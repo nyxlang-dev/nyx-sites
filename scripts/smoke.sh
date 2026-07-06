@@ -14,8 +14,10 @@ for rel in "${!BINS[@]}"; do
     site_dir="$ROOT/$(dirname "$rel")"
     bin="$ROOT/$rel"
     if [ ! -x "$bin" ]; then echo "  FAIL $rel: binario no existe (make build-all)"; fail=1; continue; fi
-    # static/ se resuelve relativo al cwd → correr desde el dir del site
-    (cd "$site_dir" && PORT=$port "$bin" >/dev/null 2>&1) &
+    # static/ se resuelve relativo al cwd → correr desde el dir del site.
+    # exec: que $! sea el PID del binario, no del subshell (si no, el kill
+    # mata al bash intermedio y el daemon queda huérfano escuchando).
+    (cd "$site_dir" && exec env PORT=$port "$bin" >/dev/null 2>&1) &
     pid=$!
     ok=0
     for _ in $(seq 1 50); do
