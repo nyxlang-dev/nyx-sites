@@ -2,7 +2,8 @@
 
 ## Qué es este repo
 
-**Repo PRIVADO** con las 3 landing pages de producción del ecosistema Nyx,
+Repo con las 3 landing pages de producción del ecosistema Nyx (PÚBLICO en
+GitHub — decisión 2026-07-06; no volcar datos sensibles ni secrets acá),
 extraídas del monorepo NyxLang (split #6, 2026-07-06). Cada site es un
 proyecto `nyx build` independiente que consume la lib **nyx-serve**
 (vendorizada y COMMITEADA en `<site>/packages/nyx-serve/`).
@@ -30,8 +31,10 @@ make status      # is-active de las 3 units
 
 - ⛔ **NUNCA ejecutar los binarios en foreground** en una sesión — son
   servidores bloqueantes. El smoke los corre en background y los baja.
-- ⛔ **Este repo NO se sincroniza a ningún repo público** (paths de
-  servidor, contenido de producción).
+- ⛔ **El repo ES público en GitHub** (nyxlang-dev/nyx-sites): jamás
+  commitear secrets, tokens, certs ni datos de usuarios. Los paths de
+  servidor y puertos internos que ya contiene son aceptables (decisión
+  2026-07-06); ante la duda, no commitear.
 - **Vendoring COMMITEADO**: `packages/nyx-serve/` va al git de este repo
   (build determinista sin red; pin explícito de la versión de la lib).
   Actualizar SOLO con `make vendor` + commit del diff. Decisión 2026-07-06.

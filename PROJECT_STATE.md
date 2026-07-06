@@ -1,7 +1,10 @@
 # nyx-sites — Project State
 
 **Extraído del monorepo**: 2026-07-06 (split #6) — antes `NyxLang/sites/`.
-**Naturaleza**: repo único PRIVADO con los 3 landings de producción.
+**Naturaleza**: repo único con los 3 landings de producción. PÚBLICO en
+GitHub (decisión Ottavio 2026-07-06 al crearlo — el contenido ya es web
+pública; CLAUDE/PROJECT_STATE son metadoc operativa, cuidar no volcar
+datos sensibles acá).
 **Estado**: en producción (units nyx-landing-main :3001, nyx-serve-web
 :3003, nyx-proxy-web :3005, detrás del gateway :443 por SNI).
 

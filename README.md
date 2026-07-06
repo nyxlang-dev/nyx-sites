@@ -1,6 +1,6 @@
 # nyx-sites
 
-Repo privado con las 3 landing pages de producción del ecosistema Nyx,
+Las 3 landing pages de producción del ecosistema Nyx,
 cada una construida con [nyx-serve](https://github.com/nyxlang-dev/nyx-serve):
 
 - **nyxlang.com** (:3001) — landing del lenguaje + Nyx Book + By-Example
