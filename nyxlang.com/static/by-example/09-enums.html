@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enums — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Enums</h1>
+
+    <p>Nyx enums are algebraic data types (ADTs): each variant can carry different data, and <code>match</code> expressions destructure them exhaustively. This makes it impossible to forget a case at compile time.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Enums: definición, variantes con datos, match exhaustivo
+
+enum Shape {
+    Circle(int),
+    Square(int),
+    Rectangle(int, int)
+}
+
+fn area(s: Shape) -> int {
+    return match s {
+        Shape.Circle(r)        => r * r * 3,
+        Shape.Square(l)        => l * l,
+        Shape.Rectangle(w, h)  => w * h
+    }
+}
+
+fn describe(s: Shape) -> String {
+    return match s {
+        Shape.Circle(r)        => "circulo de radio " + int_to_string(r),
+        Shape.Square(l)        => "cuadrado de lado " + int_to_string(l),
+        Shape.Rectangle(w, h)  => "rectangulo " + int_to_string(w) + "x" + int_to_string(h)
+    }
+}
+
+fn main() -> int {
+    let c: Shape = Shape.Circle(5)
+    let sq: Shape = Shape.Square(4)
+    let rect: Shape = Shape.Rectangle(3, 7)
+
+    print(describe(c) + " -> area aprox " + int_to_string(area(c)))
+    print(describe(sq) + " -> area " + int_to_string(area(sq)))
+    print(describe(rect) + " -> area " + int_to_string(area(rect)))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">circulo de radio 5 -> area aprox 75
+cuadrado de lado 4 -> area 16
+rectangulo 3x7 -> area 21</pre>
+
+    <h2>Explanation</h2>
+    <p>An enum is declared with the <code>enum</code> keyword followed by a name and a list of variants. Each variant can carry zero or more typed values in parentheses: <code>Circle(int)</code> carries one integer (the radius), <code>Rectangle(int, int)</code> carries two (width and height). Variants without parentheses would be simple tags.</p>
+    <p>Enum values are constructed with dot notation: <code>Shape.Circle(5)</code>. Note that Nyx uses <code>Shape.Circle</code>, not <code>Shape::Circle</code> — the dot is the variant separator throughout the language.</p>
+    <p>The <code>match</code> expression destructures an enum value and binds the inner data to local names. Each arm has the form <code>Pattern => expression</code>. The compiler enforces exhaustiveness: if any variant is missing from a <code>match</code>, the program will not compile.</p>
+    <p>The area formula for the circle uses integer arithmetic (<code>r * r * 3</code> as an approximation of π·r²), which is why the result is labeled "aprox". Real programs would use <code>float</code> and the <code>math</code> standard library for precise results.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/08-structs.html">← Previous</a>
+        <a href="/by-example/10-closures.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/09-enums.nx">examples/by-example/09-enums.nx</a></small></p>
+</main>
+
+</body>
+</html>

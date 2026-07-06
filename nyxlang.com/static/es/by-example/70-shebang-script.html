@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Shebang — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Script Shebang</h1>
+    <p>Los scripts de Nyx se pueden ejecutar directamente desde la línea de comandos usando una línea shebang (<code>#!/usr/bin/env nyx</code>). El lexer del compilador reconoce <code>#!</code> al inicio de un archivo y se salta toda la línea como comentario. <code>get_args()</code> da acceso a los argumentos de línea de comandos.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">#!/usr/bin/env nyx</span>
+<span class="cm">// Shebang scripts &mdash; running Nyx files as executable scripts</span>
+<span class="cm">// Scripts shebang &mdash; ejecutar archivos Nyx como scripts ejecutables</span>
+<span class="cm">//</span>
+<span class="cm">// Make this file executable: chmod +x 70-shebang-script.nx</span>
+<span class="cm">// Then run directly: ./70-shebang-script.nx</span>
+
+<span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>) -> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">"Hello, "</span> + name + <span class="str">"!"</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    print(greet(<span class="str">"World"</span>))
+    print(<span class="str">"running as a script"</span>)
+
+    <span class="cm">// Access command-line arguments</span>
+    <span class="kw">let</span> args: <span class="ty">Array</span> = get_args()
+    print(<span class="str">"args: "</span> + int_to_string(args.length()))
+
+    <span class="kw">if</span> args.length() > <span class="num">1</span> {
+        <span class="kw">let</span> name: <span class="ty">String</span> = args[<span class="num">1</span>]
+        print(greet(name))
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">Hello, World!
+running as a script
+args: 1</pre>
+    <h2>Explicación</h2>
+    <p>Una línea shebang (<code>#!/usr/bin/env nyx</code>) al comienzo de un archivo <code>.nx</code> le indica al sistema operativo que lo ejecute con el comando <code>nyx</code>. El lexer del compilador reconoce <code>#!</code> al inicio de un token y se salta toda la línea como comentario, de modo que el shebang no interfiere con la compilación.</p>
+    <p><code>get_args()</code> devuelve los argumentos de línea de comandos como un array de strings. El primer elemento (<code>args[0]</code>) es el nombre del programa. Cualquier argumento adicional es accesible por índice.</p>
+    <p>Para hacer un script ejecutable: crear el archivo con la línea shebang, ejecutar <code>chmod +x script.nx</code>, y luego ejecutarlo directamente con <code>./script.nx</code>. Esto hace que Nyx sea apto para scripting de shell, scripts de build y utilidades rápidas.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/69-raw-terminal.html">&larr; Anterior</a>
+        <a href="/es/by-example/71-kv-basic.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/70-shebang-script.nx">examples/by-example/70-shebang-script.nx</a></small></p>
+</main>
+</body>
+</html>

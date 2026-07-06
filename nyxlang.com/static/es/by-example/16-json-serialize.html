@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serialización JSON — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Serialización JSON</h1>
+
+    <p>Este ejemplo se apoya en los fundamentos de JSON de la página anterior para mostrar cómo se serializan datos del mundo real — una lista de personas — en una respuesta JSON anidada. Una función auxiliar encapsula la construcción de cada registro, manteniendo <code>main</code> limpio y legible.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Serializar datos a JSON con std/json: json_object, json_array, json_stringify
+
+import "std/json"
+
+fn build_persona(nombre: String, edad: int, activo: bool) -> Array {
+    let keys: Array = ["nombre", "edad", "activo"]
+    let vals: Array = []
+    vals.push(json_string(nombre))
+    vals.push(json_number(edad))
+    vals.push(json_bool(activo))
+    return json_object(keys, vals)
+}
+
+fn main() -> int {
+    // Objeto simple
+    let persona: Array = build_persona("Bob", 25, true)
+    print(json_stringify(persona))
+
+    // Array de objetos
+    let lista: Array = []
+    lista.push(build_persona("Ana", 30, true))
+    lista.push(build_persona("Carlos", 40, false))
+    lista.push(build_persona("Dina", 22, true))
+
+    let arr: Array = json_array(lista)
+    print(json_stringify(arr))
+
+    // Objeto anidado
+    let meta_keys: Array = ["version", "total"]
+    let meta_vals: Array = []
+    meta_vals.push(json_number(1))
+    meta_vals.push(json_number(3))
+    let meta: Array = json_object(meta_keys, meta_vals)
+
+    let resp_keys: Array = ["meta", "data"]
+    let resp_vals: Array = []
+    resp_vals.push(meta)
+    resp_vals.push(arr)
+    let resp: Array = json_object(resp_keys, resp_vals)
+
+    print(json_stringify(resp))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">{"nombre":"Bob","edad":25,"activo":true}
+[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]
+{"meta":{"version":1,"total":3},"data":[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]}</pre>
+
+    <h2>Explicación</h2>
+    <p><code>build_persona</code> es una función Nyx sencilla que recibe argumentos tipados y devuelve un nodo de objeto JSON. Envolver la lógica de construcción en una función evita desajustes entre los arrays de claves y valores, y hace que el código se documente a sí mismo — la firma de la función indica exactamente qué campos contiene cada registro.</p>
+    <p>Los arrays de objetos se construyen empujando nodos de objeto individuales dentro de un <code>Array</code> simple y envolviendo el resultado con <code>json_array</code>. Como los nodos JSON son solo arrays etiquetados, se componen de manera natural: puedes empujar un nodo de objeto como valor del campo de otro objeto para crear anidamiento tan profundo como sea necesario.</p>
+    <p>El objeto final <code>resp</code> envuelve <code>meta</code> y <code>data</code> en un único sobre de respuesta estilo API. Este patrón — un objeto de metadatos más un array de datos — es común en las APIs REST y muestra cómo <code>std/json</code> maneja formas reales de producción sin sintaxis especial.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/15-json-parse.html">← Anterior</a>
+        <a href="/es/by-example/17-regex.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/16-json-serialize.nx">examples/by-example/16-json-serialize.nx</a></small></p>
+</main>
+
+</body>
+</html>

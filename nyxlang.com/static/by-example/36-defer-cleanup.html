@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defer and Cleanup — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Defer and Cleanup</h1>
+
+    <p><code>defer</code> schedules a block of code to run when the enclosing function returns — regardless of which <code>return</code> statement is taken or whether an error occurs. It is the idiomatic way to guarantee cleanup of resources such as file handles, network connections, or locks.</p>
+
+    <h2>Code</h2>
+    <pre><code>// defer: garantizar cleanup al salir del bloque, como file_close
+
+fn main() -> int {
+    let path: String = "/tmp/nyx_example_36.txt"
+    let contenido: String = "Linea 1: Nyx defer example\nLinea 2: cleanup garantizado\n"
+
+    // Escribir el archivo primero
+    write_file(path, contenido)
+    print("Archivo escrito: " + path)
+
+    // Abrir el archivo con file_open
+    let f: File = file_open(path, "r")
+
+    // defer garantiza que file_close se ejecuta al salir,
+    // sin importar si hay return temprano o error
+    defer { file_close(f) }
+
+    // Leer e imprimir el contenido
+    let linea1: String = file_read_line(f)
+    print("Leyendo: " + linea1)
+
+    let linea2: String = file_read_line(f)
+    print("Leyendo: " + linea2)
+
+    print("El file_close se ejecutara automaticamente al salir")
+    // file_close(f) es llamado aqui por defer
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Archivo escrito: /tmp/nyx_example_36.txt
+Leyendo: Linea 1: Nyx defer example
+Leyendo: Linea 2: cleanup garantizado
+El file_close se ejecutara automaticamente al salir</pre>
+
+    <h2>Explanation</h2>
+    <p><code>defer { file_close(f) }</code> registers the block immediately after the file is opened, but the block itself does not execute until the function is about to return. This ensures the file is closed no matter how the function exits — through the normal <code>return 0</code>, an early return, or an uncaught error.</p>
+    <p>In Nyx, <code>defer</code> always requires a block delimited by <code>{ }</code> — bare expressions such as <code>defer file_close(f)</code> are not valid. Multiple deferred blocks in the same function execute in reverse registration order (last-in, first-out), mirroring how stack unwinding works.</p>
+    <p>This pattern is directly inspired by Go's <code>defer</code> and eliminates entire classes of resource-leak bugs that are common when cleanup must be placed at every possible exit point.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/35-error-handling.html">← Previous</a>
+        <a href="/by-example/37-sleep-timer.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/36-defer-cleanup.nx">examples/by-example/36-defer-cleanup.nx</a></small></p>
+</main>
+
+</body>
+</html>

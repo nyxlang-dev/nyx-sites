@@ -1,0 +1,15 @@
+[Unit]
+Description=nyxlang.com main landing page
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/nyx-sites/nyxlang.com
+ExecStart=/home/admin/nyx-sites/nyxlang.com/nyxlang-com
+Environment=PORT=3001
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

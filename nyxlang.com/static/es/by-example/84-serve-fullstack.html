@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serve Full-stack — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Serve Full-stack</h1>
+    <p>Un patrón full-stack: servidor HTTP que usa nyx-kv como backend de estado. El endpoint counter demuestra un read-modify-write con comandos RESP.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-serve full-stack — HTTP server + JSON API + nyx-kv backend</span>
+<span class="cm">// nyx-serve full-stack — servidor HTTP + API JSON + backend nyx-kv</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="cm">// Call nyx-kv and return the result (or empty on error)</span>
+<span class="kw">fn</span> <span class="fn">kv_get</span>(key: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="str">""</span> }
+    tcp_write(fd, resp_cmd([<span class="str">"GET"</span>, key]))
+    <span class="kw">let</span> hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">let</span> val: <span class="ty">String</span> = tcp_read_line(fd)
+    tcp_close(fd)
+    <span class="kw">return</span> val.trim()
+}
+
+<span class="kw">fn</span> <span class="fn">kv_set</span>(key: <span class="ty">String</span>, val: <span class="ty">String</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> -<span class="num">1</span> }
+    tcp_write(fd, resp_cmd([<span class="str">"SET"</span>, key, val]))
+    tcp_read_line(fd)
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="cm">// GET /counter — increments and returns a global counter stored in nyx-kv</span>
+<span class="kw">fn</span> <span class="fn">counter</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> current: <span class="ty">String</span> = kv_get(<span class="str">"counter"</span>)
+    <span class="kw">var</span> n: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">if</span> current.length() &gt; <span class="num">0</span> { n = string_to_int(current) }
+    n = n + <span class="num">1</span>
+    kv_set(<span class="str">"counter"</span>, int_to_string(n))
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"count\": "</span> + int_to_string(n) + <span class="str">"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+    app_get(app, <span class="str">"/counter"</span>, counter)
+
+    print(<span class="str">"full-stack app: HTTP + JSON + KV backend"</span>)
+    print(<span class="str">"GET /counter increments a counter stored in nyx-kv"</span>)
+    print(<span class="str">"this pattern powers nyxlang.com's request analytics"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">full-stack app: HTTP + JSON + KV backend
+GET /counter increments a counter stored in nyx-kv
+this pattern powers nyxlang.com's request analytics</pre>
+    <h2>Explicación</h2>
+    <p>Este es el patrón canónico full-stack de Nyx: una capa HTTP sin estado que habla con una capa nyx-kv con estado a través de RESP. resp_cmd codifica los comandos en el formato de wire de Redis — un array con prefijo de longitud de bulk strings — que nyx-kv habla nativamente. kv_get y kv_set abren cada una una conexión de corta duración; en producción las pondrías en un pool. El endpoint /counter muestra un read-modify-write: hace GET del valor actual, lo incrementa, y hace SET de vuelta. Este patrón no es atómico entre llamadores concurrentes — para un contador real usarías INCR, que nyx-kv ejecuta del lado del servidor. La ganancia arquitectónica es que la capa web permanece sin estado, así que cualquier worker en cualquier datacenter puede servir cualquier solicitud.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/83-serve-cors.html">&larr; Anterior</a>
+        <a href="/es/by-example/85-proxy-config.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/84-serve-fullstack.nx">examples/by-example/84-serve-fullstack.nx</a></small></p>
+</main>
+</body>
+</html>

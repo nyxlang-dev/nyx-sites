@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-kv AUTH and tokens — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-kv AUTH and tokens</h1>
+    <p>AUTH authenticates a client with a token. Each token scopes commands to a namespace, giving tenant isolation. Admin tokens can issue TOKEN_LIST and TOKEN_REVOKE.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-kv AUTH -- multi-tenant authentication with tokens</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Authenticate with a token -- subsequent commands are scoped to this tenant</span>
+    <span class="kw">let</span> token: <span class="ty">String</span> = <span class="str">"my-api-token-123"</span>
+    tcp_write(fd, resp_cmd([<span class="str">"AUTH"</span>, token]))
+    <span class="kw">let</span> auth_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"AUTH -&gt; "</span> + auth_reply.trim())
+
+    <span class="cm">// After auth, SET/GET operate in the tenant's namespace</span>
+    tcp_write(fd, resp_cmd([<span class="str">"SET"</span>, <span class="str">"config:db"</span>, <span class="str">"postgres://localhost"</span>]))
+    <span class="kw">let</span> set_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"SET (authed) -&gt; "</span> + set_reply.trim())
+
+    <span class="cm">// List all tokens (admin command, requires privileged AUTH)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"TOKEN_LIST"</span>]))
+    <span class="kw">let</span> list_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"TOKEN_LIST header -&gt; "</span> + list_hdr.trim())
+
+    <span class="cm">// Revoke a token (also admin-only)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"TOKEN_REVOKE"</span>, <span class="str">"old-token"</span>]))
+    <span class="kw">let</span> revoke: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"TOKEN_REVOKE -&gt; "</span> + revoke.trim())
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">AUTH -&gt; +OK
+SET (authed) -&gt; +OK
+TOKEN_LIST header -&gt; *2
+TOKEN_REVOKE -&gt; +OK</pre>
+    <h2>Explanation</h2>
+    <p>nyx-kv extends the Redis AUTH model with a token registry: each token is bound to a namespace prefix, and commands issued on that connection are silently scoped into that namespace. Two tenants holding different tokens can both write to <code>config:db</code> and never collide — the server rewrites the internal key to <code>&lt;tenant&gt;:config:db</code> on the fly.</p>
+    <p>A subset of tokens carries the admin role. Admin connections can issue <code>TOKEN_CREATE name namespace</code>, <code>TOKEN_LIST</code>, and <code>TOKEN_REVOKE token</code> to manage the registry at runtime — no server restart required. This turns a single nyx-kv instance into a self-service multi-tenant backend, ideal for SaaS deployments where each customer gets an isolated keyspace.</p>
+    <p>For production, rotate tokens on a schedule, store them encrypted at rest, and never log the raw token strings.</p>
+    <div class="book-nav">
+        <a href="/by-example/73-kv-hashes.html">&larr; Previous</a>
+        <a href="/by-example/75-kv-pubsub.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/74-kv-auth.nx">examples/by-example/74-kv-auth.nx</a></small></p>
+</main>
+</body>
+</html>

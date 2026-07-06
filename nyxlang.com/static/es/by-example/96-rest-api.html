@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REST API — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>REST API</h1>
+    <p>Una API REST completa: 5 endpoints (listar/crear/obtener/actualizar/eliminar), cadena de middleware (logging + CORS) y nyx-kv como capa de persistencia. Este es el patrón de producción para todas las APIs JSON en nyxlang.com.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Full REST API — CRUD with nyx-serve + nyx-kv</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">kv_hset</span>(key: <span class="ty">String</span>, field: <span class="ty">String</span>, val: <span class="ty">String</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> -<span class="num">1</span> }
+    tcp_write(fd, resp_cmd([<span class="str">"HSET"</span>, key, field, val]))
+    tcp_read_line(fd)
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">list_users</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"[{\"id\": 1, \"name\": \"Alice\"}]"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">create_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// Parse JSON body (simplified — use std/json in real code)</span>
+    <span class="kw">let</span> name: <span class="ty">String</span> = <span class="str">"from_body"</span>
+    kv_hset(<span class="str">"user:1"</span>, <span class="str">"name"</span>, name)
+    <span class="kw">return</span> response_json(<span class="num">201</span>, <span class="str">"{\"id\": 1, \"created\": true}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">get_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"id\": "</span> + id + <span class="str">"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">update_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    kv_hset(<span class="str">"user:"</span> + id, <span class="str">"updated_at"</span>, int_to_string(time()))
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"updated\": true}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">delete_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_new(<span class="num">204</span>, <span class="str">""</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+    app_use(app, mw_logging)
+    app_use(app, mw_cors)
+
+    <span class="cm">// RESTful CRUD</span>
+    app_get(app, <span class="str">"/api/users"</span>, list_users)
+    app_post(app, <span class="str">"/api/users"</span>, create_user)
+    app_get(app, <span class="str">"/api/users/{id}"</span>, get_user)
+    app_put(app, <span class="str">"/api/users/{id}"</span>, update_user)
+    app_delete(app, <span class="str">"/api/users/{id}"</span>, delete_user)
+
+    print(<span class="str">"REST API with 5 endpoints + middleware + nyx-kv backend"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">REST API with 5 endpoints + middleware + nyx-kv backend</pre>
+    <h2>Explicación</h2>
+    <p>Esta es la plantilla que sigue todo servicio web de Nyx. nyx-serve expone los verbos habituales app_get / app_post / app_put / app_delete, patrones de URL con captura {id} y una cadena de middleware vía app_use. Los handlers retornan valores Response (no efectos secundarios), lo cual los mantiene testeables. La persistencia es un salto TCP a nyx-kv en el puerto 6380 — un Hash por cada entidad, de modo que se obtienen búsquedas O(1) sin correr una base de datos separada. Se puede usar nyx-db en su lugar si se necesitan consultas SQL.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/95-http2-frames.html">&larr; Anterior</a>
+        <a href="/es/by-example/97-realtime-pubsub.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/96-rest-api.nx">examples/by-example/96-rest-api.nx</a></small></p>
+</main>
+</body>
+</html>

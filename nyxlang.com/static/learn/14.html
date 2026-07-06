@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enums and pattern matching — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Enums and pattern matching</h1>
+
+<h2>What is an enum?</h2>
+<p>Sometimes a value can only be one of a few specific options. A traffic light is Red, Yellow, or Green — never anything else. A playing card suit is Hearts, Diamonds, Clubs, or Spades — exactly four possibilities.</p>
+<p>An <strong>enum</strong> (short for "enumeration") lets you define a type that is exactly one of a fixed set of variants.</p>
+<h2>Defining a simple enum</h2>
+<pre><span class="kw">enum</span> Color {
+    Red,
+    Green,
+    Blue
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> c: Color <span class="op">=</span> Color.Red
+    <span class="fn">print</span>(c)    <span class="cm">// Red</span>
+}</pre>
+<p><code>Color</code> is a new type with exactly three possible values. You refer to each variant with a dot: <code>Color.Red</code>, <code>Color.Green</code>, <code>Color.Blue</code>.</p>
+<h2>Pattern matching with match</h2>
+<p>The real power of enums comes from <code>match</code> — a way to handle each variant differently:</p>
+<pre><span class="kw">enum</span> Direction {
+    North,
+    South,
+    East,
+    West
+}
+
+<span class="kw">fn</span> <span class="fn">describe</span>(d: Direction) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="kw">match</span> d {
+        Direction.North <span class="op">=&gt;</span> <span class="str">&quot;Going up&quot;</span>,
+        Direction.South <span class="op">=&gt;</span> <span class="str">&quot;Going down&quot;</span>,
+        Direction.East <span class="op">=&gt;</span> <span class="str">&quot;Going right&quot;</span>,
+        Direction.West <span class="op">=&gt;</span> <span class="str">&quot;Going left&quot;</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">describe</span>(Direction.North))    <span class="cm">// Going up</span>
+    <span class="fn">print</span>(<span class="fn">describe</span>(Direction.West))     <span class="cm">// Going left</span>
+}</pre>
+<p><code>match</code> checks which variant <code>d</code> is, and returns the corresponding value. It is like a series of <code>if</code> checks, but cleaner and the compiler ensures you handle every case.</p>
+<h2>The wildcard pattern</h2>
+<p>If you do not care about some variants, use <code>_</code> as a catch-all:</p>
+<pre><span class="kw">enum</span> Color {
+    Red,
+    Green,
+    Blue,
+    Yellow,
+    Purple
+}
+
+<span class="kw">fn</span> <span class="fn">is_primary</span>(c: Color) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> <span class="kw">match</span> c {
+        Color.Red <span class="op">=&gt;</span> <span class="kw">true</span>,
+        Color.Green <span class="op">=&gt;</span> <span class="kw">true</span>,
+        Color.Blue <span class="op">=&gt;</span> <span class="kw">true</span>,
+        _ <span class="op">=&gt;</span> <span class="kw">false</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">is_primary</span>(Color.Red))      <span class="cm">// true</span>
+    <span class="fn">print</span>(<span class="fn">is_primary</span>(Color.Yellow))   <span class="cm">// false</span>
+}</pre>
+<p>The <code>_</code> matches any variant not explicitly listed.</p>
+<h2>Enums with data</h2>
+<p>Simple enums are useful, but enums become truly powerful when variants carry data:</p>
+<pre><span class="kw">enum</span> Shape {
+    <span class="fn">Circle</span>(<span class="ty">int</span>),
+    <span class="fn">Rectangle</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="fn">Triangle</span>(<span class="ty">int</span>, <span class="ty">int</span>, <span class="ty">int</span>)
+}</pre>
+<p>Each variant can hold different types and amounts of data. A <code>Circle</code> has a radius, a <code>Rectangle</code> has width and height, a <code>Triangle</code> has three sides.</p>
+<pre><span class="kw">fn</span> <span class="fn">area</span>(s: Shape) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="kw">match</span> s {
+        Shape.<span class="fn">Circle</span>(r) <span class="op">=&gt;</span> <span class="num">3</span> <span class="op">*</span> r <span class="op">*</span> r,
+        Shape.<span class="fn">Rectangle</span>(w, h) <span class="op">=&gt;</span> w <span class="op">*</span> h,
+        Shape.<span class="fn">Triangle</span>(a, b, c) <span class="op">=&gt;</span> {
+            <span class="cm">// Heron&#x27;s formula approximation using integer math</span>
+            <span class="kw">let</span> s: <span class="ty">int</span> <span class="op">=</span> (a <span class="op">+</span> b <span class="op">+</span> c) <span class="op">/</span> <span class="num">2</span>
+            <span class="kw">return</span> s <span class="op">*</span> (s <span class="op">-</span> a) <span class="op">/</span> <span class="num">2</span>
+        }
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">describe</span>(s: Shape) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="kw">match</span> s {
+        Shape.<span class="fn">Circle</span>(r) <span class="op">=&gt;</span> <span class="str">&quot;Circle with radius &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(r),
+        Shape.<span class="fn">Rectangle</span>(w, h) <span class="op">=&gt;</span> <span class="str">&quot;Rectangle &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(w) <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(h),
+        Shape.<span class="fn">Triangle</span>(a, b, c) <span class="op">=&gt;</span> <span class="str">&quot;Triangle with sides &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(a) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(b) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(c)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> shapes: <span class="ty">Array</span> <span class="op">=</span> [
+        Shape.<span class="fn">Circle</span>(<span class="num">10</span>),
+        Shape.<span class="fn">Rectangle</span>(<span class="num">5</span>, <span class="num">8</span>),
+        Shape.<span class="fn">Triangle</span>(<span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>)
+    ]
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> shapes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Shape <span class="op">=</span> shapes[i]
+        <span class="fn">print</span>(<span class="fn">describe</span>(s) <span class="op">+</span> <span class="str">&quot; -&gt; area = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="fn">area</span>(s)))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Output:</p>
+<pre>Circle with radius 10 -&gt; area = 300
+Rectangle 5x8 -&gt; area = 40
+Triangle with sides 3, 4, 5 -&gt; area = 3</pre>
+<h2>Enums for error handling</h2>
+<p>One of the most common uses of enums is representing success or failure:</p>
+<pre><span class="kw">enum</span> <span class="ty">Result</span> {
+    <span class="ty">Ok</span>(<span class="ty">int</span>),
+    <span class="fn">Error</span>(<span class="ty">String</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">divide</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Result</span> {
+    <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="ty">Result</span>.<span class="fn">Error</span>(<span class="str">&quot;Division by zero&quot;</span>)
+    }
+    <span class="kw">return</span> <span class="ty">Result</span>.<span class="ty">Ok</span>(a <span class="op">/</span> b)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> r1: <span class="ty">Result</span> <span class="op">=</span> <span class="fn">divide</span>(<span class="num">10</span>, <span class="num">3</span>)
+    <span class="kw">let</span> r2: <span class="ty">Result</span> <span class="op">=</span> <span class="fn">divide</span>(<span class="num">10</span>, <span class="num">0</span>)
+
+    <span class="kw">let</span> msg1: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r1 {
+        <span class="ty">Result</span>.<span class="ty">Ok</span>(value) <span class="op">=&gt;</span> <span class="str">&quot;Result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(value),
+        <span class="ty">Result</span>.<span class="fn">Error</span>(msg) <span class="op">=&gt;</span> <span class="str">&quot;Error: &quot;</span> <span class="op">+</span> msg
+    }
+
+    <span class="kw">let</span> msg2: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r2 {
+        <span class="ty">Result</span>.<span class="ty">Ok</span>(value) <span class="op">=&gt;</span> <span class="str">&quot;Result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(value),
+        <span class="ty">Result</span>.<span class="fn">Error</span>(msg) <span class="op">=&gt;</span> <span class="str">&quot;Error: &quot;</span> <span class="op">+</span> msg
+    }
+
+    <span class="fn">print</span>(msg1)    <span class="cm">// Result: 3</span>
+    <span class="fn">print</span>(msg2)    <span class="cm">// Error: Division by zero</span>
+}</pre>
+<p>Instead of crashing on bad input, the function returns an enum that the caller must handle. This makes errors explicit and impossible to ignore.</p>
+<h2>Enums for optional values</h2>
+<p>Another common pattern — representing "something or nothing":</p>
+<pre><span class="kw">enum</span> <span class="ty">Option</span> {
+    <span class="ty">Some</span>(<span class="ty">int</span>),
+    <span class="ty">None</span>
+}
+
+<span class="kw">fn</span> <span class="fn">find_index</span>(arr: <span class="ty">Array</span>, target: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Option</span> {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        <span class="kw">if</span> arr[i] <span class="op">==</span> target {
+            <span class="kw">return</span> <span class="ty">Option</span>.<span class="ty">Some</span>(i)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> <span class="ty">Option</span>.<span class="ty">None</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>, <span class="num">50</span>]
+
+    <span class="kw">let</span> found: <span class="ty">Option</span> <span class="op">=</span> <span class="fn">find_index</span>(nums, <span class="num">30</span>)
+    <span class="kw">let</span> not_found: <span class="ty">Option</span> <span class="op">=</span> <span class="fn">find_index</span>(nums, <span class="num">99</span>)
+
+    <span class="kw">let</span> msg1: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> found {
+        <span class="ty">Option</span>.<span class="ty">Some</span>(idx) <span class="op">=&gt;</span> <span class="str">&quot;Found at index &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(idx),
+        <span class="ty">Option</span>.<span class="ty">None</span> <span class="op">=&gt;</span> <span class="str">&quot;Not found&quot;</span>
+    }
+
+    <span class="kw">let</span> msg2: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> not_found {
+        <span class="ty">Option</span>.<span class="ty">Some</span>(idx) <span class="op">=&gt;</span> <span class="str">&quot;Found at index &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(idx),
+        <span class="ty">Option</span>.<span class="ty">None</span> <span class="op">=&gt;</span> <span class="str">&quot;Not found&quot;</span>
+    }
+
+    <span class="fn">print</span>(msg1)    <span class="cm">// Found at index 2</span>
+    <span class="fn">print</span>(msg2)    <span class="cm">// Not found</span>
+}</pre>
+<h2>Using enums as state machines</h2>
+<p>Enums naturally represent states:</p>
+<pre><span class="kw">enum</span> OrderStatus {
+    Pending,
+    Processing,
+    <span class="fn">Shipped</span>(<span class="ty">String</span>),
+    Delivered,
+    <span class="fn">Cancelled</span>(<span class="ty">String</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">describe_order</span>(status: OrderStatus) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="kw">match</span> status {
+        OrderStatus.Pending <span class="op">=&gt;</span> <span class="str">&quot;Order is pending&quot;</span>,
+        OrderStatus.Processing <span class="op">=&gt;</span> <span class="str">&quot;Order is being processed&quot;</span>,
+        OrderStatus.<span class="fn">Shipped</span>(tracking) <span class="op">=&gt;</span> <span class="str">&quot;Shipped! Tracking: &quot;</span> <span class="op">+</span> tracking,
+        OrderStatus.Delivered <span class="op">=&gt;</span> <span class="str">&quot;Order delivered&quot;</span>,
+        OrderStatus.<span class="fn">Cancelled</span>(reason) <span class="op">=&gt;</span> <span class="str">&quot;Cancelled: &quot;</span> <span class="op">+</span> reason
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> s1: OrderStatus <span class="op">=</span> OrderStatus.Pending
+    <span class="kw">let</span> s2: OrderStatus <span class="op">=</span> OrderStatus.<span class="fn">Shipped</span>(<span class="str">&quot;NYX-12345&quot;</span>)
+    <span class="kw">let</span> s3: OrderStatus <span class="op">=</span> OrderStatus.<span class="fn">Cancelled</span>(<span class="str">&quot;Out of stock&quot;</span>)
+
+    <span class="fn">print</span>(<span class="fn">describe_order</span>(s1))    <span class="cm">// Order is pending</span>
+    <span class="fn">print</span>(<span class="fn">describe_order</span>(s2))    <span class="cm">// Shipped! Tracking: NYX-12345</span>
+    <span class="fn">print</span>(<span class="fn">describe_order</span>(s3))    <span class="cm">// Cancelled: Out of stock</span>
+}</pre>
+<h2>Practical example: a calculator</h2>
+<pre><span class="kw">enum</span> Operation {
+    <span class="ty">Add</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="fn">Subtract</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="fn">Multiply</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="fn">Divide</span>(<span class="ty">int</span>, <span class="ty">int</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">calculate</span>(op: Operation) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="kw">match</span> op {
+        Operation.<span class="ty">Add</span>(a, b) <span class="op">=&gt;</span> a <span class="op">+</span> b,
+        Operation.<span class="fn">Subtract</span>(a, b) <span class="op">=&gt;</span> a <span class="op">-</span> b,
+        Operation.<span class="fn">Multiply</span>(a, b) <span class="op">=&gt;</span> a <span class="op">*</span> b,
+        Operation.<span class="fn">Divide</span>(a, b) <span class="op">=&gt;</span> a <span class="op">/</span> b
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">show</span>(op: Operation) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="kw">match</span> op {
+        Operation.<span class="ty">Add</span>(a, b) <span class="op">=&gt;</span> <span class="fn">int_to_string</span>(a) <span class="op">+</span> <span class="str">&quot; + &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(b),
+        Operation.<span class="fn">Subtract</span>(a, b) <span class="op">=&gt;</span> <span class="fn">int_to_string</span>(a) <span class="op">+</span> <span class="str">&quot; - &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(b),
+        Operation.<span class="fn">Multiply</span>(a, b) <span class="op">=&gt;</span> <span class="fn">int_to_string</span>(a) <span class="op">+</span> <span class="str">&quot; * &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(b),
+        Operation.<span class="fn">Divide</span>(a, b) <span class="op">=&gt;</span> <span class="fn">int_to_string</span>(a) <span class="op">+</span> <span class="str">&quot; / &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(b)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ops: <span class="ty">Array</span> <span class="op">=</span> [
+        Operation.<span class="ty">Add</span>(<span class="num">10</span>, <span class="num">5</span>),
+        Operation.<span class="fn">Subtract</span>(<span class="num">10</span>, <span class="num">5</span>),
+        Operation.<span class="fn">Multiply</span>(<span class="num">10</span>, <span class="num">5</span>),
+        Operation.<span class="fn">Divide</span>(<span class="num">10</span>, <span class="num">5</span>)
+    ]
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> ops.<span class="fn">length</span>() {
+        <span class="kw">let</span> op: Operation <span class="op">=</span> ops[i]
+        <span class="fn">print</span>(<span class="fn">show</span>(op) <span class="op">+</span> <span class="str">&quot; = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="fn">calculate</span>(op)))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Output:</p>
+<pre>10 + 5 = 15
+10 - 5 = 5
+10 * 5 = 50
+10 / 5 = 2</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Define an enum <code>Weekday</code> with all seven days. Write a function <code>is_weekend(d: Weekday) -> bool</code> that returns <code>true</code> for Saturday and Sunday.</li>
+</ol>
+<ol>
+<li>Define an enum <code>Coin</code> with variants <code>Penny</code>, <code>Nickel</code>, <code>Dime</code>, <code>Quarter</code>. Write <code>value(c: Coin) -> int</code> that returns the coin's value in cents.</li>
+</ol>
+<ol>
+<li>Define <code>enum Temperature { Celsius(int), Fahrenheit(int) }</code>. Write <code>to_celsius(t: Temperature) -> int</code> that converts Fahrenheit to Celsius (use integer math: <code>(f - 32) * 5 / 9</code>).</li>
+</ol>
+<ol>
+<li>Create a <code>Result</code> enum and write a <code>safe_divide</code> function that returns <code>Result.Error</code> for division by zero. Chain two divisions: divide 100 by 5, then divide the result by 0.</li>
+</ol>
+<ol>
+<li>Build a simple expression evaluator: <code>enum Expr { Num(int), Add(int, int), Mul(int, int), Neg(int) }</code>. Write <code>eval(e: Expr) -> int</code> that computes the result.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>enum Name { Variant1, Variant2, ... }</code> defines a type with fixed variants.</li>
+<li>Access variants with dot notation: <code>Color.Red</code>.</li>
+<li>Variants can carry data: <code>Shape.Circle(10)</code>.</li>
+<li><code>match</code> inspects which variant a value is and extracts its data.</li>
+<li><code>_</code> is a wildcard that matches any unhandled variant.</li>
+<li>Common patterns: <code>Result</code> (Ok/Error) for error handling, <code>Option</code> (Some/None) for optional values.</li>
+<li>Enums + match = clean, safe handling of multiple cases.</li>
+</ul>
+<p>Next chapter: <a href="15-traits.md">Traits and impl blocks →</a></p>
+
+    <div class="book-nav">
+        <a href="13.html" class="book-nav-prev">&larr; Previous: Closures and first-class functions</a>
+        <a href="15.html" class="book-nav-next">Next: Traits and impl blocks &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

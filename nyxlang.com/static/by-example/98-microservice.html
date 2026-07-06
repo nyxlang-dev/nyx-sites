@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microservice — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Microservice</h1>
+    <p>A microservice that consumes from nyx-queue and uses nyx-kv as a cache. Cache-aside pattern: check cache first, fall through to DB on miss, populate cache for next request. EXPIRE prevents stale data.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Microservice pattern — nyx-queue consumer with nyx-kv cache</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="cm">// Send a RESP command and read a simple response line</span>
+<span class="kw">fn</span> <span class="fn">send_cmd</span>(host: <span class="ty">String</span>, port: <span class="ty">int</span>, cmd: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(host, port)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="str">""</span> }
+    tcp_write(fd, cmd)
+    <span class="kw">let</span> r: <span class="ty">String</span> = tcp_read_line(fd)
+    tcp_close(fd)
+    <span class="kw">return</span> r.trim()
+}
+
+<span class="cm">// Enrich a raw order event with cached user data</span>
+<span class="kw">fn</span> <span class="fn">process_order</span>(order_id: <span class="ty">String</span>, user_id: <span class="ty">String</span>) -&gt; <span class="ty">bool</span> {
+    <span class="cm">// Check nyx-kv cache for user profile</span>
+    <span class="kw">let</span> cache_key: <span class="ty">String</span> = <span class="str">"user:"</span> + user_id
+    <span class="kw">let</span> cached: <span class="ty">String</span> = send_cmd(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, resp_cmd([<span class="str">"GET"</span>, cache_key]))
+
+    <span class="kw">if</span> cached.length() &gt; <span class="num">0</span> {
+        print(<span class="str">"  [cache hit] "</span> + cache_key)
+    } <span class="kw">else</span> {
+        <span class="cm">// Would fetch from DB and cache here</span>
+        print(<span class="str">"  [cache miss] fetching user "</span> + user_id)
+        send_cmd(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, resp_cmd([<span class="str">"SET"</span>, cache_key, <span class="str">"{\"name\":\"Alice\"}"</span>]))
+        send_cmd(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, resp_cmd([<span class="str">"EXPIRE"</span>, cache_key, <span class="str">"3600"</span>]))
+    }
+
+    <span class="cm">// Process and store result</span>
+    <span class="kw">let</span> result_key: <span class="ty">String</span> = <span class="str">"order:"</span> + order_id
+    send_cmd(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, resp_cmd([<span class="str">"HSET"</span>, result_key, <span class="str">"status"</span>, <span class="str">"processed"</span>, <span class="str">"user"</span>, user_id]))
+    print(<span class="str">"  [processed] "</span> + order_id)
+    <span class="kw">return</span> <span class="kw">true</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Simulate consuming 3 orders from nyx-queue</span>
+    print(<span class="str">"microservice: order processor"</span>)
+    process_order(<span class="str">"ord_001"</span>, <span class="str">"u42"</span>)
+    process_order(<span class="str">"ord_002"</span>, <span class="str">"u42"</span>)  <span class="cm">// cache hit</span>
+    process_order(<span class="str">"ord_003"</span>, <span class="str">"u7"</span>)
+
+    print(<span class="str">""</span>)
+    print(<span class="str">"architecture:"</span>)
+    print(<span class="str">"  API -&gt; ENQUEUE orders -&gt; nyx-queue -&gt; DEQUEUE -&gt; this service"</span>)
+    print(<span class="str">"  this service &lt;-&gt; nyx-kv (cache) &lt;-&gt; nyx-db (persistent)"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">microservice: order processor
+  [cache miss] fetching user u42
+  [processed] ord_001
+  [cache hit] user:u42
+  [processed] ord_002
+  [cache miss] fetching user u7
+  [processed] ord_003
+
+architecture:
+  API -&gt; ENQUEUE orders -&gt; nyx-queue -&gt; DEQUEUE -&gt; this service
+  this service &lt;-&gt; nyx-kv (cache) &lt;-&gt; nyx-db (persistent)</pre>
+    <h2>Explanation</h2>
+    <p>Cache-aside is the most common caching strategy because it fails gracefully: if the cache is down, requests still work — just slower. The first request for user u42 was a miss, so we fetched from the DB and wrote to nyx-kv with a 1-hour TTL. The second request for the same user was a hit, served in microseconds. EXPIRE guarantees staleness can't grow unbounded — profile changes propagate within an hour even without explicit invalidation. Scale horizontally by running more instances of this same binary against the same queue.</p>
+    <div class="book-nav">
+        <a href="/by-example/97-realtime-pubsub.html">&larr; Previous</a>
+        <a href="/by-example/99-rate-limited-api.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/98-microservice.nx">examples/by-example/98-microservice.nx</a></small></p>
+</main>
+</body>
+</html>

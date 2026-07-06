@@ -1,0 +1,49 @@
+import "std/web"
+import "std/http"
+import "nyx-serve/src/server"
+import "nyx-serve/src/files"
+
+fn handle_index(req: Request) -> Response {
+    return response_html(200, read_file("static/index.html"))
+}
+
+fn handle_index_es(req: Request) -> Response {
+    return response_html(200, read_file("static/es/index.html"))
+}
+
+fn handle_install(req: Request) -> Response {
+    let hdrs: Array = ["Content-Type", "text/plain; charset=utf-8"]
+    return Response { status: 200, headers_flat: hdrs, body: read_file("static/install.sh") }
+}
+
+fn handle_logo(req: Request) -> Response {
+    let hdrs: Array = ["Content-Type", "image/png"]
+    return Response { status: 200, headers_flat: hdrs, body: read_file("static/logo.png") }
+}
+
+fn handle_health(req: Request) -> Response {
+    return response_json(200, "{\"status\":\"ok\"}")
+}
+
+fn main() {
+    let port_str: String = getenv("PORT")
+    var port: int = 3001
+    if port_str != "" { port = string_to_int(port_str) }
+
+    let app: App = app_new()
+    app_get(app, "/", handle_index)
+    app_get(app, "/es/", handle_index_es)
+    app_get(app, "/install.sh", handle_install)
+    app_get(app, "/logo.png", handle_logo)
+    app_get(app, "/api/health", handle_health)
+    // Contenido learn y cookbook: max-age corto (5 min) — cambia con commits.
+    app_static_cached(app, "/learn/", "static/learn/", 300)
+    app_static_cached(app, "/es/learn/", "static/es/learn/", 300)
+    app_static_cached(app, "/by-example/", "static/by-example/", 300)
+    app_static_cached(app, "/es/by-example/", "static/es/by-example/", 300)
+    // Assets compartidos (CSS/JS/imgs/fonts): max-age 1h — cambios menos
+    // frecuentes y bundle lo suficientemente pequeño que revalidar ocasional
+    // no duele.
+    app_static_cached(app, "/shared/", "static/shared/", 3600)
+    serve_app(app, port, 16)
+}

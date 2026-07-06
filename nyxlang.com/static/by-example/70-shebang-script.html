@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shebang Script — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Shebang Script</h1>
+    <p>Nyx scripts can be run directly from the command line using a shebang line (<code>#!/usr/bin/env nyx</code>). The compiler's lexer recognizes <code>#!</code> at the start of a file and skips the entire line as a comment. <code>get_args()</code> provides access to command-line arguments.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">#!/usr/bin/env nyx</span>
+<span class="cm">// Shebang scripts &mdash; running Nyx files as executable scripts</span>
+<span class="cm">// Scripts shebang &mdash; ejecutar archivos Nyx como scripts ejecutables</span>
+<span class="cm">//</span>
+<span class="cm">// Make this file executable: chmod +x 70-shebang-script.nx</span>
+<span class="cm">// Then run directly: ./70-shebang-script.nx</span>
+
+<span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>) -> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">"Hello, "</span> + name + <span class="str">"!"</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    print(greet(<span class="str">"World"</span>))
+    print(<span class="str">"running as a script"</span>)
+
+    <span class="cm">// Access command-line arguments</span>
+    <span class="kw">let</span> args: <span class="ty">Array</span> = get_args()
+    print(<span class="str">"args: "</span> + int_to_string(args.length()))
+
+    <span class="kw">if</span> args.length() > <span class="num">1</span> {
+        <span class="kw">let</span> name: <span class="ty">String</span> = args[<span class="num">1</span>]
+        print(greet(name))
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">Hello, World!
+running as a script
+args: 1</pre>
+    <h2>Explanation</h2>
+    <p>A shebang line (<code>#!/usr/bin/env nyx</code>) at the top of a <code>.nx</code> file tells the OS to run it with the <code>nyx</code> command. The compiler's lexer recognizes <code>#!</code> at the start of a token and skips the entire line as a comment, so the shebang does not interfere with compilation.</p>
+    <p><code>get_args()</code> returns the command-line arguments as an array of strings. The first element (<code>args[0]</code>) is the program name. Any additional arguments are accessible by index.</p>
+    <p>To make a script executable: create the file with the shebang line, run <code>chmod +x script.nx</code>, then execute it directly with <code>./script.nx</code>. This makes Nyx suitable for shell scripting, build scripts, and quick utilities.</p>
+    <div class="book-nav">
+        <a href="/by-example/69-raw-terminal.html">&larr; Previous</a>
+        <a href="/by-example/71-kv-basic.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/70-shebang-script.nx">examples/by-example/70-shebang-script.nx</a></small></p>
+</main>
+</body>
+</html>

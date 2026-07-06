@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: map y filter — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Iterator: map y filter</h1>
+
+    <p>Los iteradores de Nyx son cadenas perezosas de transformaciones. Llamar <code>.iter()</code> sobre un array crea un iterador, <code>.filter(pred)</code> conserva solo los elementos que satisfacen un predicado, <code>.map(f)</code> transforma cada elemento, y <code>.collect()</code> materializa el resultado en un nuevo array.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Iterators: filter + map + collect en cadena
+
+fn is_even(x: int) -> bool {
+    return x % 2 == 0
+}
+
+fn double(x: int) -> int {
+    return x * 2
+}
+
+fn square(x: int) -> int {
+    return x * x
+}
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // Filtrar pares y duplicarlos
+    let result: Array = nums.iter().filter(is_even).map(double).collect()
+    print("pares duplicados: " + int_to_string(result.length()) + " elementos")
+    let r0: int = result[0]
+    let r4: int = result[4]
+    print("primero: " + int_to_string(r0))   // 4  (2*2)
+    print("ultimo:  " + int_to_string(r4))   // 20 (10*2)
+
+    // Solo map: elevar al cuadrado todos
+    let squares: Array = nums.iter().map(square).collect()
+    print("cuadrados: " + int_to_string(squares.length()) + " elementos")
+    let s0: int = squares[0]
+    let s9: int = squares[9]
+    print("1^2 = " + int_to_string(s0))
+    print("10^2 = " + int_to_string(s9))
+
+    // Filtrar, mapear y tomar los primeros 3
+    let top3: Array = nums.iter().filter(is_even).map(double).take(3).collect()
+    print("top3 pares*2:")
+    let t0: int = top3[0]
+    let t1: int = top3[1]
+    let t2: int = top3[2]
+    print(int_to_string(t0) + " " + int_to_string(t1) + " " + int_to_string(t2))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">pares duplicados: 5 elementos
+primero: 4
+ultimo:  20
+cuadrados: 10 elementos
+1^2 = 1
+10^2 = 100
+top3 pares*2:
+4 8 12</pre>
+
+    <h2>Explicación</h2>
+    <p>Los pipelines de iteradores en Nyx siguen un patrón consistente: empiezan con <code>.iter()</code>, encadenan cero o más adaptadores intermedios (<code>filter</code>, <code>map</code>, <code>take</code>, <code>skip</code>, etc.), y terminan con un consumidor (<code>collect</code>, <code>fold</code>, <code>for_each</code>). Cada adaptador es perezoso — ningún elemento se procesa hasta que el consumidor impulsa el pipeline. Esto evita alocar arrays intermedios en cada paso.</p>
+    <p>El primer pipeline, <code>nums.iter().filter(is_even).map(double).collect()</code>, recorre los 10 números: <code>filter</code> deja pasar solo los 5 pares (2, 4, 6, 8, 10), y luego <code>map</code> duplica cada uno, produciendo [4, 8, 12, 16, 20]. Las funciones pasadas a <code>filter</code> y <code>map</code> son funciones de nivel superior nombradas aquí, pero las closures funcionan igual de bien.</p>
+    <p>Agregar <code>.take(3)</code> a la cadena detiene el pipeline después de recolectar los primeros tres resultados, así que el tercer ejemplo produce [4, 8, 12] sin procesar los elementos restantes. Esta composabilidad — combinar filter, map, take y otros adaptadores en cualquier orden — es la fortaleza central del diseño de iteradores de Nyx.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/28-match-guard.html">← Anterior</a>
+        <a href="/es/by-example/30-iterator-fold.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/29-iterator-map-filter.nx">examples/by-example/29-iterator-map-filter.nx</a></small></p>
+</main>
+
+</body>
+</html>

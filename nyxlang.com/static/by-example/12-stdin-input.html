@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stdin Input — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Stdin Input</h1>
+
+    <p>Reading from standard input in Nyx is done with <code>read_line()</code>, which blocks until the user presses Enter and returns the typed text as a <code>String</code>. A companion function <code>print_no_newline</code> lets you display a prompt without advancing to the next line, keeping the cursor right after the colon.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Leer una línea de stdin con read_line() y saludar al usuario
+// En CI/testing: redirigir stdin con echo "Alice" | ./programa
+
+fn main() -> int {
+    print_no_newline("Ingresa tu nombre: ")
+
+    // read_line() lee hasta '\n' desde stdin
+    let nombre: String = read_line()
+
+    // Eliminar posible '\n' al final con trim
+    let nombre_limpio: String = nombre.trim()
+
+    if nombre_limpio.length() == 0 {
+        print("Hola, desconocido!")
+    } else {
+        print("Hola, " + nombre_limpio + "! Bienvenido a Nyx.")
+    }
+
+    print("Longitud del nombre: " + int_to_string(nombre_limpio.length()))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Ingresa tu nombre: Alice
+Hola, Alice! Bienvenido a Nyx.
+Longitud del nombre: 5</pre>
+
+    <h2>Explanation</h2>
+    <p><code>print_no_newline(s)</code> writes a string to stdout without appending a newline, unlike the regular <code>print</code>. This is the idiomatic way to display an inline prompt so the user's input appears on the same line.</p>
+    <p><code>read_line()</code> reads characters from stdin until it encounters a newline character. The returned string may include a trailing <code>\n</code> depending on the platform and how input was piped, so calling <code>.trim()</code> is good practice to strip leading and trailing whitespace.</p>
+    <p>The <code>if/else</code> guard handles the empty-input case gracefully. In automated testing you can feed input via shell redirection: <code>echo "Alice" | ./programa</code>, which makes <code>read_line()</code> return <code>"Alice\n"</code> without blocking.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/11-file-read-write.html">← Previous</a>
+        <a href="/by-example/13-cli-args.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/12-stdin-input.nx">examples/by-example/12-stdin-input.nx</a></small></p>
+</main>
+
+</body>
+</html>

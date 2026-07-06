@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>SQLite</h1>
+
+    <p><code>std/sqlite</code> provides SQLite3 bindings loaded at runtime via <code>dlopen</code>. <code>sqlite_open(":memory:")</code> creates an in-memory database, <code>sqlite_exec</code> runs DDL/DML statements, and <code>sqlite_query</code> returns rows as arrays of strings. No external dependencies are needed — SQLite is bundled with most operating systems.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// SQLite — in-memory database with SQL queries</span>
+
+<span class="kw">import</span> <span class="str">"std/sqlite"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// The handle is an opaque pointer (*int); NULL on failure</span>
+    <span class="kw">let</span> db = sqlite_open(<span class="str">":memory:"</span>)
+
+    sqlite_exec(db, <span class="str">"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"</span>)
+
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Alice', 30)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Bob', 25)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Charlie', 35)"</span>)
+
+    <span class="kw">let</span> rows: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name, age FROM users ORDER BY age"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; rows.length() {
+        <span class="kw">let</span> row: <span class="ty">Array</span> = rows[i]
+        <span class="kw">let</span> name: <span class="ty">String</span> = row[<span class="num">0</span>]
+        <span class="kw">let</span> age: <span class="ty">String</span> = row[<span class="num">1</span>]
+        print(name + <span class="str">" is "</span> + age + <span class="str">" years old"</span>)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="kw">let</span> seniors: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name FROM users WHERE age >= 30"</span>)
+    print(<span class="str">"users 30+: "</span> + int_to_string(seniors.length()))
+
+    sqlite_close(db)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Bob is 25 years old
+Alice is 30 years old
+Charlie is 35 years old
+users 30+: 2</pre>
+
+    <h2>Explanation</h2>
+    <p><code>sqlite_open</code> returns an opaque database handle (<code>*int</code>, NULL on failure). The special path <code>":memory:"</code> creates a temporary in-memory database that is discarded when the handle is closed. For persistent storage, pass a file path like <code>"data.db"</code>.</p>
+    <p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values (SQLite stores all values as text internally). Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p>
+
+    <div class="book-nav">
+        <a href="/by-example/54-resp-protocol.html">← Previous</a>
+        <a href="/by-example/56-csv-write.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/55-sqlite.nx">examples/by-example/55-sqlite.nx</a></small></p>
+</main>
+
+</body>
+</html>

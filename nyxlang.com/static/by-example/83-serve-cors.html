@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serve CORS — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Serve CORS</h1>
+    <p>CORS middleware handles preflight OPTIONS and adds Access-Control-* headers to responses. cors_configure sets the allowed origin, methods, and headers. Middleware chains apply in registration order.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve CORS — cross-origin headers for frontend APIs</span>
+<span class="cm">// CORS nyx-serve — headers cross-origin para APIs de frontend</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">api_data</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"data\": [1, 2, 3]}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+
+    <span class="cm">// Configure CORS policy — who can call the API, what methods, headers</span>
+    cors_configure(
+        <span class="str">"https://myapp.com"</span>,
+        <span class="str">"GET, POST, PUT, DELETE"</span>,
+        <span class="str">"Content-Type, Authorization, X-API-Key"</span>
+    )
+
+    <span class="cm">// Register CORS middleware — handles OPTIONS preflight + adds headers</span>
+    app_use(app, mw_cors)
+
+    <span class="cm">// Also register logging middleware</span>
+    app_use(app, mw_logging)
+
+    app_get(app, <span class="str">"/api/data"</span>, api_data)
+
+    print(<span class="str">"CORS configured for https://myapp.com"</span>)
+    print(<span class="str">"middleware chain: logging -&gt; cors -&gt; route handler"</span>)
+    print(<span class="str">"OPTIONS preflight requests return 204 with appropriate headers"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">CORS configured for https://myapp.com
+middleware chain: logging -&gt; cors -&gt; route handler
+OPTIONS preflight requests return 204 with appropriate headers</pre>
+    <h2>Explanation</h2>
+    <p>Browsers enforce the same-origin policy on XHR and fetch — a site at myapp.com can't call api.myapp.com unless the server opts in. CORS is the opt-in protocol: the browser sends an OPTIONS preflight asking "can I?", and the server answers with Access-Control-Allow-* headers. mw_cors handles both halves: it short-circuits OPTIONS with a 204 and the configured headers, and stamps every real response with Access-Control-Allow-Origin. cors_configure centralizes the policy so you never hardcode it in a handler. The middleware chain runs in registration order — logging observes every request before cors rewrites it, which is usually what you want.</p>
+    <div class="book-nav">
+        <a href="/by-example/82-serve-multithread.html">&larr; Previous</a>
+        <a href="/by-example/84-serve-fullstack.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/83-serve-cors.nx">examples/by-example/83-serve-cors.nx</a></small></p>
+</main>
+</body>
+</html>

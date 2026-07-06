@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipes — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Pipes</h1>
+    <p><code>pipe_new()</code> crea una tubería (pipe) unidireccional que devuelve <code>[read_fd, write_fd]</code>. Combinado con <code>fork</code>, <code>dup2</code> y <code>execvp</code>, esto permite capturar la salida de un comando externo — el mismo mecanismo que usan las shells de Unix para el operador <code>|</code> (pipe).</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Pipes — connecting two processes via pipe</span>
+<span class="cm">// Pipes — conectar dos procesos via pipe</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// pipe_new() returns [read_fd, write_fd]</span>
+    <span class="kw">let</span> fds: <span class="ty">Array</span> = pipe_new()
+    <span class="kw">let</span> read_fd: <span class="ty">int</span> = fds[<span class="num">0</span>]
+    <span class="kw">let</span> write_fd: <span class="ty">int</span> = fds[<span class="num">1</span>]
+
+    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
+
+    <span class="kw">if</span> pid == <span class="num">0</span> {
+        <span class="cm">// Child: redirect stdout to write end of pipe</span>
+        close_fd(read_fd)
+        dup2(write_fd, <span class="num">1</span>)
+        close_fd(write_fd)
+        <span class="cm">// exec ls — output goes into pipe</span>
+        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"ls"</span>, <span class="str">"/tmp"</span>]
+        execvp(<span class="str">"ls"</span>, args)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Parent: read from pipe</span>
+    close_fd(write_fd)
+    <span class="kw">let</span> output: <span class="ty">String</span> = tcp_read(read_fd, <span class="num">4096</span>)
+    close_fd(read_fd)
+
+    waitpid(pid, <span class="num">0</span>)
+    print(<span class="str">"ls output (first 200 chars):"</span>)
+    <span class="kw">if</span> output.length() > <span class="num">200</span> {
+        print(output.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(output)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">ls output (first 200 chars):
+...</pre>
+    <h2>Explicación</h2>
+    <p><code>pipe_new()</code> crea un flujo de bytes unidireccional y devuelve un arreglo de dos descriptores de archivo: <code>[read_fd, write_fd]</code>. Los datos escritos en <code>write_fd</code> se pueden leer desde <code>read_fd</code>.</p>
+    <p>Después de <code>fork()</code>, el hijo cierra el extremo de lectura, usa <code>dup2(write_fd, 1)</code> para redirigir su stdout al extremo de escritura del pipe, y luego llama a <code>execvp</code> para ejecutar <code>ls</code>. La salida del hijo fluye a través del pipe en lugar de la terminal.</p>
+    <p>El padre cierra el extremo de escritura (para que las lecturas vean EOF cuando el hijo termine), lee el contenido del pipe con <code>tcp_read</code>, y espera al hijo con <code>waitpid</code>. Así es exactamente como las shells de Unix implementan el operador <code>|</code>.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/64-fork-exec.html">&larr; Anterior</a>
+        <a href="/es/by-example/66-signal-handling.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/65-pipes.nx">examples/by-example/65-pipes.nx</a></small></p>
+</main>
+</body>
+</html>

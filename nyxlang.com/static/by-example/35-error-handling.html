@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Handling — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Error Handling</h1>
+
+    <p>Nyx provides <code>try</code>/<code>catch</code> for recoverable errors and <code>panic</code> for unrecoverable ones. The <code>throw</code> built-in raises a catchable string error, while <code>panic</code> terminates the program unless caught in a surrounding <code>try</code> block.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Manejo de errores: try/catch con throw y panic
+
+fn dividir(a: int, b: int) -> int {
+    if b == 0 {
+        throw("division por cero: denominador es 0")
+    }
+    return a / b
+}
+
+fn main() -> int {
+    // Capturar un throw explícito
+    var resultado: String = ""
+    try {
+        let r: int = dividir(10, 0)
+        resultado = int_to_string(r)
+    } catch(e: String) {
+        resultado = "Error capturado: " + e
+    }
+    print(resultado)
+
+    // try normal (sin error)
+    var ok: String = ""
+    try {
+        let r: int = dividir(20, 4)
+        ok = "resultado: " + int_to_string(r)
+    } catch(e: String) {
+        ok = "inesperado: " + e
+    }
+    print(ok)
+
+    // Capturar panic
+    var panic_msg: String = ""
+    try {
+        panic("algo salio muy mal")
+    } catch(e: String) {
+        panic_msg = "panic atrapado: " + e
+    }
+    print(panic_msg)
+
+    // try anidado
+    var externo: String = ""
+    try {
+        try {
+            throw("error interno")
+        } catch(e: String) {
+            externo = "manejado: " + e
+        }
+    } catch(e: String) {
+        externo = "no deberia llegar aqui"
+    }
+    print(externo)
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Error capturado: division por cero: denominador es 0
+resultado: 5
+panic atrapado: algo salio muy mal
+manejado: error interno</pre>
+
+    <h2>Explanation</h2>
+    <p><code>throw(msg)</code> raises an error that unwinds the stack until the nearest enclosing <code>catch</code> clause. The caught value <code>e</code> is typed as <code>String</code>, matching whatever was passed to <code>throw</code>. When no error occurs the <code>catch</code> block is skipped entirely, so the <code>dividir(20, 4)</code> call goes straight to its result.</p>
+    <p><code>panic</code> signals an unrecoverable condition — by default it aborts the process, but it too can be caught with <code>try</code>/<code>catch</code> when recovery is genuinely possible. This makes it useful for assertions during development that can be wrapped in tests.</p>
+    <p>Nested <code>try</code> blocks allow inner errors to be handled locally without propagating to outer handlers. In the final example the inner <code>catch</code> handles <code>"error interno"</code> completely, so the outer <code>catch</code> is never reached.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/34-sorting.html">← Previous</a>
+        <a href="/by-example/36-defer-cleanup.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/35-error-handling.nx">examples/by-example/35-error-handling.nx</a></small></p>
+</main>
+
+</body>
+</html>

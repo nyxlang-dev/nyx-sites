@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variables — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Variables</h1>
+
+    <p>Nyx distingue entre bindings inmutables (<code>let</code>) y variables mutables (<code>var</code>). Los tipos se escriben explícitamente después de dos puntos, y la interpolación de strings con <code>${...}</code> facilita incrustar valores dentro de las cadenas.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Variables: let (inmutable), var (mutable), tipos básicos e interpolación
+
+fn main() -> int {
+    // let es inmutable
+    let nombre: String = "Nyx"
+    let version: int = 12
+    let activo: bool = true
+    let precio: float = 3.14
+
+    print("Nombre: ${nombre}")
+    print("Version: ${version}")
+    print("Activo: ${activo}")
+
+    // var es mutable — se puede reasignar
+    var contador: int = 0
+    contador = contador + 1
+    contador = contador + 1
+    print("Contador: ${contador}")
+
+    // Interpolación con expresión
+    let doble: int = contador * 2
+    print("Doble: ${doble}")
+
+    // Concatenación de strings
+    let saludo: String = "Hola, " + nombre + "!"
+    print(saludo)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Nombre: Nyx
+Version: 12
+Activo: true
+Contador: 2
+Doble: 4
+Hola, Nyx!</pre>
+
+    <h2>Explicación</h2>
+    <p><code>let</code> declara un binding inmutable. Una vez asignado, no se puede reasignar — cualquier intento de hacerlo es un error de compilación. Esta es la forma predeterminada y preferida en Nyx, ya que la mayoría de los valores no necesitan cambiar.</p>
+    <p><code>var</code> declara una variable mutable. Se puede reasignar libremente después de su declaración inicial. Usa <code>var</code> solo cuando la mutación es realmente necesaria — contadores, acumuladores y variables de bucle son buenos candidatos.</p>
+    <p>Los cuatro tipos escalares básicos que se muestran acá son <code>String</code> (texto UTF-8), <code>int</code> (entero con signo de 64 bits), <code>bool</code> (<code>true</code> o <code>false</code>) y <code>float</code> (número de punto flotante de doble precisión de 64 bits).</p>
+    <p>La interpolación de strings usa la sintaxis <code>${expr}</code> dentro de una cadena entre comillas dobles. Cualquier expresión puede aparecer dentro de las llaves, y su valor se convierte automáticamente a cadena. También se pueden concatenar cadenas con el operador <code>+</code>.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/01-hello-world.html">← Anterior</a>
+        <a href="/es/by-example/03-functions.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/02-variables.nx">examples/by-example/02-variables.nx</a></small></p>
+</main>
+
+</body>
+</html>

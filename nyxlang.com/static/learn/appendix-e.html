@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix E: Syntax color standard — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Appendix E: Syntax color standard</h1>
+
+<p>This is the official color palette for Nyx syntax highlighting. All Nyx tools, editors, documentation, and websites must use these colors for consistency.</p>
+<h2>Color Table</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Element</th>
+<th>CSS class</th>
+<th>Light theme</th>
+<th>Dark theme</th>
+<th>What it highlights</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Keywords</td>
+<td><code>.kw</code></td>
+<td><code>#7c3aed</code></td>
+<td><code>#a78bfa</code></td>
+<td><code>fn</code>, <code>let</code>, <code>var</code>, <code>if</code>, <code>else</code>, <code>while</code>, <code>return</code>, <code>import</code>, <code>struct</code>, <code>enum</code>, <code>match</code>, <code>for</code>, <code>in</code>, <code>break</code>, <code>continue</code>, <code>pub</code>, <code>true</code>, <code>false</code>, <code>trait</code>, <code>impl</code></td>
+</tr>
+<tr>
+<td>Functions</td>
+<td><code>.fn</code></td>
+<td><code>#2563eb</code></td>
+<td><code>#60a5fa</code></td>
+<td><code>main</code>, <code>print</code>, <code>push</code>, <code>length</code>, <code>http_serve_mt</code>, <code>tcp_write</code>, <code>channel_new</code></td>
+</tr>
+<tr>
+<td>Strings</td>
+<td><code>.str</code></td>
+<td><code>#059669</code></td>
+<td><code>#34d399</code></td>
+<td><code>"hello"</code>, <code>"std/http"</code>, <code>'c'</code></td>
+</tr>
+<tr>
+<td>Numbers</td>
+<td><code>.num</code></td>
+<td><code>#d97706</code></td>
+<td><code>#fbbf24</code></td>
+<td><code>42</code>, <code>0</code>, <code>3.14</code>, <code>0xFF</code>, <code>128</code></td>
+</tr>
+<tr>
+<td>Types</td>
+<td><code>.ty</code></td>
+<td><code>#db2777</code></td>
+<td><code>#f472b6</code></td>
+<td><code>String</code>, <code>int</code>, <code>float</code>, <code>bool</code>, <code>Array</code>, <code>Map</code>, <code>Fn</code>, user-defined structs</td>
+</tr>
+<tr>
+<td>Comments</td>
+<td><code>.cm</code></td>
+<td><code>#9ca3af</code></td>
+<td><code>#5a5a78</code></td>
+<td><code>// this is a comment</code></td>
+</tr>
+<tr>
+<td>Operators</td>
+<td><code>.op</code></td>
+<td><code>#6b7280</code></td>
+<td><code>#9494b0</code></td>
+<td><code>-></code>, <code>=</code>, <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code>:</code>, <code>>=</code>, <code><=</code></td>
+</tr>
+</tbody></table></div>
+<h2>Design rationale</h2>
+<ul>
+<li><strong>Violet for keywords</strong>: Nyx's identity color. Keywords are the structural backbone of code — they should stand out immediately.</li>
+<li><strong>Blue for functions</strong>: The second most important element. Function calls are action — blue conveys activity.</li>
+<li><strong>Green for strings</strong>: Strings are data/content. Green is calm and distinct from the structural violet.</li>
+<li><strong>Amber for numbers</strong>: Warm color for numeric literals. Instantly distinguishable from strings and keywords.</li>
+<li><strong>Pink for types</strong>: Types define the shape of data. Pink is semantically "metadata about data."</li>
+<li><strong>Gray for comments and operators</strong>: Low visual priority. Comments are notes, not executable. Operators are structural punctuation.</li>
+</ul>
+<h2>CSS implementation</h2>
+<h3>Light theme</h3>
+<pre>.kw  { color: #7c3aed; }  /* violet */
+.fn  { color: #2563eb; }  /* blue */
+.str { color: #059669; }  /* green */
+.num { color: #d97706; }  /* amber */
+.ty  { color: #db2777; }  /* pink */
+.cm  { color: #9ca3af; }  /* gray */
+.op  { color: #6b7280; }  /* gray medium */</pre>
+<h3>Dark theme</h3>
+<pre>.kw  { color: #a78bfa; }  /* violet light */
+.fn  { color: #60a5fa; }  /* blue light */
+.str { color: #34d399; }  /* green light */
+.num { color: #fbbf24; }  /* amber light */
+.ty  { color: #f472b6; }  /* pink light */
+.cm  { color: #5a5a78; }  /* gray dim */
+.op  { color: #9494b0; }  /* gray light */</pre>
+<h2>Code block backgrounds</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Context</th>
+<th>Light theme</th>
+<th>Dark theme</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Code block</td>
+<td><code>#f8f8fa</code></td>
+<td><code>#12121f</code></td>
+</tr>
+<tr>
+<td>Page bg</td>
+<td><code>#ffffff</code></td>
+<td><code>#06060c</code></td>
+</tr>
+</tbody></table></div>
+<h2>HTML example</h2>
+<pre>&lt;pre&gt;
+&lt;span class=&quot;kw&quot;&gt;fn&lt;/span&gt; &lt;span class=&quot;fn&quot;&gt;main&lt;/span&gt;() {
+    &lt;span class=&quot;kw&quot;&gt;let&lt;/span&gt; name: &lt;span class=&quot;ty&quot;&gt;String&lt;/span&gt; = &lt;span class=&quot;str&quot;&gt;&quot;Nyx&quot;&lt;/span&gt;
+    &lt;span class=&quot;kw&quot;&gt;let&lt;/span&gt; version: &lt;span class=&quot;ty&quot;&gt;int&lt;/span&gt; = &lt;span class=&quot;num&quot;&gt;12&lt;/span&gt;
+    &lt;span class=&quot;cm&quot;&gt;// print the name&lt;/span&gt;
+    &lt;span class=&quot;fn&quot;&gt;print&lt;/span&gt;(name)
+}
+&lt;/pre&gt;</pre>
+<h2>VS Code theme mapping</h2>
+<p>For the Nyx VS Code extension (<code>nyx-vscode</code>):</p>
+<pre>{
+    &quot;tokenColors&quot;: [
+        { &quot;scope&quot;: &quot;keyword&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#7c3aed&quot; } },
+        { &quot;scope&quot;: &quot;entity.name.function&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#2563eb&quot; } },
+        { &quot;scope&quot;: &quot;string&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#059669&quot; } },
+        { &quot;scope&quot;: &quot;constant.numeric&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#d97706&quot; } },
+        { &quot;scope&quot;: &quot;entity.name.type&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#db2777&quot; } },
+        { &quot;scope&quot;: &quot;comment&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#9ca3af&quot; } },
+        { &quot;scope&quot;: &quot;keyword.operator&quot;, &quot;settings&quot;: { &quot;foreground&quot;: &quot;#6b7280&quot; } }
+    ]
+}</pre>
+<h2>Font</h2>
+<p>The standard monospace font for Nyx code is <strong>JetBrains Mono</strong>. Fallback: <code>monospace</code>.</p>
+<pre>--font-mono: &#x27;JetBrains Mono&#x27;, monospace;</pre>
+
+    <div class="book-nav">
+        <a href="appendix-d.html" class="book-nav-prev">&larr; Previous: Appendix D: Glossary</a>
+        <span></span>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

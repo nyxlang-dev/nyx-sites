@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serve Multi-threaded — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Serve Multi-threaded</h1>
+    <p>http_serve_mt spawns N worker threads that pull connections from a shared channel. This achieves 73K req/s on a 4-core ARM64 — comparable to Go's net/http.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve multi-threaded — http_serve_mt for 73K req/s</span>
+<span class="cm">// nyx-serve multi-hilo — http_serve_mt alcanza 73K req/s</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(req: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">let</span> method: <span class="ty">String</span> = req[<span class="num">1</span>]
+    <span class="kw">let</span> path: <span class="ty">String</span> = req[<span class="num">2</span>]
+
+    <span class="kw">if</span> path == <span class="str">"/"</span> {
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"Hello from worker thread!"</span>)
+    }
+    <span class="kw">if</span> path == <span class="str">"/health"</span> {
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"{\"status\":\"ok\"}"</span>)
+    }
+    <span class="kw">return</span> http_response(<span class="num">404</span>, <span class="str">"not found"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// http_serve_mt spawns N worker threads.</span>
+    <span class="cm">// A channel distributes accepted connections to workers.</span>
+    <span class="cm">// Workers parse requests and call the handler in parallel.</span>
+    <span class="kw">let</span> port: <span class="ty">int</span> = <span class="num">8080</span>
+    <span class="kw">let</span> workers: <span class="ty">int</span> = <span class="num">8</span>  <span class="cm">// typically: number of CPU cores</span>
+
+    print(<span class="str">"multi-threaded server on :"</span> + int_to_string(port))
+    print(<span class="str">"worker threads: "</span> + int_to_string(workers))
+    print(<span class="str">"benchmark: 73K req/s on 4-core ARM64"</span>)
+
+    <span class="cm">// Blocks forever, accepting and dispatching connections</span>
+    http_serve_mt(port, workers, on_request)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">multi-threaded server on :8080
+worker threads: 8
+benchmark: 73K req/s on 4-core ARM64</pre>
+    <h2>Explanation</h2>
+    <p>Single-threaded accept loops hit a ceiling fast: the kernel can fan out connections faster than one goroutine can parse them. http_serve_mt solves this with the classic producer-consumer pattern — one accept thread feeds a bounded channel, N worker threads drain it. Each worker owns its own parser state, so there's zero contention on the hot path. On a 4-core ARM64 with 8 workers, Nyx hits 73K req/s on plain HTTP responses — that's in the same league as Go's net/http and well ahead of Node.js. The GC is thread-aware (GC_THREADS), so allocations inside handlers are safe without manual synchronization.</p>
+    <div class="book-nav">
+        <a href="/by-example/81-serve-sessions.html">&larr; Previous</a>
+        <a href="/by-example/83-serve-cors.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/82-serve-multithread.nx">examples/by-example/82-serve-multithread.nx</a></small></p>
+</main>
+</body>
+</html>

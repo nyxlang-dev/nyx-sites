@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Producer-Consumer — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Producer-Consumer</h1>
+    <p>The producer-consumer pattern decouples data generation from processing. The bounded channel (capacity 3) provides natural backpressure: the producer blocks when the buffer is full.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Producer-consumer pattern with bounded channel</span>
+<span class="cm">// Patrón productor-consumidor con canal acotado</span>
+
+<span class="kw">var</span> items_ch: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">produce</span>() -> <span class="ty">int</span> {
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">5</span> {
+        <span class="kw">let</span> item: <span class="ty">int</span> = (i + <span class="num">1</span>) * <span class="num">10</span>
+        print(<span class="str">"produced: "</span> + int_to_string(item))
+        channel_send(items_ch, item)
+        i = i + <span class="num">1</span>
+    }
+    channel_send(items_ch, <span class="num">-1</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">consume</span>() -> <span class="ty">int</span> {
+    <span class="kw">while</span> <span class="kw">true</span> {
+        <span class="kw">let</span> item: <span class="ty">int</span> = channel_recv(items_ch)
+        <span class="kw">if</span> item &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+        print(<span class="str">"consumed: "</span> + int_to_string(item))
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Bounded channel — producer blocks if buffer is full</span>
+    items_ch = channel_new(<span class="num">3</span>)
+
+    <span class="kw">let</span> p: <span class="ty">int</span> = thread_spawn(produce)
+    <span class="kw">let</span> c: <span class="ty">int</span> = thread_spawn(consume)
+
+    thread_join(p)
+    thread_join(c)
+    channel_destroy(items_ch)
+    print(<span class="str">"pipeline complete"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">produced: 10
+produced: 20
+produced: 30
+produced: 40
+produced: 50
+consumed: 10
+consumed: 20
+consumed: 30
+consumed: 40
+consumed: 50
+pipeline complete</pre>
+    <h2>Explanation</h2>
+    <p>The channel <code>items_ch</code> has a capacity of 3, meaning the producer can send at most 3 items before blocking. This provides natural backpressure -- if the consumer is slow, the producer automatically slows down to match.</p>
+    <p>The producer generates values 10, 20, 30, 40, 50 and sends them through the channel, followed by a <code>-1</code> sentinel to signal completion. The consumer loops on <code>channel_recv</code>, processing each item until it sees the sentinel.</p>
+    <p>The exact interleaving of "produced" and "consumed" messages depends on scheduling, but the order within each stream is always preserved. The bounded buffer prevents the producer from overwhelming the consumer with data.</p>
+    <div class="book-nav">
+        <a href="/by-example/59-worker-pool.html">&larr; Previous</a>
+        <a href="/by-example/61-waitgroup.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/60-producer-consumer.nx">examples/by-example/60-producer-consumer.nx</a></small></p>
+</main>
+</body>
+</html>

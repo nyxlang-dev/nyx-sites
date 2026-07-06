@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsafe y punteros raw — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Unsafe y punteros raw</h1>
+
+<h2>El mundo seguro</h2>
+<p>En código Nyx normal, no puedes corromper la memoria. El recolector de basura gestiona las asignaciones, los límites de arrays se verifican y los punteros nulos no existen. Esta seguridad tiene un pequeño costo — el GC agrega overhead, las verificaciones de límites agregan instrucciones.</p>
+<p>A veces necesitas escapar de estas barandillas: escribir un asignador de memoria, interactuar con hardware, o exprimir la última gota de rendimiento de un bucle caliente. Para eso existe <code>unsafe</code>.</p>
+<h2>El bloque unsafe</h2>
+<p>Las operaciones unsafe deben estar envueltas en un bloque <code>unsafe</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)    <span class="cm">// asignar 8 bytes</span>
+        <span class="op">*</span>ptr <span class="op">=</span> <span class="num">42</span>                    <span class="cm">// escribir en memoria cruda</span>
+        <span class="fn">print</span>(<span class="op">*</span>ptr)                  <span class="cm">// leer de memoria cruda: 42</span>
+        <span class="fn">free</span>(ptr)                    <span class="cm">// liberar</span>
+    }
+}</pre>
+<p>La palabra clave <code>unsafe</code> es un contrato: "Yo, el programador, garantizo que este código es correcto. El compilador no debería intentar protegerme aquí."</p>
+<h2>Raw pointers</h2>
+<p>Un <strong>raw pointer</strong> es una dirección de memoria. A diferencia de las referencias en código seguro, los raw pointers pueden ser nulos, colgantes o desalineados. Te dan acceso directo a la memoria.</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">100</span>
+
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="op">&amp;</span>x       <span class="cm">// obtener dirección de x</span>
+        <span class="fn">print</span>(<span class="op">*</span>ptr)               <span class="cm">// desreferenciar: 100</span>
+
+        <span class="op">*</span>ptr <span class="op">=</span> <span class="num">200</span>                <span class="cm">// modificar a través del puntero</span>
+        <span class="fn">print</span>(x)                  <span class="cm">// 200 — ¡x cambió!</span>
+    }
+}</pre>
+<ul>
+<li><code>&x</code> — el operador address-of. Devuelve un puntero a <code>x</code>.</li>
+<li><code>*ptr</code> — el operador de desreferencia. Lee o escribe el valor en la dirección.</li>
+</ul>
+<h2>Gestión manual de memoria</h2>
+<p>En Nyx seguro, el recolector de basura maneja todas las asignaciones. En código unsafe, gestionas la memoria tú mismo:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="cm">// Asignar espacio para 10 enteros (10 * 8 bytes)</span>
+        <span class="kw">let</span> arr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">80</span>)
+
+        <span class="cm">// Escribir valores</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+            <span class="op">*</span>(arr <span class="op">+</span> i) <span class="op">=</span> i <span class="op">*</span> i    <span class="cm">// aritmética de punteros</span>
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+
+        <span class="cm">// Leer valores</span>
+        i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+            <span class="fn">print</span>(<span class="op">*</span>(arr <span class="op">+</span> i))
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+
+        <span class="fn">free</span>(arr)
+    }
+}</pre>
+<p>Salida:</p>
+<pre>0
+1
+4
+9
+16
+25
+36
+49
+64
+81</pre>
+<p><code>alloc(bytes)</code> asigna memoria cruda (como <code>malloc</code> de C). <code>free(ptr)</code> la libera. Olvidar llamar <code>free</code> causa una fuga de memoria. Llamar <code>free</code> dos veces causa comportamiento indefinido.</p>
+<h2>Aritmética de punteros</h2>
+<p>Puedes sumar a punteros para navegar por la memoria:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> base: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">32</span>)    <span class="cm">// 4 enteros * 8 bytes cada uno</span>
+
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">0</span>) <span class="op">=</span> <span class="num">10</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">1</span>) <span class="op">=</span> <span class="num">20</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">2</span>) <span class="op">=</span> <span class="num">30</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">3</span>) <span class="op">=</span> <span class="num">40</span>
+
+    <span class="cm">// base + N avanza N * sizeof(int) bytes</span>
+    <span class="fn">print</span>(<span class="op">*</span>(base <span class="op">+</span> <span class="num">2</span>))    <span class="cm">// 30</span>
+
+    <span class="fn">free</span>(base)
+}</pre>
+<h2>Variables estáticas</h2>
+<p>Las variables estáticas viven durante toda la vida del programa, fuera del recolector de basura:</p>
+<pre><span class="kw">static</span> <span class="kw">var</span> contador_requests: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">registrar_request</span>() {
+    contador_requests <span class="op">=</span> contador_requests <span class="op">+</span> <span class="num">1</span>
+    <span class="fn">print</span>(<span class="str">&quot;Request #&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(contador_requests))
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">registrar_request</span>()    <span class="cm">// Request #1</span>
+    <span class="fn">registrar_request</span>()    <span class="cm">// Request #2</span>
+    <span class="fn">registrar_request</span>()    <span class="cm">// Request #3</span>
+}</pre>
+<p>Las variables estáticas son útiles para estado global que necesita ser rápido y libre de GC.</p>
+<h2>Lecturas y escrituras volátiles</h2>
+<p>Normalmente, el compilador puede reordenar o eliminar operaciones de memoria si cree que son redundantes. Las operaciones <strong>volátiles</strong> previenen esto:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+
+    <span class="fn">volatile_write</span>(ptr, <span class="num">42</span>)          <span class="cm">// escritura garantizada</span>
+    <span class="kw">let</span> v: <span class="ty">int</span> <span class="op">=</span> <span class="fn">volatile_read</span>(ptr)  <span class="cm">// lectura garantizada</span>
+
+    <span class="fn">free</span>(ptr)
+}</pre>
+<p>Volatile es esencial para:</p>
+<ul>
+<li>I/O mapeado en memoria (hablar con hardware)</li>
+<li>Manejadores de señales (variables modificadas por eventos externos)</li>
+<li>Memoria compartida entre procesos</li>
+</ul>
+<h2>Operaciones atómicas</h2>
+<p>Cuando múltiples threads acceden a la misma memoria, necesitas operaciones <strong>atómicas</strong> para prevenir condiciones de carrera sin un mutex:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> contador: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+    <span class="fn">atomic_store</span>(contador, <span class="num">0</span>)
+
+    <span class="cm">// Patrón de incremento thread-safe:</span>
+    <span class="kw">let</span> actual: <span class="ty">int</span> <span class="op">=</span> <span class="fn">atomic_load</span>(contador)
+    <span class="fn">atomic_store</span>(contador, actual <span class="op">+</span> <span class="num">1</span>)
+
+    <span class="fn">print</span>(<span class="fn">atomic_load</span>(contador))    <span class="cm">// 1</span>
+
+    <span class="fn">free</span>(contador)
+}</pre>
+<p>Las operaciones atómicas usan <strong>consistencia secuencial</strong> — la garantía de ordenamiento de memoria más fuerte. Cada thread ve las operaciones en el mismo orden.</p>
+<h2>Cuándo usar unsafe</h2>
+<p>Usa unsafe solo cuando debas:</p>
+<ul>
+<li><strong>FFI</strong> — llamar funciones C que toman raw pointers</li>
+<li><strong>Código crítico en rendimiento</strong> — evitar el GC en bucles calientes</li>
+<li><strong>Estructuras de datos de bajo nivel</strong> — implementar asignadores personalizados o estructuras lock-free</li>
+<li><strong>Interacción con hardware</strong> — I/O mapeado en memoria, drivers de dispositivos</li>
+</ul>
+<p>Nunca uses unsafe solo porque "se siente más rápido." Mide primero. El GC está altamente optimizado y agrega menos overhead del que la mayoría piensa.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe una función unsafe que asigne un array de 100 enteros, los llene con valores 0-99, los sume, libere la memoria y devuelva la suma.</li>
+</ol>
+<ol>
+<li>Crea una variable estática de contador e increméntala desde dos funciones diferentes. Imprime el valor final.</li>
+</ol>
+<ol>
+<li>Escribe una función que intercambie dos enteros usando raw pointers: <code>fn swap(a: <em>int, b: </em>int)</code>.</li>
+</ol>
+<ol>
+<li>Asigna un bloque de memoria, escribe valores usando aritmética de punteros, luego léelos de vuelta en orden inverso.</li>
+</ol>
+<ol>
+<li>Escribe un programa que use <code>volatile_write</code> y <code>volatile_read</code> para simular un registro de hardware que un manejador de señales podría modificar.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>unsafe { }</code> habilita operaciones que evitan las verificaciones de seguridad.</li>
+<li><code>&x</code> obtiene la dirección de una variable. <code>*ptr</code> desreferencia un puntero.</li>
+<li><code>alloc(bytes)</code> asigna memoria. <code>free(ptr)</code> la libera.</li>
+<li>Aritmética de punteros: <code>*(ptr + offset)</code> accede memoria en un offset.</li>
+<li><code>static var</code> crea variables que viven toda la vida del programa.</li>
+<li><code>volatile_read</code>/<code>volatile_write</code> previenen reordenamiento del compilador.</li>
+<li><code>atomic_load</code>/<code>atomic_store</code> proporcionan acceso a memoria thread-safe.</li>
+<li>Solo usa unsafe cuando las alternativas seguras sean insuficientes. Mide primero.</li>
+</ul>
+<p>Siguiente capítulo: <a href="23-async.md">Async y event loop →</a></p>
+
+    <div class="book-nav">
+        <a href="21.html" class="book-nav-prev">&larr; Anterior: FFI — Llamar código C</a>
+        <a href="23.html" class="book-nav-next">Siguiente: Async y event loop &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Hello World</h1>
+
+    <p>Every programming journey starts here. This is the smallest complete Nyx program: it defines a <code>main</code> function, calls <code>print</code> twice, and returns <code>0</code> to signal success. No imports, no boilerplate — just the code that matters.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Programa mínimo: imprime un saludo al mundo
+
+fn main() -> int {
+    print("Hello, world!")
+    print("Bienvenido a Nyx")
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Hello, world!
+Bienvenido a Nyx</pre>
+
+    <h2>Explanation</h2>
+    <p>Every Nyx program starts execution from the <code>main</code> function. The return type <code>-> int</code> tells the compiler that <code>main</code> returns an integer — by convention, <code>0</code> means success and any other value signals an error to the operating system.</p>
+    <p>The built-in <code>print</code> function writes a string to standard output followed by a newline. It accepts a single <code>String</code> argument. Unlike many languages, Nyx does not require you to import anything to use <code>print</code> — it is always available.</p>
+    <p>Comments start with <code>//</code> and extend to the end of the line. They are ignored by the compiler and exist only for human readers.</p>
+
+    <div class="book-nav">
+        <span></span>
+        <a href="/by-example/02-variables.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/01-hello-world.nx">examples/by-example/01-hello-world.nx</a></small></p>
+</main>
+
+</body>
+</html>

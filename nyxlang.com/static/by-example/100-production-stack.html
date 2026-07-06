@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Stack — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Production Stack</h1>
+    <p>The complete Nyx production stack powering nyxlang.com. Gateway terminates TLS and routes by Host header to per-domain nyx-serve instances. Shared services (nyx-kv, nyx-queue, nyx-db) provide state. No nginx, no Redis, no Postgres — just Nyx binaries and systemd.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Production deployment — full Nyx stack: proxy + web + kv + queue</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// This recipe describes how nyxlang.com is deployed end-to-end</span>
+    <span class="cm">// using only Nyx products. No nginx, no Redis, no Postgres.</span>
+
+    print(<span class="str">"=== Nyx Production Stack ==="</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Internet"</span>)
+    print(<span class="str">"   |"</span>)
+    print(<span class="str">"   v"</span>)
+    print(<span class="str">"nyx-proxy (services/gateway, :443 HTTPS + SNI)"</span>)
+    print(<span class="str">"   |"</span>)
+    print(<span class="str">"   +-&gt; nyxlang.com       -&gt; nyx-serve (:3001)"</span>)
+    print(<span class="str">"   +-&gt; nyxkv.com         -&gt; nyx-serve (:3002)"</span>)
+    print(<span class="str">"   +-&gt; serve.nyxlang.com -&gt; nyx-serve (:3003)"</span>)
+    print(<span class="str">"   +-&gt; proxy.nyxlang.com -&gt; nyx-serve (:3005)"</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Each site is a Nyx binary using nyx-serve as PM dependency."</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Shared services:"</span>)
+    print(<span class="str">"   nyx-kv   :6380  (sessions, cache, pub/sub)"</span>)
+    print(<span class="str">"   nyx-queue:6381  (async jobs)"</span>)
+    print(<span class="str">"   nyx-db   :6382  (SQL storage)"</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"All managed by systemd. HTTPS via Let's Encrypt + cert-renew hooks."</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Performance (production):"</span>)
+    print(<span class="str">"   HTTP:  9,971 req/s through gateway"</span>)
+    print(<span class="str">"   HTTPS: 4,282 req/s (TLS overhead)"</span>)
+    print(<span class="str">"   KV SET: 82K req/s (253K pipelined)"</span>)
+    print(<span class="str">"   KV GET: 85K req/s (217K pipelined)"</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Entire stack fits in AWS t4g.micro ARM64 (1GB RAM)."</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">=== Nyx Production Stack ===
+
+Internet
+   |
+   v
+nyx-proxy (services/gateway, :443 HTTPS + SNI)
+   |
+   +-&gt; nyxlang.com       -&gt; nyx-serve (:3001)
+   +-&gt; nyxkv.com         -&gt; nyx-serve (:3002)
+   +-&gt; serve.nyxlang.com -&gt; nyx-serve (:3003)
+   +-&gt; proxy.nyxlang.com -&gt; nyx-serve (:3005)
+
+Each site is a Nyx binary using nyx-serve as PM dependency.
+
+Shared services:
+   nyx-kv   :6380  (sessions, cache, pub/sub)
+   nyx-queue:6381  (async jobs)
+   nyx-db   :6382  (SQL storage)
+
+All managed by systemd. HTTPS via Let's Encrypt + cert-renew hooks.
+
+Performance (production):
+   HTTP:  9,971 req/s through gateway
+   HTTPS: 4,282 req/s (TLS overhead)
+   KV SET: 82K req/s (253K pipelined)
+   KV GET: 85K req/s (217K pipelined)
+
+Entire stack fits in AWS t4g.micro ARM64 (1GB RAM).</pre>
+    <h2>Explanation</h2>
+    <p>This is not a hypothetical architecture — it is how nyxlang.com actually runs right now. A single nyx-proxy binary on port 443 terminates TLS with SNI and dispatches by Host header to four independent nyx-serve sites, each a binary compiled from Nyx with nyx-serve as a PM dependency. nyx-kv holds sessions and caches; nyx-queue handles async jobs; nyx-db stores durable SQL. Every process is a systemd unit with a restart policy. The whole stack — gateway, four sites, three services, playground — fits in 1GB of RAM on a t4g.micro, and the only non-Nyx dependency is certbot for Let's Encrypt renewals. That's the end of the cookbook: you now have every primitive needed to build and ship production services in Nyx.</p>
+    <div class="book-nav">
+        <a href="/by-example/99-rate-limited-api.html">&larr; Previous</a>
+        <a href="/by-example/">All recipes &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/100-production-stack.nx">examples/by-example/100-production-stack.nx</a></small></p>
+</main>
+</body>
+</html>

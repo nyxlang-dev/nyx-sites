@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor HTTP/2 — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Servidor HTTP/2</h1>
+    <p>HTTP/2 multiplexa muchos streams sobre una única conexión TCP. El handler del servidor recibe un stream_id para poder intercalar respuestas. HPACK comprime los encabezados repetidos entre streams.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-http2 server — HTTP/2 with HPACK and multiplexing</span>
+
+<span class="kw">import</span> <span class="str">"std/http2"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(fd: <span class="ty">int</span>, stream_id: <span class="ty">int</span>, method: <span class="ty">String</span>, path: <span class="ty">String</span>, body: <span class="ty">String</span>) -&gt; <span class="ty">int</span> {
+    <span class="cm">// HTTP/2 handler receives stream_id so one connection handles many streams</span>
+    <span class="kw">let</span> hdrs: <span class="ty">Array</span> = [<span class="str">"content-type"</span>, <span class="str">"application/json"</span>]
+
+    <span class="kw">if</span> path == <span class="str">"/"</span> {
+        h2_send_response(fd, stream_id, <span class="num">200</span>, hdrs, <span class="str">"{\"message\": \"hello over HTTP/2\"}"</span>)
+    } <span class="kw">else</span> {
+        h2_send_response(fd, stream_id, <span class="num">404</span>, hdrs, <span class="str">"{\"error\": \"not found\"}"</span>)
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> port: <span class="ty">int</span> = <span class="num">3004</span>
+    <span class="kw">let</span> workers: <span class="ty">int</span> = <span class="num">4</span>
+
+    print(<span class="str">"HTTP/2 server starting on :"</span> + int_to_string(port))
+    print(<span class="str">"  mode: h2c (HTTP/2 cleartext, no TLS)"</span>)
+    print(<span class="str">"  multiplexing: multiple streams per connection"</span>)
+    print(<span class="str">"  compression: HPACK for headers"</span>)
+
+    <span class="cm">// h2_serve blocks accepting connections, handling HTTP/2 frames,</span>
+    <span class="cm">// dispatching streams to the handler.</span>
+    <span class="cm">// h2_serve(port, workers, on_request)</span>
+
+    print(<span class="str">""</span>)
+    print(<span class="str">"test with: curl --http2-prior-knowledge http://localhost:3004/"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">HTTP/2 server starting on :3004
+  mode: h2c (HTTP/2 cleartext, no TLS)
+  multiplexing: multiple streams per connection
+  compression: HPACK for headers
+
+test with: curl --http2-prior-knowledge http://localhost:3004/</pre>
+    <h2>Explicación</h2>
+    <p>El modelo de una-petición-por-conexión de HTTP/1.1 es un precipicio de rendimiento cuando una página necesita 80 recursos. HTTP/2 lo resuelve con multiplexado: cada petición abre un nuevo stream dentro de la misma conexión TCP, y las respuestas pueden volver fuera de orden. El stream_id atraviesa el handler para que el runtime pueda intercalar los frames. HPACK comprime los encabezados repetitivos (Host, User-Agent, Accept) que de otro modo dominarían las peticiones pequeñas. nyx-http2 implementa todo esto en Nyx puro sobre el runtime TCP crudo.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/93-db-transactions.html">&larr; Anterior</a>
+        <a href="/es/by-example/95-http2-frames.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/94-http2-server.nx">examples/by-example/94-http2-server.nx</a></small></p>
+</main>
+</body>
+</html>
+</content>

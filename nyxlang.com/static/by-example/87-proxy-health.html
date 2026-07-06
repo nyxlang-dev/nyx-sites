@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Health Checks — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Proxy Health Checks</h1>
+    <p>Periodic TCP probes detect unhealthy upstreams. After N consecutive failures (threshold), the upstream is marked unhealthy and traffic is routed elsewhere. On recovery, it's automatically re-enabled.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-proxy health checks — TCP probe upstreams periodically</span>
+<span class="cm">// Health checks nyx-proxy — probe TCP de upstreams</span>
+
+<span class="kw">var</span> failures: <span class="ty">int</span> = <span class="num">0</span>
+<span class="kw">var</span> threshold: <span class="ty">int</span> = <span class="num">3</span>
+<span class="kw">var</span> healthy: <span class="ty">bool</span> = <span class="kw">true</span>
+
+<span class="cm">// Try to connect to the upstream — returns true if reachable</span>
+<span class="kw">fn</span> <span class="fn">probe_upstream</span>(host: <span class="ty">String</span>, port: <span class="ty">int</span>) -&gt; <span class="ty">bool</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(host, port)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="kw">false</span> }
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="kw">true</span>
+}
+
+<span class="kw">fn</span> <span class="fn">check_loop</span>(host: <span class="ty">String</span>, port: <span class="ty">int</span>) -&gt; <span class="ty">int</span> {
+    <span class="cm">// A typical health check loop (runs in a separate thread)</span>
+    <span class="kw">var</span> iterations: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> iterations &lt; <span class="num">3</span> {
+        <span class="kw">let</span> ok: <span class="ty">bool</span> = probe_upstream(host, port)
+        <span class="kw">if</span> ok {
+            <span class="kw">if</span> <span class="kw">not</span> healthy {
+                print(<span class="str">"upstream RECOVERED: "</span> + host + <span class="str">":"</span> + int_to_string(port))
+                healthy = <span class="kw">true</span>
+            }
+            failures = <span class="num">0</span>
+        } <span class="kw">else</span> {
+            failures = failures + <span class="num">1</span>
+            print(<span class="str">"probe failed ("</span> + int_to_string(failures) + <span class="str">"/"</span> + int_to_string(threshold) + <span class="str">")"</span>)
+            <span class="kw">if</span> failures &gt;= threshold <span class="kw">and</span> healthy {
+                print(<span class="str">"upstream UNHEALTHY: "</span> + host + <span class="str">":"</span> + int_to_string(port))
+                healthy = <span class="kw">false</span>
+            }
+        }
+        sleep(<span class="num">1000</span>)
+        iterations = iterations + <span class="num">1</span>
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Check a local upstream (likely fails if nothing listening on 3001)</span>
+    check_loop(<span class="str">"127.0.0.1"</span>, <span class="num">3001</span>)
+    print(<span class="str">"final state: healthy="</span> + int_to_string(healthy))
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">probe failed (1/3)
+probe failed (2/3)
+probe failed (3/3)
+upstream UNHEALTHY: 127.0.0.1:3001
+final state: healthy=0</pre>
+    <h2>Explanation</h2>
+    <p>A proxy is only as reliable as the weakest backend it still trusts. Health checks decouple "is this upstream reachable?" from "is a user waiting on it right now?" by probing asynchronously — a dedicated thread opens a TCP connection every N seconds and updates a shared health flag. The threshold (here 3) prevents flapping: a single network glitch shouldn't evict a backend from rotation, but three in a row probably means something's really wrong. Recovery is symmetric — one successful probe flips healthy back to true — so restarts heal themselves without operator action. In production, nyx-proxy runs one of these loops per upstream and the forwarder consults the health map on every request.</p>
+    <div class="book-nav">
+        <a href="/by-example/86-proxy-vhost.html">&larr; Previous</a>
+        <a href="/by-example/88-proxy-ratelimit.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/87-proxy-health.nx">examples/by-example/87-proxy-health.nx</a></small></p>
+</main>
+</body>
+</html>

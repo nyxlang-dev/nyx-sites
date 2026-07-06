@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Closures and first-class functions — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Closures and first-class functions</h1>
+
+<h2>Functions as values</h2>
+<p>In Part 1, you learned to define and call functions. But in Nyx, functions are more powerful than that — they are <strong>values</strong>, just like integers or strings. You can store a function in a variable, pass it to another function, or return it from a function.</p>
+<p>This concept is called <strong>first-class functions</strong>, and it unlocks a whole new way of thinking about programs.</p>
+<h2>Passing functions to functions</h2>
+<p>Let's start with a simple example. Suppose you have two functions that transform a number:</p>
+<pre><span class="kw">fn</span> <span class="fn">double</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span>
+}
+
+<span class="kw">fn</span> <span class="fn">square</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> n
+}</pre>
+<p>Now you want a function that applies any transformation to a number:</p>
+<pre><span class="kw">fn</span> <span class="fn">apply</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="fn">f</span>(x)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">apply</span>(double, <span class="num">5</span>))    <span class="cm">// 10</span>
+    <span class="fn">print</span>(<span class="fn">apply</span>(square, <span class="num">5</span>))    <span class="cm">// 25</span>
+}</pre>
+<p>The type <code>Fn</code> means "a function." You pass <code>double</code> and <code>square</code> by name — no parentheses, because you are not calling them, you are passing them.</p>
+<h2>Why is this useful?</h2>
+<p>Imagine you want to apply a transformation to every element of an array. Without first-class functions, you would need to write a separate loop for each transformation. With them:</p>
+<pre><span class="kw">fn</span> <span class="fn">double</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span> }
+<span class="kw">fn</span> <span class="fn">negate</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> <span class="num">0</span> <span class="op">-</span> n }
+<span class="kw">fn</span> <span class="fn">add_ten</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">+</span> <span class="num">10</span> }
+
+<span class="kw">fn</span> <span class="fn">map_array</span>(arr: <span class="ty">Array</span>, f: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">var</span> result: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        result.<span class="fn">push</span>(<span class="fn">f</span>(arr[i]))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+    <span class="kw">let</span> doubled: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">map_array</span>(nums, double)
+    <span class="fn">print</span>(doubled)    <span class="cm">// [2, 4, 6, 8, 10]</span>
+
+    <span class="kw">let</span> negated: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">map_array</span>(nums, negate)
+    <span class="fn">print</span>(negated)    <span class="cm">// [-1, -2, -3, -4, -5]</span>
+
+    <span class="kw">let</span> shifted: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">map_array</span>(nums, add_ten)
+    <span class="fn">print</span>(shifted)    <span class="cm">// [11, 12, 13, 14, 15]</span>
+}</pre>
+<p>One function (<code>map_array</code>) handles all three cases. The behavior changes based on which function you pass.</p>
+<h2>Filter and reduce</h2>
+<p>Two more patterns that work beautifully with first-class functions:</p>
+<pre><span class="kw">fn</span> <span class="fn">is_even</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> { <span class="kw">return</span> n <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> }
+<span class="kw">fn</span> <span class="fn">is_positive</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> { <span class="kw">return</span> n <span class="op">&gt;</span> <span class="num">0</span> }
+
+<span class="kw">fn</span> <span class="fn">filter_array</span>(arr: <span class="ty">Array</span>, predicate: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">var</span> result: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        <span class="kw">if</span> <span class="fn">predicate</span>(arr[i]) {
+            result.<span class="fn">push</span>(arr[i])
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="kw">fn</span> <span class="fn">add</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">+</span> b }
+<span class="kw">fn</span> <span class="fn">multiply</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">*</span> b }
+
+<span class="kw">fn</span> <span class="fn">reduce_array</span>(arr: <span class="ty">Array</span>, initial: <span class="ty">int</span>, f: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> acc: <span class="ty">int</span> <span class="op">=</span> initial
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        acc <span class="op">=</span> <span class="fn">f</span>(acc, arr[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> acc
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">7</span>, <span class="num">8</span>]
+
+    <span class="kw">let</span> evens: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">filter_array</span>(nums, is_even)
+    <span class="fn">print</span>(evens)    <span class="cm">// [2, 4, 6, 8]</span>
+
+    <span class="kw">let</span> sum: <span class="ty">int</span> <span class="op">=</span> <span class="fn">reduce_array</span>(nums, <span class="num">0</span>, add)
+    <span class="fn">print</span>(sum)      <span class="cm">// 36</span>
+
+    <span class="kw">let</span> product: <span class="ty">int</span> <span class="op">=</span> <span class="fn">reduce_array</span>(nums, <span class="num">1</span>, multiply)
+    <span class="fn">print</span>(product)  <span class="cm">// 40320</span>
+}</pre>
+<p>These three — <strong>map</strong>, <strong>filter</strong>, <strong>reduce</strong> — are the building blocks of data processing in many languages.</p>
+<h2>What is a closure?</h2>
+<p>A <strong>closure</strong> is a function that remembers variables from the scope where it was defined. In Nyx, you create closures by defining functions inside other functions:</p>
+<pre><span class="kw">fn</span> <span class="fn">make_adder</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Fn</span> {
+    <span class="kw">fn</span> <span class="fn">add</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> n <span class="op">+</span> x
+    }
+    <span class="kw">return</span> add
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> add5: <span class="ty">Fn</span> <span class="op">=</span> <span class="fn">make_adder</span>(<span class="num">5</span>)
+    <span class="kw">let</span> add10: <span class="ty">Fn</span> <span class="op">=</span> <span class="fn">make_adder</span>(<span class="num">10</span>)
+
+    <span class="fn">print</span>(<span class="fn">add5</span>(<span class="num">3</span>))     <span class="cm">// 8</span>
+    <span class="fn">print</span>(<span class="fn">add10</span>(<span class="num">3</span>))    <span class="cm">// 13</span>
+    <span class="fn">print</span>(<span class="fn">add5</span>(<span class="num">100</span>))   <span class="cm">// 105</span>
+}</pre>
+<p>When <code>make_adder(5)</code> runs, it creates a function <code>add</code> that remembers <code>n = 5</code>. Even after <code>make_adder</code> returns, the inner function still has access to <code>n</code>. That captured environment is what makes it a closure.</p>
+<h2>Closures capture variables</h2>
+<p>Closures can capture and even modify variables from their enclosing scope:</p>
+<pre><span class="kw">fn</span> <span class="fn">counter</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> count: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">fn</span> <span class="fn">increment</span>() {
+        count <span class="op">=</span> count <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">get_count</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> count
+    }
+
+    <span class="fn">increment</span>()
+    <span class="fn">increment</span>()
+    <span class="fn">increment</span>()
+
+    <span class="kw">return</span> <span class="fn">get_count</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">counter</span>())    <span class="cm">// 3</span>
+}</pre>
+<p>Both <code>increment</code> and <code>get_count</code> share the same <code>count</code> variable. When <code>increment</code> modifies it, <code>get_count</code> sees the updated value.</p>
+<h2>Closures as accumulators</h2>
+<pre><span class="kw">fn</span> <span class="fn">accumulate</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">fn</span> <span class="fn">add_to_total</span>(x: <span class="ty">int</span>) {
+        total <span class="op">=</span> total <span class="op">+</span> x
+    }
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> n {
+        <span class="fn">add_to_total</span>(i)
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">accumulate</span>(<span class="num">10</span>))    <span class="cm">// 55 (1+2+3+...+10)</span>
+    <span class="fn">print</span>(<span class="fn">accumulate</span>(<span class="num">5</span>))     <span class="cm">// 15 (1+2+3+4+5)</span>
+}</pre>
+<h2>Applying functions multiple times</h2>
+<pre><span class="kw">fn</span> <span class="fn">apply_twice</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="fn">f</span>(<span class="fn">f</span>(x))
+}
+
+<span class="kw">fn</span> <span class="fn">apply_n_times</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>, n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> result: <span class="ty">int</span> <span class="op">=</span> x
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> n {
+        result <span class="op">=</span> <span class="fn">f</span>(result)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="kw">fn</span> <span class="fn">double</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span> }
+<span class="kw">fn</span> <span class="fn">increment</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">+</span> <span class="num">1</span> }
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">apply_twice</span>(double, <span class="num">3</span>))         <span class="cm">// 12 (3*2=6, 6*2=12)</span>
+    <span class="fn">print</span>(<span class="fn">apply_n_times</span>(double, <span class="num">1</span>, <span class="num">10</span>))   <span class="cm">// 1024 (2^10)</span>
+    <span class="fn">print</span>(<span class="fn">apply_n_times</span>(increment, <span class="num">0</span>, <span class="num">100</span>))  <span class="cm">// 100</span>
+}</pre>
+<h2>Practical example: sorting with a comparator</h2>
+<p>You can use first-class functions to make a generic sort:</p>
+<pre><span class="kw">fn</span> <span class="fn">sort_array</span>(arr: <span class="ty">Array</span>, compare: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="cm">// Simple bubble sort</span>
+    <span class="kw">var</span> result: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        result.<span class="fn">push</span>(arr[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="kw">var</span> swapped: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">while</span> swapped {
+        swapped <span class="op">=</span> <span class="kw">false</span>
+        i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> result.<span class="fn">length</span>() <span class="op">-</span> <span class="num">1</span> {
+            <span class="kw">if</span> <span class="fn">compare</span>(result[i], result[i <span class="op">+</span> <span class="num">1</span>]) <span class="op">&gt;</span> <span class="num">0</span> {
+                <span class="kw">let</span> temp: <span class="ty">int</span> <span class="op">=</span> result[i]
+                result[i] <span class="op">=</span> result[i <span class="op">+</span> <span class="num">1</span>]
+                result[i <span class="op">+</span> <span class="num">1</span>] <span class="op">=</span> temp
+                swapped <span class="op">=</span> <span class="kw">true</span>
+            }
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+    }
+
+    <span class="kw">return</span> result
+}
+
+<span class="kw">fn</span> <span class="fn">ascending</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">-</span> b }
+<span class="kw">fn</span> <span class="fn">descending</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> b <span class="op">-</span> a }
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>, <span class="num">9</span>, <span class="num">3</span>]
+
+    <span class="kw">let</span> asc: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sort_array</span>(nums, ascending)
+    <span class="fn">print</span>(asc)     <span class="cm">// [1, 2, 3, 5, 8, 9]</span>
+
+    <span class="kw">let</span> desc: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sort_array</span>(nums, descending)
+    <span class="fn">print</span>(desc)    <span class="cm">// [9, 8, 5, 3, 2, 1]</span>
+}</pre>
+<p>Same sort algorithm, different behavior based on the function you pass.</p>
+<h2>Practical example: event callbacks</h2>
+<p>Closures are perfect for event-driven patterns:</p>
+<pre><span class="kw">fn</span> <span class="fn">on_threshold</span>(values: <span class="ty">Array</span>, threshold: <span class="ty">int</span>, callback: <span class="ty">Fn</span>) {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> values.<span class="fn">length</span>() {
+        <span class="kw">if</span> values[i] <span class="op">&gt;</span> threshold {
+            <span class="fn">callback</span>(values[i])
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">alert</span>(value: <span class="ty">int</span>) {
+    <span class="fn">print</span>(<span class="str">&quot;WARNING: value &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(value) <span class="op">+</span> <span class="str">&quot; exceeds threshold!&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> temperatures: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">22</span>, <span class="num">35</span>, <span class="num">28</span>, <span class="num">41</span>, <span class="num">19</span>, <span class="num">38</span>, <span class="num">45</span>]
+    <span class="fn">on_threshold</span>(temperatures, <span class="num">37</span>, alert)
+}</pre>
+<p>Output:</p>
+<pre>WARNING: value 41 exceeds threshold!
+WARNING: value 38 exceeds threshold!
+WARNING: value 45 exceeds threshold!</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a function <code>apply_to_all(arr: Array, f: Fn) -> Array</code> that applies a function to every element and returns a new array. Test it with at least three different functions.</li>
+</ol>
+<ol>
+<li>Write <code>count_matching(arr: Array, predicate: Fn) -> int</code> that counts how many elements satisfy a predicate function.</li>
+</ol>
+<ol>
+<li>Write <code>compose(f: Fn, g: Fn, x: int) -> int</code> that applies <code>g</code> first, then <code>f</code>: <code>compose(f, g, x)</code> equals <code>f(g(x))</code>.</li>
+</ol>
+<ol>
+<li>Create a <code>make_multiplier(factor: int) -> Fn</code> closure that returns a function which multiplies its argument by <code>factor</code>. Use it to create <code>triple</code> and <code>quadruple</code> functions.</li>
+</ol>
+<ol>
+<li>Write a <code>find_first(arr: Array, predicate: Fn) -> int</code> that returns the first element matching the predicate, or <code>-1</code> if none match.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Functions are values in Nyx — you can pass them, store them, and return them.</li>
+<li>The <code>Fn</code> type represents a function value.</li>
+<li>Pass a function by name (without parentheses): <code>apply(double, 5)</code>.</li>
+<li><strong>Map</strong>, <strong>filter</strong>, and <strong>reduce</strong> are powerful patterns built on first-class functions.</li>
+<li>A <strong>closure</strong> is a function that captures variables from its enclosing scope.</li>
+<li>Closures can read and modify captured variables.</li>
+<li>Use closures to create functions with built-in state (counters, adders, multipliers).</li>
+</ul>
+<p>Next chapter: <a href="14-enums.md">Enums and pattern matching →</a></p>
+
+    <div class="book-nav">
+        <a href="12.html" class="book-nav-prev">&larr; Previous: Files</a>
+        <a href="14.html" class="book-nav-next">Next: Enums and pattern matching &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

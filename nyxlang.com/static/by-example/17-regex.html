@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regular Expressions — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Regular Expressions</h1>
+
+    <p>The <code>std/regex</code> module wraps POSIX extended regular expressions. Three functions cover the most common operations: testing whether a pattern matches, extracting the first match, and replacing matches in a string. Patterns follow the standard POSIX ERE syntax.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Expresiones regulares: regex_is_match, regex_match, regex_replace
+
+import "std/regex"
+
+fn validar_email(email: String) -> bool {
+    // Patrón POSIX básico para email
+    return regex_is_match(email, "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")
+}
+
+fn main() -> int {
+    // Validar emails
+    let email1: String = "alice@example.com"
+    let email2: String = "no-es-email"
+    let email3: String = "bob.dev@nyx-lang.org"
+
+    print("Email: " + email1 + " -> " + int_to_string(validar_email(email1)))
+    print("Email: " + email2 + " -> " + int_to_string(validar_email(email2)))
+    print("Email: " + email3 + " -> " + int_to_string(validar_email(email3)))
+
+    // regex_match: retorna la primera coincidencia o ""
+    let texto: String = "Nyx version 0.12.0 released"
+    let resultado: String = regex_match(texto, "[0-9]+\\.[0-9]+\\.[0-9]+")
+    print("Version encontrada: " + resultado)
+
+    // regex_replace: reemplaza primera coincidencia
+    let frase: String = "Hola   mundo   Nyx"
+    let limpio: String = regex_replace(frase, "  +", " ")
+    print("Sin espacios dobles: " + limpio)
+
+    // regex_replace_all: reemplaza todas las coincidencias
+    let html: String = "<b>nyx</b> es <i>rapido</i>"
+    let sin_tags: String = regex_replace_all(html, "<[^>]+>", "")
+    print("Sin HTML: " + sin_tags)
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Email: alice@example.com -> 1
+Email: no-es-email -> 0
+Email: bob.dev@nyx-lang.org -> 1
+Version encontrada: 0.12.0
+Sin espacios dobles: Hola mundo Nyx
+Sin HTML: nyx es rapido</pre>
+
+    <h2>Explanation</h2>
+    <p><code>regex_is_match(str, pattern)</code> returns a <code>bool</code> (represented as <code>1</code>/<code>0</code> when printed via <code>int_to_string</code>) indicating whether the pattern matches anywhere in the string. Anchoring with <code>^</code> and <code>$</code> forces a full-string match, which is essential for input validation like the email check here.</p>
+    <p><code>regex_match(str, pattern)</code> returns the first substring that matches the pattern, or an empty string if there is no match. It is useful for extraction tasks such as parsing version numbers, dates, or identifiers out of larger text.</p>
+    <p><code>regex_replace</code> substitutes the first match with a replacement string, while <code>regex_replace_all</code> replaces every non-overlapping match. The HTML tag-stripping example uses the pattern <code>&lt;[^&gt;]+&gt;</code> to match any complete HTML tag and replaces it with an empty string, leaving only the text content.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/16-json-serialize.html">← Previous</a>
+        <a href="/by-example/18-csv.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/17-regex.nx">examples/by-example/17-regex.nx</a></small></p>
+</main>
+
+</body>
+</html>

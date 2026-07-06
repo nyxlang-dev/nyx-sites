@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Números Aleatorios y UUID — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Números Aleatorios y UUID</h1>
+
+    <p>El módulo <code>std/random</code> provee un generador de números pseudoaleatorios xorshift64 rápido, y <code>std/uuid</code> genera UUID versión 4 según RFC 4122. Ambas son utilidades comúnmente necesarias para pruebas, simulaciones e identificadores de sistemas distribuidos.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Números aleatorios y UUID v4
+import "std/random"
+import "std/uuid"
+
+fn main() -> int {
+    // Generar 3 números aleatorios entre 1 y 100
+    print("Numeros aleatorios (1-100):")
+    let r1: int = random_range(1, 100)
+    let r2: int = random_range(1, 100)
+    let r3: int = random_range(1, 100)
+    print("  " + int_to_string(r1))
+    print("  " + int_to_string(r2))
+    print("  " + int_to_string(r3))
+
+    // random_bool
+    let b: bool = random_bool()
+    print("random_bool: " + int_to_string(b))
+
+    // random_float en [0.0, 1.0)
+    let f: float = random_float()
+    print("random_float: (generado)")
+
+    // Generar un UUID v4
+    let id: String = uuid_v4()
+    print("uuid_v4: " + id)
+    print("longitud uuid: " + int_to_string(id.length()))
+
+    // Validar que el UUID es valido
+    let valido: bool = uuid_is_valid(id)
+    print("uuid valido: " + int_to_string(valido))
+
+    // Generar otro UUID — debe ser diferente
+    let id2: String = uuid_v4()
+    print("segundo uuid: " + id2)
+    print("son distintos: " + int_to_string(id != id2))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Numeros aleatorios (1-100):
+  42
+  7
+  83
+random_bool: 1
+random_float: (generado)
+uuid_v4: f47ac10b-58cc-4372-a567-0e02b2c3d479
+longitud uuid: 36
+uuid valido: 1
+segundo uuid: 550e8400-e29b-41d4-a716-446655440000
+son distintos: 1</pre>
+
+    <h2>Explicación</h2>
+    <p><code>random_range(lo, hi)</code> retorna un entero uniformemente distribuido en el rango inclusivo <code>[lo, hi]</code>. <code>random_bool()</code> retorna <code>true</code> o <code>false</code> con igual probabilidad, y <code>random_float()</code> retorna un <code>float</code> en <code>[0.0, 1.0)</code>. Los tres se apoyan en el generador xorshift64 sembrado a partir del reloj del sistema al iniciar el programa.</p>
+    <p><code>uuid_v4()</code> genera un string de 36 caracteres en el formato canónico de UUID <code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code>. El <code>4</code> en el tercer grupo codifica la versión, y los bits altos del cuarto grupo codifican la variante. Cada llamada produce un nuevo UUID aleatorio; la probabilidad de que dos UUID colisionen es astronómicamente pequeña.</p>
+    <p><code>uuid_is_valid(s)</code> valida que un string se ajusta al formato UUID — útil para sanear entradas de usuario o valores de configuración antes de tratarlos como identificadores. La aserción final confirma que dos UUID generados por separado siempre son distintos.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/38-crypto-hash.html">← Anterior</a>
+        <a href="/es/by-example/40-thread-spawn.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/39-random-uuid.nx">examples/by-example/39-random-uuid.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manejo de Errores — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Manejo de Errores</h1>
+
+    <p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. El built-in <code>throw</code> lanza un error de tipo string que se puede capturar, mientras que <code>panic</code> termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Manejo de errores: try/catch con throw y panic
+
+fn dividir(a: int, b: int) -> int {
+    if b == 0 {
+        throw("division por cero: denominador es 0")
+    }
+    return a / b
+}
+
+fn main() -> int {
+    // Capturar un throw explícito
+    var resultado: String = ""
+    try {
+        let r: int = dividir(10, 0)
+        resultado = int_to_string(r)
+    } catch(e: String) {
+        resultado = "Error capturado: " + e
+    }
+    print(resultado)
+
+    // try normal (sin error)
+    var ok: String = ""
+    try {
+        let r: int = dividir(20, 4)
+        ok = "resultado: " + int_to_string(r)
+    } catch(e: String) {
+        ok = "inesperado: " + e
+    }
+    print(ok)
+
+    // Capturar panic
+    var panic_msg: String = ""
+    try {
+        panic("algo salio muy mal")
+    } catch(e: String) {
+        panic_msg = "panic atrapado: " + e
+    }
+    print(panic_msg)
+
+    // try anidado
+    var externo: String = ""
+    try {
+        try {
+            throw("error interno")
+        } catch(e: String) {
+            externo = "manejado: " + e
+        }
+    } catch(e: String) {
+        externo = "no deberia llegar aqui"
+    }
+    print(externo)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Error capturado: division por cero: denominador es 0
+resultado: 5
+panic atrapado: algo salio muy mal
+manejado: error interno</pre>
+
+    <h2>Explicación</h2>
+    <p><code>throw(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>throw</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
+    <p><code>panic</code> señala una condición irrecuperable — por defecto aborta el proceso, pero también se puede capturar con <code>try</code>/<code>catch</code> cuando la recuperación es genuinamente posible. Esto lo hace útil para aserciones durante el desarrollo que pueden envolverse en tests.</p>
+    <p>Los bloques <code>try</code> anidados permiten manejar los errores internos localmente sin propagarlos a los manejadores externos. En el último ejemplo, el <code>catch</code> interno maneja <code>"error interno"</code> por completo, así que nunca se llega al <code>catch</code> externo.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/34-sorting.html">← Anterior</a>
+        <a href="/es/by-example/36-defer-cleanup.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/35-error-handling.nx">examples/by-example/35-error-handling.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productor-Consumidor — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Productor-Consumidor</h1>
+    <p>El patrón productor-consumidor desacopla la generación de datos de su procesamiento. El canal acotado (capacidad 3) provee contrapresión natural: el productor se bloquea cuando el buffer está lleno.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Producer-consumer pattern with bounded channel</span>
+<span class="cm">// Patrón productor-consumidor con canal acotado</span>
+
+<span class="kw">var</span> items_ch: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">produce</span>() -> <span class="ty">int</span> {
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">5</span> {
+        <span class="kw">let</span> item: <span class="ty">int</span> = (i + <span class="num">1</span>) * <span class="num">10</span>
+        print(<span class="str">"produced: "</span> + int_to_string(item))
+        channel_send(items_ch, item)
+        i = i + <span class="num">1</span>
+    }
+    channel_send(items_ch, <span class="num">-1</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">consume</span>() -> <span class="ty">int</span> {
+    <span class="kw">while</span> <span class="kw">true</span> {
+        <span class="kw">let</span> item: <span class="ty">int</span> = channel_recv(items_ch)
+        <span class="kw">if</span> item &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+        print(<span class="str">"consumed: "</span> + int_to_string(item))
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Bounded channel — producer blocks if buffer is full</span>
+    items_ch = channel_new(<span class="num">3</span>)
+
+    <span class="kw">let</span> p: <span class="ty">int</span> = thread_spawn(produce)
+    <span class="kw">let</span> c: <span class="ty">int</span> = thread_spawn(consume)
+
+    thread_join(p)
+    thread_join(c)
+    channel_destroy(items_ch)
+    print(<span class="str">"pipeline complete"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">produced: 10
+produced: 20
+produced: 30
+produced: 40
+produced: 50
+consumed: 10
+consumed: 20
+consumed: 30
+consumed: 40
+consumed: 50
+pipeline complete</pre>
+    <h2>Explicación</h2>
+    <p>El canal <code>items_ch</code> tiene una capacidad de 3, lo que significa que el productor puede enviar como máximo 3 elementos antes de bloquearse. Esto provee contrapresión natural -- si el consumidor es lento, el productor automáticamente se ralentiza para ajustarse.</p>
+    <p>El productor genera los valores 10, 20, 30, 40, 50 y los envía a través del canal, seguidos de un centinela <code>-1</code> para señalar la finalización. El consumidor recorre en bucle <code>channel_recv</code>, procesando cada elemento hasta que ve el centinela.</p>
+    <p>El entrelazado exacto de los mensajes "produced" y "consumed" depende de la planificación del sistema, pero el orden dentro de cada flujo siempre se preserva. El buffer acotado evita que el productor sature al consumidor con datos.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/59-worker-pool.html">&larr; Anterior</a>
+        <a href="/es/by-example/61-waitgroup.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/60-producer-consumer.nx">examples/by-example/60-producer-consumer.nx</a></small></p>
+</main>
+</body>
+</html>

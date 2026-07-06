@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Derive Clone — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Derive Clone</h1>
+
+    <p>The <code>#[derive]</code> attribute instructs the compiler to auto-generate trait implementations for a struct. <code>Clone</code> adds a <code>.clone()</code> method that produces a deep copy, while <code>Debug</code> adds <code>.debug_str()</code> for human-readable inspection.</p>
+
+    <h2>Code</h2>
+    <pre><code>// #[derive(Clone, Debug)]: clonar structs y obtener representación debug
+
+#[derive(Clone, Debug)]
+struct Point {
+    x: int,
+    y: int
+}
+
+#[derive(Clone, Debug)]
+struct Rectangle {
+    origin: int,
+    width: int,
+    height: int
+}
+
+fn main() -> int {
+    // Clonar un Point
+    let p1: Point = Point { x: 10, y: 20 }
+    let p2: Point = p1.clone()
+
+    print("Original:  x=" + int_to_string(p1.x) + " y=" + int_to_string(p1.y))
+    print("Clon:      x=" + int_to_string(p2.x) + " y=" + int_to_string(p2.y))
+
+    // Debug string
+    let ds: String = p1.debug_str()
+    print("Debug: " + ds)
+
+    // Clonar Rectangle
+    let r1: Rectangle = Rectangle { origin: 0, width: 100, height: 50 }
+    let r2: Rectangle = r1.clone()
+    print("Rect original: w=" + int_to_string(r1.width))
+    print("Rect clon:     w=" + int_to_string(r2.width))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Original:  x=10 y=20
+Clon:      x=10 y=20
+Debug: Point { x: 10, y: 20 }
+Rect original: w=100
+Rect clon:     w=100</pre>
+
+    <h2>Explanation</h2>
+    <p>Placing <code>#[derive(Clone, Debug)]</code> above a struct declaration tells the Nyx compiler to synthesize the corresponding trait implementations automatically. You get a fully working <code>.clone()</code> and <code>.debug_str()</code> without writing a single line of implementation code. This eliminates a whole category of repetitive boilerplate.</p>
+    <p><code>Clone</code> performs a field-by-field copy of the struct. After <code>let p2 = p1.clone()</code>, modifying <code>p2</code> does not affect <code>p1</code> — each holds its own independent copy of the data. This is safe even for structs that contain heap-allocated fields, because the derive macro handles the deep copy logic.</p>
+    <p><code>Debug</code> generates a <code>.debug_str()</code> method that formats the struct with its type name and field values in a readable form — useful for logging, tests, and development-time inspection. Multiple traits can be derived in a single annotation by listing them comma-separated inside the parentheses.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/22-trait-bounds.html">← Previous</a>
+        <a href="/by-example/24-option-some-none.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/23-derive-clone.nx">examples/by-example/23-derive-clone.nx</a></small></p>
+</main>
+
+</body>
+</html>

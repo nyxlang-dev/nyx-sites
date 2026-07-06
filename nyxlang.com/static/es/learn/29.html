@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colas de mensajes con nyx-queue — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Colas de mensajes con nyx-queue</h1>
+
+<h2>Que es una cola de mensajes?</h2>
+<p>Una cola de mensajes es un buffer que retiene mensajes hasta que un consumidor esta listo para procesarlos. A diferencia de Pub/Sub (donde los mensajes se pierden si nadie escucha), una cola <strong>persiste los mensajes</strong> y garantiza la entrega.</p>
+<pre>Producer ──► ENQUEUE "emails" "welcome:alice" ──► nyx-queue
+                                                       │
+                                                    ┌──┴──┐
+                                                    │Queue│
+                                                    │     │
+                                                    │msg1 │
+                                                    │msg2 │
+                                                    │msg3 │
+                                                    └──┬──┘
+                                                       │ DEQUEUE
+                                            ┌──────────┼──────────┐
+                                            ▼          ▼          ▼
+                                       Consumer 1  Consumer 2  Consumer 3</pre>
+<p>Diferencia clave con Pub/Sub: cada mensaje va a <strong>exactamente un consumidor</strong> (round-robin), no a todos.</p>
+
+<h2>Primeros pasos</h2>
+<p>nyx-queue habla el protocolo RESP, asi que usas <code>redis-cli</code> para interactuar con el:</p>
+<pre>$ redis-cli -p 6381
+127.0.0.1:6381&gt; PING
+PONG</pre>
+
+<h2>Producir mensajes</h2>
+<p>Envia un mensaje a una cola con <code>ENQUEUE</code>:</p>
+<pre>127.0.0.1:6381&gt; ENQUEUE emails "welcome:alice@example.com"
+"msg_1712001234_1"</pre>
+<p>El comando devuelve un <strong>ID de mensaje</strong> unico. La cola se crea automaticamente si no existe.</p>
+
+<h2>Consumir mensajes</h2>
+<p><code>DEQUEUE</code> recupera el siguiente mensaje. Se <strong>bloquea</strong> hasta que un mensaje este disponible:</p>
+<pre>127.0.0.1:6381&gt; DEQUEUE emails
+1) "msg_1712001234_1"
+2) "welcome:alice@example.com"</pre>
+<p>La respuesta es un array de dos elementos: el ID del mensaje y el contenido. Para modo no bloqueante:</p>
+<pre>127.0.0.1:6381&gt; DEQUEUE emails NOWAIT
+(nil)</pre>
+
+<h2>Confirmar mensajes</h2>
+<p>Despues de procesar un mensaje, confirmalo con <code>ACK</code>:</p>
+<pre>127.0.0.1:6381&gt; ACK emails msg_1712001234_1
+OK</pre>
+<p>Si el procesamiento falla, envia <code>NACK</code> para devolver el mensaje a la cola para reenvio:</p>
+<pre>127.0.0.1:6381&gt; NACK emails msg_1712001234_1
+OK</pre>
+
+<h2>Reenvio automatico</h2>
+<p>Si un consumidor se cae sin enviar <code>ACK</code> o <code>NACK</code>, el mensaje se devuelve automaticamente a la cola despues de 30 segundos (configurable con <code>--ack-timeout</code>). Esto proporciona <strong>entrega al-menos-una-vez</strong> — cada mensaje sera procesado al menos una vez.</p>
+
+<h2>Gestion de colas</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Comando</th><th>Descripcion</th></tr></thead>
+<tbody>
+<tr><td><code>QLEN queue</code></td><td>Numero de mensajes pendientes</td></tr>
+<tr><td><code>QINFO queue</code></td><td>Devuelve [pendientes, entregados, total_encolados, total_confirmados]</td></tr>
+<tr><td><code>QUEUES</code></td><td>Lista todos los nombres de colas</td></tr>
+<tr><td><code>QDEL queue</code></td><td>Elimina una cola y todos sus mensajes</td></tr>
+<tr><td><code>INFO</code></td><td>Estadisticas del servidor</td></tr>
+</tbody></table></div>
+
+<h2>Persistencia</h2>
+<p>Los mensajes sobreviven a los reinicios. nyx-queue guarda su estado en un archivo binario <code>queue.ndb</code> usando el mismo patron de guardado en segundo plano que nyx-kv — cada 60 segundos o despues de 100 cambios. Al reiniciar, los mensajes que fueron entregados pero no confirmados se restablecen a pendientes.</p>
+
+<h2>Ejemplo: procesador de emails en segundo plano</h2>
+<p>Una aplicacion web encola emails. Tres procesos worker los desencolan y envian:</p>
+<pre><span class="cm"># Productor (aplicacion web)</span>
+import redis
+q = redis.Redis(port=6381)
+q.execute_command("ENQUEUE", "emails", "welcome:alice@example.com")
+q.execute_command("ENQUEUE", "emails", "receipt:order_123")
+q.execute_command("ENQUEUE", "emails", "reset:bob@example.com")</pre>
+<pre><span class="cm"># Consumidor (worker de email)</span>
+import redis
+q = redis.Redis(port=6381)
+
+while True:
+    msg = q.execute_command("DEQUEUE", "emails")
+    msg_id, payload = msg[0], msg[1]
+    try:
+        send_email(payload)
+        q.execute_command("ACK", "emails", msg_id)
+    except Exception:
+        q.execute_command("NACK", "emails", msg_id)</pre>
+<p>Ejecuta tres workers en paralelo. nyx-queue distribuye mensajes en round-robin — ningun mensaje se procesa dos veces (a menos que se haga NACK).</p>
+
+<h2>Resumen</h2>
+<ul>
+<li><code>ENQUEUE queue payload</code> agrega un mensaje y devuelve un ID unico.</li>
+<li><code>DEQUEUE queue</code> se bloquea hasta que un mensaje este disponible.</li>
+<li><code>ACK</code> marca un mensaje como procesado; <code>NACK</code> lo devuelve para reintento.</li>
+<li>El reenvio automatico despues de 30s asegura que ningun mensaje se pierda.</li>
+<li>Los mensajes persisten en disco y sobreviven a los reinicios.</li>
+<li>Entrega round-robin entre multiples consumidores.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="28.html" class="book-nav-prev">&larr; Anterior: Tiempo real con Pub/Sub</a>
+        <a href="30.html" class="book-nav-next">Siguiente: HTTP/2 — Protocolos binarios &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

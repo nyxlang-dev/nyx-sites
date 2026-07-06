@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semáforo — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Semáforo</h1>
+    <p>Un <code>Semaphore</code> de <code>std/sync</code> limita el número de accesos concurrentes a un recurso. <code>sem_new(n)</code> crea un semáforo con n permisos, <code>sem_acquire</code> toma un permiso (bloqueando si no hay ninguno disponible), y <code>sem_release</code> devuelve uno.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Semaphore — limiting concurrent access to a resource</span>
+<span class="cm">// Semáforo — limitar acceso concurrente a un recurso</span>
+
+<span class="kw">import</span> <span class="str">"std/sync"</span>
+
+<span class="kw">var</span> sem: <span class="ty">Semaphore</span> = sem_new(<span class="num">2</span>)
+<span class="kw">var</span> done: <span class="ty">WaitGroup</span> = wg_new()
+
+<span class="kw">fn</span> <span class="fn">access_resource</span>() -> <span class="ty">int</span> {
+    sem_acquire(sem)
+    print(<span class="str">"acquired (count: "</span> + int_to_string(sem_count(sem)) + <span class="str">")"</span>)
+    sleep(<span class="num">50</span>)
+    sem_release(sem)
+    print(<span class="str">"released"</span>)
+    wg_done(done)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Allow at most 2 concurrent accesses</span>
+    wg_add(done, <span class="num">5</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">5</span> {
+        thread_spawn(access_resource)
+        i = i + <span class="num">1</span>
+    }
+
+    wg_wait(done)
+    print(<span class="str">"all done"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+released
+all done</pre>
+    <h2>Explicación</h2>
+    <p><code>sem_new(2)</code> crea un semáforo con 2 permisos. Como máximo 2 hilos pueden tener un permiso al mismo tiempo. Cuando un tercer hilo llama a <code>sem_acquire</code>, se bloquea hasta que uno de los dos primeros llame a <code>sem_release</code>.</p>
+    <p>Cinco hilos compiten por el semáforo. <code>sem_count</code> devuelve el número de permisos restantes, que cae a 0 cuando ambos están tomados. Después de dormir 50ms (simulando trabajo), cada hilo libera su permiso y avisa al WaitGroup.</p>
+    <p>Este patrón es útil para limitar la velocidad de acceso a recursos externos como conexiones de base de datos, descriptores de archivo o endpoints de API, donde se desea concurrencia controlada en lugar de exclusión mutua total.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/61-waitgroup.html">&larr; Anterior</a>
+        <a href="/es/by-example/63-select-channel.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/62-semaphore.nx">examples/by-example/62-semaphore.nx</a></small></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functions — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Functions</h1>
+
+    <p>Las funciones en Nyx se definen con <code>fn</code>, reciben parámetros tipados y declaran su tipo de retorno después de <code>-&gt;</code>. Admiten valores de parámetro por defecto, lo que hace más limpios los sitios de llamada cuando existe un valor por defecto razonable.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Funciones: parámetros, valor de retorno, default parameters
+
+fn suma(a: int, b: int) -> int {
+    return a + b
+}
+
+fn saludar(nombre: String, saludo: String = "Hola") -> String {
+    return saludo + ", " + nombre + "!"
+}
+
+fn describir(n: int) -> String {
+    if n > 0 {
+        return "positivo"
+    }
+    if n < 0 {
+        return "negativo"
+    }
+    return "cero"
+}
+
+fn main() -> int {
+    let resultado: int = suma(3, 4)
+    print("3 + 4 = " + int_to_string(resultado))
+
+    print(saludar("Mundo"))
+    print(saludar("Nyx", "Buenos dias"))
+
+    print("42 es " + describir(42))
+    print("-5 es " + describir(-5))
+    print("0 es " + describir(0))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">3 + 4 = 7
+Hola, Mundo!
+Buenos dias, Nyx!
+42 es positivo
+-5 es negativo
+0 es cero</pre>
+
+    <h2>Explicación</h2>
+    <p>Las funciones se declaran con la palabra clave <code>fn</code> seguida del nombre de la función, una lista de parámetros entre paréntesis y el tipo de retorno. Cada parámetro tiene un nombre y un tipo separados por dos puntos. El cuerpo de la función es un bloque encerrado entre <code>{ }</code>.</p>
+    <p>Los valores de parámetro por defecto se escriben como <code>param: Type = value</code>. Cuando quien llama omite ese argumento, se usa el valor por defecto automáticamente. En <code>saludar</code>, llamar a <code>saludar("Mundo")</code> usa el saludo por defecto <code>"Hola"</code>, mientras que <code>saludar("Nyx", "Buenos dias")</code> lo reemplaza.</p>
+    <p>La función incorporada <code>int_to_string</code> convierte un entero a su representación en cadena. Nyx no coacciona tipos de forma implícita, así que hay que convertir explícitamente al construir cadenas a partir de valores que no son strings.</p>
+    <p>Las funciones pueden tener múltiples sentencias <code>return</code>. El compilador exige que todos los caminos devuelvan un valor del tipo declarado — cualquier rama que termine sin devolver un valor produce un error de compilación.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/02-variables.html">← Anterior</a>
+        <a href="/es/by-example/04-control-flow.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/03-functions.nx">examples/by-example/03-functions.nx</a></small></p>
+</main>
+
+</body>
+</html>

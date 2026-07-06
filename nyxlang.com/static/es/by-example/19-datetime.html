@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fecha y Hora — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Fecha y Hora</h1>
+
+    <p>Nyx ofrece funciones de tiempo incorporadas para las necesidades más comunes: timestamps Unix en segundos y milisegundos, una cadena formateada con la fecha y hora actual, y conversión de un valor epoch de vuelta a una fecha legible. No se necesita ningún import para estos primitivos.</p>
+
+    <h2>Código</h2>
+    <pre><code>// 19: Date and time — timestamps, formatting, sleep
+fn main() -> int {
+    // Current Unix timestamp
+    let now: int = time()
+    print("Unix timestamp: " + int_to_string(now))
+
+    // Millisecond precision
+    let ms: int = time_ms()
+    print("Milliseconds: " + int_to_string(ms))
+
+    // Formatted datetime
+    let dt: String = datetime_now()
+    print("Current datetime: " + dt)
+
+    // From epoch
+    let formatted: String = datetime_from_epoch(now)
+    print("From epoch: " + formatted)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Unix timestamp: 1744761600
+Milliseconds: 1744761600123
+Current datetime: 2026-04-15 12:00:00
+From epoch: 2026-04-15 12:00:00</pre>
+
+    <h2>Explicación</h2>
+    <p><code>time()</code> devuelve el timestamp Unix actual como un <code>int</code> — el número de segundos desde el epoch Unix (1970-01-01 00:00:00 UTC). Esta es la forma estándar de registrar el momento de un evento, medir duraciones restando dos timestamps, o establecer tiempos de expiración para cachés y tokens.</p>
+    <p><code>time_ms()</code> devuelve el mismo valor pero con precisión de milisegundos, útil para medir el rendimiento de operaciones cortas o generar IDs monótonamente crecientes. <code>datetime_now()</code> devuelve la hora local formateada como una cadena legible en estilo ISO-8601.</p>
+    <p><code>datetime_from_epoch(ts)</code> convierte cualquier timestamp Unix de vuelta al mismo formato legible. Esto resulta útil cuando guardas timestamps crudos en una base de datos o archivo de log y quieres mostrarlos más tarde. Para aritmética de fechas más avanzada — sumar días, parsear formatos arbitrarios o trabajar con zonas horarias — consulta <code>std/datetime</code>.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/18-csv.html">← Anterior</a>
+        <a href="/es/by-example/20-spawn-channel.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/19-datetime.nx">examples/by-example/19-datetime.nx</a></small></p>
+</main>
+
+</body>
+</html>

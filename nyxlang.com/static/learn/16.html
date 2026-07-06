@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generics — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Generics</h1>
+
+<h2>The problem</h2>
+<p>You have already written functions like <code>find_max</code> that work on arrays of integers. But what if you want the same logic for strings? Or for structs? Without generics, you would need to write a separate function for each type:</p>
+<pre><span class="kw">fn</span> <span class="fn">max_int</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> a <span class="op">&gt;</span> b { <span class="kw">return</span> a }
+    <span class="kw">return</span> b
+}
+
+<span class="kw">fn</span> <span class="fn">max_string</span>(a: <span class="ty">String</span>, b: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> a <span class="op">&gt;</span> b { <span class="kw">return</span> a }
+    <span class="kw">return</span> b
+}</pre>
+<p>The logic is identical — only the types change. Generics solve this duplication.</p>
+<h2>What are generics?</h2>
+<p><strong>Generics</strong> let you write code that works with any type. Instead of hardcoding <code>int</code> or <code>String</code>, you use a <strong>type parameter</strong> — a placeholder that gets filled in when the function is used.</p>
+<pre><span class="kw">fn</span> <span class="fn">max_val</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(a: T, b: T) <span class="op">-&gt;</span> T {
+    <span class="kw">if</span> a <span class="op">&gt;</span> b { <span class="kw">return</span> a }
+    <span class="kw">return</span> b
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(max_val<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(<span class="num">10</span>, <span class="num">20</span>))            <span class="cm">// 20</span>
+    <span class="fn">print</span>(max_val<span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span>(<span class="str">&quot;apple&quot;</span>, <span class="str">&quot;banana&quot;</span>))  <span class="cm">// banana</span>
+}</pre>
+<p>The <code><T></code> after the function name declares a type parameter called <code>T</code>. When you call <code>max_val<int>(10, 20)</code>, the compiler replaces every <code>T</code> with <code>int</code> and generates a specialized version of the function.</p>
+<h2>Generic functions</h2>
+<p>Here are more examples of generic functions:</p>
+<pre><span class="kw">fn</span> <span class="fn">identity</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(x: T) <span class="op">-&gt;</span> T {
+    <span class="kw">return</span> x
+}
+
+<span class="kw">fn</span> <span class="fn">first_of_two</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(a: T, b: T) <span class="op">-&gt;</span> T {
+    <span class="kw">return</span> a
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> n: <span class="ty">int</span> <span class="op">=</span> identity<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(<span class="num">42</span>)
+    <span class="kw">let</span> s: <span class="ty">String</span> <span class="op">=</span> identity<span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span>(<span class="str">&quot;hello&quot;</span>)
+
+    <span class="fn">print</span>(n)    <span class="cm">// 42</span>
+    <span class="fn">print</span>(s)    <span class="cm">// hello</span>
+}</pre>
+<h2>Multiple type parameters</h2>
+<p>Functions can have more than one type parameter:</p>
+<pre><span class="kw">struct</span> Pair<span class="op">&lt;</span>A, B<span class="op">&gt;</span> {
+    first: A,
+    second: B
+}
+
+<span class="kw">fn</span> <span class="fn">make_pair</span><span class="op">&lt;</span>A, B<span class="op">&gt;</span>(a: A, b: B) <span class="op">-&gt;</span> Pair<span class="op">&lt;</span>A, B<span class="op">&gt;</span> {
+    <span class="kw">return</span> Pair<span class="op">&lt;</span>A, B<span class="op">&gt;</span> { first: a, second: b }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> p1: Pair<span class="op">&lt;</span><span class="ty">String</span>, <span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> make_pair<span class="op">&lt;</span><span class="ty">String</span>, <span class="ty">int</span><span class="op">&gt;</span>(<span class="str">&quot;age&quot;</span>, <span class="num">30</span>)
+    <span class="fn">print</span>(p1.first)     <span class="cm">// age</span>
+    <span class="fn">print</span>(p1.second)    <span class="cm">// 30</span>
+
+    <span class="kw">let</span> p2: Pair<span class="op">&lt;</span><span class="ty">int</span>, <span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> make_pair<span class="op">&lt;</span><span class="ty">int</span>, <span class="ty">int</span><span class="op">&gt;</span>(<span class="num">10</span>, <span class="num">20</span>)
+    <span class="fn">print</span>(p2.first)     <span class="cm">// 10</span>
+    <span class="fn">print</span>(p2.second)    <span class="cm">// 20</span>
+}</pre>
+<h2>Generic structs</h2>
+<p>Structs can be generic too:</p>
+<pre><span class="kw">struct</span> <span class="ty">Box</span><span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    value: T
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> int_box: <span class="ty">Box</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ty">Box</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> { value: <span class="num">42</span> }
+    <span class="kw">let</span> str_box: <span class="ty">Box</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ty">Box</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span> { value: <span class="str">&quot;hello&quot;</span> }
+
+    <span class="fn">print</span>(int_box.value)    <span class="cm">// 42</span>
+    <span class="fn">print</span>(str_box.value)    <span class="cm">// hello</span>
+}</pre>
+<h2>Generic enums</h2>
+<p>Enums work with generics naturally. In fact, you have already seen a pattern like this:</p>
+<pre><span class="kw">enum</span> <span class="ty">Option</span><span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    <span class="ty">Some</span>(T),
+    <span class="ty">None</span>
+}
+
+<span class="kw">fn</span> <span class="fn">safe_div</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="ty">Option</span>.<span class="ty">None</span>
+    }
+    <span class="kw">return</span> <span class="ty">Option</span>.<span class="ty">Some</span>(a <span class="op">/</span> b)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> r1: <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">safe_div</span>(<span class="num">10</span>, <span class="num">3</span>)
+    <span class="kw">let</span> r2: <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">safe_div</span>(<span class="num">10</span>, <span class="num">0</span>)
+
+    <span class="kw">let</span> msg1: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r1 {
+        <span class="ty">Option</span>.<span class="ty">Some</span>(v) <span class="op">=&gt;</span> <span class="str">&quot;Result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(v),
+        <span class="ty">Option</span>.<span class="ty">None</span> <span class="op">=&gt;</span> <span class="str">&quot;No result&quot;</span>
+    }
+
+    <span class="kw">let</span> msg2: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r2 {
+        <span class="ty">Option</span>.<span class="ty">Some</span>(v) <span class="op">=&gt;</span> <span class="str">&quot;Result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(v),
+        <span class="ty">Option</span>.<span class="ty">None</span> <span class="op">=&gt;</span> <span class="str">&quot;No result&quot;</span>
+    }
+
+    <span class="fn">print</span>(msg1)    <span class="cm">// Result: 3</span>
+    <span class="fn">print</span>(msg2)    <span class="cm">// No result</span>
+}</pre>
+<p>With generics, <code>Option</code> works for any type — not just <code>int</code>.</p>
+<h2>Generics with trait bounds</h2>
+<p>You can combine generics with traits to say "this works for any type that has certain capabilities":</p>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Person {
+    name: <span class="ty">String</span>,
+    age: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Person {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.name <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.age) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">print_all</span><span class="op">&lt;</span>T: <span class="ty">Display</span><span class="op">&gt;</span>(items: <span class="ty">Array</span>) {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> items.<span class="fn">length</span>() {
+        <span class="kw">let</span> item: T <span class="op">=</span> items[i]
+        <span class="fn">print</span>(item.<span class="fn">to_string</span>())
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> people: <span class="ty">Array</span> <span class="op">=</span> [
+        Person { name: <span class="str">&quot;Alice&quot;</span>, age: <span class="num">30</span> },
+        Person { name: <span class="str">&quot;Bob&quot;</span>, age: <span class="num">25</span> }
+    ]
+
+    print_all<span class="op">&lt;</span>Person<span class="op">&gt;</span>(people)
+}</pre>
+<p>Output:</p>
+<pre>Alice (30)
+Bob (25)</pre>
+<h2>How it works: monomorphization</h2>
+<p>When the compiler sees <code>max_val<int>(10, 20)</code>, it generates a version of <code>max_val</code> where every <code>T</code> is replaced with <code>int</code>. If you also call <code>max_val<String>(...)</code>, it generates a second version. This process is called <strong>monomorphization</strong>.</p>
+<p>The result is that generic code runs at the same speed as code you wrote by hand for each type — there is no runtime cost.</p>
+<pre>Your code:           max_val&lt;T&gt;(a: T, b: T) -&gt; T
+
+Compiler generates:  max_val_int(a: int, b: int) -&gt; int
+                     max_val_string(a: String, b: String) -&gt; String</pre>
+<h2>Practical example: a generic stack</h2>
+<pre><span class="kw">struct</span> Stack<span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    items: <span class="ty">Array</span>
+}
+
+<span class="kw">fn</span> <span class="fn">stack_new</span><span class="op">&lt;</span>T<span class="op">&gt;</span>() <span class="op">-&gt;</span> Stack<span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    <span class="kw">return</span> Stack<span class="op">&lt;</span>T<span class="op">&gt;</span> { items: [] }
+}
+
+<span class="kw">fn</span> <span class="fn">stack_push</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(s: Stack<span class="op">&lt;</span>T<span class="op">&gt;</span>, item: T) <span class="op">-&gt;</span> Stack<span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    s.items.<span class="fn">push</span>(item)
+    <span class="kw">return</span> s
+}
+
+<span class="kw">fn</span> <span class="fn">stack_pop</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(s: Stack<span class="op">&lt;</span>T<span class="op">&gt;</span>) <span class="op">-&gt;</span> T {
+    <span class="kw">return</span> s.items.<span class="fn">pop</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">stack_is_empty</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(s: Stack<span class="op">&lt;</span>T<span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> s.items.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">stack_size</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(s: Stack<span class="op">&lt;</span>T<span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> s.items.<span class="fn">length</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> s: Stack<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> stack_new<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>()
+    s <span class="op">=</span> stack_push<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(s, <span class="num">10</span>)
+    s <span class="op">=</span> stack_push<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(s, <span class="num">20</span>)
+    s <span class="op">=</span> stack_push<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(s, <span class="num">30</span>)
+
+    <span class="fn">print</span>(stack_size<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(s))    <span class="cm">// 3</span>
+
+    <span class="kw">let</span> top: <span class="ty">int</span> <span class="op">=</span> stack_pop<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span>(s)
+    <span class="fn">print</span>(top)                   <span class="cm">// 30</span>
+}</pre>
+<h2>Practical example: a generic result type</h2>
+<pre><span class="kw">enum</span> <span class="ty">Result</span><span class="op">&lt;</span>T, E<span class="op">&gt;</span> {
+    <span class="ty">Ok</span>(T),
+    <span class="ty">Err</span>(E)
+}
+
+<span class="kw">fn</span> <span class="fn">parse_number</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span>, <span class="ty">String</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> s.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="ty">Result</span>.<span class="ty">Err</span>(<span class="str">&quot;Empty string&quot;</span>)
+    }
+    <span class="cm">// Simple check: only digits</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> s.<span class="fn">length</span>() {
+        <span class="kw">let</span> c: <span class="ty">int</span> <span class="op">=</span> s.<span class="fn">charAt</span>(i)
+        <span class="kw">if</span> c <span class="op">&lt;</span> <span class="num">48</span> <span class="kw">or</span> c <span class="op">&gt;</span> <span class="num">57</span> {
+            <span class="kw">return</span> <span class="ty">Result</span>.<span class="ty">Err</span>(<span class="str">&quot;Not a number: &quot;</span> <span class="op">+</span> s)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> <span class="ty">Result</span>.<span class="ty">Ok</span>(<span class="fn">string_to_int</span>(s))
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> r1: <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span>, <span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">parse_number</span>(<span class="str">&quot;42&quot;</span>)
+    <span class="kw">let</span> r2: <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span>, <span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">parse_number</span>(<span class="str">&quot;abc&quot;</span>)
+
+    <span class="kw">let</span> msg1: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r1 {
+        <span class="ty">Result</span>.<span class="ty">Ok</span>(n) <span class="op">=&gt;</span> <span class="str">&quot;Parsed: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(n),
+        <span class="ty">Result</span>.<span class="ty">Err</span>(e) <span class="op">=&gt;</span> <span class="str">&quot;Error: &quot;</span> <span class="op">+</span> e
+    }
+
+    <span class="kw">let</span> msg2: <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> r2 {
+        <span class="ty">Result</span>.<span class="ty">Ok</span>(n) <span class="op">=&gt;</span> <span class="str">&quot;Parsed: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(n),
+        <span class="ty">Result</span>.<span class="ty">Err</span>(e) <span class="op">=&gt;</span> <span class="str">&quot;Error: &quot;</span> <span class="op">+</span> e
+    }
+
+    <span class="fn">print</span>(msg1)    <span class="cm">// Parsed: 42</span>
+    <span class="fn">print</span>(msg2)    <span class="cm">// Error: Not a number: abc</span>
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a generic function <code>swap<A, B>(p: Pair<A, B>) -> Pair<B, A></code> that swaps the elements of a pair.</li>
+</ol>
+<ol>
+<li>Write a generic <code>Stack<T></code> with <code>push</code>, <code>pop</code>, <code>peek</code> (look at top without removing), and <code>size</code> methods.</li>
+</ol>
+<ol>
+<li>Create a generic <code>enum Option<T> { Some(T), None }</code>. Write a function <code>unwrap_or<T>(opt: Option<T>, default: T) -> T</code> that returns the value inside <code>Some</code> or the default if <code>None</code>.</li>
+</ol>
+<ol>
+<li>Write a generic <code>find_first<T>(items: Array, predicate: Fn) -> Option<T></code> that returns the first matching element wrapped in <code>Option.Some</code>, or <code>Option.None</code>.</li>
+</ol>
+<ol>
+<li>Create a <code>Result<T, E></code> enum and use it to write a <code>safe_get(arr: Array, index: int) -> Result<int, String></code> that returns <code>Err</code> for out-of-bounds access.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Generics let you write code that works with any type: <code>fn f<T>(x: T) -> T</code>.</li>
+<li>Type parameters go in angle brackets: <code><T></code>, <code><A, B></code>, <code><T, E></code>.</li>
+<li>Structs and enums can be generic: <code>struct Box<T></code>, <code>enum Option<T></code>.</li>
+<li>Trait bounds constrain generics: <code><T: Display></code> means "T must implement Display."</li>
+<li>Nyx uses <strong>monomorphization</strong> — generic code compiles to specialized versions with zero runtime cost.</li>
+<li>Common generic patterns: <code>Option<T></code> for optional values, <code>Result<T, E></code> for error handling, <code>Pair<A, B></code> for tuples.</li>
+</ul>
+<p>Next chapter: <a href="17-networking.md">Networking — TCP servers →</a></p>
+
+    <div class="book-nav">
+        <a href="15.html" class="book-nav-prev">&larr; Previous: Traits and impl blocks</a>
+        <a href="17.html" class="book-nav-next">Next: Networking — TCP servers &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

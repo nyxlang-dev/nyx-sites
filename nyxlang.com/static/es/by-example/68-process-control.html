@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Procesos — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Control de Procesos</h1>
+    <p>Nyx provee builtins POSIX de procesos: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. Estos son los bloques de construcción para herramientas como nyx-shell.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Process control — pid, working directory, environment</span>
+<span class="cm">// Control de procesos — pid, directorio de trabajo, entorno</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Get current process ID</span>
+    <span class="kw">let</span> pid: <span class="ty">int</span> = getpid()
+    print(<span class="str">"my pid: "</span> + int_to_string(pid))
+
+    <span class="cm">// Get current working directory</span>
+    <span class="kw">let</span> cwd: <span class="ty">String</span> = getcwd()
+    print(<span class="str">"cwd: "</span> + cwd)
+
+    <span class="cm">// Check if stdout is a terminal</span>
+    <span class="kw">let</span> is_tty: <span class="ty">bool</span> = isatty(<span class="num">1</span>)
+    <span class="kw">if</span> is_tty {
+        print(<span class="str">"stdout is a terminal"</span>)
+    } <span class="kw">else</span> {
+        print(<span class="str">"stdout is not a terminal (piped)"</span>)
+    }
+
+    <span class="cm">// File stat</span>
+    <span class="kw">let</span> info: <span class="ty">Array</span> = stat(<span class="str">"/tmp"</span>)
+    <span class="kw">let</span> is_dir: <span class="ty">int</span> = info[<span class="num">3</span>]
+    <span class="kw">if</span> is_dir == <span class="num">1</span> {
+        print(<span class="str">"/tmp is a directory"</span>)
+    }
+
+    <span class="cm">// Change directory and back</span>
+    <span class="kw">let</span> original: <span class="ty">String</span> = getcwd()
+    chdir(<span class="str">"/tmp"</span>)
+    print(<span class="str">"changed to: "</span> + getcwd())
+    chdir(original)
+    print(<span class="str">"back to: "</span> + getcwd())
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">my pid: 12345
+cwd: /home/admin/NyxLang
+stdout is not a terminal (piped)
+/tmp is a directory
+changed to: /tmp
+back to: /home/admin/NyxLang</pre>
+    <h2>Explicación</h2>
+    <p><code>getpid()</code> devuelve el ID del proceso actual. <code>getcwd()</code> devuelve el directorio de trabajo actual como string. <code>chdir(path)</code> cambia el directorio de trabajo.</p>
+    <p><code>isatty(fd)</code> verifica si un descriptor de archivo corresponde a un terminal. El descriptor de archivo 0 es stdin, 1 es stdout, 2 es stderr. Esto es útil para decidir si emitir códigos de color o prompts interactivos.</p>
+    <p><code>stat(path)</code> devuelve metadatos de un archivo o directorio como <code>[size, mode, mtime, is_dir, is_regular]</code>. La bandera <code>is_dir</code> (índice 3) es 1 para directorios, 0 en caso contrario. Estos primitivos son la base de los comandos incorporados de nyx-shell.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/67-file-watcher.html">&larr; Anterior</a>
+        <a href="/es/by-example/69-raw-terminal.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/68-process-control.nx">examples/by-example/68-process-control.nx</a></small></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traits and impl blocks — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Traits and impl blocks</h1>
+
+<h2>What is a trait?</h2>
+<p>In the previous chapter, you saw how enums let a single type have multiple variants. Traits solve the opposite problem: letting multiple types share a common interface.</p>
+<p>A <strong>trait</strong> is a contract. It says "any type that implements this trait must provide these functions." Think of it like a job description — it lists what the job requires, but different people (types) fulfill those requirements differently.</p>
+<h2>Your first trait</h2>
+<pre><span class="kw">trait</span> Describable {
+    <span class="kw">fn</span> <span class="fn">describe</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}</pre>
+<p>This trait says: "any type that is <code>Describable</code> must have a <code>describe</code> method that takes itself and returns a String."</p>
+<p>The <code>self</code> parameter is special — it refers to the value the method is called on.</p>
+<h2>Implementing a trait</h2>
+<p>Use <code>impl TraitName for TypeName</code> to fulfill the contract:</p>
+<pre><span class="kw">trait</span> Describable {
+    <span class="kw">fn</span> <span class="fn">describe</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Dog {
+    name: <span class="ty">String</span>,
+    breed: <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Car {
+    make: <span class="ty">String</span>,
+    year: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Describable <span class="kw">for</span> Dog {
+    <span class="kw">fn</span> <span class="fn">describe</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.name <span class="op">+</span> <span class="str">&quot; the &quot;</span> <span class="op">+</span> <span class="kw">self</span>.breed
+    }
+}
+
+<span class="kw">impl</span> Describable <span class="kw">for</span> Car {
+    <span class="kw">fn</span> <span class="fn">describe</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.year) <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="kw">self</span>.make
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> d: Dog <span class="op">=</span> Dog { name: <span class="str">&quot;Rex&quot;</span>, breed: <span class="str">&quot;German Shepherd&quot;</span> }
+    <span class="kw">let</span> c: Car <span class="op">=</span> Car { make: <span class="str">&quot;Toyota&quot;</span>, year: <span class="num">2024</span> }
+
+    <span class="fn">print</span>(d.<span class="fn">describe</span>())    <span class="cm">// Rex the German Shepherd</span>
+    <span class="fn">print</span>(c.<span class="fn">describe</span>())    <span class="cm">// 2024 Toyota</span>
+}</pre>
+<p>Both <code>Dog</code> and <code>Car</code> implement <code>Describable</code>, but each provides its own version of <code>describe</code>. The method is called with dot syntax: <code>d.describe()</code>.</p>
+<h2>Methods without traits: impl blocks</h2>
+<p>You do not always need a trait to add methods to a type. A plain <code>impl</code> block adds methods directly:</p>
+<pre><span class="kw">struct</span> Rectangle {
+    width: <span class="ty">int</span>,
+    height: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Rectangle {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.width <span class="op">*</span> <span class="kw">self</span>.height
+    }
+
+    <span class="kw">fn</span> <span class="fn">perimeter</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="num">2</span> <span class="op">*</span> (<span class="kw">self</span>.width <span class="op">+</span> <span class="kw">self</span>.height)
+    }
+
+    <span class="kw">fn</span> <span class="fn">is_square</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.width <span class="op">==</span> <span class="kw">self</span>.height
+    }
+
+    <span class="kw">fn</span> <span class="fn">scale</span>(<span class="kw">self</span>, factor: <span class="ty">int</span>) <span class="op">-&gt;</span> Rectangle {
+        <span class="kw">return</span> Rectangle { width: <span class="kw">self</span>.width <span class="op">*</span> factor, height: <span class="kw">self</span>.height <span class="op">*</span> factor }
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> r: Rectangle <span class="op">=</span> Rectangle { width: <span class="num">10</span>, height: <span class="num">5</span> }
+
+    <span class="fn">print</span>(r.<span class="fn">area</span>())        <span class="cm">// 50</span>
+    <span class="fn">print</span>(r.<span class="fn">perimeter</span>())   <span class="cm">// 30</span>
+    <span class="fn">print</span>(r.<span class="fn">is_square</span>())   <span class="cm">// false</span>
+
+    <span class="kw">let</span> big: Rectangle <span class="op">=</span> r.<span class="fn">scale</span>(<span class="num">3</span>)
+    <span class="fn">print</span>(big.<span class="fn">area</span>())      <span class="cm">// 450</span>
+}</pre>
+<p>Methods in <code>impl</code> blocks are called with dot syntax, just like trait methods. The first parameter is always <code>self</code>.</p>
+<h2>Multiple traits on one type</h2>
+<p>A type can implement as many traits as needed:</p>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">trait</span> <span class="ty">Eq</span> {
+    <span class="kw">fn</span> <span class="fn">equals</span>(<span class="kw">self</span>, other: Self) <span class="op">-&gt;</span> <span class="ty">bool</span>
+}
+
+<span class="kw">struct</span> Point {
+    x: <span class="ty">int</span>,
+    y: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Point {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.x) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.y) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ty">Eq</span> <span class="kw">for</span> Point {
+    <span class="kw">fn</span> <span class="fn">equals</span>(<span class="kw">self</span>, other: Point) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.x <span class="op">==</span> other.x <span class="kw">and</span> <span class="kw">self</span>.y <span class="op">==</span> other.y
+    }
+}
+
+<span class="kw">impl</span> Point {
+    <span class="kw">fn</span> <span class="fn">distance_squared</span>(<span class="kw">self</span>, other: Point) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">let</span> dx: <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span>.x <span class="op">-</span> other.x
+        <span class="kw">let</span> dy: <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span>.y <span class="op">-</span> other.y
+        <span class="kw">return</span> dx <span class="op">*</span> dx <span class="op">+</span> dy <span class="op">*</span> dy
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: Point <span class="op">=</span> Point { x: <span class="num">3</span>, y: <span class="num">4</span> }
+    <span class="kw">let</span> b: Point <span class="op">=</span> Point { x: <span class="num">3</span>, y: <span class="num">4</span> }
+    <span class="kw">let</span> c: Point <span class="op">=</span> Point { x: <span class="num">1</span>, y: <span class="num">1</span> }
+
+    <span class="fn">print</span>(a.<span class="fn">to_string</span>())              <span class="cm">// (3, 4)</span>
+    <span class="fn">print</span>(a.<span class="fn">equals</span>(b))                <span class="cm">// true</span>
+    <span class="fn">print</span>(a.<span class="fn">equals</span>(c))                <span class="cm">// false</span>
+    <span class="fn">print</span>(a.<span class="fn">distance_squared</span>(c))      <span class="cm">// 13</span>
+}</pre>
+<h2>Traits as function parameters</h2>
+<p>You can write functions that accept any type implementing a trait:</p>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Person {
+    name: <span class="ty">String</span>,
+    age: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Product {
+    name: <span class="ty">String</span>,
+    price: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Person {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.name <span class="op">+</span> <span class="str">&quot; (age &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.age) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Product {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.name <span class="op">+</span> <span class="str">&quot; - $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.price)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">print_item</span><span class="op">&lt;</span>T: <span class="ty">Display</span><span class="op">&gt;</span>(item: T) {
+    <span class="fn">print</span>(<span class="str">&quot;Item: &quot;</span> <span class="op">+</span> item.<span class="fn">to_string</span>())
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> p: Person <span class="op">=</span> Person { name: <span class="str">&quot;Alice&quot;</span>, age: <span class="num">30</span> }
+    <span class="kw">let</span> prod: Product <span class="op">=</span> Product { name: <span class="str">&quot;Laptop&quot;</span>, price: <span class="num">999</span> }
+
+    <span class="fn">print_item</span>(p)       <span class="cm">// Item: Alice (age 30)</span>
+    <span class="fn">print_item</span>(prod)    <span class="cm">// Item: Laptop - $999</span>
+}</pre>
+<p>The <code><T: Display></code> syntax means "T can be any type, as long as it implements <code>Display</code>." This is called a <strong>trait bound</strong>.</p>
+<h2>Practical example: a shape system</h2>
+<pre><span class="kw">trait</span> Shape {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+    <span class="kw">fn</span> <span class="fn">name</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Circle {
+    radius: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Square {
+    side: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Triangle {
+    base: <span class="ty">int</span>,
+    height: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Shape <span class="kw">for</span> Circle {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="num">3</span> <span class="op">*</span> <span class="kw">self</span>.radius <span class="op">*</span> <span class="kw">self</span>.radius
+    }
+    <span class="kw">fn</span> <span class="fn">name</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Circle&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> Shape <span class="kw">for</span> Square {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.side <span class="op">*</span> <span class="kw">self</span>.side
+    }
+    <span class="kw">fn</span> <span class="fn">name</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Square&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> Shape <span class="kw">for</span> Triangle {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.base <span class="op">*</span> <span class="kw">self</span>.height <span class="op">/</span> <span class="num">2</span>
+    }
+    <span class="kw">fn</span> <span class="fn">name</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Triangle&quot;</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">print_shape</span><span class="op">&lt;</span>T: Shape<span class="op">&gt;</span>(s: T) {
+    <span class="fn">print</span>(s.<span class="fn">name</span>() <span class="op">+</span> <span class="str">&quot; has area &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(s.<span class="fn">area</span>()))
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> c: Circle <span class="op">=</span> Circle { radius: <span class="num">10</span> }
+    <span class="kw">let</span> sq: Square <span class="op">=</span> Square { side: <span class="num">7</span> }
+    <span class="kw">let</span> t: Triangle <span class="op">=</span> Triangle { base: <span class="num">6</span>, height: <span class="num">8</span> }
+
+    <span class="fn">print_shape</span>(c)     <span class="cm">// Circle has area 300</span>
+    <span class="fn">print_shape</span>(sq)    <span class="cm">// Square has area 49</span>
+    <span class="fn">print_shape</span>(t)     <span class="cm">// Triangle has area 24</span>
+}</pre>
+<h2>Practical example: a scoring system</h2>
+<pre><span class="kw">trait</span> Scoreable {
+    <span class="kw">fn</span> <span class="fn">score</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+    <span class="kw">fn</span> <span class="fn">label</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Student {
+    name: <span class="ty">String</span>,
+    average: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Team {
+    name: <span class="ty">String</span>,
+    wins: <span class="ty">int</span>,
+    losses: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Scoreable <span class="kw">for</span> Student {
+    <span class="kw">fn</span> <span class="fn">score</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.average
+    }
+    <span class="kw">fn</span> <span class="fn">label</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Student &quot;</span> <span class="op">+</span> <span class="kw">self</span>.name
+    }
+}
+
+<span class="kw">impl</span> Scoreable <span class="kw">for</span> Team {
+    <span class="kw">fn</span> <span class="fn">score</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.wins <span class="op">*</span> <span class="num">3</span>
+    }
+    <span class="kw">fn</span> <span class="fn">label</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Team &quot;</span> <span class="op">+</span> <span class="kw">self</span>.name
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">print_ranking</span><span class="op">&lt;</span>T: Scoreable<span class="op">&gt;</span>(item: T) {
+    <span class="fn">print</span>(item.<span class="fn">label</span>() <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(item.<span class="fn">score</span>()) <span class="op">+</span> <span class="str">&quot; points&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> s: Student <span class="op">=</span> Student { name: <span class="str">&quot;Alice&quot;</span>, average: <span class="num">95</span> }
+    <span class="kw">let</span> t: Team <span class="op">=</span> Team { name: <span class="str">&quot;Nyx FC&quot;</span>, wins: <span class="num">8</span>, losses: <span class="num">2</span> }
+
+    <span class="fn">print_ranking</span>(s)    <span class="cm">// Student Alice: 95 points</span>
+    <span class="fn">print_ranking</span>(t)    <span class="cm">// Team Nyx FC: 24 points</span>
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Define a trait <code>Area</code> with method <code>fn area(self) -> int</code>. Implement it for <code>Circle</code> (radius) and <code>Rectangle</code> (width, height). Write a function that prints the area of any <code>Area</code> implementor.</li>
+</ol>
+<ol>
+<li>Define a trait <code>Printable</code> with <code>fn display(self) -> String</code>. Implement it for three different structs of your choice.</li>
+</ol>
+<ol>
+<li>Create a <code>struct Counter { value: int }</code> with an <code>impl</code> block that has methods: <code>increment(self) -> Counter</code>, <code>decrement(self) -> Counter</code>, <code>is_zero(self) -> bool</code>.</li>
+</ol>
+<ol>
+<li>Define traits <code>Named</code> (with <code>fn name(self) -> String</code>) and <code>Aged</code> (with <code>fn age(self) -> int</code>). Implement both for a <code>Person</code> struct.</li>
+</ol>
+<ol>
+<li>Build a mini animal kingdom: trait <code>Animal</code> with <code>fn speak(self) -> String</code> and <code>fn legs(self) -> int</code>. Implement it for <code>Dog</code>, <code>Cat</code>, and <code>Spider</code>. Print a report for each.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>A <code>trait</code> defines a set of methods a type must implement.</li>
+<li><code>impl Trait for Type</code> provides the implementation.</li>
+<li><code>impl Type</code> adds methods directly without a trait.</li>
+<li>Methods use <code>self</code> as the first parameter and are called with dot syntax.</li>
+<li>Trait bounds (<code><T: Display></code>) let functions accept any type with that trait.</li>
+<li>One type can implement multiple traits.</li>
+<li>Traits separate "what" (interface) from "how" (implementation).</li>
+</ul>
+<p>Next chapter: <a href="16-generics.md">Generics →</a></p>
+
+    <div class="book-nav">
+        <a href="14.html" class="book-nav-prev">&larr; Previous: Enums and pattern matching</a>
+        <a href="16.html" class="book-nav-next">Next: Generics &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

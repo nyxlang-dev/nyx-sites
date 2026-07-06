@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOML Config — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>TOML Config</h1>
+
+    <p><code>std/toml</code> parses TOML configuration strings into a flat <code>Map</code> with dot-notation keys. TOML is the configuration format used by <code>nyx.toml</code> (the package manager manifest) and <code>proxy.toml</code> (nyx-proxy configuration).</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Parsing TOML configuration strings</span>
+
+<span class="kw">import</span> <span class="str">"std/toml"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> config: <span class="ty">String</span> = <span class="str">"[server]\nhost = \"localhost\"\nport = 8080\ndebug = true\n\n[database]\npath = \"/var/data/app.db\"\nmax_connections = 50"</span>
+
+    <span class="kw">let</span> parsed: <span class="ty">Map</span> = toml_parse(config)
+
+    <span class="kw">let</span> host: <span class="ty">String</span> = toml_get(parsed, <span class="str">"server.host"</span>, <span class="str">"0.0.0.0"</span>)
+    print(<span class="str">"host: "</span> + host)
+
+    <span class="kw">let</span> port: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"server.port"</span>, <span class="num">3000</span>)
+    print(<span class="str">"port: "</span> + int_to_string(port))
+
+    <span class="kw">let</span> debug: <span class="ty">bool</span> = toml_get_bool(parsed, <span class="str">"server.debug"</span>, <span class="kw">false</span>)
+    <span class="kw">if</span> debug {
+        print(<span class="str">"debug mode enabled"</span>)
+    }
+
+    <span class="kw">if</span> toml_has(parsed, <span class="str">"database.path"</span>) {
+        <span class="kw">let</span> db_path: <span class="ty">String</span> = toml_get(parsed, <span class="str">"database.path"</span>, <span class="str">""</span>)
+        print(<span class="str">"db: "</span> + db_path)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">host: localhost
+port: 8080
+debug mode enabled
+db: /var/data/app.db</pre>
+
+    <h2>Explanation</h2>
+    <p><code>toml_parse</code> reads a TOML string and returns a <code>Map&lt;String&gt;</code> where section keys use dot notation: <code>[server]</code> + <code>host = "localhost"</code> becomes <code>"server.host" → "localhost"</code>. All values are stored as strings internally.</p>
+    <p>Typed accessors — <code>toml_get</code> (string), <code>toml_get_int</code>, <code>toml_get_bool</code> — convert from the string representation and accept a default value if the key is missing. <code>toml_has</code> checks whether a key exists without reading its value.</p>
+    <p>This is the same parser used by <code>nyx build</code> to read <code>nyx.toml</code> project manifests and by <code>nyx-proxy</code> to read its routing configuration.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/42-url-encode.html">← Previous</a>
+        <a href="/by-example/44-msgpack.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/43-toml-config.nx">examples/by-example/43-toml-config.nx</a></small></p>
+</main>
+
+</body>
+</html>

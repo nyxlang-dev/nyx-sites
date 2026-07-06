@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>if let — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>if let</h1>
+
+    <p><code>if let</code> es una construcción compacta de pattern matching que combina una verificación condicional y un binding en una sola expresión. Es especialmente útil cuando solo importa una variante de un enum y se quiere evitar la verbosidad de un <code>match</code> completo.</p>
+
+    <h2>Código</h2>
+    <pre><code>// if let: destructurar Option sin match completo
+
+fn find_even(nums: Array, start: int) -> Option&lt;int&gt; {
+    let len: int = nums.length()
+    var i: int = start
+    while i &lt; len {
+        let v: int = nums[i]
+        if v % 2 == 0 {
+            return Option.Some(v)
+        }
+        i = i + 1
+    }
+    return Option.None
+}
+
+fn main() -> int {
+    let data: Array = [1, 3, 4, 7, 8, 10]
+
+    // if let extrae el valor si es Some
+    let a: Option&lt;int&gt; = find_even(data, 0)
+    if let Option.Some(v) = a {
+        print("primer par desde 0: " + int_to_string(v))
+    } else {
+        print("no hay pares")
+    }
+
+    // buscar desde índice 4 (8 y 10 son pares)
+    let b: Option&lt;int&gt; = find_even(data, 4)
+    if let Option.Some(v) = b {
+        print("primer par desde 4: " + int_to_string(v))
+    } else {
+        print("no hay pares desde 4")
+    }
+
+    // Array sin pares: retorna None -> ejecuta else
+    let odds: Array = [1, 3, 5, 7]
+    let c: Option&lt;int&gt; = find_even(odds, 0)
+    if let Option.Some(v) = c {
+        print("par encontrado: " + int_to_string(v))
+    } else {
+        print("no hay pares en odds")
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">primer par desde 0: 4
+primer par desde 4: 8
+no hay pares en odds</pre>
+
+    <h2>Explicación</h2>
+    <p><code>find_even</code> recorre un array a partir de un índice dado y retorna el primer número par envuelto en <code>Option.Some</code>, o <code>Option.None</code> si no se encuentra ninguno. Este es un patrón típico para funciones de búsqueda: el tipo de retorno comunica "encontrado o no encontrado" a través del sistema de tipos en lugar de un valor centinela mágico.</p>
+    <p>La sintaxis <code>if let Option.Some(v) = a</code> evalúa el patrón <code>Option.Some(v)</code> contra el valor <code>a</code>. Si coincide, el valor interno se asigna a <code>v</code> y el cuerpo del if se ejecuta con <code>v</code> en scope. Si el patrón no coincide (es decir, el valor es <code>Option.None</code>), se ejecuta en cambio la rama <code>else</code>. Esto es exactamente equivalente a un <code>match</code> de dos brazos pero encaja de forma más natural en código de estilo imperativo.</p>
+    <p>La tercera llamada usa un array puramente impar para demostrar que se toma la rama <code>else</code>. Nótese que cada bloque <code>if let</code> introduce un binding <code>v</code> nuevo cuyo scope está limitado a ese bloque — no hay riesgo de que el binding del primer bloque se filtre al segundo o al tercero.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/26-try-operator.html">← Anterior</a>
+        <a href="/es/by-example/28-match-guard.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/27-if-let.nx">examples/by-example/27-if-let.nx</a></small></p>
+</main>
+
+</body>
+</html>

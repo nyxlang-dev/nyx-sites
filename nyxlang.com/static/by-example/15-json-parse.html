@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Parse — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>JSON Parse</h1>
+
+    <p>The <code>std/json</code> module provides a complete JSON parser and builder. JSON values are represented as tagged <code>Array</code> nodes — the first element is the type tag and the second is the value — making it easy to inspect and traverse any JSON document.</p>
+
+    <h2>Code</h2>
+    <pre><code>// JSON con std/json: construir objetos, arrays y serializar/parsear números
+
+import "std/json"
+
+fn main() -> int {
+    // Construir un objeto JSON programáticamente
+    let keys: Array = ["name", "age", "activo"]
+    let vals: Array = []
+    vals.push(json_string("Alice"))
+    vals.push(json_number(30))
+    vals.push(json_bool(true))
+
+    let obj: Array = json_object(keys, vals)
+    let serializado: String = json_stringify(obj)
+    print("Objeto: " + serializado)
+
+    // Construir un array JSON
+    let items: Array = []
+    items.push(json_number(10))
+    items.push(json_number(20))
+    items.push(json_number(30))
+    let arr: Array = json_array(items)
+    print("Array:  " + json_stringify(arr))
+
+    // Parsear un número
+    let parsed: Array = json_parse("42")
+    print("Tipo: " + json_type(parsed))
+    let val: int = parsed[1]
+    print("Valor: " + int_to_string(val))
+
+    // Parsear un array de números
+    let parsed2: Array = json_parse("[1,2,3]")
+    print("Array parseado: " + json_stringify(parsed2))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Objeto: {"name":"Alice","age":30,"activo":true}
+Array:  [10,20,30]
+Tipo: number
+Valor: 42
+Array parseado: [1,2,3]</pre>
+
+    <h2>Explanation</h2>
+    <p>JSON values are constructed with typed builder functions: <code>json_string</code>, <code>json_number</code>, <code>json_bool</code>, <code>json_object</code>, and <code>json_array</code>. Each returns a tagged <code>Array</code> where <code>node[0]</code> is the type string (e.g. <code>"number"</code>) and <code>node[1]</code> is the payload. This uniform representation makes recursive traversal straightforward.</p>
+    <p><code>json_stringify</code> serializes any JSON node back to a compact string. <code>json_parse</code> does the reverse — it accepts a JSON string and returns the same tagged-array structure, which you can then inspect with <code>json_type</code> or index directly.</p>
+    <p>For reading nested fields, you would chain array indexing: <code>obj[1][1]</code> reaches the first value in a JSON object node. The next example (16) focuses on building complex nested structures for serialization.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/14-env-vars.html">← Previous</a>
+        <a href="/by-example/16-json-serialize.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/15-json-parse.nx">examples/by-example/15-json-parse.nx</a></small></p>
+</main>
+
+</body>
+</html>

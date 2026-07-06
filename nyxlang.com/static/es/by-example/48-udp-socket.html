@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket UDP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Socket UDP</h1>
+
+    <p>UDP es un protocolo sin conexión: cada datagrama es independiente, sin handshake ni entrega garantizada. <code>udp_bind</code> crea un socket, <code>udp_sendto</code> envía datos a una dirección, y <code>udp_recvfrom</code> recibe datos. UDP es ideal para aplicaciones en tiempo real donde la baja latencia importa más que la confiabilidad.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// UDP send and receive — connectionless datagrams</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> sock: <span class="ty">int</span> = udp_bind(<span class="str">"127.0.0.1"</span>, <span class="num">9001</span>)
+    <span class="kw">if</span> sock &lt; <span class="num">0</span> {
+        print(<span class="str">"failed to bind UDP socket"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+    print(<span class="str">"UDP socket bound to :9001"</span>)
+
+    <span class="kw">let</span> msg: <span class="ty">String</span> = <span class="str">"hello via UDP"</span>
+    udp_sendto(sock, msg, <span class="str">"127.0.0.1"</span>, <span class="num">9001</span>)
+    print(<span class="str">"sent: "</span> + msg)
+
+    <span class="kw">let</span> received: <span class="ty">String</span> = udp_recvfrom(sock, <span class="num">1024</span>)
+    print(<span class="str">"received: "</span> + received)
+
+    tcp_close(sock)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">UDP socket bound to :9001
+sent: hello via UDP
+received: hello via UDP</pre>
+
+    <h2>Explicación</h2>
+    <p><code>udp_bind(host, port)</code> crea un socket UDP vinculado a la dirección dada. A diferencia de TCP, no hay configuración de conexión — puedes enviar inmediatamente a cualquier dirección con <code>udp_sendto(sock, data, host, port)</code>. <code>udp_recvfrom(sock, max_bytes)</code> bloquea hasta que llega un datagrama.</p>
+    <p>En este ejemplo, el socket se envía a sí mismo (loopback). En la práctica, tendrías sockets separados de emisor y receptor en distintos hosts o puertos. Los sockets UDP se cierran con <code>tcp_close</code> (el mismo mecanismo de descriptor de archivo subyacente).</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/47-tcp-server.html">← Anterior</a>
+        <a href="/es/by-example/49-http-get.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/48-udp-socket.nx">examples/by-example/48-udp-socket.nx</a></small></p>
+</main>
+
+</body>
+</html>

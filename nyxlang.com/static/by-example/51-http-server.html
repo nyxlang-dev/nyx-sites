@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Server — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>HTTP Server</h1>
+
+    <p>A minimal HTTP server using <code>http_serve</code> from <code>std/http</code>. The handler function receives a parsed request array <code>[type, method, path, headers, body]</code> and returns an HTTP response string built with <code>http_response</code>. The server blocks in an accept loop, handling one request at a time.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Minimal HTTP server using std/http</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(req: <span class="ty">Array</span>) -> <span class="ty">String</span> {
+    <span class="kw">let</span> method: <span class="ty">String</span> = req[<span class="num">1</span>]
+    <span class="kw">let</span> path: <span class="ty">String</span> = req[<span class="num">2</span>]
+
+    <span class="kw">if</span> path == <span class="str">"/"</span> {
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"Hello from Nyx!"</span>)
+    }
+    <span class="kw">if</span> path == <span class="str">"/time"</span> {
+        <span class="kw">let</span> t: <span class="ty">int</span> = time()
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"timestamp: "</span> + int_to_string(t))
+    }
+    <span class="kw">return</span> http_response(<span class="num">404</span>, <span class="str">"not found: "</span> + path)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"listening on :8080"</span>)
+    http_serve(<span class="num">8080</span>, on_request)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">listening on :8080</pre>
+
+    <h2>Explanation</h2>
+    <p><code>http_serve(port, handler)</code> listens on the given port and enters an infinite accept loop. For each connection, it parses the HTTP request into an array, calls the handler function, sends the response, and closes the connection.</p>
+    <p><code>http_response(status, body)</code> builds a properly formatted HTTP/1.1 response with Content-Length and Connection: close headers. For custom headers (like Content-Type: application/json), use <code>http_response_with_headers</code>.</p>
+    <p>For multi-threaded serving, use <code>http_serve_mt(port, num_workers, handler)</code> which dispatches connections to a thread pool via channels — this is how nyx-serve achieves 73K req/s.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/50-http-post.html">← Previous</a>
+        <a href="/by-example/52-http-middleware.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/51-http-server.nx">examples/by-example/51-http-server.nx</a></small></p>
+</main>
+
+</body>
+</html>

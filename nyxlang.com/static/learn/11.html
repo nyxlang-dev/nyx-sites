@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imports and modules — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Imports and modules</h1>
+
+<h2>Why modules?</h2>
+<p>In Part 1, every program was a single file. That works fine for small programs, but imagine a program with 50 functions — finding anything becomes a nightmare. Modules let you split code into separate files, each focused on one topic.</p>
+<p>Think of modules like chapters in a book. Each chapter covers one subject, and you can flip to the chapter you need. In Nyx, each <code>.nx</code> file can be a module.</p>
+<h2>Your first module</h2>
+<p>Let's create a math helper module. Create a file called <code>math_helpers.nx</code>:</p>
+<pre><span class="cm">// math_helpers.nx</span>
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">square</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> x <span class="op">*</span> x
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">cube</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> x <span class="op">*</span> x <span class="op">*</span> x
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">factorial</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">1</span> { <span class="kw">return</span> <span class="num">1</span> }
+    <span class="kw">return</span> n <span class="op">*</span> <span class="fn">factorial</span>(n <span class="op">-</span> <span class="num">1</span>)
+}</pre>
+<p>The <code>export</code> keyword makes a function available to other files. Without <code>export</code>, the function is private — only usable inside its own file.</p>
+<p>Now create your main program that uses it:</p>
+<pre><span class="cm">// main.nx</span>
+
+<span class="kw">import</span> { square, cube, factorial } from <span class="str">&quot;math_helpers&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">square</span>(<span class="num">5</span>))       <span class="cm">// 25</span>
+    <span class="fn">print</span>(<span class="fn">cube</span>(<span class="num">3</span>))         <span class="cm">// 27</span>
+    <span class="fn">print</span>(<span class="fn">factorial</span>(<span class="num">6</span>))    <span class="cm">// 720</span>
+}</pre>
+<p>The <code>import</code> statement brings specific functions from another module into your file.</p>
+<h2>The import syntax</h2>
+<pre><span class="kw">import</span> { name1, name2, name3 } from <span class="str">&quot;module_name&quot;</span></pre>
+<ul>
+<li>The names inside <code>{ }</code> are the functions (or structs) you want to use.</li>
+<li>The string after <code>from</code> is the module name — the filename without <code>.nx</code>.</li>
+<li>You only import what you need. This keeps your code clean and makes dependencies clear.</li>
+</ul>
+<h2>Exporting structs</h2>
+<p>You can export structs too:</p>
+<pre><span class="cm">// shapes.nx</span>
+
+<span class="kw">export</span> <span class="kw">struct</span> Circle {
+    radius: <span class="ty">int</span>
+}
+
+<span class="kw">export</span> <span class="kw">struct</span> Rectangle {
+    width: <span class="ty">int</span>,
+    height: <span class="ty">int</span>
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">circle_area</span>(c: Circle) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="num">3</span> <span class="op">*</span> c.radius <span class="op">*</span> c.radius
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">rect_area</span>(r: Rectangle) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> r.width <span class="op">*</span> r.height
+}</pre>
+<pre><span class="cm">// main.nx</span>
+
+<span class="kw">import</span> { Circle, Rectangle, circle_area, rect_area } from <span class="str">&quot;shapes&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> c: Circle <span class="op">=</span> Circle { radius: <span class="num">10</span> }
+    <span class="kw">let</span> r: Rectangle <span class="op">=</span> Rectangle { width: <span class="num">5</span>, height: <span class="num">8</span> }
+
+    <span class="fn">print</span>(<span class="fn">circle_area</span>(c))    <span class="cm">// 300</span>
+    <span class="fn">print</span>(<span class="fn">rect_area</span>(r))      <span class="cm">// 40</span>
+}</pre>
+<h2>Where Nyx looks for modules</h2>
+<p>When you write <code>import "math_helpers"</code>, Nyx searches in this order:</p>
+<ol>
+<li><strong>Project directory</strong> — <code>math_helpers.nx</code> relative to your project root</li>
+<li><strong>Installed packages</strong> — <code>packages/pkg-name/rest.nx</code> for dependencies added via <code>nyx add</code></li>
+<li><strong>Local directory</strong> — <code>math_helpers.nx</code> next to your file</li>
+<li><strong>Standard library</strong> — <code>std/math_helpers.nx</code> in the Nyx installation</li>
+</ol>
+<p>This means you can import from the standard library, your own files, and installed packages the same way.</p>
+<h2>Using the standard library</h2>
+<p>Nyx comes with a standard library of useful modules. Here are some examples:</p>
+<pre><span class="kw">import</span> { read_file, write_file } from <span class="str">&quot;std/file&quot;</span>
+<span class="kw">import</span> { http_serve, http_response } from <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> { json_parse, json_stringify } from <span class="str">&quot;std/json&quot;</span></pre>
+<p>The <code>std/</code> prefix tells Nyx to look in the standard library directory.</p>
+<h2>Organizing a project</h2>
+<p>A typical Nyx project might look like this:</p>
+<pre>my_project/
+├── main.nx           # Entry point
+├── models.nx         # Data structures
+├── database.nx       # Database operations
+└── utils.nx          # Helper functions</pre>
+<pre><span class="cm">// models.nx</span>
+<span class="kw">export</span> <span class="kw">struct</span> User {
+    name: <span class="ty">String</span>,
+    email: <span class="ty">String</span>,
+    age: <span class="ty">int</span>
+}
+
+<span class="kw">export</span> <span class="kw">struct</span> Post {
+    title: <span class="ty">String</span>,
+    body: <span class="ty">String</span>,
+    author: <span class="ty">String</span>
+}</pre>
+<pre><span class="cm">// utils.nx</span>
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">repeat_string</span>(s: <span class="ty">String</span>, times: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> result: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> times {
+        result <span class="op">=</span> result <span class="op">+</span> s
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">clamp</span>(value: <span class="ty">int</span>, low: <span class="ty">int</span>, high: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> value <span class="op">&lt;</span> low { <span class="kw">return</span> low }
+    <span class="kw">if</span> value <span class="op">&gt;</span> high { <span class="kw">return</span> high }
+    <span class="kw">return</span> value
+}</pre>
+<pre><span class="cm">// main.nx</span>
+<span class="kw">import</span> { User, Post } from <span class="str">&quot;models&quot;</span>
+<span class="kw">import</span> { repeat_string, clamp } from <span class="str">&quot;utils&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> u: User <span class="op">=</span> User { name: <span class="str">&quot;Alice&quot;</span>, email: <span class="str">&quot;alice@example.com&quot;</span>, age: <span class="num">30</span> }
+    <span class="fn">print</span>(u.name)
+
+    <span class="fn">print</span>(<span class="fn">repeat_string</span>(<span class="str">&quot;=-&quot;</span>, <span class="num">20</span>))    <span class="cm">// =-=-=-=-=-=-...</span>
+    <span class="fn">print</span>(<span class="fn">clamp</span>(<span class="num">150</span>, <span class="num">0</span>, <span class="num">100</span>))         <span class="cm">// 100</span>
+}</pre>
+<h2>What export means</h2>
+<p>Only <code>export</code>ed items are visible outside the module. This is important for hiding implementation details:</p>
+<pre><span class="cm">// password.nx</span>
+
+<span class="cm">// Private — only usable inside this file</span>
+<span class="kw">fn</span> <span class="fn">hash_internal</span>(s: <span class="ty">String</span>, rounds: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> result: <span class="ty">String</span> <span class="op">=</span> s
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> rounds {
+        result <span class="op">=</span> result <span class="op">+</span> <span class="str">&quot;*&quot;</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="cm">// Public — other files can use this</span>
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">hash_password</span>(password: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="fn">hash_internal</span>(password, <span class="num">10</span>)
+}</pre>
+<p>If another file tries to import <code>hash_internal</code>, the compiler will give an error. This protects your internal logic.</p>
+<h2>Practical example: a mini library</h2>
+<p>Let's build a small string utility library:</p>
+<pre><span class="cm">// string_utils.nx</span>
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">is_empty</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> s.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span>
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">starts_with_upper</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">if</span> s.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> { <span class="kw">return</span> <span class="kw">false</span> }
+    <span class="kw">let</span> c: <span class="ty">int</span> <span class="op">=</span> s.<span class="fn">charAt</span>(<span class="num">0</span>)
+    <span class="kw">return</span> c <span class="op">&gt;=</span> <span class="num">65</span> <span class="kw">and</span> c <span class="op">&lt;=</span> <span class="num">90</span>
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">count_words</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> s.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+    <span class="kw">let</span> parts: <span class="ty">Array</span> <span class="op">=</span> s.<span class="fn">split</span>(<span class="str">&quot; &quot;</span>)
+    <span class="kw">return</span> parts.<span class="fn">length</span>()
+}
+
+<span class="kw">export</span> <span class="kw">fn</span> <span class="fn">truncate</span>(s: <span class="ty">String</span>, max_len: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> s.<span class="fn">length</span>() <span class="op">&lt;=</span> max_len { <span class="kw">return</span> s }
+    <span class="kw">return</span> s.<span class="fn">substring</span>(<span class="num">0</span>, max_len) <span class="op">+</span> <span class="str">&quot;...&quot;</span>
+}</pre>
+<pre><span class="cm">// main.nx</span>
+
+<span class="kw">import</span> { is_empty, starts_with_upper, count_words, truncate } from <span class="str">&quot;string_utils&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">is_empty</span>(<span class="str">&quot;&quot;</span>))                    <span class="cm">// true</span>
+    <span class="fn">print</span>(<span class="fn">is_empty</span>(<span class="str">&quot;hello&quot;</span>))               <span class="cm">// false</span>
+    <span class="fn">print</span>(<span class="fn">starts_with_upper</span>(<span class="str">&quot;Hello&quot;</span>))      <span class="cm">// true</span>
+    <span class="fn">print</span>(<span class="fn">starts_with_upper</span>(<span class="str">&quot;hello&quot;</span>))      <span class="cm">// false</span>
+    <span class="fn">print</span>(<span class="fn">count_words</span>(<span class="str">&quot;Nyx is a compiled language&quot;</span>))    <span class="cm">// 5</span>
+    <span class="fn">print</span>(<span class="fn">truncate</span>(<span class="str">&quot;Hello, World!&quot;</span>, <span class="num">5</span>))    <span class="cm">// Hello...</span>
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Create a module <code>math_utils.nx</code> that exports functions <code>abs(n: int) -> int</code>, <code>max(a: int, b: int) -> int</code>, and <code>min(a: int, b: int) -> int</code>. Write a main program that imports and uses them.</li>
+</ol>
+<ol>
+<li>Create a module <code>validators.nx</code> that exports <code>is_positive(n: int) -> bool</code>, <code>is_even(n: int) -> bool</code>, and <code>in_range(n: int, low: int, high: int) -> bool</code>. Use them in a main program.</li>
+</ol>
+<ol>
+<li>Split the student grade tracker from Chapter 10 into modules: <code>student.nx</code> (struct + creation), <code>grades.nx</code> (average, highest, letter grade), and <code>main.nx</code> (report and entry point).</li>
+</ol>
+<ol>
+<li>Create a module <code>array_utils.nx</code> that exports <code>sum(arr: Array) -> int</code>, <code>average(arr: Array) -> int</code>, and <code>contains(arr: Array, target: int) -> bool</code>. Test it from a main file.</li>
+</ol>
+<ol>
+<li>Create two modules that both export a function with the same logic but different names. Import both into a main file and verify they work together without conflicts.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Use <code>export</code> to make functions and structs available to other files.</li>
+<li>Use <code>import { names } from "module"</code> to bring items into your file.</li>
+<li>Nyx searches: local directory → standard library → packages.</li>
+<li>Modules help you organize code into focused, reusable files.</li>
+<li>Only export what other files need — keep implementation details private.</li>
+<li>The standard library is imported the same way: <code>from "std/module"</code>.</li>
+</ul>
+<p>Next chapter: <a href="12-files.md">Files →</a></p>
+
+    <div class="book-nav">
+        <a href="10.html" class="book-nav-prev">&larr; Previous: Your first project</a>
+        <a href="12.html" class="book-nav-next">Next: Files &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

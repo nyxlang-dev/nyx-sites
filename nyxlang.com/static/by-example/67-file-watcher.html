@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Watcher — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>File Watcher</h1>
+    <p>Without inotify/kqueue, file watching uses polling: call <code>stat()</code> periodically and compare the mtime. <code>stat</code> returns <code>[size, mode, mtime, is_dir, is_regular]</code>.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// File watcher — polling for file changes with stat()</span>
+<span class="cm">// Vigilante de archivos — polling de cambios con stat()</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> path: <span class="ty">String</span> = <span class="str">"/tmp/nyx_watch_test.txt"</span>
+
+    <span class="cm">// Create a test file</span>
+    write_file(path, <span class="str">"initial content"</span>)
+    print(<span class="str">"watching: "</span> + path)
+
+    <span class="cm">// stat() returns [size, mode, mtime, is_dir, is_regular]</span>
+    <span class="kw">let</span> info: <span class="ty">Array</span> = stat(path)
+    <span class="kw">let</span> initial_mtime: <span class="ty">int</span> = info[<span class="num">2</span>]
+    print(<span class="str">"initial mtime: "</span> + int_to_string(initial_mtime))
+    print(<span class="str">"file size: "</span> + int_to_string(info[<span class="num">0</span>]) + <span class="str">" bytes"</span>)
+
+    <span class="cm">// Modify the file</span>
+    sleep(<span class="num">1100</span>)
+    write_file(path, <span class="str">"modified content!"</span>)
+
+    <span class="cm">// Check again</span>
+    <span class="kw">let</span> info2: <span class="ty">Array</span> = stat(path)
+    <span class="kw">let</span> new_mtime: <span class="ty">int</span> = info2[<span class="num">2</span>]
+
+    <span class="kw">if</span> new_mtime > initial_mtime {
+        print(<span class="str">"file changed! new mtime: "</span> + int_to_string(new_mtime))
+        print(<span class="str">"new size: "</span> + int_to_string(info2[<span class="num">0</span>]) + <span class="str">" bytes"</span>)
+    } <span class="kw">else</span> {
+        print(<span class="str">"no change detected"</span>)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">watching: /tmp/nyx_watch_test.txt
+initial mtime: ...
+file size: 15 bytes
+file changed! new mtime: ...
+new size: 17 bytes</pre>
+    <h2>Explanation</h2>
+    <p><code>stat(path)</code> returns an array with five elements: <code>[size, mode, mtime, is_dir, is_regular]</code>. The <code>mtime</code> field is the file's last modification time as a Unix timestamp.</p>
+    <p>This recipe creates a file, records its initial mtime, waits just over one second (to ensure the filesystem timestamp changes), modifies the file, and checks the mtime again. If the new mtime is greater, the file has changed.</p>
+    <p>This polling approach works on any filesystem but is not efficient for watching many files. For production use, you would want inotify (Linux) or kqueue (macOS) bindings, which Nyx can access via FFI.</p>
+    <div class="book-nav">
+        <a href="/by-example/66-signal-handling.html">&larr; Previous</a>
+        <a href="/by-example/68-process-control.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/67-file-watcher.nx">examples/by-example/67-file-watcher.nx</a></small></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option: Some y None — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Option: Some y None</h1>
+
+    <p><code>Option&lt;T&gt;</code> es la manera que tiene Nyx de expresar un valor que puede estar presente o no. En lugar de retornar un valor centinela como <code>-1</code> o arriesgarse a un puntero nulo, las funciones retornan <code>Option.Some(value)</code> en caso de éxito u <code>Option.None</code> cuando no hay nada que retornar.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Option: función que retorna Some o None, match exhaustivo para manejar ambos
+
+fn find_positive(nums: Array, index: int) -> Option&lt;int&gt; {
+    let val: int = nums[index]
+    if val &gt; 0 {
+        return Option.Some(val)
+    }
+    return Option.None
+}
+
+fn describe(opt: Option&lt;int&gt;) -> String {
+    return match opt {
+        Option.Some(v) =&gt; "encontrado: " + int_to_string(v),
+        Option.None    =&gt; "no encontrado"
+    }
+}
+
+fn main() -> int {
+    let nums: Array = [10, -5, 3, -1, 7]
+
+    // Caso Some: index 0 es positivo
+    let a: Option&lt;int&gt; = find_positive(nums, 0)
+    print(describe(a))
+
+    // Caso None: index 1 es negativo
+    let b: Option&lt;int&gt; = find_positive(nums, 1)
+    print(describe(b))
+
+    // if let para extraer el valor directamente
+    let c: Option&lt;int&gt; = find_positive(nums, 4)
+    if let Option.Some(v) = c {
+        print("if let Some: valor es " + int_to_string(v))
+    } else {
+        print("if let: ningun valor")
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">encontrado: 10
+no encontrado
+if let Some: valor es 7</pre>
+
+    <h2>Explicación</h2>
+    <p><code>Option&lt;T&gt;</code> es un enum genérico con dos variantes: <code>Option.Some(value)</code> envuelve un valor existente de tipo <code>T</code>, y <code>Option.None</code> señala su ausencia. Como forma parte del prelude, no necesitás importarlo — siempre está disponible. Este patrón elimina toda una clase de bugs relacionados con nulos al hacer explícita la opcionalidad en el sistema de tipos.</p>
+    <p>La función <code>describe</code> muestra un <code>match</code> exhaustivo sobre un <code>Option</code>. El compilador exige que se manejen ambos casos — olvidarse de <code>Option.None</code> es un error en tiempo de compilación. El caso <code>Some</code> usa desestructuración de patrones para vincular el valor interno directamente a <code>v</code>, que luego queda disponible en la expresión de ese caso.</p>
+    <p><code>if let Option.Some(v) = c</code> es un atajo conciso para cuando solo te interesa el caso <code>Some</code> y querés recurrir a una rama <code>else</code> para el caso <code>None</code>. Vincula <code>v</code> dentro del cuerpo del if sin la formalidad de una expresión match completa.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/23-derive-clone.html">← Anterior</a>
+        <a href="/es/by-example/25-result-ok-err.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/24-option-some-none.nx">examples/by-example/24-option-some-none.nx</a></small></p>
+</main>
+
+</body>
+</html>

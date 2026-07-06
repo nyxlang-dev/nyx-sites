@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El gestor de paquetes — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>El gestor de paquetes</h1>
+
+<h2>Por que un gestor de paquetes?</h2>
+<p>A medida que los proyectos crecen, necesitas una forma de organizar el codigo en modulos, compartir bibliotecas y garantizar compilaciones reproducibles. Nyx incluye un gestor de paquetes integrado que maneja todo esto a traves de un unico archivo de configuracion: <code>nyx.toml</code>.</p>
+<p>No se requieren herramientas externas. Ni <code>npm</code>, ni <code>pip</code>, ni <code>cargo</code> que instalar por separado. Es parte del compilador.</p>
+
+<h2>El formato nyx.toml</h2>
+<p>Cada proyecto Nyx tiene un archivo <code>nyx.toml</code> en su raiz. Describe el proyecto y sus dependencias:</p>
+<pre><span class="cm"># nyx.toml</span>
+
+[package]
+name <span class="op">=</span> <span class="str">"myapp"</span>
+version <span class="op">=</span> <span class="str">"0.1.0"</span>
+main <span class="op">=</span> <span class="str">"src/main.nx"</span>
+description <span class="op">=</span> <span class="str">"A web API for managing tasks"</span>
+
+[dependencies]
+json <span class="op">=</span> <span class="str">"*"</span>
+http <span class="op">=</span> <span class="str">"https://github.com/nyxlang-dev/http"</span></pre>
+
+<p>La seccion <code>[package]</code> describe tu proyecto:</p>
+<div class="table-wrapper"><table>
+<thead><tr><th>Clave</th><th>Requerida</th><th>Descripcion</th></tr></thead>
+<tbody>
+<tr><td><code>name</code></td><td>Si</td><td>Nombre del proyecto (se usa para el binario de salida)</td></tr>
+<tr><td><code>version</code></td><td>Si</td><td>Version semantica (ej. <code>"0.1.0"</code>)</td></tr>
+<tr><td><code>main</code></td><td>No</td><td>Archivo de entrada (por defecto: <code>src/main.nx</code>)</td></tr>
+<tr><td><code>description</code></td><td>No</td><td>Descripcion breve del proyecto</td></tr>
+<tr><td><code>no_gc</code></td><td>No</td><td>Establecer a <code>true</code> para modo sistemas sin recolector de basura</td></tr>
+</tbody></table></div>
+
+<p>La seccion <code>[dependencies]</code> lista las bibliotecas de las que depende tu proyecto. Cada dependencia se obtiene via <code>git clone</code> en un directorio <code>packages/</code>.</p>
+
+<h2>Crear un proyecto con nyx init</h2>
+<p>La forma mas rapida de iniciar un nuevo proyecto:</p>
+<pre>$ mkdir my-api
+$ cd my-api
+$ nyx init</pre>
+<p>Esto crea dos archivos:</p>
+<pre>my-api/
+  nyx.toml       <span class="cm">&larr; configuracion del proyecto</span>
+  src/
+    main.nx      <span class="cm">&larr; punto de entrada</span></pre>
+<p>El <code>nyx.toml</code> generado usa el nombre del directorio como nombre del proyecto, y <code>src/main.nx</code> contiene un programa hola-mundo.</p>
+
+<h2>Compilar y ejecutar</h2>
+<p><code>nyx build</code> lee <code>nyx.toml</code>, resuelve las dependencias, compila el proyecto y produce un binario nativo:</p>
+<pre>$ nyx build
+Resolving dependencies...
+Compiling my-api v0.1.0
+  Built: my-api</pre>
+<p>Para compilaciones optimizadas, agrega el flag <code>--release</code>:</p>
+<pre>$ nyx build --release</pre>
+<p>Para compilar y ejecutar en un solo paso:</p>
+<pre>$ nyx run</pre>
+<p>Tras una compilacion exitosa, se escribe un archivo <code>nyx.lock</code> que registra las versiones exactas de todas las dependencias. Haz commit de este archivo en el control de versiones para compilaciones reproducibles.</p>
+
+<h2>Agregar dependencias</h2>
+<p>El comando <code>nyx add</code> agrega un paquete del registro por defecto:</p>
+<pre>$ nyx add json</pre>
+<p>Esto clona el paquete en <code>packages/json/</code> y lo agrega a <code>nyx.toml</code>. Para agregar desde una URL personalizada:</p>
+<pre>$ nyx add mylib --from https://github.com/user/mylib</pre>
+
+<h2>Importar desde paquetes</h2>
+<p>Despues de agregar un paquete, importa sus modulos usando el nombre del paquete como prefijo:</p>
+<pre><span class="cm">// Despues de: nyx add nyx-db</span>
+<span class="kw">import</span> <span class="str">"nyx-db/src/query"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">db_query</span>(<span class="str">"CREATE TABLE users (id INT PRIMARY KEY, name TEXT)"</span>)
+    <span class="fn">db_query</span>(<span class="str">"INSERT INTO users VALUES (1, 'Alice')"</span>)
+    <span class="kw">let</span> rows: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">db_query_rows</span>(<span class="str">"SELECT * FROM users"</span>)
+}</pre>
+<p>El compilador resuelve <code>import "nyx-db/src/query"</code> a <code>packages/nyx-db/src/query.nx</code>. Los imports internos del paquete (como <code>import "src/store"</code>) se reescriben automaticamente para que las dependencias transitivas se resuelvan correctamente.</p>
+
+<h2>Inspeccionar un proyecto</h2>
+<p>El comando <code>nyx info</code> imprime los metadatos del proyecto:</p>
+<pre>$ nyx info
+  name: my-api
+  version: 0.1.0
+  main: src/main.nx
+  description: A web API for managing tasks
+  gc: enabled</pre>
+
+<h2>Ejemplo practico</h2>
+<p>Construyamos un proyecto pequeno desde cero:</p>
+<pre>$ mkdir greeter &amp;&amp; cd greeter
+$ nyx init</pre>
+<p>Edita <code>src/main.nx</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">"Hello, "</span> <span class="op">+</span> name <span class="op">+</span> <span class="str">"!"</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> args: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span>()
+    <span class="kw">if</span> args.<span class="fn">length</span>() <span class="op">&gt;</span> <span class="num">1</span> {
+        <span class="kw">let</span> name: <span class="ty">String</span> <span class="op">=</span> args[<span class="num">1</span>]
+        <span class="fn">println</span>(<span class="fn">greet</span>(name))
+    } <span class="kw">else</span> {
+        <span class="fn">println</span>(<span class="fn">greet</span>(<span class="str">"World"</span>))
+    }
+}</pre>
+<p>Compilar y ejecutar:</p>
+<pre>$ nyx run
+Hello, World!
+
+$ nyx build
+$ ./greeter Alice
+Hello, Alice!</pre>
+
+<h2>Resumen</h2>
+<ul>
+<li><code>nyx.toml</code> describe el proyecto y sus dependencias.</li>
+<li><code>nyx init</code> genera la estructura de un nuevo proyecto.</li>
+<li><code>nyx build</code> resuelve dependencias y compila a un binario nativo.</li>
+<li><code>nyx run</code> compila y ejecuta en un solo paso.</li>
+<li><code>nyx add &lt;pkg&gt;</code> agrega una dependencia del registro o de una URL personalizada.</li>
+<li><code>nyx.lock</code> registra las versiones exactas para compilaciones reproducibles.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="25.html" class="book-nav-prev">&larr; Anterior: Caso de estudio — Como se construyo nyx-kv</a>
+        <a href="27.html" class="book-nav-next">Siguiente: APIs web con nyx-serve &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building a database — nyx-db — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Building a database — nyx-db</h1>
+
+<h2>What is nyx-db?</h2>
+<p>nyx-db is an <strong>embedded SQL database engine</strong> written entirely in Nyx. It accepts SQL commands over the RESP protocol (just like nyx-kv), so you can use <code>redis-cli</code> as the client. Think of it as a mini SQLite accessible over the network.</p>
+
+<h2>Architecture</h2>
+<pre>SQL string ──► Lexer ──► Parser ──► AST ──► Executor ──► Storage
+                                                            │
+                                                         ┌──┴──┐
+                                                         │.db  │
+                                                         │file │
+                                                         └─────┘</pre>
+<p>The pipeline has four stages:</p>
+<ol>
+<li><strong>Lexer</strong> — tokenizes the SQL string into keywords, identifiers, literals, and operators.</li>
+<li><strong>Parser</strong> — recursive descent parser that builds an AST (abstract syntax tree).</li>
+<li><strong>Executor</strong> — walks the AST and performs the requested operation.</li>
+<li><strong>Storage</strong> — rows are stored in-memory in Maps, with background persistence to a <code>.db</code> file.</li>
+</ol>
+
+<h2>Connecting</h2>
+<p>nyx-db listens on port 6382 by default:</p>
+<pre>$ redis-cli -p 6382
+127.0.0.1:6382&gt; PING
+PONG</pre>
+
+<h2>Creating tables</h2>
+<pre>127.0.0.1:6382&gt; SQL CREATE TABLE users (id INT PRIMARY KEY, name TEXT, age INT)
+OK</pre>
+<p>Supported types: <code>INT</code>, <code>TEXT</code>, <code>REAL</code>. The <code>PRIMARY KEY</code> constraint ensures uniqueness.</p>
+
+<h2>Inserting data</h2>
+<pre>127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (1, 'Alice', 30)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (2, 'Bob', 25)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (3, 'Charlie', 35)
+OK</pre>
+
+<h2>Querying data</h2>
+<pre>127.0.0.1:6382&gt; SQL SELECT * FROM users
+1) "id=1, name=Alice, age=30"
+2) "id=2, name=Bob, age=25"
+3) "id=3, name=Charlie, age=35"</pre>
+<p>Select specific columns with a WHERE clause:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT name, age FROM users WHERE age > 28
+1) "name=Alice, age=30"
+2) "name=Charlie, age=35"</pre>
+<p>Ordering and limiting results:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT * FROM users ORDER BY age DESC LIMIT 2
+1) "id=3, name=Charlie, age=35"
+2) "id=1, name=Alice, age=30"</pre>
+<p>Aggregate functions:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT COUNT(*) FROM users
+(integer) 3</pre>
+
+<h2>Updating and deleting</h2>
+<pre>127.0.0.1:6382&gt; SQL UPDATE users SET age = 31 WHERE name = 'Alice'
+OK (1 row updated)
+
+127.0.0.1:6382&gt; SQL DELETE FROM users WHERE age &lt; 30
+OK (1 row deleted)</pre>
+
+<h2>Indexes</h2>
+<p>Create an index to speed up queries on frequently-searched columns:</p>
+<pre>127.0.0.1:6382&gt; SQL CREATE INDEX idx_age ON users (age)
+OK</pre>
+
+<h2>Transactions</h2>
+<p>Group multiple operations into an atomic transaction:</p>
+<pre>127.0.0.1:6382&gt; SQL BEGIN
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (4, 'Diana', 28)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (5, 'Eve', 22)
+OK
+127.0.0.1:6382&gt; SQL COMMIT
+OK</pre>
+<p>Use <code>ROLLBACK</code> to undo all changes since <code>BEGIN</code>.</p>
+
+<h2>Meta commands</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>TABLES</code></td><td>List all tables</td></tr>
+<tr><td><code>SCHEMA tablename</code></td><td>Show table schema (columns and types)</td></tr>
+<tr><td><code>INFO</code></td><td>Server statistics</td></tr>
+<tr><td><code>PING</code></td><td>Health check</td></tr>
+</tbody></table></div>
+
+<h2>Persistence</h2>
+<p>nyx-db persists data to a <code>.db</code> file. A background saver thread writes snapshots periodically, and a shutdown handler ensures a final save on <code>SIGTERM</code>. On restart, all tables and rows are restored from disk.</p>
+<pre>$ ./nyx-db --data mydata.db --port 6383</pre>
+
+<h2>The SQL parser</h2>
+<p>The parser is a classic <strong>recursive descent parser</strong>. It reads tokens one at a time and builds AST nodes. For example, parsing <code>SELECT * FROM users WHERE age > 25</code> produces:</p>
+<pre>["SELECT",                    <span class="cm">← node type</span>
+  ["*"],                      <span class="cm">← columns</span>
+  "users",                    <span class="cm">← table name</span>
+  [">", "age", 25],           <span class="cm">← WHERE expression</span>
+  [],                         <span class="cm">← ORDER BY (empty)</span>
+  -1,                         <span class="cm">← LIMIT (none)</span>
+  0,                          <span class="cm">← OFFSET</span>
+  []]                         <span class="cm">← JOIN (empty)</span></pre>
+<p>WHERE expressions support <code>AND</code>, <code>OR</code>, and comparison operators (<code>=</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>) with proper precedence.</p>
+
+<h2>Summary</h2>
+<ul>
+<li>nyx-db is an SQL database written in Nyx, accessible via <code>redis-cli</code>.</li>
+<li>Supports <code>CREATE TABLE</code>, <code>INSERT</code>, <code>SELECT</code> (with WHERE, ORDER BY, LIMIT), <code>UPDATE</code>, <code>DELETE</code>.</li>
+<li>Types: <code>INT</code>, <code>TEXT</code>, <code>REAL</code>.</li>
+<li>Transactions with <code>BEGIN</code> / <code>COMMIT</code> / <code>ROLLBACK</code>.</li>
+<li>Persistence via background snapshots and SIGTERM handler.</li>
+<li>The SQL parser is a recursive descent parser that builds an AST.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="30.html" class="book-nav-prev">&larr; Previous: HTTP/2 — Binary protocols</a>
+        <a href="appendix-a.html" class="book-nav-next">Next: Appendix A: Syntax quick reference &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

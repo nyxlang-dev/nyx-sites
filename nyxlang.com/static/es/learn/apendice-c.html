@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apéndice C: Mensajes de error comunes — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Apéndice C: Mensajes de error comunes</h1>
+
+<p>Este apéndice lista los errores más comunes que encontrarás al programar en Nyx, junto con sus causas y soluciones.</p>
+<h2>Errores de tipo</h2>
+<h3>"Type mismatch: expected X, got Y"</h3>
+<p>Estás usando un valor del tipo incorrecto donde se espera un tipo específico.</p>
+<pre><span class="cm">// Error: Type mismatch: expected int, got String</span>
+<span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="str">&quot;hola&quot;</span>
+
+<span class="cm">// Solución: usa el tipo correcto</span>
+<span class="kw">let</span> x: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;hola&quot;</span>
+<span class="cm">// O convierte:</span>
+<span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(<span class="str">&quot;42&quot;</span>)</pre>
+<h3>"Cannot assign to immutable variable"</h3>
+<p>Declaraste una variable con <code>let</code> (inmutable) e intentaste cambiarla.</p>
+<pre><span class="cm">// Error: Cannot assign to immutable variable &#x27;x&#x27;</span>
+<span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+x <span class="op">=</span> <span class="num">20</span>
+
+<span class="cm">// Solución: usa &#x27;var&#x27; para variables mutables</span>
+<span class="kw">var</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+x <span class="op">=</span> <span class="num">20</span></pre>
+<h3>"Undefined variable: X"</h3>
+<p>Estás usando una variable que no ha sido declarada en el scope actual.</p>
+<pre><span class="cm">// Error: Undefined variable: count</span>
+<span class="fn">print</span>(<span class="fn">int_to_string</span>(count))
+
+<span class="cm">// Solución: declara la variable primero</span>
+<span class="kw">var</span> count: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="fn">print</span>(<span class="fn">int_to_string</span>(count))</pre>
+<h3>"Undefined function: X"</h3>
+<p>Estás llamando a una función que no existe o no ha sido importada.</p>
+<pre><span class="cm">// Error: Undefined function: json_parse</span>
+<span class="kw">let</span> data: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">json_parse</span>(text)
+
+<span class="cm">// Solución: importa el módulo que define la función</span>
+<span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+<span class="kw">let</span> data: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">json_parse</span>(text)</pre>
+<h2>Errores de sintaxis</h2>
+<h3>"Expected '{' after ..."</h3>
+<p>Nyx requiere llaves para todos los bloques — no hay atajos de una línea.</p>
+<pre><span class="cm">// Error: Expected &#x27;{&#x27; after if condition</span>
+<span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">0</span>
+    <span class="fn">print</span>(<span class="str">&quot;positivo&quot;</span>)
+
+<span class="cm">// Solución: agrega llaves</span>
+<span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">0</span> {
+    <span class="fn">print</span>(<span class="str">&quot;positivo&quot;</span>)
+}</pre>
+<h3>"Expected type annotation"</h3>
+<p>Los parámetros de función requieren tipos explícitos.</p>
+<pre><span class="cm">// Error: Expected type annotation</span>
+<span class="kw">fn</span> <span class="fn">add</span>(a, b) {
+    <span class="kw">return</span> a <span class="op">+</span> b
+}
+
+<span class="cm">// Solución: agrega anotaciones de tipo</span>
+<span class="kw">fn</span> <span class="fn">add</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> a <span class="op">+</span> b
+}</pre>
+<h3>"Unexpected token"</h3>
+<p>El parser encontró algo que no esperaba. Causas comunes:</p>
+<ul>
+<li>Falta llave de cierre <code>}</code></li>
+<li>Falta coma en campos de struct</li>
+<li>Usar una palabra clave como nombre de variable</li>
+</ul>
+<pre><span class="cm">// Error: Unexpected token</span>
+<span class="kw">struct</span> Point {
+    x: <span class="ty">int</span>
+    y: <span class="ty">int</span>
+}
+
+<span class="cm">// Solución: agrega comas entre campos</span>
+<span class="kw">struct</span> Point {
+    x: <span class="ty">int</span>,
+    y: <span class="ty">int</span>
+}</pre>
+<h2>Errores de runtime</h2>
+<h3>"Index out of bounds"</h3>
+<p>Estás accediendo a un array con un índice demasiado grande o negativo.</p>
+<pre><span class="kw">let</span> arr: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]
+<span class="cm">// Error de runtime: Index out of bounds (index 5, length 3)</span>
+<span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> arr[<span class="num">5</span>]
+
+<span class="cm">// Solución: verifica la longitud primero</span>
+<span class="kw">if</span> index <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+    <span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> arr[index]
+}</pre>
+<h3>"Division by zero"</h3>
+<pre><span class="cm">// Error de runtime: Division by zero</span>
+<span class="kw">let</span> result: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span> <span class="op">/</span> <span class="num">0</span>
+
+<span class="cm">// Solución: verifica el divisor</span>
+<span class="kw">if</span> divisor <span class="op">!=</span> <span class="num">0</span> {
+    <span class="kw">let</span> result: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span> <span class="op">/</span> divisor
+}</pre>
+<h3>"Key not found"</h3>
+<p>Accediendo a una clave de Map que no existe.</p>
+<pre><span class="kw">let</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+<span class="cm">// Error de runtime: key not found</span>
+<span class="kw">let</span> v: <span class="ty">String</span> <span class="op">=</span> m.<span class="fn">get</span>(<span class="str">&quot;faltante&quot;</span>)
+
+<span class="cm">// Solución: verifica primero con .contains()</span>
+<span class="kw">if</span> m.<span class="fn">contains</span>(<span class="str">&quot;faltante&quot;</span>) {
+    <span class="kw">let</span> v: <span class="ty">String</span> <span class="op">=</span> m.<span class="fn">get</span>(<span class="str">&quot;faltante&quot;</span>)
+}</pre>
+<h3>"Null pointer / segmentation fault"</h3>
+<p>Esto usualmente significa:</p>
+<ol>
+<li>Llamaste a <code>.charAt()</code> y comparaste el resultado con un string en vez de un int</li>
+<li>Usaste un puntero después de liberarlo (en código unsafe)</li>
+<li>Accediste a un campo de struct sobre una referencia null</li>
+</ol>
+<pre><span class="cm">// Bug: charAt retorna int (valor ASCII), NO un string</span>
+<span class="kw">let</span> ch: <span class="ty">int</span> <span class="op">=</span> name.<span class="fn">charAt</span>(<span class="num">0</span>)
+<span class="kw">if</span> ch <span class="op">==</span> <span class="str">&quot;A&quot;</span> { }    <span class="cm">// MAL — comparando int con String → crash</span>
+
+<span class="cm">// Solución: compara con valor ASCII</span>
+<span class="kw">if</span> ch <span class="op">==</span> <span class="num">65</span> { }     <span class="cm">// 65 es ASCII para &#x27;A&#x27;</span></pre>
+<h2>Errores de import</h2>
+<h3>"Module not found: X"</h3>
+<p>El compilador no puede encontrar el módulo que estás importando.</p>
+<pre><span class="cm">// Error: Module not found: utils</span>
+<span class="kw">import</span> <span class="str">&quot;utils&quot;</span>
+
+<span class="cm">// Solución: verifica la ruta. Archivos locales necesitan la ruta relativa correcta:</span>
+<span class="kw">import</span> <span class="str">&quot;src/utils&quot;</span>
+<span class="cm">// La biblioteca estándar usa prefijo std/:</span>
+<span class="kw">import</span> <span class="str">&quot;std/json&quot;</span></pre>
+<h3>"Circular import detected"</h3>
+<p>Dos módulos se importan mutuamente, creando un ciclo.</p>
+<pre><span class="cm">// a.nx: import &quot;b&quot;</span>
+<span class="cm">// b.nx: import &quot;a&quot;    ← ¡circular!</span>
+
+<span class="cm">// Solución: reestructura. Extrae código compartido a un tercer módulo:</span>
+<span class="cm">// common.nx: definiciones compartidas</span>
+<span class="cm">// a.nx: import &quot;common&quot;</span>
+<span class="cm">// b.nx: import &quot;common&quot;</span></pre>
+<h2>Errores de match</h2>
+<h3>"Non-exhaustive match"</h3>
+<p>Tu <code>match</code> no cubre todos los casos posibles.</p>
+<pre><span class="kw">enum</span> Color { Red, Green, Blue }
+
+<span class="cm">// Error: Non-exhaustive match — missing: Blue</span>
+<span class="kw">match</span> color {
+    Red <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;rojo&quot;</span>),
+    Green <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;verde&quot;</span>)
+}
+
+<span class="cm">// Solución: agrega el caso faltante, o usa un comodín</span>
+<span class="kw">match</span> color {
+    Red <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;rojo&quot;</span>),
+    Green <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;verde&quot;</span>),
+    _ <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;otro&quot;</span>)
+}</pre>
+<h2>Errores de struct</h2>
+<h3>"Unknown field: X"</h3>
+<p>Estás accediendo a un campo que no existe en el struct.</p>
+<pre><span class="kw">struct</span> Point { x: <span class="ty">int</span>, y: <span class="ty">int</span> }
+<span class="kw">let</span> p: Point <span class="op">=</span> Point { x: <span class="num">1</span>, y: <span class="num">2</span> }
+
+<span class="cm">// Error: Unknown field: z</span>
+<span class="fn">print</span>(<span class="fn">int_to_string</span>(p.z))
+
+<span class="cm">// Solución: usa un campo que exista</span>
+<span class="fn">print</span>(<span class="fn">int_to_string</span>(p.x))</pre>
+<h3>"Missing field: X in struct initializer"</h3>
+<p>Olvidaste inicializar un campo requerido.</p>
+<pre><span class="kw">struct</span> Point { x: <span class="ty">int</span>, y: <span class="ty">int</span> }
+
+<span class="cm">// Error: Missing field: y</span>
+<span class="kw">let</span> p: Point <span class="op">=</span> Point { x: <span class="num">1</span> }
+
+<span class="cm">// Solución: proporciona todos los campos</span>
+<span class="kw">let</span> p: Point <span class="op">=</span> Point { x: <span class="num">1</span>, y: <span class="num">2</span> }</pre>
+<h2>Errores de concurrencia</h2>
+<h3>"Channel closed" / retorno negativo de channel_recv</h3>
+<p>El channel ha sido cerrado o es inválido.</p>
+<pre><span class="kw">let</span> ch: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">4</span>)
+<span class="cm">// Si channel_recv retorna un valor negativo, el channel está cerrado</span>
+<span class="kw">let</span> val: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(ch)
+<span class="kw">if</span> val <span class="op">&lt;</span> <span class="num">0</span> {
+    <span class="fn">print</span>(<span class="str">&quot;Channel cerrado&quot;</span>)
+}</pre>
+<h3>Deadlock (el programa se cuelga)</h3>
+<p>Causas comunes:</p>
+<ul>
+<li>Enviar a un channel lleno sin receptores</li>
+<li>Recibir de un channel vacío sin emisores</li>
+<li>Dos threads esperándose mutuamente</li>
+</ul>
+<pre><span class="cm">// Deadlock: main envía pero nadie recibe</span>
+<span class="kw">let</span> ch: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">1</span>)
+<span class="fn">channel_send</span>(ch, <span class="num">1</span>)
+<span class="fn">channel_send</span>(ch, <span class="num">2</span>)    <span class="cm">// se bloquea — channel lleno, sin receptor</span>
+
+<span class="cm">// Solución: crea un receptor con spawn, o aumenta la capacidad del channel</span></pre>
+<h2>Errores de codegen / LLVM</h2>
+<h3>"La función handler crashea" (problema conocido)</h3>
+<p>No uses <code>handler</code> como nombre de función — conflicta con el codegen interno.</p>
+<pre><span class="cm">// CRASHEA el compilador</span>
+<span class="kw">fn</span> <span class="fn">handler</span>(req: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> { ... }
+
+<span class="cm">// Solución: usa un nombre diferente</span>
+<span class="kw">fn</span> <span class="fn">request_handler</span>(req: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> { ... }
+<span class="kw">fn</span> <span class="fn">on_request</span>(req: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> { ... }</pre>
+<h2>Consejos generales de debugging</h2>
+<ol>
+<li><strong>Lee el mensaje de error cuidadosamente.</strong> Los mensajes de error de Nyx incluyen el número de línea y una descripción del problema.</li>
+</ol>
+<ol>
+<li><strong>Compila con salida IR.</strong> Usa <code>make compile FILE=prog.nx</code> para ver el LLVM IR generado. Busca la función donde ocurre el error.</li>
+</ol>
+<ol>
+<li><strong>Simplifica.</strong> Si un programa complejo falla, extrae la parte que falla a un archivo de test mínimo.</li>
+</ol>
+<ol>
+<li><strong>Verifica los tipos.</strong> La mayoría de errores vienen de incompatibilidades de tipo. Recuerda:</li>
+</ol>
+<ul>
+<li><code>.charAt()</code> retorna <code>int</code>, no <code>String</code></li>
+<li><code>channel_new()</code> retorna tipo <code>Map</code></li>
+<li>El indexado de arrays retorna un valor genérico — convierte si es necesario</li>
+</ul>
+<ol>
+<li><strong>Verifica los imports.</strong> Si una función es "undefined," probablemente olvidaste importar su módulo.</li>
+</ol>
+<p><a href="00-indice.md">← Volver al Índice</a></p>
+
+    <div class="book-nav">
+        <a href="apendice-b.html" class="book-nav-prev">&larr; Anterior: Apéndice B: Módulos de la biblioteca estándar</a>
+        <a href="apendice-d.html" class="book-nav-next">Siguiente: Apéndice D: Glosario &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

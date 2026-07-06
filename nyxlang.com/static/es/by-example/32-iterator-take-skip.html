@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterador: take() y skip() — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Iterador: take() y skip()</h1>
+
+    <p><code>take(n)</code> limita un iterador a sus primeros <code>n</code> elementos, mientras que <code>skip(n)</code> descarta los primeros <code>n</code> y produce el resto. Juntos forman los bloques básicos de ventanas deslizantes, recortes y paginación sobre cualquier secuencia.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Iteradores: skip() y take() para componer pipelines de datos
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // skip(2): omitir los primeros 2 elementos
+    let sin_primeros2: Array = nums.iter().skip(2).collect()
+    print("skip(2): " + int_to_string(sin_primeros2.length()) + " elementos")
+
+    // take(3): tomar solo los primeros 3
+    let solo3: Array = nums.iter().take(3).collect()
+    print("take(3): " + int_to_string(solo3.length()) + " elementos")
+    let v0: int = solo3[0]
+    let v2: int = solo3[2]
+    print("  [0]=" + int_to_string(v0) + " [2]=" + int_to_string(v2))
+
+    // Combinacion: skip(2).take(3) — elementos 3, 4, 5
+    let ventana: Array = nums.iter().skip(2).take(3).collect()
+    print("skip(2).take(3): " + int_to_string(ventana.length()) + " elementos")
+    var i: int = 0
+    while i < ventana.length() {
+        let v: int = ventana[i]
+        print("  " + int_to_string(v))
+        i = i + 1
+    }
+
+    // Otro uso: paginar — página 2, tamaño 3
+    let pagina2: Array = nums.iter().skip(3).take(3).collect()
+    print("pagina 2 (skip 3, take 3): " + int_to_string(pagina2.length()) + " elementos")
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">skip(2): 8 elementos
+take(3): 3 elementos
+  [0]=1 [2]=3
+skip(2).take(3): 3 elementos
+  3
+  4
+  5
+pagina 2 (skip 3, take 3): 3 elementos</pre>
+
+    <h2>Explicación</h2>
+    <p><code>skip(2)</code> sobre un array de 10 elementos produce los elementos en las posiciones 2 a 9, dando 8 elementos. <code>take(3)</code> detiene el iterador después de los primeros 3 elementos, produciendo <code>[1, 2, 3]</code> — así que <code>[0]</code> es <code>1</code> y <code>[2]</code> es <code>3</code>.</p>
+    <p>Encadenar <code>skip(2).take(3)</code> primero descarta dos elementos, y luego limita el resto a tres — produciendo <code>[3, 4, 5]</code>. Este es el patrón clásico de ventana deslizante. El orden importa: <code>take(3).skip(2)</code> en cambio daría un único elemento.</p>
+    <p>El ejemplo de paginación al final muestra un uso real directo: para obtener la página <em>P</em> de tamaño <em>N</em>, se escribe <code>.skip((P-1) * N).take(N)</code>. Ambos adaptadores son perezosos — no se asigna ningún elemento hasta que se llama a <code>.collect()</code>.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/31-iterator-enumerate.html">← Anterior</a>
+        <a href="/es/by-example/33-recursion.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/32-iterator-take-skip.nx">examples/by-example/32-iterator-take-skip.nx</a></small></p>
+</main>
+
+</body>
+</html>

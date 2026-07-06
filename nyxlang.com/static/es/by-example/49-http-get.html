@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP GET — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>HTTP GET</h1>
+
+    <p><code>std/http</code> provee funciones de cliente HTTP de alto nivel construidas sobre primitivas TCP. <code>http_get(url)</code> maneja la resolución DNS, la conexión, el formateo de la petición y el parseo de la respuesta en una sola llamada. La respuesta se devuelve como un array: <code>["response", status, headers, body]</code>.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// HTTP GET request using std/http</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> resp: <span class="ty">Array</span> = http_get(<span class="str">"http://example.com/"</span>)
+
+    <span class="kw">let</span> status: <span class="ty">int</span> = http_status(resp)
+    print(<span class="str">"status: "</span> + int_to_string(status))
+
+    <span class="kw">let</span> body: <span class="ty">String</span> = http_body(resp)
+    <span class="kw">if</span> body.length() > <span class="num">100</span> {
+        print(<span class="str">"body (first 100 chars): "</span> + body.substring(<span class="num">0</span>, <span class="num">100</span>))
+    } <span class="kw">else</span> {
+        print(<span class="str">"body: "</span> + body)
+    }
+
+    <span class="kw">let</span> hdrs: <span class="ty">Array</span> = http_headers(resp)
+    print(<span class="str">"header count: "</span> + int_to_string(hdrs.length()))
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">status: 200
+body (first 100 chars): &lt;!doctype html&gt;...
+header count: 10</pre>
+
+    <h2>Explicación</h2>
+    <p><code>http_get</code> parsea la URL para extraer el host, el puerto y el path, luego abre una conexión TCP, envía una petición HTTP/1.1 GET y lee la respuesta. Las funciones auxiliares <code>http_status</code>, <code>http_body</code> y <code>http_headers</code> extraen campos del array de respuesta.</p>
+    <p>Si la conexión falla, el código de estado es <code>-1</code> y el cuerpo contiene el mensaje de error. Para HTTPS, usa <code>https_get</code>, que agrega TLS vía OpenSSL.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/48-udp-socket.html">← Anterior</a>
+        <a href="/es/by-example/50-http-post.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/49-http-get.nx">examples/by-example/49-http-get.nx</a></small></p>
+</main>
+
+</body>
+</html>

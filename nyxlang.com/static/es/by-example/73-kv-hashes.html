@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hashes en nyx-kv — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Hashes en nyx-kv</h1>
+    <p>Los hashes almacenan pares campo-valor bajo una única clave, perfectos para perfiles de usuario o datos estructurados. HSET puede setear múltiples campos en un solo comando.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-kv hashes -- HSET, HGET, HGETALL for structured data</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Store a user profile as a hash</span>
+    tcp_write(fd, resp_cmd([<span class="str">"HSET"</span>, <span class="str">"user:1"</span>, <span class="str">"name"</span>, <span class="str">"Alice"</span>, <span class="str">"age"</span>, <span class="str">"30"</span>, <span class="str">"city"</span>, <span class="str">"Buenos Aires"</span>]))
+    <span class="kw">let</span> hset_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"HSET -&gt; "</span> + hset_reply.trim())
+
+    <span class="cm">// Get a single field</span>
+    tcp_write(fd, resp_cmd([<span class="str">"HGET"</span>, <span class="str">"user:1"</span>, <span class="str">"name"</span>]))
+    <span class="kw">let</span> hget_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">let</span> name: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"HGET name -&gt; "</span> + name.trim())
+
+    <span class="cm">// Check if a field exists</span>
+    tcp_write(fd, resp_cmd([<span class="str">"HEXISTS"</span>, <span class="str">"user:1"</span>, <span class="str">"age"</span>]))
+    <span class="kw">let</span> exists: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"HEXISTS age -&gt; "</span> + exists.trim())
+
+    <span class="cm">// Get the number of fields</span>
+    tcp_write(fd, resp_cmd([<span class="str">"HLEN"</span>, <span class="str">"user:1"</span>]))
+    <span class="kw">let</span> hlen: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"HLEN -&gt; "</span> + hlen.trim())
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">HSET -&gt; :3
+HGET name -&gt; Alice
+HEXISTS age -&gt; :1
+HLEN -&gt; :3</pre>
+    <h2>Explicación</h2>
+    <p>Un hash es una clave que mapea a un Map interno de campo -&gt; string. <code>HSET user:1 name Alice age 30 city "Buenos Aires"</code> escribe tres campos en un solo comando — más eficiente que tres llamadas <code>SET</code> separadas y mantiene el perfil agrupado bajo una única clave.</p>
+    <p>Usá hashes cuando de otro modo aplanarías una estructura anidada en claves como <code>user:1:name</code>, <code>user:1:age</code>. Un único hash es más fácil de borrar (<code>DEL user:1</code> elimina todo), más fácil de enumerar (<code>HGETALL</code>, <code>HKEYS</code>, <code>HVALS</code>), y usa menos memoria del lado del servidor porque la clave de nivel superior se almacena una sola vez.</p>
+    <p>Patrones comunes: perfiles de usuario, feature flags por cuenta, paquetes de configuración, y carritos de compra donde cada campo es un id de producto y cada valor es la cantidad.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/72-kv-lists.html">&larr; Anterior</a>
+        <a href="/es/by-example/74-kv-auth.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/73-kv-hashes.nx">examples/by-example/73-kv-hashes.nx</a></small></p>
+</main>
+</body>
+</html>

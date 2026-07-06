@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lectura y Escritura de Archivos — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Lectura y Escritura de Archivos</h1>
+
+    <p>Nyx provee las funciones integradas <code>write_file</code> y <code>read_file</code> para I/O de archivos simple sin necesidad de ningún import. Escribir un archivo es una sola llamada; volver a leerlo devuelve el contenido completo como un <code>String</code>. Este ejemplo también muestra <code>str_byte_length</code>, que cuenta bytes crudos en lugar de caracteres.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Escribir y leer un archivo: write_file, read_file
+
+fn main() -> int {
+    let path: String = "/tmp/nyx_example_11.txt"
+    let contenido: String = "Hola desde Nyx!\nSegunda línea.\nTercera línea."
+
+    // Escribir el archivo
+    write_file(path, contenido)
+    print("Archivo escrito en: " + path)
+
+    // Leer el archivo
+    let leido: String = read_file(path)
+    print("Contenido leido:")
+    print(leido)
+
+    // Verificar longitud
+    print("Bytes: " + int_to_string(str_byte_length(leido)))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Archivo escrito en: /tmp/nyx_example_11.txt
+Contenido leido:
+Hola desde Nyx!
+Segunda línea.
+Tercera línea.
+Bytes: 47</pre>
+
+    <h2>Explicación</h2>
+    <p><code>write_file(path, content)</code> crea o sobrescribe el archivo en <code>path</code> con el string dado. Los caracteres de nueva línea (<code>\n</code>) incrustados en el string se convierten en saltos de línea reales dentro del archivo. No hace falta abrir ni cerrar ningún manejador de archivo — la función se encarga de todo internamente.</p>
+    <p><code>read_file(path)</code> lee el archivo completo y devuelve su contenido como un único <code>String</code>. Para archivos grandes usarías I/O por streaming desde <code>std/io</code>, pero para la mayoría de los scripts este enfoque de una sola pasada es perfectamente suficiente.</p>
+    <p><code>str_byte_length</code> devuelve la cantidad de bytes en un string codificado en UTF-8, que puede diferir de la cantidad de puntos de código Unicode. Esto es útil cuando te importa el tamaño de almacenamiento y no la cantidad de caracteres.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/10-closures.html">← Anterior</a>
+        <a href="/es/by-example/12-stdin-input.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/11-file-read-write.nx">examples/by-example/11-file-read-write.nx</a></small></p>
+</main>
+
+</body>
+</html>

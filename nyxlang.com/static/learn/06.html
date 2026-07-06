@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrays — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Arrays</h1>
+
+<h2>What is an array?</h2>
+<p>Imagine you have a list of groceries: eggs, milk, bread, butter. You could create a separate variable for each item, but that gets messy fast. An <strong>array</strong> is a single variable that holds a list of values in order.</p>
+<p>Think of an array like a row of numbered boxes. Each box has a position (starting from 0) and contains one value.</p>
+<pre>Position:  0      1      2      3
+         [eggs] [milk] [bread] [butter]</pre>
+<h2>Creating arrays</h2>
+<p>In Nyx, you create an array with square brackets:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> numbers: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>, <span class="num">50</span>]
+    <span class="kw">let</span> names: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;Bob&quot;</span>, <span class="str">&quot;Charlie&quot;</span>]
+    <span class="kw">let</span> empty: <span class="ty">Array</span> <span class="op">=</span> []
+
+    <span class="fn">print</span>(numbers)
+    <span class="fn">print</span>(names)
+    <span class="fn">print</span>(empty)
+}</pre>
+<p>Arrays can hold any type of value: integers, strings, booleans, or even other arrays.</p>
+<h2>Accessing elements</h2>
+<p>You access an element by its <strong>index</strong> — its position in the array. Indices start at 0, not 1:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> fruits: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;apple&quot;</span>, <span class="str">&quot;banana&quot;</span>, <span class="str">&quot;cherry&quot;</span>, <span class="str">&quot;date&quot;</span>]
+
+    <span class="fn">print</span>(fruits[<span class="num">0</span>])    <span class="cm">// apple (first element)</span>
+    <span class="fn">print</span>(fruits[<span class="num">1</span>])    <span class="cm">// banana (second element)</span>
+    <span class="fn">print</span>(fruits[<span class="num">3</span>])    <span class="cm">// date (fourth element)</span>
+}</pre>
+<p>Why start at 0? It is a convention in most programming languages. The first element is at position 0, the second at position 1, and so on.</p>
+<h2>Modifying elements</h2>
+<p>If you declare an array with <code>var</code>, you can change its elements:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> scores: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">85</span>, <span class="num">90</span>, <span class="num">78</span>]
+
+    <span class="fn">print</span>(scores[<span class="num">1</span>])    <span class="cm">// 90</span>
+    scores[<span class="num">1</span>] <span class="op">=</span> <span class="num">95</span>
+    <span class="fn">print</span>(scores[<span class="num">1</span>])    <span class="cm">// 95</span>
+}</pre>
+<h2>Array length</h2>
+<p>The <code>.length()</code> method tells you how many elements an array has:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> colors: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;red&quot;</span>, <span class="str">&quot;green&quot;</span>, <span class="str">&quot;blue&quot;</span>]
+    <span class="fn">print</span>(colors.<span class="fn">length</span>())    <span class="cm">// 3</span>
+
+    <span class="kw">let</span> empty: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="fn">print</span>(empty.<span class="fn">length</span>())     <span class="cm">// 0</span>
+}</pre>
+<h2>Adding elements</h2>
+<p>The <code>.push()</code> method adds an element to the end of an array:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> list: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]
+    <span class="fn">print</span>(list.<span class="fn">length</span>())    <span class="cm">// 3</span>
+
+    list.<span class="fn">push</span>(<span class="num">4</span>)
+    list.<span class="fn">push</span>(<span class="num">5</span>)
+    <span class="fn">print</span>(list.<span class="fn">length</span>())    <span class="cm">// 5</span>
+    <span class="fn">print</span>(list[<span class="num">4</span>])          <span class="cm">// 5</span>
+}</pre>
+<h2>Removing the last element</h2>
+<p>The <code>.pop()</code> method removes and returns the last element:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> stack: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>]
+
+    <span class="kw">let</span> last: <span class="ty">int</span> <span class="op">=</span> stack.<span class="fn">pop</span>()
+    <span class="fn">print</span>(last)               <span class="cm">// 30</span>
+    <span class="fn">print</span>(stack.<span class="fn">length</span>())     <span class="cm">// 2</span>
+}</pre>
+<h2>Inserting and removing at any position</h2>
+<p>The <code>.insert(index, value)</code> method adds an element at a specific position, shifting elements to the right. The <code>.remove(index)</code> method removes and returns the element at a specific position, shifting elements to the left:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">10</span>, <span class="num">30</span>, <span class="num">40</span>]
+
+    nums.<span class="fn">insert</span>(<span class="num">1</span>, <span class="num">20</span>)         <span class="cm">// insert 20 at index 1</span>
+    <span class="fn">print</span>(nums)                <span class="cm">// [10, 20, 30, 40]</span>
+
+    <span class="kw">let</span> removed: <span class="ty">int</span> <span class="op">=</span> nums.<span class="fn">remove</span>(<span class="num">2</span>)   <span class="cm">// remove element at index 2</span>
+    <span class="fn">print</span>(removed)             <span class="cm">// 30</span>
+    <span class="fn">print</span>(nums)                <span class="cm">// [10, 20, 40]</span>
+}</pre>
+<p>These methods are more flexible than <code>push</code>/<code>pop</code>, which only work at the end. Use them when you need to add or remove elements in the middle of an array.</p>
+<h2>Looping through arrays</h2>
+<p>The most common thing to do with an array is to go through every element. Use a <code>while</code> loop with an index:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> names: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;Bob&quot;</span>, <span class="str">&quot;Charlie&quot;</span>, <span class="str">&quot;Diana&quot;</span>]
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> names.<span class="fn">length</span>() {
+        <span class="fn">print</span>(names[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Output:</p>
+<pre>Alice
+Bob
+Charlie
+Diana</pre>
+<h2>Practical example: finding the maximum</h2>
+<p>Let's write a function that finds the largest number in an array:</p>
+<pre><span class="kw">fn</span> <span class="fn">find_max</span>(arr: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> max_val: <span class="ty">int</span> <span class="op">=</span> arr[<span class="num">0</span>]
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        <span class="kw">if</span> arr[i] <span class="op">&gt;</span> max_val {
+            max_val <span class="op">=</span> arr[i]
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> max_val
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> scores: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">72</span>, <span class="num">95</span>, <span class="num">88</span>, <span class="num">61</span>, <span class="num">100</span>, <span class="num">84</span>]
+    <span class="fn">print</span>(<span class="fn">find_max</span>(scores))    <span class="cm">// 100</span>
+}</pre>
+<h2>Practical example: sum of all elements</h2>
+<pre><span class="kw">fn</span> <span class="fn">sum</span>(arr: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        total <span class="op">+=</span> arr[i]
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> numbers: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>]
+    <span class="fn">print</span>(<span class="fn">sum</span>(numbers))    <span class="cm">// 100</span>
+}</pre>
+<h2>Practical example: counting occurrences</h2>
+<pre><span class="kw">fn</span> <span class="fn">count_value</span>(arr: <span class="ty">Array</span>, target: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> count: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        <span class="kw">if</span> arr[i] <span class="op">==</span> target {
+            count <span class="op">+=</span> <span class="num">1</span>
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> count
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> data: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">3</span>, <span class="num">5</span>, <span class="num">3</span>, <span class="num">7</span>, <span class="num">3</span>, <span class="num">9</span>]
+    <span class="fn">print</span>(<span class="fn">count_value</span>(data, <span class="num">3</span>))    <span class="cm">// 3</span>
+    <span class="fn">print</span>(<span class="fn">count_value</span>(data, <span class="num">7</span>))    <span class="cm">// 1</span>
+    <span class="fn">print</span>(<span class="fn">count_value</span>(data, <span class="num">2</span>))    <span class="cm">// 0</span>
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a function <code>find_min(arr: Array) -> int</code> that returns the smallest element.</li>
+</ol>
+<ol>
+<li>Write a function <code>average(arr: Array) -> int</code> that returns the integer average of all elements.</li>
+</ol>
+<ol>
+<li>Write a function <code>reverse_array(arr: Array) -> Array</code> that returns a new array with elements in reverse order. Hint: create an empty array, loop from the last element to the first, and push each one.</li>
+</ol>
+<ol>
+<li>Write a program that creates an array of the first 20 even numbers (2, 4, 6, ..., 40) using a loop with <code>.push()</code>, then prints them all.</li>
+</ol>
+<ol>
+<li>Write a function <code>contains(arr: Array, target: int) -> bool</code> that returns <code>true</code> if the array contains the target value.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Arrays hold ordered lists of values: <code>let a: Array = [1, 2, 3]</code></li>
+<li>Access elements by index (starting at 0): <code>a[0]</code></li>
+<li><code>.length()</code> returns the number of elements.</li>
+<li><code>.push(val)</code> adds to the end. <code>.pop()</code> removes from the end.</li>
+<li>Loop through arrays with <code>while i < arr.length()</code>.</li>
+<li>Arrays are one of the most fundamental data structures in programming.</li>
+</ul>
+<p>Next chapter: <a href="07-strings.md">Strings →</a></p>
+
+    <div class="book-nav">
+        <a href="05.html" class="book-nav-prev">&larr; Previous: Functions</a>
+        <a href="07.html" class="book-nav-next">Next: Strings &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

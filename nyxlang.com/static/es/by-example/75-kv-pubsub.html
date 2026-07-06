@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-kv Pub/Sub — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>nyx-kv Pub/Sub</h1>
+    <p>PUBLISH difunde un mensaje a todos los clientes que hicieron SUBSCRIBE a un canal. Pub/Sub desacopla a los productores de los consumidores — ideal para notificaciones en tiempo real.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-kv Pub/Sub -- SUBSCRIBE and PUBLISH for real-time messaging</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Publisher connection</span>
+    <span class="kw">let</span> pub_fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> pub_fd &lt; <span class="num">0</span> {
+        print(<span class="str">"publisher connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Publish a message to a channel</span>
+    tcp_write(pub_fd, resp_cmd([<span class="str">"PUBLISH"</span>, <span class="str">"notifications"</span>, <span class="str">"user signed up"</span>]))
+    <span class="kw">let</span> pub_reply: <span class="ty">String</span> = tcp_read_line(pub_fd)
+    print(<span class="str">"PUBLISH -&gt; "</span> + pub_reply.trim() + <span class="str">" subscribers received"</span>)
+
+    tcp_close(pub_fd)
+
+    <span class="cm">// Subscriber connection (usually runs in a separate thread)</span>
+    <span class="kw">let</span> sub_fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> sub_fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="num">1</span> }
+
+    <span class="cm">// SUBSCRIBE -- the connection becomes a message stream</span>
+    tcp_write(sub_fd, resp_cmd([<span class="str">"SUBSCRIBE"</span>, <span class="str">"notifications"</span>]))
+    <span class="kw">let</span> sub_hdr: <span class="ty">String</span> = tcp_read_line(sub_fd)
+    print(<span class="str">"SUBSCRIBE header -&gt; "</span> + sub_hdr.trim())
+
+    <span class="cm">// In a real app, loop reading messages:</span>
+    <span class="cm">//   let msg_type: String = tcp_read_line(sub_fd)</span>
+    <span class="cm">//   let channel: String = tcp_read_line(sub_fd)</span>
+    <span class="cm">//   let payload: String = tcp_read_line(sub_fd)</span>
+
+    <span class="cm">// UNSUBSCRIBE when done</span>
+    tcp_write(sub_fd, resp_cmd([<span class="str">"UNSUBSCRIBE"</span>, <span class="str">"notifications"</span>]))
+    tcp_close(sub_fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">PUBLISH -&gt; :0 subscribers received
+SUBSCRIBE header -&gt; *3</pre>
+    <h2>Explicación</h2>
+    <p>Pub/Sub es un modelo de difusión "fire-and-forget" (sin confirmación de entrega). El publicador envía <code>PUBLISH channel payload</code> y el servidor devuelve la cantidad de clientes suscritos actualmente que recibieron el mensaje. Los mensajes no se persisten — los suscriptores que se unen más tarde nunca ven mensajes pasados. Si se necesita reproducir mensajes anteriores, hay que usar una lista o un stream.</p>
+    <p>Una conexión suscriptora entra en un modo especial: deja de aceptar comandos regulares y empieza a recibir una secuencia de arreglos de tres elementos <code>["message", channel, payload]</code> por cada publicación que coincida. Como el suscriptor se bloquea en las lecturas, normalmente corre en su propio thread o goroutine; el publicador puede vivir en cualquier otra conexión.</p>
+    <p>Pub/Sub sirve para dashboards en vivo, invalidación de caché en cascada, salas de chat y buses de eventos entre servicios. Para garantizar la entrega, se puede combinar con nyx-queue.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/74-kv-auth.html">&larr; Anterior</a>
+        <a href="/es/by-example/76-kv-expire.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/75-kv-pubsub.nx">examples/by-example/75-kv-pubsub.nx</a></small></p>
+</main>
+</body>
+</html>

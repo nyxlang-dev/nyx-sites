@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Channel — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Select Channel</h1>
+    <p>The <code>select</code> statement multiplexes multiple channels, waiting for the first one that has data available. Each <code>case</code> names a channel variable. This is similar to Go's select statement.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Select — multiplexing multiple channels</span>
+<span class="cm">// Select — multiplexar múltiples canales</span>
+
+<span class="kw">var</span> ch1: <span class="ty">Map</span> = Map.new()
+<span class="kw">var</span> ch2: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">sender1</span>() -> <span class="ty">int</span> {
+    sleep(<span class="num">10</span>)
+    channel_send(ch1, <span class="num">42</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">sender2</span>() -> <span class="ty">int</span> {
+    sleep(<span class="num">20</span>)
+    channel_send(ch2, <span class="num">99</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    ch1 = channel_new(<span class="num">1</span>)
+    ch2 = channel_new(<span class="num">1</span>)
+
+    thread_spawn(sender1)
+    thread_spawn(sender2)
+
+    <span class="cm">// Select waits for the first channel that has data</span>
+    <span class="cm">// and executes the matching case block</span>
+    <span class="kw">var</span> received: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> received &lt; <span class="num">2</span> {
+        <span class="kw">select</span> {
+            <span class="kw">case</span> ch1 =&gt; {
+                <span class="kw">let</span> val: <span class="ty">int</span> = channel_recv(ch1)
+                print(<span class="str">"from ch1: "</span> + int_to_string(val))
+                received = received + <span class="num">1</span>
+            }
+            <span class="kw">case</span> ch2 =&gt; {
+                <span class="kw">let</span> val: <span class="ty">int</span> = channel_recv(ch2)
+                print(<span class="str">"from ch2: "</span> + int_to_string(val))
+                received = received + <span class="num">1</span>
+            }
+        }
+    }
+
+    print(<span class="str">"both received"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">from ch1: 42
+from ch2: 99
+both received</pre>
+    <h2>Explanation</h2>
+    <p>The <code>select</code> statement monitors multiple channels simultaneously. When data becomes available on any channel, the corresponding <code>case</code> branch executes. If multiple channels have data, one is chosen.</p>
+    <p>Two sender threads send values after different delays (10ms and 20ms). The main thread uses <code>select</code> inside a loop to receive from whichever channel is ready first. Since <code>sender1</code> sleeps less, <code>ch1</code> typically delivers first.</p>
+    <p>Channels are declared as <code>Map</code> type -- this is a Nyx-specific detail. The <code>select</code> pattern is essential for building event-driven systems, timeouts, and fan-in multiplexers where you need to react to the first available signal from multiple sources.</p>
+    <div class="book-nav">
+        <a href="/by-example/62-semaphore.html">&larr; Previous</a>
+        <a href="/by-example/64-fork-exec.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/63-select-channel.nx">examples/by-example/63-select-channel.nx</a></small></p>
+</main>
+</body>
+</html>

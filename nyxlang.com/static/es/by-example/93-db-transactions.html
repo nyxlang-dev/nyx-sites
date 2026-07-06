@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transacciones de base de datos — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Transacciones de base de datos</h1>
+    <p>BEGIN TRANSACTION agrupa sentencias de forma atómica. COMMIT las hace durables; ROLLBACK las descarta. Esto es esencial para operaciones como transferencias de dinero donde actualizaciones parciales corromperían los datos.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-db transactions — BEGIN, COMMIT, ROLLBACK</span>
+
+<span class="kw">import</span> <span class="str">"std/sqlite"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Use embedded SQLite for the demo (recipe 55 shows basic usage).</span>
+    <span class="cm">// The handle is an opaque pointer (*int); NULL on failure.</span>
+    <span class="kw">let</span> db = sqlite_open(<span class="str">":memory:"</span>)
+
+    sqlite_exec(db, <span class="str">"CREATE TABLE accounts (id INTEGER PRIMARY KEY, balance INTEGER)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO accounts VALUES (1, 1000)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO accounts VALUES (2, 500)"</span>)
+
+    <span class="cm">// Atomic money transfer using a transaction</span>
+    sqlite_exec(db, <span class="str">"BEGIN TRANSACTION"</span>)
+
+    <span class="cm">// Debit account 1</span>
+    sqlite_exec(db, <span class="str">"UPDATE accounts SET balance = balance - 100 WHERE id = 1"</span>)
+
+    <span class="cm">// Credit account 2</span>
+    sqlite_exec(db, <span class="str">"UPDATE accounts SET balance = balance + 100 WHERE id = 2"</span>)
+
+    <span class="cm">// Commit atomically</span>
+    sqlite_exec(db, <span class="str">"COMMIT"</span>)
+    print(<span class="str">"transfer committed"</span>)
+
+    <span class="cm">// Verify balances</span>
+    <span class="kw">let</span> rows: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT id, balance FROM accounts ORDER BY id"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; rows.length() {
+        <span class="kw">let</span> row: <span class="ty">Array</span> = rows[i]
+        <span class="kw">let</span> id: <span class="ty">String</span> = row[<span class="num">0</span>]
+        <span class="kw">let</span> bal: <span class="ty">String</span> = row[<span class="num">1</span>]
+        print(<span class="str">"  account "</span> + id + <span class="str">": "</span> + bal)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="cm">// Rollback example</span>
+    sqlite_exec(db, <span class="str">"BEGIN TRANSACTION"</span>)
+    sqlite_exec(db, <span class="str">"UPDATE accounts SET balance = 0 WHERE id = 1"</span>)
+    sqlite_exec(db, <span class="str">"ROLLBACK"</span>)
+    print(<span class="str">"rolled back — balance unchanged"</span>)
+
+    sqlite_close(db)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">transfer committed
+  account 1: 900
+  account 2: 600
+rolled back — balance unchanged</pre>
+    <h2>Explicación</h2>
+    <p>Sin transacciones, una caída entre el débito y el crédito dejaría $100 faltantes — el pecado capital del software financiero. BEGIN TRANSACTION abre un alcance atómico; todas las escrituras dentro quedan preparadas hasta que COMMIT las vuelca como una sola operación durable. Si algo sale mal, ROLLBACK descarta todos los cambios desde el BEGIN. Esto da la A (atomicidad) y la C (consistencia) de ACID sin esfuerzo adicional.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/92-db-sql.html">&larr; Anterior</a>
+        <a href="/es/by-example/94-http2-server.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/93-db-transactions.nx">examples/by-example/93-db-transactions.nx</a></small></p>
+</main>
+</body>
+</html>

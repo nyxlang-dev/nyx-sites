@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: fold — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Iterator: fold</h1>
+
+    <p><code>fold</code> es el consumidor de iteradores de propósito general que reduce una secuencia a un único valor. Toma un acumulador inicial y una función de dos argumentos, aplica la función a cada elemento y al acumulador en curso, y retorna el resultado acumulado final.</p>
+
+    <h2>Código</h2>
+    <pre><code>// fold: reducir un iterator a un valor acumulando con una función
+
+fn add(acc: int, x: int) -> int {
+    return acc + x
+}
+
+fn multiply(acc: int, x: int) -> int {
+    return acc * x
+}
+
+fn max_val(acc: int, x: int) -> int {
+    if x &gt; acc {
+        return x
+    }
+    return acc
+}
+
+fn is_even(x: int) -> bool {
+    return x % 2 == 0
+}
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5]
+
+    // Suma con fold — equivale a un loop manual con acumulador
+    let suma: int = nums.iter().fold(0, add)
+    print("suma(1..5) = " + int_to_string(suma))         // 15
+
+    // Producto con fold
+    let producto: int = nums.iter().fold(1, multiply)
+    print("producto(1..5) = " + int_to_string(producto)) // 120
+
+    // Máximo con fold
+    let maximo: int = nums.iter().fold(0, max_val)
+    print("max(1..5) = " + int_to_string(maximo))        // 5
+
+    // Sumar solo los pares con filter + fold
+    let nums2: Array = [10, 3, 8, 7, 2, 6]
+    let suma_pares: int = nums2.iter().filter(is_even).fold(0, add)
+    print("suma pares = " + int_to_string(suma_pares))   // 26 (10+8+2+6)
+
+    // fold con valor inicial distinto de cero
+    let nums3: Array = [1, 2, 3]
+    let con_offset: int = nums3.iter().fold(100, add)
+    print("100 + sum(1,2,3) = " + int_to_string(con_offset)) // 106
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">suma(1..5) = 15
+producto(1..5) = 120
+max(1..5) = 5
+suma pares = 26
+100 + sum(1,2,3) = 106</pre>
+
+    <h2>Explicación</h2>
+    <p><code>fold(init, f)</code> es equivalente a escribir manualmente un loop con una variable acumuladora: comienza con <code>acc = init</code> y para cada elemento <code>x</code> calcula <code>acc = f(acc, x)</code>, retornando el <code>acc</code> final. La elección del valor inicial es importante: <code>0</code> es el elemento neutro para la suma (sumar cero no cambia nada), mientras que <code>1</code> es el elemento neutro para la multiplicación. Elegir el valor inicial incorrecto da resultados incorrectos.</p>
+    <p>La función acumuladora <code>max_val</code> selecciona el mayor entre el acumulador actual y el elemento entrante, así que hacer fold sobre un array con <code>0</code> como inicio encuentra el máximo. Esto funciona correctamente aquí porque todos los valores son positivos; para arrays que puedan contener negativos, el valor inicial debería fijarse al entero mínimo posible.</p>
+    <p>Combinar <code>filter</code> y <code>fold</code> en un solo pipeline — como en el ejemplo de suma de pares — es idiomático en Nyx: filter reduce el flujo, y luego fold lo reduce a un valor, sin alocar ningún array intermedio. Muchas operaciones clásicas (<code>sum</code>, <code>product</code>, <code>count</code>, <code>any</code>, <code>all</code>) son casos especiales de fold y pueden expresarse de esta manera.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/29-iterator-map-filter.html">← Anterior</a>
+        <a href="/es/by-example/31-iterator-enumerate.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/30-iterator-fold.nx">examples/by-example/30-iterator-fold.nx</a></small></p>
+</main>
+
+</body>
+</html>

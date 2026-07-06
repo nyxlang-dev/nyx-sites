@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-db SQL — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-db SQL</h1>
+    <p>nyx-db is a SQL engine written in Nyx, listening on port 6382 with a RESP-based protocol. EXEC runs DDL/DML; QUERY returns rows as a RESP array. For embedded use in the same process, std/sqlite is lighter.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-db SQL — CREATE, INSERT, SELECT via RESP commands</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// nyx-db listens on port 6382 (SQL engine written in Nyx)</span>
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6382</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed (is nyx-db running?)"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Send SQL as a single EXEC command</span>
+    <span class="kw">let</span> create: <span class="ty">String</span> = <span class="str">"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"</span>
+    tcp_write(fd, resp_cmd([<span class="str">"EXEC"</span>, create]))
+    <span class="kw">let</span> r1: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"CREATE -&gt; "</span> + r1.trim())
+
+    <span class="cm">// Insert rows</span>
+    tcp_write(fd, resp_cmd([<span class="str">"EXEC"</span>, <span class="str">"INSERT INTO users VALUES (1, 'Alice', 30)"</span>]))
+    <span class="kw">let</span> r2: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"INSERT 1 -&gt; "</span> + r2.trim())
+
+    tcp_write(fd, resp_cmd([<span class="str">"EXEC"</span>, <span class="str">"INSERT INTO users VALUES (2, 'Bob', 25)"</span>]))
+    tcp_read_line(fd)
+
+    <span class="cm">// SELECT returns rows as RESP array</span>
+    tcp_write(fd, resp_cmd([<span class="str">"QUERY"</span>, <span class="str">"SELECT name FROM users WHERE age &gt;= 30"</span>]))
+    <span class="kw">let</span> sel_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"SELECT header -&gt; "</span> + sel_hdr.trim())
+
+    <span class="cm">// For embedded use (no daemon), see std/sqlite (recipe 55)</span>
+    print(<span class="str">""</span>)
+    print(<span class="str">"for embedded SQL (same process), use std/sqlite"</span>)
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">CREATE -&gt; +OK
+INSERT 1 -&gt; +OK
+SELECT header -&gt; *1
+
+for embedded SQL (same process), use std/sqlite</pre>
+    <h2>Explanation</h2>
+    <p>nyx-db speaks RESP (the same wire protocol as nyx-kv) to keep the client surface tiny — any RESP client library works. EXEC is for statements that return a status (DDL, INSERT, UPDATE, DELETE); QUERY returns rows as a RESP array of arrays. Rows are flattened column-by-column. When your program owns the data and doesn't need network access, skip the daemon and use std/sqlite directly for lower latency.</p>
+    <div class="book-nav">
+        <a href="/by-example/91-queue-consumer.html">&larr; Previous</a>
+        <a href="/by-example/93-db-transactions.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/92-db-sql.nx">examples/by-example/92-db-sql.nx</a></small></p>
+</main>
+</body>
+</html>

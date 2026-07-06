@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsafe and raw pointers — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Unsafe and raw pointers</h1>
+
+<h2>The safe world</h2>
+<p>In normal Nyx code, you cannot corrupt memory. The garbage collector manages allocations, array bounds are checked, and null pointers do not exist. This safety has a small cost — the GC adds overhead, bounds checks add instructions.</p>
+<p>Sometimes you need to escape these guardrails: writing a memory allocator, interfacing with hardware, or squeezing the last drop of performance from a hot loop. That is what <code>unsafe</code> is for.</p>
+<h2>The unsafe block</h2>
+<p>Unsafe operations must be wrapped in an <code>unsafe</code> block:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)    <span class="cm">// allocate 8 bytes</span>
+        <span class="op">*</span>ptr <span class="op">=</span> <span class="num">42</span>                    <span class="cm">// write to raw memory</span>
+        <span class="fn">print</span>(<span class="op">*</span>ptr)                  <span class="cm">// read from raw memory: 42</span>
+        <span class="fn">free</span>(ptr)                    <span class="cm">// deallocate</span>
+    }
+}</pre>
+<p>The <code>unsafe</code> keyword is a contract: "I, the programmer, guarantee this code is correct. The compiler should not try to protect me here."</p>
+<h2>Raw pointers</h2>
+<p>A <strong>raw pointer</strong> is a memory address. Unlike references in safe code, raw pointers can be null, dangling, or unaligned. They give you direct access to memory.</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">100</span>
+
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="op">&amp;</span>x       <span class="cm">// get address of x</span>
+        <span class="fn">print</span>(<span class="op">*</span>ptr)               <span class="cm">// dereference: 100</span>
+
+        <span class="op">*</span>ptr <span class="op">=</span> <span class="num">200</span>                <span class="cm">// modify through pointer</span>
+        <span class="fn">print</span>(x)                  <span class="cm">// 200 — x changed!</span>
+    }
+}</pre>
+<ul>
+<li><code>&x</code> — the address-of operator. Returns a pointer to <code>x</code>.</li>
+<li><code>*ptr</code> — the dereference operator. Reads or writes the value at the address.</li>
+</ul>
+<h2>Manual memory management</h2>
+<p>In safe Nyx, the garbage collector handles all allocations. In unsafe code, you manage memory yourself:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="cm">// Allocate space for 10 integers (10 * 8 bytes)</span>
+        <span class="kw">let</span> arr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">80</span>)
+
+        <span class="cm">// Write values</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+            <span class="op">*</span>(arr <span class="op">+</span> i) <span class="op">=</span> i <span class="op">*</span> i    <span class="cm">// pointer arithmetic</span>
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+
+        <span class="cm">// Read values</span>
+        i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+            <span class="fn">print</span>(<span class="op">*</span>(arr <span class="op">+</span> i))
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+
+        <span class="fn">free</span>(arr)
+    }
+}</pre>
+<p>Output:</p>
+<pre>0
+1
+4
+9
+16
+25
+36
+49
+64
+81</pre>
+<p><code>alloc(bytes)</code> allocates raw memory (like C's <code>malloc</code>). <code>free(ptr)</code> releases it. Forgetting to call <code>free</code> causes a memory leak. Calling <code>free</code> twice causes undefined behavior.</p>
+<h2>Pointer arithmetic</h2>
+<p>You can add to pointers to navigate through memory:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> base: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">32</span>)    <span class="cm">// 4 integers * 8 bytes each</span>
+
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">0</span>) <span class="op">=</span> <span class="num">10</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">1</span>) <span class="op">=</span> <span class="num">20</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">2</span>) <span class="op">=</span> <span class="num">30</span>
+    <span class="op">*</span>(base <span class="op">+</span> <span class="num">3</span>) <span class="op">=</span> <span class="num">40</span>
+
+    <span class="cm">// base + N moves N * sizeof(int) bytes forward</span>
+    <span class="fn">print</span>(<span class="op">*</span>(base <span class="op">+</span> <span class="num">2</span>))    <span class="cm">// 30</span>
+
+    <span class="fn">free</span>(base)
+}</pre>
+<h2>Static variables</h2>
+<p>Static variables live for the entire program lifetime, outside the garbage collector:</p>
+<pre><span class="kw">static</span> <span class="kw">var</span> request_count: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">log_request</span>() {
+    request_count <span class="op">=</span> request_count <span class="op">+</span> <span class="num">1</span>
+    <span class="fn">print</span>(<span class="str">&quot;Request #&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(request_count))
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">log_request</span>()    <span class="cm">// Request #1</span>
+    <span class="fn">log_request</span>()    <span class="cm">// Request #2</span>
+    <span class="fn">log_request</span>()    <span class="cm">// Request #3</span>
+}</pre>
+<p>Static variables are useful for global state that needs to be fast and GC-free.</p>
+<h2>Volatile reads and writes</h2>
+<p>Normally, the compiler can reorder or eliminate memory operations if it thinks they are redundant. <strong>Volatile</strong> operations prevent this:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> ptr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+
+    <span class="fn">volatile_write</span>(ptr, <span class="num">42</span>)     <span class="cm">// guaranteed to write</span>
+    <span class="kw">let</span> v: <span class="ty">int</span> <span class="op">=</span> <span class="fn">volatile_read</span>(ptr)    <span class="cm">// guaranteed to read</span>
+
+    <span class="fn">free</span>(ptr)
+}</pre>
+<p>Volatile is essential for:</p>
+<ul>
+<li>Memory-mapped I/O (talking to hardware)</li>
+<li>Signal handlers (variables modified by external events)</li>
+<li>Shared memory between processes</li>
+</ul>
+<h2>Atomic operations</h2>
+<p>When multiple threads access the same memory, you need <strong>atomic</strong> operations to prevent race conditions without a mutex:</p>
+<pre><span class="kw">unsafe</span> {
+    <span class="kw">let</span> counter: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+    <span class="fn">atomic_store</span>(counter, <span class="num">0</span>)
+
+    <span class="cm">// Thread-safe increment pattern:</span>
+    <span class="kw">let</span> current: <span class="ty">int</span> <span class="op">=</span> <span class="fn">atomic_load</span>(counter)
+    <span class="fn">atomic_store</span>(counter, current <span class="op">+</span> <span class="num">1</span>)
+
+    <span class="fn">print</span>(<span class="fn">atomic_load</span>(counter))    <span class="cm">// 1</span>
+
+    <span class="fn">free</span>(counter)
+}</pre>
+<p>Atomic operations use <strong>sequential consistency</strong> — the strongest memory ordering guarantee. Every thread sees operations in the same order.</p>
+<h2>When to use unsafe</h2>
+<p>Use unsafe only when you must:</p>
+<ul>
+<li><strong>FFI</strong> — calling C functions that take raw pointers</li>
+<li><strong>Performance-critical code</strong> — avoiding GC in hot loops</li>
+<li><strong>Low-level data structures</strong> — implementing custom allocators or lock-free structures</li>
+<li><strong>Hardware interaction</strong> — memory-mapped I/O, device drivers</li>
+</ul>
+<p>Never use unsafe just because it feels faster. Measure first. The GC is highly optimized and adds less overhead than most people think.</p>
+<h2>Exercises</h2>
+<ol>
+<li>Write an unsafe function that allocates an array of 100 integers, fills them with values 0-99, sums them, frees the memory, and returns the sum.</li>
+</ol>
+<ol>
+<li>Create a static counter variable and increment it from two different functions. Print the final value.</li>
+</ol>
+<ol>
+<li>Write a function that swaps two integers using raw pointers: <code>fn swap(a: <em>int, b: </em>int)</code>.</li>
+</ol>
+<ol>
+<li>Allocate a block of memory, write values using pointer arithmetic, then read them back in reverse order.</li>
+</ol>
+<ol>
+<li>Write a program that uses <code>volatile_write</code> and <code>volatile_read</code> to simulate a hardware register that a signal handler might modify.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>unsafe { }</code> enables operations that bypass safety checks.</li>
+<li><code>&x</code> gets the address of a variable. <code>*ptr</code> dereferences a pointer.</li>
+<li><code>alloc(bytes)</code> allocates memory. <code>free(ptr)</code> releases it.</li>
+<li>Pointer arithmetic: <code>*(ptr + offset)</code> accesses memory at an offset.</li>
+<li><code>static var</code> creates variables that live for the program's lifetime.</li>
+<li><code>volatile_read</code>/<code>volatile_write</code> prevent compiler reordering.</li>
+<li><code>atomic_load</code>/<code>atomic_store</code> provide thread-safe memory access.</li>
+<li>Only use unsafe when safe alternatives are insufficient. Measure first.</li>
+</ul>
+<p>Next chapter: <a href="23-async.md">Async and event loop →</a></p>
+
+    <div class="book-nav">
+        <a href="21.html" class="book-nav-prev">&larr; Previous: FFI — Calling C code</a>
+        <a href="23.html" class="book-nav-next">Next: Async and event loop &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

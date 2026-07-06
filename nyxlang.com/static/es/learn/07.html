@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strings — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Strings</h1>
+
+<h2>¿Qué es un string?</h2>
+<p>Un <strong>string</strong> es un fragmento de texto. Cada vez que escribes algo entre comillas dobles en Nyx, creas un string:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> saludo: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;¡Hola, Mundo!&quot;</span>
+    <span class="fn">print</span>(saludo)
+}</pre>
+<p>El nombre "string" viene de la idea de que el texto es una "cadena de caracteres" — como cuentas en un collar, cada carácter es una cuenta.</p>
+<h2>Crear strings</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alice&quot;</span>
+    <span class="kw">let</span> vacio: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">let</span> frase: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx es un lenguaje compilado.&quot;</span>
+
+    <span class="fn">print</span>(nombre)
+    <span class="fn">print</span>(vacio)        <span class="cm">// (no imprime nada)</span>
+    <span class="fn">print</span>(frase)
+}</pre>
+<h2>Unir strings — concatenación</h2>
+<p>Puedes unir dos strings usando el operador <code>+</code>. Esto se llama <strong>concatenación</strong>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> primero: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola&quot;</span>
+    <span class="kw">let</span> segundo: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Mundo&quot;</span>
+    <span class="kw">let</span> resultado: <span class="ty">String</span> <span class="op">=</span> primero <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> segundo <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+
+    <span class="fn">print</span>(resultado)    <span class="cm">// Hola, Mundo!</span>
+}</pre>
+<p>También puedes concatenar strings con números convirtiéndolos primero:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="kw">let</span> mensaje: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Tengo &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(edad) <span class="op">+</span> <span class="str">&quot; años.&quot;</span>
+    <span class="fn">print</span>(mensaje)    <span class="cm">// Tengo 25 años.</span>
+}</pre>
+<p><code>int_to_string()</code> convierte un entero a su representación de texto. Esto es necesario porque <code>+</code> con strings significa "unir texto", no "sumar números".</p>
+<h2>Longitud del string</h2>
+<p>El método <code>.length()</code> te dice cuántos caracteres tiene un string:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> palabra: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx&quot;</span>
+    <span class="fn">print</span>(palabra.<span class="fn">length</span>())    <span class="cm">// 3</span>
+
+    <span class="kw">let</span> vacio: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="fn">print</span>(vacio.<span class="fn">length</span>())    <span class="cm">// 0</span>
+
+    <span class="kw">let</span> frase: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;¡Hola, Mundo!&quot;</span>
+    <span class="fn">print</span>(frase.<span class="fn">length</span>())   <span class="cm">// 13</span>
+}</pre>
+<h2>Acceder a caracteres individuales</h2>
+<p>Puedes acceder a un solo carácter usando <code>.charAt()</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> palabra: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hello&quot;</span>
+
+    <span class="kw">let</span> primero: <span class="ty">char</span> <span class="op">=</span> palabra.<span class="fn">charAt</span>(<span class="num">0</span>)    <span class="cm">// &#x27;H&#x27;</span>
+    <span class="kw">let</span> ultimo: <span class="ty">char</span> <span class="op">=</span> palabra.<span class="fn">charAt</span>(<span class="num">4</span>)     <span class="cm">// &#x27;o&#x27;</span>
+
+    <span class="cm">// Comparar caracteres usando valores ASCII</span>
+    <span class="kw">if</span> primero <span class="op">==</span> <span class="num">72</span> {    <span class="cm">// 72 es ASCII para &#x27;H&#x27;</span>
+        <span class="fn">print</span>(<span class="str">&quot;Empieza con H&quot;</span>)
+    }
+}</pre>
+<p>Nota: <code>.charAt()</code> devuelve un entero (el valor ASCII del carácter). Para comparar, usa el valor ASCII directamente.</p>
+<h2>Substrings</h2>
+<p>El método <code>.substring(inicio, fin)</code> extrae una porción de un string. Devuelve los caracteres desde la posición <code>inicio</code> hasta (pero sin incluir) la posición <code>fin</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> texto: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hello, World!&quot;</span>
+
+    <span class="kw">let</span> hello: <span class="ty">String</span> <span class="op">=</span> texto.<span class="fn">substring</span>(<span class="num">0</span>, <span class="num">5</span>)
+    <span class="fn">print</span>(hello)    <span class="cm">// Hello</span>
+
+    <span class="kw">let</span> world: <span class="ty">String</span> <span class="op">=</span> texto.<span class="fn">substring</span>(<span class="num">7</span>, <span class="num">12</span>)
+    <span class="fn">print</span>(world)    <span class="cm">// World</span>
+}</pre>
+<h2>Buscar en strings</h2>
+<h3>indexOf</h3>
+<p>El método <code>.indexOf()</code> encuentra la posición de un substring dentro de un string. Devuelve -1 si no lo encuentra:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> texto: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;The quick brown fox&quot;</span>
+
+    <span class="kw">let</span> pos: <span class="ty">int</span> <span class="op">=</span> texto.<span class="fn">indexOf</span>(<span class="str">&quot;quick&quot;</span>)
+    <span class="fn">print</span>(pos)     <span class="cm">// 4</span>
+
+    <span class="kw">let</span> no_encontrado: <span class="ty">int</span> <span class="op">=</span> texto.<span class="fn">indexOf</span>(<span class="str">&quot;slow&quot;</span>)
+    <span class="fn">print</span>(no_encontrado)    <span class="cm">// -1</span>
+}</pre>
+<h3>startsWith y endsWith</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> archivo: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;reporte.pdf&quot;</span>
+
+    <span class="kw">if</span> archivo.<span class="fn">endsWith</span>(<span class="str">&quot;.pdf&quot;</span>) {
+        <span class="fn">print</span>(<span class="str">&quot;Es un archivo PDF&quot;</span>)
+    }
+
+    <span class="kw">let</span> url: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;https://nyxlang.com&quot;</span>
+    <span class="kw">if</span> url.<span class="fn">startsWith</span>(<span class="str">&quot;https&quot;</span>) {
+        <span class="fn">print</span>(<span class="str">&quot;Conexión segura&quot;</span>)
+    }
+}</pre>
+<h2>Dividir strings</h2>
+<p>El método <code>.split()</code> divide un string en un array basándose en un separador:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> csv: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alice,Bob,Charlie,Diana&quot;</span>
+    <span class="kw">let</span> nombres: <span class="ty">Array</span> <span class="op">=</span> csv.<span class="fn">split</span>(<span class="str">&quot;,&quot;</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> nombres.<span class="fn">length</span>() {
+        <span class="fn">print</span>(nombres[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Salida:</p>
+<pre>Alice
+Bob
+Charlie
+Diana</pre>
+<h2>Convertir entre tipos</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Entero a string</span>
+    <span class="kw">let</span> n: <span class="ty">int</span> <span class="op">=</span> <span class="num">42</span>
+    <span class="kw">let</span> s: <span class="ty">String</span> <span class="op">=</span> <span class="fn">int_to_string</span>(n)
+    <span class="fn">print</span>(s)    <span class="cm">// &quot;42&quot;</span>
+
+    <span class="cm">// String a entero</span>
+    <span class="kw">let</span> texto: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;123&quot;</span>
+    <span class="kw">let</span> num: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(texto)
+    <span class="fn">print</span>(num <span class="op">+</span> <span class="num">1</span>)    <span class="cm">// 124</span>
+}</pre>
+<h2>Ejemplo práctico: contar palabras</h2>
+<pre><span class="kw">fn</span> <span class="fn">contar_palabras</span>(texto: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">let</span> palabras: <span class="ty">Array</span> <span class="op">=</span> texto.<span class="fn">split</span>(<span class="str">&quot; &quot;</span>)
+    <span class="kw">return</span> palabras.<span class="fn">length</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> frase: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx es un lenguaje compilado rapido&quot;</span>
+    <span class="fn">print</span>(<span class="fn">contar_palabras</span>(frase))    <span class="cm">// 6</span>
+}</pre>
+<h2>Ejemplo práctico: invertir un string</h2>
+<pre><span class="kw">fn</span> <span class="fn">invertir_string</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> resultado: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> s.<span class="fn">length</span>() <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&gt;=</span> <span class="num">0</span> {
+        <span class="kw">let</span> c: <span class="ty">char</span> <span class="op">=</span> s.<span class="fn">charAt</span>(i)
+        resultado <span class="op">=</span> resultado <span class="op">+</span> <span class="fn">char_to_string</span>(c)
+        i <span class="op">-=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">invertir_string</span>(<span class="str">&quot;hello&quot;</span>))    <span class="cm">// olleh</span>
+    <span class="fn">print</span>(<span class="fn">invertir_string</span>(<span class="str">&quot;Nyx&quot;</span>))      <span class="cm">// xyN</span>
+}</pre>
+<h2>Ejemplo práctico: construir strings por partes</h2>
+<pre><span class="kw">fn</span> <span class="fn">repetir_string</span>(s: <span class="ty">String</span>, veces: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> resultado: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> veces {
+        resultado <span class="op">=</span> resultado <span class="op">+</span> s
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">repetir_string</span>(<span class="str">&quot;ja&quot;</span>, <span class="num">3</span>))     <span class="cm">// jajaja</span>
+    <span class="fn">print</span>(<span class="fn">repetir_string</span>(<span class="str">&quot;=-&quot;</span>, <span class="num">10</span>))    <span class="cm">// =-=-=-=-=-=-=-=-=-=-</span>
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe una función <code>contar_char(s: String, objetivo: String) -> int</code> que cuente cuántas veces aparece un string de un carácter en <code>s</code>. Pista: usa <code>.split()</code> — la longitud del resultado menos 1 da la cuenta.</li>
+</ol>
+<ol>
+<li>Escribe una función <code>es_palindromo(s: String) -> bool</code> que devuelva <code>true</code> si un string se lee igual de adelante hacia atrás y viceversa. Pista: compara el string con su reverso.</li>
+</ol>
+<ol>
+<li>Escribe una función <code>capitalizar_primera(s: String) -> String</code> que devuelva el string con su primer carácter en mayúscula. Asume que la entrada empieza con una letra minúscula.</li>
+</ol>
+<ol>
+<li>Escribe un programa que tome una frase y la imprima palabra por palabra, numerada:</li>
+</ol>
+<p>   ``<code>    1. Nyx    2. es    3. genial    </code>``</p>
+<ol>
+<li>Escribe una función <code>reemplazar_todo(texto: String, viejo: String, nuevo: String) -> String</code> que reemplace todas las ocurrencias de <code>viejo</code> con <code>nuevo</code>. Pista: divide por <code>viejo</code>, luego une con <code>nuevo</code>.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li>Los strings son texto encerrado en comillas dobles: <code>"Hola"</code></li>
+<li><code>+</code> une strings (concatenación).</li>
+<li><code>.length()</code> devuelve la cantidad de caracteres.</li>
+<li><code>.charAt(i)</code> devuelve el carácter en la posición <code>i</code> (como entero ASCII).</li>
+<li><code>.substring(inicio, fin)</code> extrae una porción.</li>
+<li><code>.indexOf(s)</code> encuentra la posición de un substring (-1 si no lo encuentra).</li>
+<li><code>.split(sep)</code> divide un string en un array.</li>
+<li><code>int_to_string()</code> y <code>string_to_int()</code> convierten entre tipos.</li>
+<li><code>char_to_string()</code> convierte un carácter a un string de un carácter.</li>
+</ul>
+<p>Siguiente capítulo: <a href="08-maps.md">Maps →</a></p>
+
+    <div class="book-nav">
+        <a href="06.html" class="book-nav-prev">&larr; Anterior: Arrays</a>
+        <a href="08.html" class="book-nav-next">Siguiente: Maps &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

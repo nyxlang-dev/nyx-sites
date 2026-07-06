@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Guards — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Match Guards</h1>
+
+    <p>Match guards add an extra boolean condition to a match arm using the <code>if</code> keyword. An arm only fires when both its pattern matches and its guard evaluates to true, enabling fine-grained branching that would otherwise require nested if-else chains.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Match guards: condiciones adicionales dentro de los brazos del match
+
+fn classify(n: int) -> String {
+    return match n {
+        x if x &gt; 100  =&gt; "muy grande (" + int_to_string(x) + ")",
+        x if x &gt; 10   =&gt; "grande (" + int_to_string(x) + ")",
+        x if x &gt; 0    =&gt; "positivo (" + int_to_string(x) + ")",
+        x if x == 0   =&gt; "cero",
+        x if x &gt; -10  =&gt; "negativo pequeno (" + int_to_string(x) + ")",
+        x              =&gt; "muy negativo (" + int_to_string(x) + ")"
+    }
+}
+
+fn grade(score: int) -> String {
+    return match score {
+        s if s &gt;= 90 =&gt; "A",
+        s if s &gt;= 80 =&gt; "B",
+        s if s &gt;= 70 =&gt; "C",
+        s if s &gt;= 60 =&gt; "D",
+        _            =&gt; "F"
+    }
+}
+
+fn main() -> int {
+    print(classify(200))
+    print(classify(50))
+    print(classify(5))
+    print(classify(0))
+    print(classify(-3))
+    print(classify(-99))
+
+    print("nota 95: " + grade(95))
+    print("nota 82: " + grade(82))
+    print("nota 71: " + grade(71))
+    print("nota 55: " + grade(55))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">muy grande (200)
+grande (50)
+positivo (5)
+cero
+negativo pequeno (-3)
+muy negativo (-99)
+nota 95: A
+nota 82: B
+nota 71: C
+nota 55: F</pre>
+
+    <h2>Explanation</h2>
+    <p>Each arm in the <code>classify</code> match uses the wildcard pattern <code>x</code> to bind the scrutinee, then applies an <code>if</code> guard to restrict when the arm fires. Arms are evaluated top-to-bottom, so the ordering matters: <code>x &gt; 100</code> must appear before <code>x &gt; 10</code>, otherwise values like 200 would be caught by the less specific guard first. The final arm has no guard, making it an unconditional catch-all that ensures exhaustiveness.</p>
+    <p>The <code>grade</code> function shows the same technique applied to an academic grading scale. The wildcard <code>_</code> in the last arm is equivalent to a catch-all variable pattern but discards the value, signaling to readers that the bound value is intentionally unused. Both functions return a <code>String</code> expression directly from the match, so no intermediate variable is needed.</p>
+    <p>Match guards are especially powerful when combined with enum variants that carry data — you can first check which variant you have, then apply a numeric or string condition on its payload, all within a single concise match block.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/27-if-let.html">← Previous</a>
+        <a href="/by-example/29-iterator-map-filter.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/28-match-guard.nx">examples/by-example/28-match-guard.nx</a></small></p>
+</main>
+
+</body>
+</html>

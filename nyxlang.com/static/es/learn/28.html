@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiempo real con Pub/Sub — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Tiempo real con Pub/Sub</h1>
+
+<h2>Que es Pub/Sub?</h2>
+<p>En una interaccion cliente-servidor normal, el cliente pregunta y el servidor responde. Pero, que pasa si el servidor necesita enviar datos a los clientes sin que se lo pidan? Este es el patron <strong>publish/subscribe</strong> (publicar/suscribir).</p>
+<p>Los publicadores envian mensajes a un <strong>canal</strong> con nombre. Los suscriptores registran interes en canales y reciben mensajes a medida que llegan. El publicador no necesita saber quien esta escuchando — el sistema se encarga de la entrega.</p>
+<pre>Publisher ──► PUBLISH "news" "breaking: ..." ──► nyx-kv
+                                                    │
+                                    ┌───────────────┼───────────────┐
+                                    ▼               ▼               ▼
+                              Subscriber A    Subscriber B    Subscriber C</pre>
+<p>Esto se llama <strong>entrega fan-out</strong>: un mensaje, muchos receptores.</p>
+
+<h2>Suscribirse a un canal</h2>
+<p>nyx-kv implementa Pub/Sub usando los comandos estandar de Redis. Conectate con cualquier cliente Redis y suscribete:</p>
+<pre>$ redis-cli -p 6380
+127.0.0.1:6380&gt; SUBSCRIBE alerts
+Reading messages... (press Ctrl-C to quit)
+1) "subscribe"
+2) "alerts"
+3) (integer) 1</pre>
+<p>La respuesta confirma la suscripcion. El cliente ahora esta en <strong>modo suscriptor</strong> — se bloquea y espera mensajes. Solo tres comandos se aceptan en este modo: <code>SUBSCRIBE</code>, <code>UNSUBSCRIBE</code> y <code>PING</code>.</p>
+
+<h2>Publicar un mensaje</h2>
+<p>Desde otra terminal, publica un mensaje en el canal:</p>
+<pre>$ redis-cli -p 6380
+127.0.0.1:6380&gt; PUBLISH alerts "disk usage at 90%"
+(integer) 1</pre>
+<p>El valor de retorno es la cantidad de suscriptores que recibieron el mensaje. El suscriptor ve:</p>
+<pre>1) "message"
+2) "alerts"
+3) "disk usage at 90%"</pre>
+<p>Los mensajes se entregan como un array RESP de tres elementos: la cadena <code>"message"</code>, el nombre del canal y el contenido.</p>
+
+<h2>Multiples canales</h2>
+<p>Un solo cliente puede suscribirse a multiples canales:</p>
+<pre>127.0.0.1:6380&gt; SUBSCRIBE alerts notifications system</pre>
+<p>Los mensajes de cualquiera de estos canales se entregaran a este suscriptor.</p>
+
+<h2>Cancelar suscripcion</h2>
+<p>Para dejar de recibir mensajes de un canal:</p>
+<pre>127.0.0.1:6380&gt; UNSUBSCRIBE alerts</pre>
+
+<h2>Ejemplo: notificaciones en vivo</h2>
+<p>Aqui hay un patron practico. Una aplicacion web publica eventos cuando los usuarios realizan acciones:</p>
+<pre><span class="cm"># Publicador en Python (usando redis-py)</span>
+import redis
+r = redis.Redis(port=6380)
+
+<span class="cm"># Cuando un usuario se registra:</span>
+r.publish("events", "signup:alice@example.com")
+
+<span class="cm"># Cuando se realiza un pedido:</span>
+r.publish("events", "order:12345:$49.99")</pre>
+<p>Un servicio de monitoreo se suscribe y procesa eventos en tiempo real:</p>
+<pre><span class="cm"># Suscriptor en Python</span>
+import redis
+r = redis.Redis(port=6380)
+p = r.pubsub()
+p.subscribe("events")
+
+for msg in p.listen():
+    if msg["type"] == "message":
+        print(f"Event: {msg['data'].decode()}")</pre>
+
+<h2>Pub/Sub vs colas de mensajes</h2>
+<p>Pub/Sub y las colas de mensajes entregan mensajes, pero funcionan de manera diferente:</p>
+<div class="table-wrapper"><table>
+<thead><tr><th>Caracteristica</th><th>Pub/Sub</th><th>Cola de mensajes</th></tr></thead>
+<tbody>
+<tr><td>Entrega</td><td>Todos los suscriptores reciben cada mensaje</td><td>Cada mensaje va a un solo consumidor</td></tr>
+<tr><td>Persistencia</td><td>No — si nadie escucha, los mensajes se pierden</td><td>Si — los mensajes esperan hasta ser consumidos</td></tr>
+<tr><td>Confirmacion</td><td>No — dispara y olvida</td><td>Si — se requiere ACK/NACK</td></tr>
+<tr><td>Caso de uso</td><td>Notificaciones en vivo, chat, eventos</td><td>Trabajos en segundo plano, procesamiento de tareas</td></tr>
+</tbody></table></div>
+
+<h2>Resumen</h2>
+<ul>
+<li><code>SUBSCRIBE channel</code> entra en modo suscriptor y espera mensajes.</li>
+<li><code>PUBLISH channel message</code> envia un mensaje a todos los suscriptores.</li>
+<li><code>UNSUBSCRIBE channel</code> deja de recibir mensajes.</li>
+<li>Fan-out: cada suscriptor recibe cada mensaje.</li>
+<li>Sin persistencia — si nadie esta escuchando, el mensaje se pierde.</li>
+<li>Usa Pub/Sub para notificaciones en tiempo real, eventos y actualizaciones en vivo.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="27.html" class="book-nav-prev">&larr; Anterior: APIs web con nyx-serve</a>
+        <a href="29.html" class="book-nav-next">Siguiente: Colas de mensajes con nyx-queue &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

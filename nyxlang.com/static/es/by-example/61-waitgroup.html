@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaitGroup — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>WaitGroup</h1>
+    <p><code>WaitGroup</code> de <code>std/sync</code> coordina múltiples hilos. <code>wg_add</code> establece el contador esperado, cada hilo llama a <code>wg_done</code> al terminar, y <code>wg_wait</code> bloquea hasta que el contador llega a cero.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// WaitGroup — waiting for multiple threads to finish</span>
+<span class="cm">// WaitGroup — esperar a que múltiples hilos terminen</span>
+
+<span class="kw">import</span> <span class="str">"std/sync"</span>
+
+<span class="kw">var</span> wg: <span class="ty">WaitGroup</span> = wg_new()
+
+<span class="kw">fn</span> <span class="fn">task_a</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task A running"</span>)
+    sleep(<span class="num">10</span>)
+    print(<span class="str">"task A done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">task_b</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task B running"</span>)
+    sleep(<span class="num">20</span>)
+    print(<span class="str">"task B done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">task_c</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task C running"</span>)
+    sleep(<span class="num">5</span>)
+    print(<span class="str">"task C done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Set the counter to the number of tasks</span>
+    wg_add(wg, <span class="num">3</span>)
+
+    <span class="cm">// Spawn three concurrent tasks</span>
+    thread_spawn(task_a)
+    thread_spawn(task_b)
+    thread_spawn(task_c)
+
+    <span class="cm">// Block until all three call wg_done()</span>
+    wg_wait(wg)
+    print(<span class="str">"all tasks completed"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">task C running
+task C done
+task A running
+task A done
+task B running
+task B done
+all tasks completed</pre>
+    <h2>Explicación</h2>
+    <p><code>WaitGroup</code> se importa de <code>std/sync</code>. Mantiene un contador interno: <code>wg_add(wg, 3)</code> lo establece en 3, cada llamada a <code>wg_done</code> lo decrementa en 1, y <code>wg_wait</code> bloquea hasta que el contador llega a cero.</p>
+    <p>Tres tareas se ejecutan de forma concurrente con distintas duraciones de espera (5ms, 10ms, 20ms). La tarea C termina primero porque duerme menos tiempo. El orden exacto de la salida depende de la planificación de hilos, pero "all tasks completed" siempre se imprime al final porque <code>wg_wait</code> garantiza que todos los hilos ya llamaron a <code>wg_done</code>.</p>
+    <p>Este patrón es ideal cuando se necesita repartir trabajo entre múltiples hilos y esperar a que todos terminen antes de continuar. A diferencia de <code>thread_join</code>, no es necesario rastrear los handles de cada hilo individualmente.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/60-producer-consumer.html">&larr; Anterior</a>
+        <a href="/es/by-example/62-semaphore.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/61-waitgroup.nx">examples/by-example/61-waitgroup.nx</a></small></p>
+</main>
+</body>
+</html>

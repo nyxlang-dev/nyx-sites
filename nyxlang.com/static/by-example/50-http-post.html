@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP POST — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>HTTP POST</h1>
+
+    <p><code>http_post(url, body)</code> sends a POST request with <code>Content-Type: text/plain</code>. For custom headers and methods, use <code>http_request(method, url, headers, body)</code> which gives full control over the request.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// HTTP POST request with a body</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> resp: <span class="ty">Array</span> = http_post(<span class="str">"http://httpbin.org/post"</span>, <span class="str">"hello from Nyx"</span>)
+
+    <span class="kw">let</span> status: <span class="ty">int</span> = http_status(resp)
+    print(<span class="str">"status: "</span> + int_to_string(status))
+
+    <span class="kw">let</span> body: <span class="ty">String</span> = http_body(resp)
+    <span class="kw">if</span> body.length() > <span class="num">200</span> {
+        print(<span class="str">"body (first 200 chars): "</span> + body.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(<span class="str">"body: "</span> + body)
+    }
+
+    <span class="cm">// Custom headers and methods with http_request</span>
+    <span class="kw">let</span> headers: <span class="ty">Array</span> = [<span class="str">"Content-Type"</span>, <span class="str">"application/json"</span>]
+    <span class="kw">let</span> json_body: <span class="ty">String</span> = <span class="str">"{\"key\": \"value\"}"</span>
+    <span class="kw">let</span> resp2: <span class="ty">Array</span> = http_request(<span class="str">"PUT"</span>, <span class="str">"http://httpbin.org/put"</span>, headers, json_body)
+    print(<span class="str">"PUT status: "</span> + int_to_string(http_status(resp2)))
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">status: 200
+body (first 200 chars): { "args": {}, "data": "hello from Nyx", ...}
+PUT status: 200</pre>
+
+    <h2>Explanation</h2>
+    <p><code>http_post</code> is a convenience wrapper that sets <code>Content-Type: text/plain</code>. For JSON APIs, use <code>http_request</code> with explicit headers — the headers array uses a flat key-value format: <code>["Header-Name", "value", "Another", "value"]</code>.</p>
+    <p><code>http_request</code> supports any HTTP method (GET, POST, PUT, DELETE, PATCH, etc.) and gives full control over headers and body content.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/49-http-get.html">← Previous</a>
+        <a href="/by-example/51-http-server.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/50-http-post.nx">examples/by-example/50-http-post.nx</a></small></p>
+</main>
+
+</body>
+</html>

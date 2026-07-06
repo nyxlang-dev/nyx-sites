@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systems — inline assembly, volatile, atomic — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Systems — inline assembly, volatile, atomic</h1>
+
+<h2>Nyx as a systems language</h2>
+<p>Most programming books stop at "build a web server." But Nyx is designed to go further — it can replace C for systems programming. This chapter covers the low-level tools that make that possible.</p>
+<h2>Inline assembly</h2>
+<p>When you need to execute a specific CPU instruction, Nyx lets you write assembly directly:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;nop&quot;</span>)    <span class="cm">// no-operation: does nothing, takes one cycle</span>
+    }
+}</pre>
+<p>Inline assembly uses GCC-style AT&T syntax and compiles to LLVM inline assembly.</p>
+<h3>Register manipulation</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;mov $42, %rax&quot;</span>)     <span class="cm">// move 42 into RAX register</span>
+        <span class="fn">asm</span>(<span class="str">&quot;add $8, %rax&quot;</span>)      <span class="cm">// add 8 to RAX (now 50)</span>
+    }
+}</pre>
+<h3>When to use inline assembly</h3>
+<ul>
+<li><strong>CPU-specific instructions</strong>: CPUID, RDTSC (read timestamp counter), cache control</li>
+<li><strong>Interrupt handlers</strong>: <code>cli</code>/<code>sti</code> to disable/enable interrupts</li>
+<li><strong>Bare-metal programming</strong>: bootloaders, OS kernels</li>
+<li><strong>Performance-critical sequences</strong>: when LLVM's optimizer does not generate optimal code</li>
+</ul>
+<p>For almost all application-level code, you never need inline assembly. It exists for the rare cases where you need exact control over what the CPU does.</p>
+<h2>Function attributes</h2>
+<p>Nyx supports function attributes for systems programming:</p>
+<pre><span class="kw">#[naked]</span>
+<span class="kw">fn</span> <span class="fn">interrupt_handler</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;push %rax&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;push %rbx&quot;</span>)
+        <span class="cm">// ... handle interrupt ...</span>
+        <span class="fn">asm</span>(<span class="str">&quot;pop %rbx&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;pop %rax&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;iretq&quot;</span>)
+    }
+}</pre>
+<ul>
+<li><code>#[naked]</code> — no function prologue/epilogue (no stack frame setup)</li>
+<li><code>#[interrupt]</code> — marks as hardware interrupt handler</li>
+<li><code>#[link_section(".text.boot")]</code> — places function in a specific binary section</li>
+<li><code>#[export_name("_start")]</code> — controls the symbol name in the binary</li>
+</ul>
+<h2>Volatile memory access</h2>
+<p>Normal memory access can be reordered or eliminated by the compiler. Volatile access cannot:</p>
+<pre><span class="kw">fn</span> <span class="fn">read_hardware_register</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> mmio_addr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="num">0x40000000</span> <span class="kw">as</span> <span class="op">*</span><span class="ty">int</span>
+        <span class="kw">return</span> <span class="fn">volatile_read</span>(mmio_addr)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">write_hardware_register</span>(value: <span class="ty">int</span>) {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> mmio_addr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="num">0x40000000</span> <span class="kw">as</span> <span class="op">*</span><span class="ty">int</span>
+        <span class="fn">volatile_write</span>(mmio_addr, value)
+    }
+}</pre>
+<h3>Why volatile matters</h3>
+<p>Without volatile, the compiler might:</p>
+<ul>
+<li>Read a hardware register once and cache the value (missing updates)</li>
+<li>Remove a write to a register because "no one reads it" (the hardware does!)</li>
+<li>Reorder reads and writes (hardware depends on exact ordering)</li>
+</ul>
+<p>Volatile guarantees: every read reads from memory, every write writes to memory, in exactly the order you specified.</p>
+<h2>Atomic operations</h2>
+<p>Atomic operations are the foundation of lock-free programming. They guarantee that a read-modify-write cycle completes without interruption:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> flag: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+        <span class="fn">atomic_store</span>(flag, <span class="num">0</span>)
+
+        <span class="cm">// In one thread:</span>
+        <span class="fn">atomic_store</span>(flag, <span class="num">1</span>)    <span class="cm">// signal &quot;ready&quot;</span>
+
+        <span class="cm">// In another thread:</span>
+        <span class="kw">let</span> ready: <span class="ty">int</span> <span class="op">=</span> <span class="fn">atomic_load</span>(flag)
+        <span class="kw">if</span> ready <span class="op">==</span> <span class="num">1</span> {
+            <span class="fn">print</span>(<span class="str">&quot;Other thread signaled ready&quot;</span>)
+        }
+
+        <span class="fn">free</span>(flag)
+    }
+}</pre>
+<h3>Atomic vs mutex</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Atomic</th>
+<th>Mutex</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Single operations only</td>
+<td>Protects code blocks</td>
+</tr>
+<tr>
+<td>No waiting (lock-free)</td>
+<td>Can block (threads wait)</td>
+</tr>
+<tr>
+<td>Very fast (~1 nanosecond)</td>
+<td>Slower (~50 nanoseconds)</td>
+</tr>
+<tr>
+<td>Hard to use correctly</td>
+<td>Easy to reason about</td>
+</tr>
+</tbody></table></div>
+<p>Use atomics for simple flags, counters, and state machines. Use mutexes for complex critical sections.</p>
+<h2>Sized types for hardware</h2>
+<p>When interfacing with hardware or binary protocols, you need exact-sized types:</p>
+<pre><span class="kw">var</span> byte: <span class="ty">i8</span> <span class="op">=</span> <span class="num">0xFF</span>
+<span class="kw">var</span> word: <span class="ty">i16</span> <span class="op">=</span> <span class="num">0x1234</span>
+<span class="kw">var</span> dword: <span class="ty">i32</span> <span class="op">=</span> <span class="num">0xDEADBEEF</span>
+<span class="kw">var</span> qword: <span class="ty">i64</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">var</span> ubyte: <span class="ty">u8</span> <span class="op">=</span> <span class="num">255</span>
+<span class="kw">var</span> uword: <span class="ty">u16</span> <span class="op">=</span> <span class="num">65535</span>
+<span class="kw">var</span> udword: <span class="ty">u32</span> <span class="op">=</span> <span class="num">4294967295</span>
+<span class="kw">var</span> uqword: <span class="ty">u64</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">var</span> single: <span class="ty">f32</span> <span class="op">=</span> <span class="num">3.14</span></pre>
+<p>These types map directly to hardware register widths and are essential for device drivers and binary protocol parsing.</p>
+<h2>No-GC mode</h2>
+<p>For systems programming, you often cannot have a garbage collector. Nyx supports compilation without the GC:</p>
+<pre>make run-no-gc FILE=program.nx</pre>
+<p>In no-GC mode:</p>
+<ul>
+<li>No Boehm GC linked</li>
+<li>All memory management is manual (<code>alloc</code>/<code>free</code>)</li>
+<li>Smaller binaries</li>
+<li>Deterministic performance (no GC pauses)</li>
+<li>You must free everything — leaks are your responsibility</li>
+</ul>
+<h2>Cross-compilation</h2>
+<p>Nyx can compile for different architectures:</p>
+<pre>make cross FILE=program.nx TARGET=aarch64-linux-gnu</pre>
+<p>This generates a binary for ARM64 Linux from an x86 machine. Combined with no-GC mode, you can target embedded systems and microcontrollers.</p>
+<h2>WebAssembly target</h2>
+<p>Nyx can also compile to WebAssembly for running in browsers:</p>
+<pre>make wasm FILE=program.nx</pre>
+<p>This generates a <code>.wasm</code> file that can be loaded by a web page.</p>
+<h2>Practical example: reading the CPU timestamp</h2>
+<pre><span class="kw">fn</span> <span class="fn">rdtsc</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> result: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">unsafe</span> {
+        <span class="cm">// Read Time Stamp Counter</span>
+        <span class="fn">asm</span>(<span class="str">&quot;rdtsc&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;shl $32, %rdx&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;or %rdx, %rax&quot;</span>)
+    }
+    <span class="kw">return</span> result
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> start: <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_us</span>()
+    <span class="cm">// ... do some work ...</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> { i <span class="op">+=</span> <span class="num">1</span> }
+    <span class="kw">let</span> end: <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_us</span>()
+    <span class="fn">print</span>(<span class="str">&quot;Elapsed: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(end <span class="op">-</span> start) <span class="op">+</span> <span class="str">&quot; microseconds&quot;</span>)
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a program that uses <code>volatile_write</code> and <code>volatile_read</code> to implement a simple spin-lock (busy-waiting lock).</li>
+</ol>
+<ol>
+<li>Use <code>atomic_store</code> and <code>atomic_load</code> to implement a thread-safe boolean flag that one thread sets and another thread polls.</li>
+</ol>
+<ol>
+<li>Write a program using sized types (<code>i8</code>, <code>i16</code>, <code>i32</code>) that packs three values into a single <code>i64</code> using bit shifting.</li>
+</ol>
+<ol>
+<li>Compile a simple "hello world" program in no-GC mode and compare its binary size to the normal GC-enabled version.</li>
+</ol>
+<ol>
+<li>Write a function that uses inline assembly to execute a <code>nop</code> sled (100 nops in a row) and measure its execution time.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>unsafe { asm("...") }</code> executes inline assembly (AT&T syntax).</li>
+<li>Function attributes: <code>#[naked]</code>, <code>#[interrupt]</code>, <code>#[link_section]</code>, <code>#[export_name]</code>.</li>
+<li><code>volatile_read</code>/<code>volatile_write</code> prevent compiler reordering of memory access.</li>
+<li><code>atomic_load</code>/<code>atomic_store</code> provide lock-free thread synchronization.</li>
+<li>Sized types (<code>i8</code>, <code>i16</code>, <code>i32</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>f32</code>) match hardware widths.</li>
+<li>No-GC mode enables deterministic, manual memory management.</li>
+<li>Cross-compilation and WebAssembly targets extend Nyx beyond desktop Linux.</li>
+</ul>
+<p>Next chapter: <a href="25-case-study-kv.md">Case study — How nyx-kv was built →</a></p>
+
+    <div class="book-nav">
+        <a href="23.html" class="book-nav-prev">&larr; Previous: Async and event loop</a>
+        <a href="25.html" class="book-nav-next">Next: Case study — How nyx-kv was built &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

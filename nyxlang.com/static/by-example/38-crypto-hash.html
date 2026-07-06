@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptographic Hashing — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Cryptographic Hashing</h1>
+
+    <p>Nyx ships SHA-256, MD5, and HMAC-SHA256 as built-in functions backed by the runtime's <code>crypto.c</code> module. No external library or import is required — all three are available in every Nyx program.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Criptografía: SHA-256, MD5 y HMAC-SHA256
+
+fn main() -> int {
+    // SHA-256
+    let h1: String = sha256("hello world")
+    print("sha256(\"hello world\"):")
+    print("  " + h1)
+    print("  longitud: " + int_to_string(h1.length()) + " chars")
+
+    // SHA-256 de string vacío
+    let h_empty: String = sha256("")
+    print("sha256(\"\"):")
+    print("  " + h_empty)
+
+    // MD5
+    let m1: String = md5("hello world")
+    print("md5(\"hello world\"):")
+    print("  " + m1)
+    print("  longitud: " + int_to_string(m1.length()) + " chars")
+
+    // HMAC-SHA256
+    let key: String = "clave-secreta"
+    let data: String = "mensaje importante"
+    let hmac: String = hmac_sha256(key, data)
+    print("hmac_sha256(key, data):")
+    print("  " + hmac)
+
+    // Verificar determinismo: mismo input -> mismo hash
+    let a: String = sha256("nyx")
+    let b: String = sha256("nyx")
+    print("sha256 es determinista: " + int_to_string(a == b))
+
+    // Verificar que inputs distintos -> hashes distintos
+    let c: String = sha256("aaa")
+    let d: String = sha256("bbb")
+    print("hashes distintos para inputs distintos: " + int_to_string(c != d))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">sha256("hello world"):
+  b94d27b9934d3e08a52e52d7da7dabfac484efe04294e576e5b9571d73f61a7d
+  longitud: 64 chars
+sha256(""):
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+md5("hello world"):
+  5eb63bbbe01eeed093cb22bb8f5acdc3
+  longitud: 32 chars
+hmac_sha256(key, data):
+  (valor dependiente de key y data)
+sha256 es determinista: 1
+hashes distintos para inputs distintos: 1</pre>
+
+    <h2>Explanation</h2>
+    <p><code>sha256(s)</code> returns a 64-character lowercase hexadecimal string — the standard encoding of a 256-bit (32-byte) digest. The empty-string hash <code>e3b0c44...</code> is a well-known constant you can use to verify your toolchain is computing correctly. SHA-256 is suitable for data integrity checks, password hashing (with a proper KDF on top), and digital signatures.</p>
+    <p><code>md5(s)</code> returns a 32-character hex string (128-bit digest). MD5 is no longer considered cryptographically secure for collision resistance, but it remains widely used for checksums and cache keys where collision attacks are not a concern.</p>
+    <p><code>hmac_sha256(key, data)</code> computes a keyed hash that proves both the content of <code>data</code> and knowledge of <code>key</code>. It is the standard primitive for API request signing and JWT verification. The determinism assertions at the end demonstrate a fundamental property of all hash functions: identical inputs always produce identical outputs.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/37-sleep-timer.html">← Previous</a>
+        <a href="/by-example/39-random-uuid.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/38-crypto-hash.nx">examples/by-example/38-crypto-hash.nx</a></small></p>
+</main>
+
+</body>
+</html>

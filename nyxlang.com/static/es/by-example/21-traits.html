@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traits — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Traits</h1>
+
+    <p>Los traits definen comportamiento compartido que múltiples tipos pueden implementar. Son el mecanismo de abstracción principal de Nyx — similar a las interfaces en Go o a las clases de tipos en Haskell — pero con cuerpos de método completos y soporte de despacho genérico.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Traits: definir Display, implementar para struct, llamar método
+
+trait Display {
+    fn to_string(self) -> String
+}
+
+struct Point {
+    x: int,
+    y: int
+}
+
+impl Display for Point {
+    fn to_string(self) -> String {
+        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
+    }
+}
+
+struct Color {
+    r: int,
+    g: int,
+    b: int
+}
+
+impl Display for Color {
+    fn to_string(self) -> String {
+        return "rgb(" + int_to_string(self.r) + ", " + int_to_string(self.g) + ", " + int_to_string(self.b) + ")"
+    }
+}
+
+fn main() -> int {
+    let p: Point = Point { x: 3, y: 4 }
+    print("Punto: " + p.to_string())
+
+    let c: Color = Color { r: 255, g: 128, b: 0 }
+    print("Color: " + c.to_string())
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Punto: (3, 4)
+Color: rgb(255, 128, 0)</pre>
+
+    <h2>Explicación</h2>
+    <p>Un bloque <code>trait</code> declara un conjunto de firmas de método que cualquier tipo que lo implemente debe proveer. Aquí <code>Display</code> requiere un único método <code>to_string</code> que toma el receptor por valor y retorna un <code>String</code>. El trait en sí mismo no contiene datos — es puramente un contrato de comportamiento.</p>
+    <p>Cada bloque <code>impl Display for T</code> provee el cuerpo concreto para cada método que exige el trait. <code>Point</code> formatea sus campos como un par de coordenadas, mientras que <code>Color</code> usa la notación CSS <code>rgb()</code>. Ambos structs son por lo demás completamente independientes; lo único que comparten es la adhesión al trait <code>Display</code>.</p>
+    <p>Una vez que un struct implementa un trait, sus métodos se llaman con la sintaxis de punto habitual — <code>p.to_string()</code> despacha a la implementación de <code>Point</code> en tiempo de compilación (despacho estático). Esto te da polimorfismo sin sobrecarga en tiempo de ejecución.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/20-generics.html">← Anterior</a>
+        <a href="/es/by-example/22-trait-bounds.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/21-traits.nx">examples/by-example/21-traits.nx</a></small></p>
+</main>
+
+</body>
+</html>

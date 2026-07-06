@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>SQLite</h1>
+
+    <p><code>std/sqlite</code> ofrece bindings de SQLite3 cargados en tiempo de ejecución vía <code>dlopen</code>. <code>sqlite_open(":memory:")</code> crea una base de datos en memoria, <code>sqlite_exec</code> ejecuta sentencias DDL/DML, y <code>sqlite_query</code> devuelve filas como arreglos de strings. No se necesitan dependencias externas — SQLite viene incluido en la mayoría de los sistemas operativos.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// SQLite — in-memory database with SQL queries</span>
+
+<span class="kw">import</span> <span class="str">"std/sqlite"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// The handle is an opaque pointer (*int); NULL on failure</span>
+    <span class="kw">let</span> db = sqlite_open(<span class="str">":memory:"</span>)
+
+    sqlite_exec(db, <span class="str">"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"</span>)
+
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Alice', 30)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Bob', 25)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Charlie', 35)"</span>)
+
+    <span class="kw">let</span> rows: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name, age FROM users ORDER BY age"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; rows.length() {
+        <span class="kw">let</span> row: <span class="ty">Array</span> = rows[i]
+        <span class="kw">let</span> name: <span class="ty">String</span> = row[<span class="num">0</span>]
+        <span class="kw">let</span> age: <span class="ty">String</span> = row[<span class="num">1</span>]
+        print(name + <span class="str">" is "</span> + age + <span class="str">" years old"</span>)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="kw">let</span> seniors: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name FROM users WHERE age >= 30"</span>)
+    print(<span class="str">"users 30+: "</span> + int_to_string(seniors.length()))
+
+    sqlite_close(db)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Bob is 25 years old
+Alice is 30 years old
+Charlie is 35 years old
+users 30+: 2</pre>
+
+    <h2>Explicación</h2>
+    <p><code>sqlite_open</code> devuelve un handle opaco de base de datos (<code>*int</code>, NULL en caso de fallo). La ruta especial <code>":memory:"</code> crea una base de datos temporal en memoria que se descarta al cerrar el handle. Para almacenamiento persistente, pasar una ruta de archivo como <code>"data.db"</code>.</p>
+    <p><code>sqlite_query</code> devuelve un arreglo de filas, donde cada fila es un arreglo de valores string (SQLite almacena internamente todos los valores como texto). El orden de las columnas coincide con la cláusula SELECT. <code>sqlite_exec</code> se usa para sentencias que no devuelven datos (CREATE, INSERT, UPDATE, DELETE).</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/54-resp-protocol.html">← Anterior</a>
+        <a href="/es/by-example/56-csv-write.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/55-sqlite.nx">examples/by-example/55-sqlite.nx</a></small></p>
+</main>
+
+</body>
+</html>

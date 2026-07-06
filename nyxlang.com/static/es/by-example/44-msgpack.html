@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MessagePack — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>MessagePack</h1>
+
+    <p><code>std/msgpack</code> ofrece serialización binaria que es aproximadamente un 30% más compacta que JSON para datos típicos. Cada valor se empaqueta en una cadena binaria compacta que preserva su tipo. Esto se usa internamente en nyx-kv para su formato de persistencia <code>.ndb</code>.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// MessagePack binary serialization</span>
+
+<span class="kw">import</span> <span class="str">"std/msgpack"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> packed_int: <span class="ty">String</span> = msgpack_int(<span class="num">42</span>)
+    <span class="kw">let</span> packed_str: <span class="ty">String</span> = msgpack_str(<span class="str">"hello"</span>)
+    <span class="kw">let</span> packed_bool: <span class="ty">String</span> = msgpack_bool(<span class="kw">true</span>)
+    <span class="kw">let</span> packed_nil: <span class="ty">String</span> = msgpack_nil()
+
+    print(<span class="str">"int type:  "</span> + msgpack_type(packed_int))
+    print(<span class="str">"str type:  "</span> + msgpack_type(packed_str))
+    print(<span class="str">"bool type: "</span> + msgpack_type(packed_bool))
+    print(<span class="str">"nil type:  "</span> + msgpack_type(packed_nil))
+
+    <span class="kw">let</span> val_int: <span class="ty">int</span> = msgpack_unpack_int(packed_int)
+    <span class="kw">let</span> val_str: <span class="ty">String</span> = msgpack_unpack_str(packed_str)
+    print(<span class="str">"unpacked int: "</span> + int_to_string(val_int))
+    print(<span class="str">"unpacked str: "</span> + val_str)
+
+    <span class="kw">let</span> items: <span class="ty">Array</span> = [msgpack_int(<span class="num">1</span>), msgpack_str(<span class="str">"two"</span>), msgpack_bool(<span class="kw">false</span>)]
+    <span class="kw">let</span> packed_arr: <span class="ty">String</span> = msgpack_array(items)
+    print(<span class="str">"array type: "</span> + msgpack_type(packed_arr))
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">int type:  positive_int
+str type:  str
+bool type: bool_true
+nil type:  nil
+unpacked int: 42
+unpacked str: hello
+array type: array</pre>
+
+    <h2>Explicación</h2>
+    <p>MessagePack codifica cada valor en una representación binaria compacta. Los enteros pequeños (0-127) caben en un solo byte, las cadenas cortas usan un encabezado de 1 byte, y los booleanos/nil siempre ocupan 1 byte. La función <code>msgpack_type</code> inspecciona el primer byte para determinar qué tipo de valor está almacenado.</p>
+    <p><code>msgpack_array</code> toma un array de valores ya empaquetados y antepone un encabezado de array. Esto permite construir estructuras anidadas de forma arbitraria: primero se empaquetan los valores individuales y luego se componen en arrays.</p>
+    <p>Las funciones de pack/unpack operan sobre strings de Nyx (que son secuencias de bytes), lo que las hace compatibles con transmisión por red y almacenamiento en archivos sin codificación adicional.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/43-toml-config.html">← Anterior</a>
+        <a href="/es/by-example/45-dns-resolve.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/44-msgpack.nx">examples/by-example/44-msgpack.nx</a></small></p>
+</main>
+
+</body>
+</html>

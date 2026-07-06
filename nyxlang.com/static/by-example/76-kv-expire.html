@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-kv TTL and EXPIRE — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-kv TTL and EXPIRE</h1>
+    <p>EXPIRE sets a TTL on a key — after the given seconds elapse, the key is auto-deleted. Essential for session storage, cache, and rate limiting.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-kv TTL -- key expiration for caching and session storage</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Store a session token that expires in 60 seconds</span>
+    tcp_write(fd, resp_cmd([<span class="str">"SET"</span>, <span class="str">"session:abc123"</span>, <span class="str">"user42"</span>]))
+    <span class="kw">let</span> set_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"SET -&gt; "</span> + set_reply.trim())
+
+    <span class="cm">// Set expiration (in seconds)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"EXPIRE"</span>, <span class="str">"session:abc123"</span>, <span class="str">"60"</span>]))
+    <span class="kw">let</span> expire_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"EXPIRE 60s -&gt; "</span> + expire_reply.trim())
+
+    <span class="cm">// Check remaining TTL</span>
+    tcp_write(fd, resp_cmd([<span class="str">"TTL"</span>, <span class="str">"session:abc123"</span>]))
+    <span class="kw">let</span> ttl: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"TTL -&gt; "</span> + ttl.trim() + <span class="str">" seconds"</span>)
+
+    <span class="cm">// Alternative: SET with EX in one command</span>
+    tcp_write(fd, resp_cmd([<span class="str">"SET"</span>, <span class="str">"cache:user:42"</span>, <span class="str">"payload"</span>, <span class="str">"EX"</span>, <span class="str">"300"</span>]))
+    <span class="kw">let</span> setex: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"SET with EX 300 -&gt; "</span> + setex.trim())
+
+    <span class="cm">// Remove expiration (make key permanent)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"PERSIST"</span>, <span class="str">"session:abc123"</span>]))
+    <span class="kw">let</span> persist: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"PERSIST -&gt; "</span> + persist.trim())
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">SET -&gt; +OK
+EXPIRE 60s -&gt; :1
+TTL -&gt; :60 seconds
+SET with EX 300 -&gt; +OK
+PERSIST -&gt; :1</pre>
+    <h2>Explanation</h2>
+    <p>Every key can carry a TTL — a monotonic clock deadline after which the server lazily deletes it. <code>EXPIRE key seconds</code> attaches a TTL to an existing key and returns <code>:1</code> if the key existed or <code>:0</code> otherwise. <code>TTL key</code> returns the remaining seconds, <code>-2</code> if the key does not exist, and <code>-1</code> if it is permanent.</p>
+    <p>The combined form <code>SET key value EX seconds</code> sets the value and TTL atomically, which is what you want for caches — you never leave a window where the key exists without expiry. To cancel a pending expiration use <code>PERSIST key</code>.</p>
+    <p>TTLs are the foundation for session storage (auto-logout), rate limiting (<code>INCR</code> + <code>EXPIRE</code> on first hit), idempotency keys, and cache lines that need to forget stale data without a sweeper.</p>
+    <div class="book-nav">
+        <a href="/by-example/75-kv-pubsub.html">&larr; Previous</a>
+        <a href="/by-example/77-kv-pipelined.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/76-kv-expire.nx">examples/by-example/76-kv-expire.nx</a></small></p>
+</main>
+</body>
+</html>

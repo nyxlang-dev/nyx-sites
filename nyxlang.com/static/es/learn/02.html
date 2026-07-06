@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variables y tipos — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Variables y tipos</h1>
+
+<h2>¿Qué es una variable?</h2>
+<p>Imagina una caja con una etiqueta. Puedes poner algo dentro de la caja, y después puedes leer la etiqueta para encontrar lo que hay dentro. Eso es una variable.</p>
+<p>Una variable tiene tres partes:</p>
+<ul>
+<li>Un <strong>nombre</strong> (la etiqueta de la caja)</li>
+<li>Un <strong>valor</strong> (lo que hay dentro de la caja)</li>
+<li>Un <strong>tipo</strong> (qué clase de cosa puede ir en la caja)</li>
+</ul>
+<h2>Crear variables</h2>
+<p>En Nyx, hay dos formas de crear una variable:</p>
+<h3><code>let</code> — Un valor que no cambia</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="kw">let</span> pi: <span class="ty">float</span> <span class="op">=</span> <span class="num">3.14159</span>
+    <span class="kw">let</span> activo: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+
+    <span class="fn">print</span>(nombre)
+    <span class="fn">print</span>(edad)
+}</pre>
+<p><code>let</code> crea una variable <strong>inmutable</strong> — una vez que asignas un valor, no puedes cambiarlo. Esta es la opción por defecto y la más segura. La mayoría de tus variables deberían usar <code>let</code>.</p>
+<h3><code>var</code> — Un valor que puede cambiar</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> puntuacion: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="fn">print</span>(puntuacion)    <span class="cm">// 0</span>
+
+    puntuacion <span class="op">=</span> <span class="num">10</span>
+    <span class="fn">print</span>(puntuacion)    <span class="cm">// 10</span>
+
+    puntuacion <span class="op">=</span> puntuacion <span class="op">+</span> <span class="num">5</span>
+    <span class="fn">print</span>(puntuacion)    <span class="cm">// 15</span>
+}</pre>
+<p><code>var</code> crea una variable <strong>mutable</strong> — puedes cambiar su valor tantas veces como quieras.</p>
+<h3>¿Por qué tener ambos?</h3>
+<p>Si usas <code>let</code> e intentas cambiar el valor accidentalmente, el compilador te avisará. Esto detecta errores temprano. Usa <code>var</code> solo cuando genuinamente necesites que el valor cambie.</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>
+    nombre <span class="op">=</span> <span class="str">&quot;Roberto&quot;</span>    <span class="cm">// ERROR: no se puede asignar a variable inmutable</span>
+}</pre>
+<h2>Los cuatro tipos básicos</h2>
+<p>Nyx tiene cuatro tipos fundamentales de datos:</p>
+<h3><code>int</code> — Números enteros</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> contador: <span class="ty">int</span> <span class="op">=</span> <span class="num">42</span>
+    <span class="kw">let</span> negativo: <span class="ty">int</span> <span class="op">=</span> <span class="num">-7</span>
+    <span class="kw">let</span> cero: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">let</span> grande: <span class="ty">int</span> <span class="op">=</span> <span class="num">1000000</span>
+
+    <span class="fn">print</span>(contador)     <span class="cm">// 42</span>
+    <span class="fn">print</span>(negativo)     <span class="cm">// -7</span>
+}</pre>
+<p>Los enteros son números sin punto decimal. Pueden ser positivos, negativos o cero. Úsalos para contar, indexar, y cualquier cosa que no necesite fracciones.</p>
+<h3><code>float</code> — Números decimales</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> temperatura: <span class="ty">float</span> <span class="op">=</span> <span class="num">36.6</span>
+    <span class="kw">let</span> precio: <span class="ty">float</span> <span class="op">=</span> <span class="num">9.99</span>
+    <span class="kw">let</span> proporcion: <span class="ty">float</span> <span class="op">=</span> <span class="num">0.5</span>
+
+    <span class="fn">print</span>(temperatura)    <span class="cm">// 36.6</span>
+}</pre>
+<p>Los floats son números con punto decimal. Úsalos para medidas, precios, porcentajes y cálculos científicos.</p>
+<h3><code>String</code> — Texto</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> saludo: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola&quot;</span>
+    <span class="kw">let</span> vacio: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">let</span> frase: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx es un lenguaje compilado.&quot;</span>
+
+    <span class="fn">print</span>(saludo)     <span class="cm">// Hola</span>
+    <span class="fn">print</span>(frase)      <span class="cm">// Nyx es un lenguaje compilado.</span>
+}</pre>
+<p>Los strings son secuencias de caracteres — texto. Siempre van entre comillas dobles <code>"..."</code>. Nota que <code>String</code> empieza con mayúscula — esta es una convención en Nyx para tipos complejos.</p>
+<h3><code>bool</code> — Verdadero o falso</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> esta_activo: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> esta_borrado: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">false</span>
+
+    <span class="fn">print</span>(esta_activo)     <span class="cm">// true</span>
+    <span class="fn">print</span>(esta_borrado)    <span class="cm">// false</span>
+}</pre>
+<p>Los booleanos solo tienen dos valores posibles: <code>true</code> o <code>false</code>. Se usan para condiciones y decisiones (aprenderás más sobre esto en el Capítulo 4).</p>
+<h2>Inferencia de tipos</h2>
+<p>En muchos casos, Nyx puede determinar el tipo automáticamente:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>    <span class="cm">// Nyx sabe que es String</span>
+    <span class="kw">let</span> edad <span class="op">=</span> <span class="num">25</span>            <span class="cm">// Nyx sabe que es int</span>
+    <span class="kw">let</span> pi <span class="op">=</span> <span class="num">3.14</span>            <span class="cm">// Nyx sabe que es float</span>
+    <span class="kw">let</span> activo <span class="op">=</span> <span class="kw">true</span>        <span class="cm">// Nyx sabe que es bool</span>
+
+    <span class="fn">print</span>(nombre)
+    <span class="fn">print</span>(edad)
+}</pre>
+<p>Cuando escribes <code>let nombre = "Alicia"</code>, Nyx ve las comillas dobles y sabe que el valor es un <code>String</code>. No necesitas escribir <code>: String</code> explícitamente — pero puedes hacerlo si quieres ser claro sobre tus intenciones.</p>
+<p>En este libro, escribiremos los tipos explícitamente en la mayoría de los ejemplos para que puedas ver exactamente qué tipo tiene cada variable. En la práctica, los programadores experimentados frecuentemente dejan que el compilador infiera los tipos.</p>
+<h2>Reglas para nombres</h2>
+<p>Los nombres de variables en Nyx deben seguir estas reglas:</p>
+<ul>
+<li>Empezar con una letra o guion bajo <code>_</code></li>
+<li>Pueden contener letras, números y guiones bajos</li>
+<li>No pueden ser una palabra reservada (como <code>fn</code>, <code>let</code>, <code>var</code>, <code>if</code>, <code>while</code>)</li>
+<li>Distinguen mayúsculas de minúsculas (<code>nombre</code> y <code>Nombre</code> son variables diferentes)</li>
+</ul>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre_usuario: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>    <span class="cm">// correcto</span>
+    <span class="kw">let</span> edad2: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>                      <span class="cm">// correcto</span>
+    <span class="kw">let</span> _temp: <span class="ty">int</span> <span class="op">=</span> <span class="num">100</span>                     <span class="cm">// correcto</span>
+
+    <span class="cm">// let 2rapido: int = 0       // ERROR: empieza con número</span>
+    <span class="cm">// let let: int = 0           // ERROR: palabra reservada</span>
+    <span class="cm">// let mi-nombre: String = &quot;&quot; // ERROR: guiones no permitidos</span>
+}</pre>
+<p>Convención: Nyx usa <code>snake_case</code> para variables y funciones (palabras separadas por guiones bajos, todo en minúsculas). Structs y tipos usan <code>PascalCase</code> (cada palabra en mayúscula, sin separadores).</p>
+<pre><span class="kw">let</span> nombre_usuario: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>    <span class="cm">// snake_case para variables</span>
+<span class="kw">let</span> max_reintentos: <span class="ty">int</span> <span class="op">=</span> <span class="num">3</span>              <span class="cm">// snake_case para variables</span>
+
+<span class="kw">struct</span> PerfilUsuario {                    <span class="cm">// PascalCase para tipos</span>
+    nombre: <span class="ty">String</span>,
+    edad: <span class="ty">int</span>
+}</pre>
+<h2>Convertir entre tipos</h2>
+<p>A veces necesitas convertir un valor de un tipo a otro:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// int a String</span>
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="kw">let</span> edad_texto: <span class="ty">String</span> <span class="op">=</span> <span class="fn">int_to_string</span>(edad)
+    <span class="fn">print</span>(<span class="str">&quot;Edad: &quot;</span> <span class="op">+</span> edad_texto)    <span class="cm">// Edad: 25</span>
+
+    <span class="cm">// String a int</span>
+    <span class="kw">let</span> entrada: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;42&quot;</span>
+    <span class="kw">let</span> numero: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(entrada)
+    <span class="fn">print</span>(numero <span class="op">+</span> <span class="num">8</span>)               <span class="cm">// 50</span>
+}</pre>
+<p>No puedes mezclar tipos directamente:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="fn">print</span>(<span class="str">&quot;Tengo &quot;</span> <span class="op">+</span> edad)    <span class="cm">// ERROR: no se puede sumar String con int</span>
+}</pre>
+<p>En su lugar, convierte el int a String primero:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="fn">print</span>(<span class="str">&quot;Tengo &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(edad))    <span class="cm">// Tengo 25</span>
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Crea variables para tu nombre, tu edad y tu número favorito. Imprime los tres.</li>
+</ol>
+<ol>
+<li>Crea una variable mutable <code>contador</code> que empiece en 0. Increméntala tres veces (suma 1 cada vez) e imprime el resultado después de cada incremento.</li>
+</ol>
+<ol>
+<li>Intenta crear una variable <code>let</code> y cambiarla. Lee el mensaje de error que te da el compilador.</li>
+</ol>
+<ol>
+<li>¿Qué tipo usarías para cada uno de estos?</li>
+</ol>
+<ul>
+<li>El número de estudiantes en una clase</li>
+<li>La temperatura exterior</li>
+<li>El nombre completo de una persona</li>
+<li>Si un interruptor de luz está encendido o apagado</li>
+</ul>
+<h2>Resumen</h2>
+<ul>
+<li><code>let</code> crea una variable inmutable (no puede cambiar).</li>
+<li><code>var</code> crea una variable mutable (puede cambiar).</li>
+<li>Cuatro tipos básicos: <code>int</code> (enteros), <code>float</code> (decimales), <code>String</code> (texto), <code>bool</code> (verdadero/falso).</li>
+<li>Nyx puede inferir tipos, pero puedes escribirlos explícitamente.</li>
+<li>Usa <code>int_to_string()</code> y <code>string_to_int()</code> para convertir entre tipos.</li>
+<li>Los nombres de variables usan <code>snake_case</code>.</li>
+</ul>
+<p>Siguiente capítulo: <a href="03-operaciones.md">Operaciones y expresiones →</a></p>
+
+    <div class="book-nav">
+        <a href="01.html" class="book-nav-prev">&larr; Anterior: ¿Qué es programar?</a>
+        <a href="03.html" class="book-nav-next">Siguiente: Operaciones y expresiones &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipes — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Pipes</h1>
+    <p><code>pipe_new()</code> creates a unidirectional pipe returning <code>[read_fd, write_fd]</code>. Combined with <code>fork</code>, <code>dup2</code>, and <code>execvp</code>, this lets you capture the output of an external command — the same mechanism Unix shells use for <code>|</code> (pipe).</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Pipes — connecting two processes via pipe</span>
+<span class="cm">// Pipes — conectar dos procesos via pipe</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// pipe_new() returns [read_fd, write_fd]</span>
+    <span class="kw">let</span> fds: <span class="ty">Array</span> = pipe_new()
+    <span class="kw">let</span> read_fd: <span class="ty">int</span> = fds[<span class="num">0</span>]
+    <span class="kw">let</span> write_fd: <span class="ty">int</span> = fds[<span class="num">1</span>]
+
+    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
+
+    <span class="kw">if</span> pid == <span class="num">0</span> {
+        <span class="cm">// Child: redirect stdout to write end of pipe</span>
+        close_fd(read_fd)
+        dup2(write_fd, <span class="num">1</span>)
+        close_fd(write_fd)
+        <span class="cm">// exec ls — output goes into pipe</span>
+        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"ls"</span>, <span class="str">"/tmp"</span>]
+        execvp(<span class="str">"ls"</span>, args)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Parent: read from pipe</span>
+    close_fd(write_fd)
+    <span class="kw">let</span> output: <span class="ty">String</span> = tcp_read(read_fd, <span class="num">4096</span>)
+    close_fd(read_fd)
+
+    waitpid(pid, <span class="num">0</span>)
+    print(<span class="str">"ls output (first 200 chars):"</span>)
+    <span class="kw">if</span> output.length() > <span class="num">200</span> {
+        print(output.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(output)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">ls output (first 200 chars):
+...</pre>
+    <h2>Explanation</h2>
+    <p><code>pipe_new()</code> creates a unidirectional byte stream and returns an array of two file descriptors: <code>[read_fd, write_fd]</code>. Data written to <code>write_fd</code> can be read from <code>read_fd</code>.</p>
+    <p>After <code>fork()</code>, the child closes the read end, uses <code>dup2(write_fd, 1)</code> to redirect its stdout to the pipe's write end, then calls <code>execvp</code> to run <code>ls</code>. The child's output flows through the pipe instead of the terminal.</p>
+    <p>The parent closes the write end (so reads will see EOF when the child exits), reads the pipe contents with <code>tcp_read</code>, and waits for the child with <code>waitpid</code>. This is exactly how Unix shells implement the <code>|</code> operator.</p>
+    <div class="book-nav">
+        <a href="/by-example/64-fork-exec.html">&larr; Previous</a>
+        <a href="/by-example/66-signal-handling.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/65-pipes.nx">examples/by-example/65-pipes.nx</a></small></p>
+</main>
+</body>
+</html>

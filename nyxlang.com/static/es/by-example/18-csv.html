@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parseo de CSV — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Parseo de CSV</h1>
+
+    <p>Los valores separados por comas son uno de los formatos de intercambio de datos más comunes. Nyx facilita su parseo: divide el texto en líneas con <code>.split("\n")</code>, y luego divide cada línea en campos con <code>.split(",")</code>. El import <code>std/csv</code> ofrece utilidades adicionales para campos entre comillas y casos especiales.</p>
+
+    <h2>Código</h2>
+    <pre><code>// 18: CSV parsing — split lines and fields manually
+import "std/csv"
+
+fn main() -> int {
+    let data: String = "name,age,city\nAlice,30,NYC\nBob,25,LA\nCharlie,35,SF"
+    let rows: Array = data.split("\n")
+
+    // Skip header, print each row parsed
+    var i: int = 1
+    while i < rows.length() {
+        let row: String = rows[i]
+        let fields: Array = row.split(",")
+        let name: String = fields[0]
+        let age: String = fields[1]
+        let city: String = fields[2]
+        print(name + " is " + age + " from " + city)
+        i = i + 1
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Alice is 30 from NYC
+Bob is 25 from LA
+Charlie is 35 from SF</pre>
+
+    <h2>Explicación</h2>
+    <p><code>.split(delimiter)</code> es un método incorporado de <code>String</code> que divide una cadena en cada ocurrencia del delimitador dado y devuelve un <code>Array</code> de <code>String</code>. Dividir por <code>"\n"</code> da un elemento por cada fila del CSV; dividir cada fila por <code>","</code> da un elemento por cada campo.</p>
+    <p>El bucle comienza en el índice <code>1</code> para saltar la fila de encabezado. Este es un patrón habitual en archivos CSV donde la primera línea contiene los nombres de columna en lugar de datos. Si necesitas procesar el encabezado (por ejemplo, para construir un mapa de nombre de columna a índice), deberías leer <code>rows[0]</code> por separado antes del bucle.</p>
+    <p>Este enfoque funciona bien para CSV simples sin campos entre comillas. Para CSV de producción que pueda contener comas dentro de cadenas entre comillas o saltos de línea dentro de campos, usa el parser completo de <code>std/csv</code>, que maneja correctamente las reglas de comillas de RFC 4180.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/17-regex.html">← Anterior</a>
+        <a href="/es/by-example/19-datetime.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/18-csv.nx">examples/by-example/18-csv.nx</a></small></p>
+</main>
+
+</body>
+</html>

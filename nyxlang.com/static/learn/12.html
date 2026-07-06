@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Files — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Files</h1>
+
+<h2>Why files?</h2>
+<p>So far, all our programs lose their data when they finish running. Variables only exist while the program is alive. But what if you want to save a high score, store a configuration, or process a log? That is where files come in.</p>
+<p>Files let your programs <strong>persist data</strong> — save it to disk so it survives after the program exits, and read it back later.</p>
+<h2>Reading a file</h2>
+<p>The simplest operation is reading an entire file into a string:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;message.txt&quot;</span>)
+    <span class="fn">print</span>(content)
+}</pre>
+<p>If <code>message.txt</code> contains <code>Hello from a file!</code>, the program prints exactly that.</p>
+<p><code>read_file</code> returns the entire file as a single string, including newlines. This is the easiest way to get data from a file.</p>
+<h2>Writing a file</h2>
+<p>To save data, use <code>write_file</code>:</p>
+<pre><span class="kw">import</span> { write_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">write_file</span>(<span class="str">&quot;output.txt&quot;</span>, <span class="str">&quot;Nyx was here!&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;File written successfully&quot;</span>)
+}</pre>
+<p>This creates <code>output.txt</code> (or overwrites it if it already exists) with the text <code>Nyx was here!</code>.</p>
+<p><code>write_file</code> returns <code>1</code> on success.</p>
+<h2>Checking if a file exists</h2>
+<p>Before reading a file, you might want to check if it actually exists:</p>
+<pre><span class="kw">import</span> { read_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">if</span> <span class="fn">file_exists</span>(<span class="str">&quot;config.txt&quot;</span>) {
+        <span class="kw">let</span> config: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;config.txt&quot;</span>)
+        <span class="fn">print</span>(<span class="str">&quot;Config loaded: &quot;</span> <span class="op">+</span> config)
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;No config file found, using defaults&quot;</span>)
+    }
+}</pre>
+<p><code>file_exists</code> returns <code>true</code> if the file is on disk, <code>false</code> otherwise.</p>
+<h2>Working with lines</h2>
+<p>Files often contain multiple lines of data. You can use <code>.split()</code> to break the content into lines:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;names.txt&quot;</span>)
+    <span class="kw">let</span> lines: <span class="ty">Array</span> <span class="op">=</span> content.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lines.<span class="fn">length</span>() {
+        <span class="fn">print</span>(<span class="str">&quot;Line &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(i <span class="op">+</span> <span class="num">1</span>) <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> lines[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>If <code>names.txt</code> contains:</p>
+<pre>Alice
+Bob
+Charlie</pre>
+<p>Output:</p>
+<pre>Line 1: Alice
+Line 2: Bob
+Line 3: Charlie</pre>
+<h2>Writing multiple lines</h2>
+<p>To write multiple lines, join them with newline characters:</p>
+<pre><span class="kw">import</span> { write_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> names: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;Bob&quot;</span>, <span class="str">&quot;Charlie&quot;</span>, <span class="str">&quot;Diana&quot;</span>]
+
+    <span class="kw">var</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> names.<span class="fn">length</span>() {
+        content <span class="op">=</span> content <span class="op">+</span> names[i] <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">write_file</span>(<span class="str">&quot;names.txt&quot;</span>, content)
+    <span class="fn">print</span>(<span class="str">&quot;Wrote &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(names.<span class="fn">length</span>()) <span class="op">+</span> <span class="str">&quot; names&quot;</span>)
+}</pre>
+<h2>Practical example: a simple config file</h2>
+<p>Many programs use config files to store settings. Let's build a simple key=value config reader:</p>
+<pre><span class="kw">import</span> { read_file, write_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">load_config</span>(path: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Map</span> {
+    <span class="kw">var</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+
+    <span class="kw">if</span> <span class="fn">file_exists</span>(path) {
+        <span class="kw">let</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(path)
+        <span class="kw">let</span> lines: <span class="ty">Array</span> <span class="op">=</span> content.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> lines.<span class="fn">length</span>() {
+            <span class="kw">let</span> line: <span class="ty">String</span> <span class="op">=</span> lines[i]
+            <span class="kw">let</span> eq_pos: <span class="ty">int</span> <span class="op">=</span> line.<span class="fn">indexOf</span>(<span class="str">&quot;=&quot;</span>)
+            <span class="kw">if</span> eq_pos <span class="op">&gt;</span> <span class="num">0</span> {
+                <span class="kw">let</span> key: <span class="ty">String</span> <span class="op">=</span> line.<span class="fn">substring</span>(<span class="num">0</span>, eq_pos)
+                <span class="kw">let</span> value: <span class="ty">String</span> <span class="op">=</span> line.<span class="fn">substring</span>(eq_pos <span class="op">+</span> <span class="num">1</span>, line.<span class="fn">length</span>())
+                config.<span class="fn">insert</span>(key, value)
+            }
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+    }
+
+    <span class="kw">return</span> config
+}
+
+<span class="kw">fn</span> <span class="fn">save_config</span>(path: <span class="ty">String</span>, config: <span class="ty">Map</span>) {
+    <span class="kw">var</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="cm">// We save known keys</span>
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;host&quot;</span>) {
+        content <span class="op">=</span> content <span class="op">+</span> <span class="str">&quot;host=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;host&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;port&quot;</span>) {
+        content <span class="op">=</span> content <span class="op">+</span> <span class="str">&quot;port=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;port&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;debug&quot;</span>) {
+        content <span class="op">=</span> content <span class="op">+</span> <span class="str">&quot;debug=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;debug&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="fn">write_file</span>(path, content)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">load_config</span>(<span class="str">&quot;app.conf&quot;</span>)
+
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;host&quot;</span>) {
+        <span class="fn">print</span>(<span class="str">&quot;Host: &quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;host&quot;</span>))
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;No config found, creating defaults...&quot;</span>)
+        <span class="kw">var</span> defaults: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;host&quot;</span>, <span class="str">&quot;localhost&quot;</span>)
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;port&quot;</span>, <span class="str">&quot;8080&quot;</span>)
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;debug&quot;</span>, <span class="str">&quot;false&quot;</span>)
+        <span class="fn">save_config</span>(<span class="str">&quot;app.conf&quot;</span>, defaults)
+        <span class="fn">print</span>(<span class="str">&quot;Default config saved to app.conf&quot;</span>)
+    }
+}</pre>
+<h2>Practical example: a simple logger</h2>
+<pre><span class="kw">import</span> { read_file, write_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">log_message</span>(path: <span class="ty">String</span>, message: <span class="ty">String</span>) {
+    <span class="kw">var</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">if</span> <span class="fn">file_exists</span>(path) {
+        content <span class="op">=</span> <span class="fn">read_file</span>(path)
+    }
+    content <span class="op">=</span> content <span class="op">+</span> message <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    <span class="fn">write_file</span>(path, content)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> log_file: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;app.log&quot;</span>
+
+    <span class="fn">log_message</span>(log_file, <span class="str">&quot;Application started&quot;</span>)
+    <span class="fn">log_message</span>(log_file, <span class="str">&quot;Processing data...&quot;</span>)
+    <span class="fn">log_message</span>(log_file, <span class="str">&quot;Done!&quot;</span>)
+
+    <span class="fn">print</span>(<span class="str">&quot;Log contents:&quot;</span>)
+    <span class="fn">print</span>(<span class="fn">read_file</span>(log_file))
+}</pre>
+<p>Output:</p>
+<pre>Log contents:
+Application started
+Processing data...
+Done!</pre>
+<h2>Practical example: CSV data processing</h2>
+<p>CSV (Comma-Separated Values) is a common file format. Let's read and process one:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">struct</span> Product {
+    name: <span class="ty">String</span>,
+    price: <span class="ty">int</span>,
+    quantity: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">parse_csv</span>(content: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">let</span> lines: <span class="ty">Array</span> <span class="op">=</span> content.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+    <span class="kw">var</span> products: <span class="ty">Array</span> <span class="op">=</span> []
+
+    <span class="cm">// Skip header line, start at 1</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lines.<span class="fn">length</span>() {
+        <span class="kw">let</span> line: <span class="ty">String</span> <span class="op">=</span> lines[i]
+        <span class="kw">if</span> line.<span class="fn">length</span>() <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="kw">let</span> fields: <span class="ty">Array</span> <span class="op">=</span> line.<span class="fn">split</span>(<span class="str">&quot;,&quot;</span>)
+            <span class="kw">let</span> p: Product <span class="op">=</span> Product {
+                name: fields[<span class="num">0</span>],
+                price: <span class="fn">string_to_int</span>(fields[<span class="num">1</span>]),
+                quantity: <span class="fn">string_to_int</span>(fields[<span class="num">2</span>])
+            }
+            products.<span class="fn">push</span>(p)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="kw">return</span> products
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Assume inventory.csv contains:</span>
+    <span class="cm">// name,price,quantity</span>
+    <span class="cm">// Apple,2,50</span>
+    <span class="cm">// Bread,3,20</span>
+    <span class="cm">// Milk,4,30</span>
+    <span class="kw">let</span> content: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;inventory.csv&quot;</span>)
+    <span class="kw">let</span> products: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">parse_csv</span>(content)
+
+    <span class="kw">var</span> total_value: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> products.<span class="fn">length</span>() {
+        <span class="kw">let</span> p: Product <span class="op">=</span> products[i]
+        <span class="kw">let</span> value: <span class="ty">int</span> <span class="op">=</span> p.price <span class="op">*</span> p.quantity
+        <span class="fn">print</span>(p.name <span class="op">+</span> <span class="str">&quot;: $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(value))
+        total_value <span class="op">+=</span> value
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">&quot;Total inventory value: $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(total_value))
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a program that reads a file of numbers (one per line) and prints the sum, average, minimum, and maximum.</li>
+</ol>
+<ol>
+<li>Write a "todo list" program that saves tasks to <code>todos.txt</code>. It should be able to add a task (append a line) and display all tasks (read and print).</li>
+</ol>
+<ol>
+<li>Write a program that reads a text file and counts how many times each word appears. Print the word counts.</li>
+</ol>
+<ol>
+<li>Write a program that copies one file to another: read the source, write to the destination, and print a confirmation message.</li>
+</ol>
+<ol>
+<li>Write a program that reads a CSV with student names and grades, calculates the average for each student, and writes a summary report to a new file.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>read_file(path)</code> reads an entire file into a string.</li>
+<li><code>write_file(path, content)</code> writes a string to a file (creates or overwrites).</li>
+<li><code>file_exists(path)</code> checks if a file exists on disk.</li>
+<li>Use <code>.split("\n")</code> to break file content into lines.</li>
+<li>Use string concatenation with <code>"\n"</code> to build multi-line content.</li>
+<li>Files let your programs save and load data that persists across runs.</li>
+</ul>
+<p>Next chapter: <a href="13-closures.md">Closures and first-class functions →</a></p>
+
+    <div class="book-nav">
+        <a href="11.html" class="book-nav-prev">&larr; Previous: Imports and modules</a>
+        <a href="13.html" class="book-nav-next">Next: Closures and first-class functions &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

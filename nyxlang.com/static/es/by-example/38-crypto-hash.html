@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hashing Criptográfico — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Hashing Criptográfico</h1>
+
+    <p>Nyx incluye SHA-256, MD5 y HMAC-SHA256 como funciones integradas respaldadas por el módulo <code>crypto.c</code> del runtime. No se requiere ninguna librería externa ni import — las tres están disponibles en todo programa Nyx.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Criptografía: SHA-256, MD5 y HMAC-SHA256
+
+fn main() -> int {
+    // SHA-256
+    let h1: String = sha256("hello world")
+    print("sha256(\"hello world\"):")
+    print("  " + h1)
+    print("  longitud: " + int_to_string(h1.length()) + " chars")
+
+    // SHA-256 de string vacío
+    let h_empty: String = sha256("")
+    print("sha256(\"\"):")
+    print("  " + h_empty)
+
+    // MD5
+    let m1: String = md5("hello world")
+    print("md5(\"hello world\"):")
+    print("  " + m1)
+    print("  longitud: " + int_to_string(m1.length()) + " chars")
+
+    // HMAC-SHA256
+    let key: String = "clave-secreta"
+    let data: String = "mensaje importante"
+    let hmac: String = hmac_sha256(key, data)
+    print("hmac_sha256(key, data):")
+    print("  " + hmac)
+
+    // Verificar determinismo: mismo input -> mismo hash
+    let a: String = sha256("nyx")
+    let b: String = sha256("nyx")
+    print("sha256 es determinista: " + int_to_string(a == b))
+
+    // Verificar que inputs distintos -> hashes distintos
+    let c: String = sha256("aaa")
+    let d: String = sha256("bbb")
+    print("hashes distintos para inputs distintos: " + int_to_string(c != d))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">sha256("hello world"):
+  b94d27b9934d3e08a52e52d7da7dabfac484efe04294e576e5b9571d73f61a7d
+  longitud: 64 chars
+sha256(""):
+  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+md5("hello world"):
+  5eb63bbbe01eeed093cb22bb8f5acdc3
+  longitud: 32 chars
+hmac_sha256(key, data):
+  (valor dependiente de key y data)
+sha256 es determinista: 1
+hashes distintos para inputs distintos: 1</pre>
+
+    <h2>Explicación</h2>
+    <p><code>sha256(s)</code> retorna un string hexadecimal de 64 caracteres en minúsculas — la codificación estándar de un digest de 256 bits (32 bytes). El hash del string vacío <code>e3b0c44...</code> es una constante bien conocida que puede usarse para verificar que el toolchain está calculando correctamente. SHA-256 es adecuado para verificaciones de integridad de datos, hashing de contraseñas (con un KDF apropiado encima) y firmas digitales.</p>
+    <p><code>md5(s)</code> retorna un string hexadecimal de 32 caracteres (digest de 128 bits). MD5 ya no se considera criptográficamente seguro en cuanto a resistencia a colisiones, pero sigue siendo ampliamente usado para checksums y claves de caché donde los ataques de colisión no son una preocupación.</p>
+    <p><code>hmac_sha256(key, data)</code> calcula un hash con clave que demuestra tanto el contenido de <code>data</code> como el conocimiento de <code>key</code>. Es el primitivo estándar para firmar peticiones de API y verificar JWT. Las aserciones de determinismo al final demuestran una propiedad fundamental de todas las funciones de hash: entradas idénticas siempre producen salidas idénticas.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/37-sleep-timer.html">← Anterior</a>
+        <a href="/es/by-example/39-random-uuid.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/38-crypto-hash.nx">examples/by-example/38-crypto-hash.nx</a></small></p>
+</main>
+
+</body>
+</html>

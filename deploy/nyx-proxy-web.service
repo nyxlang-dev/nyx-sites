@@ -1,0 +1,15 @@
+[Unit]
+Description=proxy.nyxlang.com landing page
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/nyx-sites/proxy.nyxlang.com
+ExecStart=/home/admin/nyx-sites/proxy.nyxlang.com/proxy-nyxlang-com
+Environment=PORT=3005
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fork &amp; Exec — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Fork &amp; Exec</h1>
+    <p><code>fork()</code> crea un proceso hijo. En el hijo (pid == 0), hay que llamar a <code>execvp</code> de inmediato para reemplazar la imagen del proceso — el GC de Boehm requiere este patrón, ya que el hijo hereda un estado de GC inconsistente. <code>waitpid</code> en el padre bloquea hasta que el hijo termina.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Fork and exec — running external commands</span>
+<span class="cm">// Fork y exec — ejecutar comandos externos</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
+
+    <span class="kw">if</span> pid == <span class="num">0</span> {
+        <span class="cm">// Child process: exec immediately (GC requirement)</span>
+        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"echo"</span>, <span class="str">"hello from child"</span>]
+        execvp(<span class="str">"echo"</span>, args)
+        <span class="cm">// execvp replaces the process — this line never runs</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="kw">if</span> pid > <span class="num">0</span> {
+        <span class="cm">// Parent: wait for child to finish</span>
+        print(<span class="str">"parent: spawned child "</span> + int_to_string(pid))
+        <span class="kw">let</span> status: <span class="ty">int</span> = waitpid(pid, <span class="num">0</span>)
+        print(<span class="str">"parent: child exited with "</span> + int_to_string(status))
+    } <span class="kw">else</span> {
+        print(<span class="str">"fork failed"</span>)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">parent: spawned child 12345
+hello from child
+parent: child exited with 0</pre>
+    <h2>Explicación</h2>
+    <p><code>fork()</code> duplica el proceso actual. Devuelve 0 en el hijo y el PID del hijo en el padre. Dado que Nyx usa el recolector de basura de Boehm, el proceso hijo <strong>no</strong> debe alocar memoria gestionada por el GC — debe llamar a <code>execvp()</code> de inmediato para reemplazar su imagen de proceso con un nuevo programa.</p>
+    <p><code>execvp(command, args)</code> reemplaza el proceso actual con el comando dado. El primer elemento de <code>args</code> es, por convención, el nombre del programa. Si <code>execvp</code> tiene éxito, nunca retorna.</p>
+    <p><code>waitpid(pid, 0)</code> bloquea al padre hasta que el hijo termina y devuelve el código de salida. Este es el patrón estándar de Unix para lanzar subprocesos.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/63-select-channel.html">&larr; Anterior</a>
+        <a href="/es/by-example/65-pipes.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/64-fork-exec.nx">examples/by-example/64-fork-exec.nx</a></small></p>
+</main>
+</body>
+</html>

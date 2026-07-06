@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP/2 — Binary protocols — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>HTTP/2 — Binary protocols</h1>
+
+<h2>Why HTTP/2?</h2>
+<p>HTTP/1.1 is text-based. Every request looks like this:</p>
+<pre>GET /index.html HTTP/1.1\r\n
+Host: example.com\r\n
+Accept: text/html\r\n
+\r\n</pre>
+<p>This has two problems. First, headers are sent as plain text on every request — even when they repeat. Second, HTTP/1.1 allows only <strong>one request at a time</strong> per TCP connection. If you need to load 10 resources, you either open 10 connections or wait for each response before sending the next request.</p>
+<p>HTTP/2 solves both problems with a <strong>binary framing layer</strong>:</p>
+<ul>
+<li><strong>Multiplexing</strong> — multiple requests and responses interleave on a single TCP connection.</li>
+<li><strong>Header compression (HPACK)</strong> — headers are compressed using a static table and Huffman encoding.</li>
+<li><strong>Binary format</strong> — no text parsing overhead.</li>
+</ul>
+
+<h2>Frame structure</h2>
+<p>Everything in HTTP/2 is a <strong>frame</strong>. Each frame has a 9-byte header:</p>
+<pre>+-----------------------------------------------+
+|                Length (24 bits)                |
++---------------+---------------+---------------+
+|   Type (8)    |   Flags (8)   |
++-+-------------+---------------+---------------+
+|R|         Stream Identifier (31 bits)         |
++-+---------------------------------------------+
+|                Frame Payload ...               |
++-----------------------------------------------+</pre>
+<ul>
+<li><strong>Length</strong> — payload size in bytes (max 16,384 by default).</li>
+<li><strong>Type</strong> — what kind of frame this is.</li>
+<li><strong>Flags</strong> — type-specific flags (e.g. END_STREAM, END_HEADERS).</li>
+<li><strong>Stream ID</strong> — which stream this frame belongs to (0 for connection-level).</li>
+</ul>
+
+<h2>Frame types</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Type</th><th>ID</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>DATA</td><td>0</td><td>Request/response body</td></tr>
+<tr><td>HEADERS</td><td>1</td><td>HTTP headers (HPACK compressed)</td></tr>
+<tr><td>SETTINGS</td><td>4</td><td>Connection configuration</td></tr>
+<tr><td>PING</td><td>6</td><td>Keep-alive / latency measurement</td></tr>
+<tr><td>GOAWAY</td><td>7</td><td>Graceful shutdown</td></tr>
+<tr><td>WINDOW_UPDATE</td><td>8</td><td>Flow control</td></tr>
+<tr><td>RST_STREAM</td><td>3</td><td>Cancel a stream</td></tr>
+</tbody></table></div>
+
+<h2>Streams and multiplexing</h2>
+<p>A <strong>stream</strong> is a logical request/response pair within a connection. Streams have numeric IDs:</p>
+<ul>
+<li><strong>Odd IDs</strong> (1, 3, 5, ...) — client-initiated requests.</li>
+<li><strong>Even IDs</strong> (2, 4, 6, ...) — server push.</li>
+<li><strong>Stream 0</strong> — connection-level frames (SETTINGS, PING, GOAWAY).</li>
+</ul>
+<p>Multiple streams can be active simultaneously. A client sends HEADERS on stream 1, then HEADERS on stream 3, without waiting for responses. The server sends responses in any order.</p>
+
+<h2>HPACK header compression</h2>
+<p>HTTP/2 compresses headers using a <strong>static table</strong> of 61 common header name-value pairs. For example:</p>
+<div class="table-wrapper"><table>
+<thead><tr><th>Index</th><th>Name</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>2</td><td><code>:method</code></td><td><code>GET</code></td></tr>
+<tr><td>4</td><td><code>:path</code></td><td><code>/</code></td></tr>
+<tr><td>8</td><td><code>:status</code></td><td><code>200</code></td></tr>
+<tr><td>13</td><td><code>:status</code></td><td><code>404</code></td></tr>
+</tbody></table></div>
+<p>Instead of sending <code>:status: 200</code> as 12 bytes of text, HPACK sends a single byte: <code>0x88</code> (indexed representation of entry 8). This reduces header overhead dramatically.</p>
+
+<h2>Connection preface</h2>
+<p>An HTTP/2 connection starts with the client sending a 24-byte <strong>magic string</strong>:</p>
+<pre>PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n</pre>
+<p>Followed by a SETTINGS frame. The server responds with its own SETTINGS and an ACK. This handshake establishes the connection parameters. In h2c (cleartext) mode, no TLS is needed.</p>
+
+<h2>Building an HTTP/2 server in Nyx</h2>
+<p>Nyx provides <code>std/http2.nx</code> for HTTP/2 servers. The API is callback-based:</p>
+<pre><span class="kw">import</span> <span class="str">"std/http2"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(method: <span class="ty">String</span>, path: <span class="ty">String</span>, headers: <span class="ty">Array</span>, body: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">if</span> path <span class="op">==</span> <span class="str">"/"</span> {
+        <span class="kw">let</span> hdrs: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">"content-type"</span>, <span class="str">"text/html"</span>]
+        <span class="kw">return</span> [<span class="num">200</span>, hdrs, <span class="str">"&lt;h1&gt;Hello from HTTP/2!&lt;/h1&gt;"</span>]
+    }
+    <span class="kw">let</span> hdrs: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">"content-type"</span>, <span class="str">"text/plain"</span>]
+    <span class="kw">return</span> [<span class="num">404</span>, hdrs, <span class="str">"Not Found"</span>]
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="fn">h2_serve</span>(<span class="num">3000</span>, <span class="num">4</span>, on_request)
+    <span class="kw">return</span> <span class="num">0</span>
+}</pre>
+<p>The callback receives the method, path, headers (as a flat array <code>[key1, val1, key2, val2, ...]</code>), and body. It returns a three-element array: <code>[status, headers, body]</code>.</p>
+
+<h2>Testing with curl</h2>
+<p>Use <code>curl --http2-prior-knowledge</code> to connect over h2c:</p>
+<pre>$ curl --http2-prior-knowledge http://localhost:3000/
+&lt;h1&gt;Hello from HTTP/2!&lt;/h1&gt;</pre>
+<p>The <code>--http2-prior-knowledge</code> flag tells curl to use HTTP/2 directly without an upgrade handshake.</p>
+
+<h2>What Nyx does under the hood</h2>
+<p>The HTTP/2 implementation is split between C and Nyx:</p>
+<ul>
+<li><code>runtime/http2.c</code> — frame I/O, HPACK encoding/decoding, Huffman tables (all binary operations in C for performance).</li>
+<li><code>std/http2.nx</code> — protocol state machine, connection preface validation, frame dispatch loop, response building (all logic in Nyx).</li>
+</ul>
+<p>This hybrid approach — C for byte-level operations, Nyx for protocol logic — is the same pattern used for WebSockets, TCP, and the RESP parser.</p>
+
+<h2>Summary</h2>
+<ul>
+<li>HTTP/2 replaces HTTP/1.1's text protocol with binary framing.</li>
+<li>Multiplexing allows multiple requests on one TCP connection.</li>
+<li>HPACK compresses headers using a static table and Huffman encoding.</li>
+<li>Frames have a 9-byte header: length, type, flags, stream ID.</li>
+<li><code>h2_serve(port, workers, callback)</code> starts an HTTP/2 server.</li>
+<li>Test with <code>curl --http2-prior-knowledge</code>.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="29.html" class="book-nav-prev">&larr; Previous: Message queues with nyx-queue</a>
+        <a href="31.html" class="book-nav-next">Next: Building a database — nyx-db &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

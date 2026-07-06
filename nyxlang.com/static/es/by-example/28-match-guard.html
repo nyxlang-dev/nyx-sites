@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardas de Match — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Guardas de Match</h1>
+
+    <p>Las guardas de match agregan una condición booleana adicional a un brazo de match usando la palabra clave <code>if</code>. Un brazo solo se dispara cuando tanto su patrón coincide como su guarda evalúa a verdadero, permitiendo ramificaciones finas que de otro modo requerirían cadenas anidadas de if-else.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Match guards: condiciones adicionales dentro de los brazos del match
+
+fn classify(n: int) -> String {
+    return match n {
+        x if x &gt; 100  =&gt; "muy grande (" + int_to_string(x) + ")",
+        x if x &gt; 10   =&gt; "grande (" + int_to_string(x) + ")",
+        x if x &gt; 0    =&gt; "positivo (" + int_to_string(x) + ")",
+        x if x == 0   =&gt; "cero",
+        x if x &gt; -10  =&gt; "negativo pequeno (" + int_to_string(x) + ")",
+        x              =&gt; "muy negativo (" + int_to_string(x) + ")"
+    }
+}
+
+fn grade(score: int) -> String {
+    return match score {
+        s if s &gt;= 90 =&gt; "A",
+        s if s &gt;= 80 =&gt; "B",
+        s if s &gt;= 70 =&gt; "C",
+        s if s &gt;= 60 =&gt; "D",
+        _            =&gt; "F"
+    }
+}
+
+fn main() -> int {
+    print(classify(200))
+    print(classify(50))
+    print(classify(5))
+    print(classify(0))
+    print(classify(-3))
+    print(classify(-99))
+
+    print("nota 95: " + grade(95))
+    print("nota 82: " + grade(82))
+    print("nota 71: " + grade(71))
+    print("nota 55: " + grade(55))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">muy grande (200)
+grande (50)
+positivo (5)
+cero
+negativo pequeno (-3)
+muy negativo (-99)
+nota 95: A
+nota 82: B
+nota 71: C
+nota 55: F</pre>
+
+    <h2>Explicación</h2>
+    <p>Cada brazo del match en <code>classify</code> usa el patrón comodín <code>x</code> para vincular el valor evaluado, y luego aplica una guarda <code>if</code> para restringir cuándo se dispara el brazo. Los brazos se evalúan de arriba hacia abajo, así que el orden importa: <code>x &gt; 100</code> debe aparecer antes que <code>x &gt; 10</code>, de lo contrario valores como 200 serían capturados primero por la guarda menos específica. El último brazo no tiene guarda, lo que lo convierte en un catch-all incondicional que garantiza la exhaustividad.</p>
+    <p>La función <code>grade</code> muestra la misma técnica aplicada a una escala de calificación académica. El comodín <code>_</code> en el último brazo es equivalente a un patrón de variable catch-all pero descarta el valor, señalando a quien lea el código que el valor vinculado se ignora a propósito. Ambas funciones retornan una expresión <code>String</code> directamente desde el match, por lo que no se necesita ninguna variable intermedia.</p>
+    <p>Las guardas de match son especialmente poderosas cuando se combinan con variantes de enum que llevan datos — primero se puede verificar qué variante se tiene, y luego aplicar una condición numérica o de string sobre su contenido, todo dentro de un único bloque match conciso.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/27-if-let.html">← Anterior</a>
+        <a href="/es/by-example/29-iterator-map-filter.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/28-match-guard.nx">examples/by-example/28-match-guard.nx</a></small></p>
+</main>
+
+</body>
+</html>

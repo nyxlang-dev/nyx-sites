@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structs — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Structs</h1>
+
+    <p>Los structs permiten agrupar datos relacionados bajo un tipo con nombre. Se les puede asociar comportamiento con un bloque <code>impl</code>, dándoles métodos que operan sobre sus campos a través de un parámetro <code>self</code>.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Structs: definición, campos, impl con métodos, instanciación
+
+struct Point {
+    x: int,
+    y: int
+}
+
+impl Point {
+    fn distance_from_origin(self) -> int {
+        // distancia Manhattan: |x| + |y|
+        var ax: int = self.x
+        if ax < 0 {
+            ax = ax * -1
+        }
+        var ay: int = self.y
+        if ay < 0 {
+            ay = ay * -1
+        }
+        return ax + ay
+    }
+
+    fn to_string(self) -> String {
+        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
+    }
+}
+
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+impl Rectangle {
+    fn area(self) -> int {
+        return self.width * self.height
+    }
+}
+
+fn main() -> int {
+    let p1: Point = Point { x: 3, y: 4 }
+    print("Punto: " + p1.to_string())
+    print("Distancia al origen: " + int_to_string(p1.distance_from_origin()))
+
+    let p2: Point = Point { x: -2, y: 5 }
+    print("Punto: " + p2.to_string())
+    print("Distancia al origen: " + int_to_string(p2.distance_from_origin()))
+
+    let rect: Rectangle = Rectangle { width: 6, height: 7 }
+    print("Area del rectangulo: " + int_to_string(rect.area()))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Punto: (3, 4)
+Distancia al origen: 7
+Punto: (-2, 5)
+Distancia al origen: 7
+Area del rectangulo: 42</pre>
+
+    <h2>Explicación</h2>
+    <p>Un struct se define con la palabra clave <code>struct</code>, un nombre, y una lista de campos tipados separados por comas dentro de llaves. Los nombres de structs siguen PascalCase por convención. Los campos se acceden con notación de punto: <code>instance.field</code>.</p>
+    <p>Los métodos se definen en un bloque <code>impl</code> para el struct. El primer parámetro <code>self</code> se refiere a la instancia sobre la que se llama el método — es similar a <code>this</code> en otros lenguajes. Los métodos pueden acceder a cualquier campo del struct a través de <code>self.field_name</code>.</p>
+    <p>La instanciación de structs usa la sintaxis de inicialización de campos: <code>TypeName { field: value, ... }</code>. Todos los campos deben proporcionarse; no hay valores por defecto a menos que se escriba explícitamente un método constructor.</p>
+    <p>El ejemplo de distancia Manhattan muestra cómo los métodos pueden contener lógica arbitraria, variables locales y control de flujo — son simplemente funciones asociadas a un tipo. Puede haber múltiples bloques <code>impl</code> para el mismo struct, y cada struct puede tener su propio <code>impl</code> independiente.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/07-strings.html">← Anterior</a>
+        <a href="/es/by-example/09-enums.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/08-structs.nx">examples/by-example/08-structs.nx</a></small></p>
+</main>
+
+</body>
+</html>

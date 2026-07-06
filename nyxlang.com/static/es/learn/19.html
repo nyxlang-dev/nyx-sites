@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu segundo proyecto — Un servidor web — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Tu segundo proyecto — Un servidor web</h1>
+
+<h2>Juntando la Parte 2</h2>
+<p>En la Parte 1, construiste un seguimiento de notas de estudiantes. Ahora conoces módulos, archivos, closures, enums, traits, generics, networking y concurrencia. Es momento de juntar todo y construir algo real: un <strong>servidor web multi-threaded</strong> que sirve páginas dinámicas.</p>
+<p>Construiremos una aplicación de estantería de libros personal: los usuarios pueden ver libros, agregar nuevos y ver estadísticas — todo a través de un navegador web.</p>
+<h2>Paso 1: Definir los datos</h2>
+<pre><span class="kw">struct</span> Libro {
+    titulo: <span class="ty">String</span>,
+    autor: <span class="ty">String</span>,
+    paginas: <span class="ty">int</span>,
+    leido: <span class="ty">bool</span>
+}
+
+<span class="kw">fn</span> <span class="fn">crear_libro</span>(titulo: <span class="ty">String</span>, autor: <span class="ty">String</span>, paginas: <span class="ty">int</span>) <span class="op">-&gt;</span> Libro {
+    <span class="kw">return</span> Libro { titulo: titulo, autor: autor, paginas: paginas, leido: <span class="kw">false</span> }
+}</pre>
+<h2>Paso 2: Construir el almacén de libros</h2>
+<p>Guardaremos los libros en un array y proporcionaremos funciones para trabajar con ellos:</p>
+<pre><span class="kw">fn</span> <span class="fn">contar_leidos</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> cuenta: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        <span class="kw">if</span> l.leido {
+            cuenta <span class="op">+=</span> <span class="num">1</span>
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> cuenta
+}
+
+<span class="kw">fn</span> <span class="fn">total_paginas</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        total <span class="op">+=</span> l.paginas
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">encontrar_mas_largo</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> libros.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> { <span class="kw">return</span> <span class="str">&quot;Ninguno&quot;</span> }
+    <span class="kw">var</span> mejor: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> mejor_paginas: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        <span class="kw">if</span> l.paginas <span class="op">&gt;</span> mejor_paginas {
+            mejor_paginas <span class="op">=</span> l.paginas
+            mejor <span class="op">=</span> l.titulo
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor
+}</pre>
+<h2>Paso 3: Construir páginas HTML</h2>
+<p>Creemos funciones que generen HTML:</p>
+<pre><span class="kw">fn</span> <span class="fn">pagina_html</span>(titulo: <span class="ty">String</span>, cuerpo: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;title&gt;&quot;</span> <span class="op">+</span> titulo <span class="op">+</span> <span class="str">&quot;&lt;/title&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;style&gt;body{font-family:sans-serif;max-width:800px;margin:40px auto;padding:0 20px;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;h1{color:#333;}table{width:100%;border-collapse:collapse;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;a{color:#0066cc;}a:hover{text-decoration:underline;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;.stat{background:#f5f5f5;padding:15px;margin:10px 0;border-radius:5px;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&quot;</span> <span class="op">+</span> cuerpo <span class="op">+</span> <span class="str">&quot;&lt;/body&gt;&lt;/html&gt;&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">barra_nav</span>() <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;&lt;nav&gt;&lt;a href=\&quot;/\&quot;&gt;Inicio&lt;/a&gt; | &lt;a href=\&quot;/libros\&quot;&gt;Libros&lt;/a&gt; | &lt;a href=\&quot;/stats\&quot;&gt;Estadísticas&lt;/a&gt;&lt;/nav&gt;&lt;hr&gt;&quot;</span>
+}</pre>
+<h2>Paso 4: La página de lista de libros</h2>
+<pre><span class="kw">fn</span> <span class="fn">pagina_libros</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> filas: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        <span class="kw">var</span> estado: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;No&quot;</span>
+        <span class="kw">if</span> l.leido { estado <span class="op">=</span> <span class="str">&quot;Sí&quot;</span> }
+        filas <span class="op">=</span> filas <span class="op">+</span> <span class="str">&quot;&lt;tr&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> l.titulo <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> l.autor <span class="op">+</span>
+            <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(l.paginas) <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> estado <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;/tr&gt;&quot;</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Mi Estantería&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Título&lt;/th&gt;&lt;th&gt;Autor&lt;/th&gt;&lt;th&gt;Páginas&lt;/th&gt;&lt;th&gt;¿Leído?&lt;/th&gt;&lt;/tr&gt;&quot;</span> <span class="op">+</span>
+        filas <span class="op">+</span> <span class="str">&quot;&lt;/table&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;br&gt;&lt;p&gt;&lt;a href=\&quot;/agregar\&quot;&gt;+ Agregar un libro&lt;/a&gt;&lt;/p&gt;&quot;</span>
+
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Libros&quot;</span>, cuerpo)
+}</pre>
+<h2>Paso 5: La página de estadísticas</h2>
+<pre><span class="kw">fn</span> <span class="fn">pagina_stats</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> total: <span class="ty">int</span> <span class="op">=</span> libros.<span class="fn">length</span>()
+    <span class="kw">let</span> leidos: <span class="ty">int</span> <span class="op">=</span> <span class="fn">contar_leidos</span>(libros)
+    <span class="kw">let</span> no_leidos: <span class="ty">int</span> <span class="op">=</span> total <span class="op">-</span> leidos
+    <span class="kw">let</span> paginas: <span class="ty">int</span> <span class="op">=</span> <span class="fn">total_paginas</span>(libros)
+    <span class="kw">let</span> mas_largo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">encontrar_mas_largo</span>(libros)
+
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Estadísticas de Lectura&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Total de libros: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(total) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Leídos: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(leidos) <span class="op">+</span> <span class="str">&quot; / Sin leer: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(no_leidos) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Total de páginas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(paginas) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Libro más largo: &quot;</span> <span class="op">+</span> mas_largo <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span>
+
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Estadísticas&quot;</span>, cuerpo)
+}</pre>
+<h2>Paso 6: El formulario para agregar libros</h2>
+<pre><span class="kw">fn</span> <span class="fn">pagina_agregar</span>() <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Agregar un Libro&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;form method=\&quot;POST\&quot; action=\&quot;/agregar\&quot;&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Título: &lt;input name=\&quot;titulo\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Autor: &lt;input name=\&quot;autor\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Páginas: &lt;input name=\&quot;paginas\&quot; type=\&quot;number\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;&lt;button type=\&quot;submit\&quot;&gt;Agregar Libro&lt;/button&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;/form&gt;&quot;</span>
+
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Agregar Libro&quot;</span>, cuerpo)
+}</pre>
+<h2>Paso 7: Parsear datos del formulario</h2>
+<p>Cuando el usuario envía el formulario, el navegador manda una solicitud POST con datos del formulario. Parseémoslos:</p>
+<pre><span class="kw">fn</span> <span class="fn">parsear_formulario</span>(body: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Map</span> {
+    <span class="kw">var</span> resultado: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="kw">let</span> pares: <span class="ty">Array</span> <span class="op">=</span> body.<span class="fn">split</span>(<span class="str">&quot;&amp;&quot;</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> pares.<span class="fn">length</span>() {
+        <span class="kw">let</span> par: <span class="ty">String</span> <span class="op">=</span> pares[i]
+        <span class="kw">let</span> eq: <span class="ty">int</span> <span class="op">=</span> par.<span class="fn">indexOf</span>(<span class="str">&quot;=&quot;</span>)
+        <span class="kw">if</span> eq <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="kw">let</span> clave: <span class="ty">String</span> <span class="op">=</span> par.<span class="fn">substring</span>(<span class="num">0</span>, eq)
+            <span class="kw">let</span> valor: <span class="ty">String</span> <span class="op">=</span> par.<span class="fn">substring</span>(eq <span class="op">+</span> <span class="num">1</span>, par.<span class="fn">length</span>())
+            resultado.<span class="fn">insert</span>(clave, valor)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}</pre>
+<h2>Paso 8: El router de solicitudes</h2>
+<p>Ahora conectemos todo con un manejador de solicitudes.</p>
+<h2>El programa completo</h2>
+<pre><span class="kw">struct</span> Libro {
+    titulo: <span class="ty">String</span>,
+    autor: <span class="ty">String</span>,
+    paginas: <span class="ty">int</span>,
+    leido: <span class="ty">bool</span>
+}
+
+<span class="kw">fn</span> <span class="fn">crear_libro</span>(titulo: <span class="ty">String</span>, autor: <span class="ty">String</span>, paginas: <span class="ty">int</span>) <span class="op">-&gt;</span> Libro {
+    <span class="kw">return</span> Libro { titulo: titulo, autor: autor, paginas: paginas, leido: <span class="kw">false</span> }
+}
+
+<span class="kw">fn</span> <span class="fn">contar_leidos</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> cuenta: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        <span class="kw">if</span> l.leido { cuenta <span class="op">+=</span> <span class="num">1</span> }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> cuenta
+}
+
+<span class="kw">fn</span> <span class="fn">total_paginas</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        total <span class="op">+=</span> l.paginas
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">encontrar_mas_largo</span>(libros: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> libros.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> { <span class="kw">return</span> <span class="str">&quot;Ninguno&quot;</span> }
+    <span class="kw">var</span> mejor: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> mejor_paginas: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> libros.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> libros[i]
+        <span class="kw">if</span> l.paginas <span class="op">&gt;</span> mejor_paginas {
+            mejor_paginas <span class="op">=</span> l.paginas
+            mejor <span class="op">=</span> l.titulo
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor
+}
+
+<span class="kw">fn</span> <span class="fn">pagina_html</span>(titulo: <span class="ty">String</span>, cuerpo: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;title&gt;&quot;</span> <span class="op">+</span> titulo <span class="op">+</span> <span class="str">&quot;&lt;/title&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;style&gt;body{font-family:sans-serif;max-width:800px;margin:40px auto;padding:0 20px;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;h1{color:#333;}table{width:100%;border-collapse:collapse;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;a{color:#0066cc;}a:hover{text-decoration:underline;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;.stat{background:#f5f5f5;padding:15px;margin:10px 0;border-radius:5px;}&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&quot;</span> <span class="op">+</span> cuerpo <span class="op">+</span> <span class="str">&quot;&lt;/body&gt;&lt;/html&gt;&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">barra_nav</span>() <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;&lt;nav&gt;&lt;a href=\&quot;/\&quot;&gt;Inicio&lt;/a&gt; | &lt;a href=\&quot;/libros\&quot;&gt;Libros&lt;/a&gt; | &lt;a href=\&quot;/stats\&quot;&gt;Estadísticas&lt;/a&gt;&lt;/nav&gt;&lt;hr&gt;&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">pagina_libros</span>(lbs: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> filas: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lbs.<span class="fn">length</span>() {
+        <span class="kw">let</span> l: Libro <span class="op">=</span> lbs[i]
+        <span class="kw">var</span> estado: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;No&quot;</span>
+        <span class="kw">if</span> l.leido { estado <span class="op">=</span> <span class="str">&quot;Sí&quot;</span> }
+        filas <span class="op">=</span> filas <span class="op">+</span> <span class="str">&quot;&lt;tr&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> l.titulo <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> l.autor <span class="op">+</span>
+            <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(l.paginas) <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;td&gt;&quot;</span> <span class="op">+</span> estado <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;/tr&gt;&quot;</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Mi Estantería&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;table&gt;&lt;tr&gt;&lt;th&gt;Título&lt;/th&gt;&lt;th&gt;Autor&lt;/th&gt;&lt;th&gt;Páginas&lt;/th&gt;&lt;th&gt;¿Leído?&lt;/th&gt;&lt;/tr&gt;&quot;</span> <span class="op">+</span>
+        filas <span class="op">+</span> <span class="str">&quot;&lt;/table&gt;&lt;br&gt;&lt;p&gt;&lt;a href=\&quot;/agregar\&quot;&gt;+ Agregar un libro&lt;/a&gt;&lt;/p&gt;&quot;</span>
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Libros&quot;</span>, cuerpo)
+}
+
+<span class="kw">fn</span> <span class="fn">pagina_stats</span>(lbs: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> total: <span class="ty">int</span> <span class="op">=</span> lbs.<span class="fn">length</span>()
+    <span class="kw">let</span> leidos: <span class="ty">int</span> <span class="op">=</span> <span class="fn">contar_leidos</span>(lbs)
+    <span class="kw">let</span> paginas: <span class="ty">int</span> <span class="op">=</span> <span class="fn">total_paginas</span>(lbs)
+    <span class="kw">let</span> mas_largo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">encontrar_mas_largo</span>(lbs)
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Estadísticas de Lectura&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Total de libros: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(total) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Leídos: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(leidos) <span class="op">+</span> <span class="str">&quot; / Sin leer: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(total <span class="op">-</span> leidos) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Total de páginas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(paginas) <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;div class=\&quot;stat\&quot;&gt;Libro más largo: &quot;</span> <span class="op">+</span> mas_largo <span class="op">+</span> <span class="str">&quot;&lt;/div&gt;&quot;</span>
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Estadísticas&quot;</span>, cuerpo)
+}
+
+<span class="kw">fn</span> <span class="fn">pagina_agregar</span>() <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> cuerpo: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+        <span class="str">&quot;&lt;h1&gt;Agregar un Libro&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;form method=\&quot;POST\&quot; action=\&quot;/agregar\&quot;&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Título: &lt;input name=\&quot;titulo\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Autor: &lt;input name=\&quot;autor\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;Páginas: &lt;input name=\&quot;paginas\&quot; type=\&quot;number\&quot; required&gt;&lt;/p&gt;&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;&lt;p&gt;&lt;button type=\&quot;submit\&quot;&gt;Agregar Libro&lt;/button&gt;&lt;/p&gt;&lt;/form&gt;&quot;</span>
+    <span class="kw">return</span> <span class="fn">pagina_html</span>(<span class="str">&quot;Agregar Libro&quot;</span>, cuerpo)
+}
+
+<span class="kw">fn</span> <span class="fn">parsear_formulario</span>(body: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Map</span> {
+    <span class="kw">var</span> resultado: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="kw">let</span> pares: <span class="ty">Array</span> <span class="op">=</span> body.<span class="fn">split</span>(<span class="str">&quot;&amp;&quot;</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> pares.<span class="fn">length</span>() {
+        <span class="kw">let</span> par: <span class="ty">String</span> <span class="op">=</span> pares[i]
+        <span class="kw">let</span> eq: <span class="ty">int</span> <span class="op">=</span> par.<span class="fn">indexOf</span>(<span class="str">&quot;=&quot;</span>)
+        <span class="kw">if</span> eq <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="kw">let</span> clave: <span class="ty">String</span> <span class="op">=</span> par.<span class="fn">substring</span>(<span class="num">0</span>, eq)
+            <span class="kw">let</span> valor: <span class="ty">String</span> <span class="op">=</span> par.<span class="fn">substring</span>(eq <span class="op">+</span> <span class="num">1</span>, par.<span class="fn">length</span>())
+            resultado.<span class="fn">insert</span>(clave, valor)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">import</span> { http_serve_mt, http_response, http_response_with_headers } from <span class="str">&quot;std/http&quot;</span>
+
+<span class="kw">var</span> libros: <span class="ty">Array</span> <span class="op">=</span> []
+
+<span class="kw">fn</span> <span class="fn">al_recibir_solicitud</span>(request: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> metodo: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">1</span>]
+    <span class="kw">let</span> ruta: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">2</span>]
+    <span class="kw">let</span> body: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">4</span>]
+    <span class="kw">let</span> html_headers: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Content-Type&quot;</span>, <span class="str">&quot;text/html; charset=utf-8&quot;</span>]
+
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/&quot;</span> {
+        <span class="kw">let</span> inicio: <span class="ty">String</span> <span class="op">=</span> <span class="fn">barra_nav</span>() <span class="op">+</span>
+            <span class="str">&quot;&lt;h1&gt;Bienvenido a Mi Estantería&lt;/h1&gt;&quot;</span> <span class="op">+</span>
+            <span class="str">&quot;&lt;p&gt;Un registro personal de libros construido con Nyx.&lt;/p&gt;&quot;</span> <span class="op">+</span>
+            <span class="str">&quot;&lt;p&gt;Tienes &lt;strong&gt;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(libros.<span class="fn">length</span>()) <span class="op">+</span> <span class="str">&quot;&lt;/strong&gt; libros.&lt;/p&gt;&quot;</span> <span class="op">+</span>
+            <span class="str">&quot;&lt;p&gt;&lt;a href=\&quot;/libros\&quot;&gt;Ver todos los libros&lt;/a&gt;&lt;/p&gt;&quot;</span>
+        <span class="kw">return</span> <span class="fn">http_response_with_headers</span>(<span class="num">200</span>, html_headers, <span class="fn">pagina_html</span>(<span class="str">&quot;Inicio&quot;</span>, inicio))
+    }
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/libros&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response_with_headers</span>(<span class="num">200</span>, html_headers, <span class="fn">pagina_libros</span>(libros))
+    }
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/stats&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response_with_headers</span>(<span class="num">200</span>, html_headers, <span class="fn">pagina_stats</span>(libros))
+    }
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/agregar&quot;</span> <span class="kw">and</span> metodo <span class="op">==</span> <span class="str">&quot;GET&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response_with_headers</span>(<span class="num">200</span>, html_headers, <span class="fn">pagina_agregar</span>())
+    }
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/agregar&quot;</span> <span class="kw">and</span> metodo <span class="op">==</span> <span class="str">&quot;POST&quot;</span> {
+        <span class="kw">let</span> form: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">parsear_formulario</span>(body)
+        <span class="kw">if</span> form.<span class="fn">contains</span>(<span class="str">&quot;titulo&quot;</span>) <span class="kw">and</span> form.<span class="fn">contains</span>(<span class="str">&quot;autor&quot;</span>) <span class="kw">and</span> form.<span class="fn">contains</span>(<span class="str">&quot;paginas&quot;</span>) {
+            libros.<span class="fn">push</span>(<span class="fn">crear_libro</span>(form.<span class="fn">get</span>(<span class="str">&quot;titulo&quot;</span>), form.<span class="fn">get</span>(<span class="str">&quot;autor&quot;</span>), <span class="fn">string_to_int</span>(form.<span class="fn">get</span>(<span class="str">&quot;paginas&quot;</span>))))
+        }
+        <span class="kw">let</span> redir: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Location&quot;</span>, <span class="str">&quot;/libros&quot;</span>]
+        <span class="kw">return</span> <span class="fn">http_response_with_headers</span>(<span class="num">302</span>, redir, <span class="str">&quot;&quot;</span>)
+    }
+    <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">404</span>, <span class="str">&quot;Página no encontrada&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Datos de ejemplo</span>
+    libros.<span class="fn">push</span>(<span class="fn">crear_libro</span>(<span class="str">&quot;El Programador Pragmático&quot;</span>, <span class="str">&quot;Hunt y Thomas&quot;</span>, <span class="num">352</span>))
+    libros.<span class="fn">push</span>(<span class="fn">crear_libro</span>(<span class="str">&quot;Estructura e Interpretación&quot;</span>, <span class="str">&quot;Abelson y Sussman&quot;</span>, <span class="num">657</span>))
+    libros.<span class="fn">push</span>(<span class="fn">crear_libro</span>(<span class="str">&quot;El Lenguaje C&quot;</span>, <span class="str">&quot;Kernighan y Ritchie&quot;</span>, <span class="num">288</span>))
+
+    <span class="fn">print</span>(<span class="str">&quot;Servidor de estantería en http://localhost:8080&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Abre tu navegador y visita http://localhost:8080&quot;</span>)
+    <span class="fn">http_serve_mt</span>(<span class="num">8080</span>, <span class="num">4</span>, al_recibir_solicitud)
+}</pre>
+<h2>Lo que construiste</h2>
+<p>Este programa usa todo lo de la Parte 2:</p>
+<ul>
+<li><strong>Módulos</strong> — importando desde <code>std/http</code>.</li>
+<li><strong>Structs</strong> — <code>Libro</code> para modelar datos.</li>
+<li><strong>Arrays</strong> — almacenando la colección de libros.</li>
+<li><strong>Maps</strong> — parseando datos del formulario.</li>
+<li><strong>Strings</strong> — construyendo HTML dinámicamente.</li>
+<li><strong>Funciones</strong> — cada página y utilidad es su propia función.</li>
+<li><strong>Flujo de control</strong> — enrutando solicitudes por ruta y método.</li>
+<li><strong>Concurrencia</strong> — <code>http_serve_mt</code> maneja múltiples clientes con threads.</li>
+</ul>
+<p>Abre <code>http://localhost:8080</code> en tu navegador y tienes una aplicación web funcionando — construida enteramente en Nyx, compilada a código nativo, ejecutándose a miles de solicitudes por segundo.</p>
+<h2>Desafíos</h2>
+<ol>
+<li><strong>Marcar como leído</strong>: Agrega una ruta <code>/leido/N</code> que marque el libro N como leído y redirija a <code>/libros</code>.</li>
+</ol>
+<ol>
+<li><strong>Eliminar libros</strong>: Agrega una ruta <code>/eliminar/N</code> que quite el libro N de la lista.</li>
+</ol>
+<ol>
+<li><strong>Búsqueda</strong>: Agrega una ruta <code>/buscar?q=termino</code> que muestre solo libros que coincidan con el término de búsqueda.</li>
+</ol>
+<ol>
+<li><strong>Persistencia</strong>: Guarda los libros en un archivo (<code>libros.csv</code>) en cada cambio y cárgalos al iniciar.</li>
+</ol>
+<ol>
+<li><strong>API JSON</strong>: Agrega <code>/api/libros</code> que devuelva la lista de libros como JSON, y <code>/api/libros/agregar</code> que acepte solicitudes POST con JSON.</li>
+</ol>
+<h2>¿Qué sigue?</h2>
+<p>¡Felicitaciones! Has completado la Parte 2 de El Libro de Nyx. Ahora puedes construir aplicaciones reales conectadas en red: módulos para organización, archivos para persistencia, closures para flexibilidad, enums para seguridad, traits para abstracción, generics para reutilización, networking para comunicación y concurrencia para rendimiento.</p>
+<p>En la Parte 3, irás más profundo: internos de LLVM, FFI para llamar código C, operaciones unsafe, I/O asíncrono, y un caso de estudio de cómo nyx-kv (una base de datos compatible con Redis) fue construida enteramente en Nyx.</p>
+<p>Siguiente capítulo: <a href="20-llvm-rendimiento.md">LLVM y rendimiento →</a></p>
+
+    <div class="book-nav">
+        <a href="18.html" class="book-nav-prev">&larr; Anterior: Concurrencia — Threads y channels</a>
+        <a href="20.html" class="book-nav-next">Siguiente: LLVM y rendimiento &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

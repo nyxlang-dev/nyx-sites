@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Terminal — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Raw Terminal</h1>
+    <p><code>raw_mode_enter()</code> disables line buffering and echo, allowing character-by-character input. <code>read_byte()</code> reads a single byte. Always call <code>raw_mode_exit()</code> to restore the terminal. This is how nyx-edit implements its text editor.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Raw terminal — reading keypresses without line buffering</span>
+<span class="cm">// Terminal raw — leer teclas sin buffer de línea</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Check if we have a terminal</span>
+    <span class="kw">if</span> <span class="kw">not</span> isatty(<span class="num">0</span>) {
+        print(<span class="str">"not a terminal — skipping raw mode demo"</span>)
+        print(<span class="str">"run interactively to see keypress reading"</span>)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    print(<span class="str">"terminal size: "</span> + int_to_string(term_cols()) + <span class="str">"x"</span> + int_to_string(term_rows()))
+    print(<span class="str">"press any key (or 'q' to quit):"</span>)
+
+    <span class="cm">// Enter raw mode — disables echo and line buffering</span>
+    raw_mode_enter()
+
+    <span class="kw">var</span> running: <span class="ty">bool</span> = <span class="kw">true</span>
+    <span class="kw">while</span> running {
+        <span class="kw">let</span> byte: <span class="ty">int</span> = read_byte()
+        <span class="kw">if</span> byte == <span class="num">113</span> {
+            <span class="cm">// 'q' pressed</span>
+            running = <span class="kw">false</span>
+        } <span class="kw">else</span> {
+            <span class="cm">// In raw mode, we need to manually handle output</span>
+            print(<span class="str">"key: "</span> + int_to_string(byte))
+        }
+    }
+
+    <span class="cm">// Always restore terminal state</span>
+    raw_mode_exit()
+    print(<span class="str">"raw mode exited"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">not a terminal — skipping raw mode demo
+run interactively to see keypress reading</pre>
+    <h2>Explanation</h2>
+    <p><code>raw_mode_enter()</code> puts the terminal into raw mode by disabling canonical (line-buffered) input and echo. In this mode, each keypress is available immediately via <code>read_byte()</code> without waiting for Enter.</p>
+    <p><code>read_byte()</code> reads a single byte from stdin, returning its integer value. ASCII 113 is the character 'q'. Special keys like arrows produce escape sequences (multiple bytes starting with 27).</p>
+    <p><code>raw_mode_exit()</code> restores the terminal to its previous state. You should always call this before exiting, even on error — otherwise the terminal will remain in raw mode and become unusable. <code>term_cols()</code> and <code>term_rows()</code> return the current terminal dimensions.</p>
+    <div class="book-nav">
+        <a href="/by-example/68-process-control.html">&larr; Previous</a>
+        <a href="/by-example/70-shebang-script.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/69-raw-terminal.nx">examples/by-example/69-raw-terminal.nx</a></small></p>
+</main>
+</body>
+</html>

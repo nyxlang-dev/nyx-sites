@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordenamiento — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Ordenamiento</h1>
+
+    <p>El módulo <code>std/array</code> provee <code>sort_int</code> y <code>sort_str</code> para ordenar in-place arrays numéricos y de strings respectivamente. Ambas funciones ordenan de forma ascendente y retornan el mismo array que mutaron.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Ordenamiento: sort_int() de std/array + bubble sort manual
+import "std/array"
+
+fn print_array(arr: Array) {
+    var s: String = "["
+    var i: int = 0
+    while i < arr.length() {
+        let v: int = arr[i]
+        s = s + int_to_string(v)
+        if i < arr.length() - 1 {
+            s = s + ", "
+        }
+        i = i + 1
+    }
+    s = s + "]"
+    print(s)
+}
+
+fn main() -> int {
+    var nums: Array = [64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
+
+    print("Antes de ordenar:")
+    print_array(nums)
+
+    // sort_int ordena in-place y retorna el array
+    let ordenado: Array = sort_int(nums)
+
+    print("Despues de ordenar:")
+    print_array(ordenado)
+
+    // Otro ejemplo: strings
+    var palabras: Array = ["manzana", "banana", "cereza", "aguacate"]
+    print("Strings antes:")
+    print_array(palabras)
+
+    let ord_str: Array = sort_str(palabras)
+    print("Strings despues:")
+    print_array(ord_str)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Antes de ordenar:
+[64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
+Despues de ordenar:
+[3, 8, 11, 12, 22, 25, 47, 55, 64, 90]
+Strings antes:
+[manzana, banana, cereza, aguacate]
+Strings despues:
+[aguacate, banana, cereza, manzana]</pre>
+
+    <h2>Explicación</h2>
+    <p><code>sort_int(nums)</code> ordena el array in-place y lo retorna, así que el valor de retorno y la variable original referencian la misma secuencia ya ordenada. Se puede usar el valor de retorno o seguir usando la variable original — ambos apuntan a los datos ya ordenados.</p>
+    <p><code>sort_str</code> funciona de forma idéntica para arrays de strings, ordenando los elementos lexicográficamente (byte por byte, de forma ascendente). En el ejemplo, <code>"aguacate"</code> se ordena primero porque <code>'a'</code> precede a <code>'b'</code>, <code>'c'</code> y <code>'m'</code>.</p>
+    <p>La función auxiliar <code>print_array</code> demuestra el recorrido manual de un array usando un loop <code>while</code> con una variable índice — el patrón estándar de Nyx cuando se necesita acceso por índice en lugar de un pipeline de iteradores.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/33-recursion.html">← Anterior</a>
+        <a href="/es/by-example/35-error-handling.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/34-sorting.nx">examples/by-example/34-sorting.nx</a></small></p>
+</main>
+
+</body>
+</html>

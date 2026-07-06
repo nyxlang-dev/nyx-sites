@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor HTTP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Servidor HTTP</h1>
+
+    <p>Un servidor HTTP mínimo usando <code>http_serve</code> de <code>std/http</code>. La función handler recibe un array de request ya parseado <code>[type, method, path, headers, body]</code> y retorna un string de respuesta HTTP construido con <code>http_response</code>. El servidor se bloquea en un bucle de accept, manejando una petición a la vez.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Minimal HTTP server using std/http</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(req: <span class="ty">Array</span>) -> <span class="ty">String</span> {
+    <span class="kw">let</span> method: <span class="ty">String</span> = req[<span class="num">1</span>]
+    <span class="kw">let</span> path: <span class="ty">String</span> = req[<span class="num">2</span>]
+
+    <span class="kw">if</span> path == <span class="str">"/"</span> {
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"Hello from Nyx!"</span>)
+    }
+    <span class="kw">if</span> path == <span class="str">"/time"</span> {
+        <span class="kw">let</span> t: <span class="ty">int</span> = time()
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"timestamp: "</span> + int_to_string(t))
+    }
+    <span class="kw">return</span> http_response(<span class="num">404</span>, <span class="str">"not found: "</span> + path)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"listening on :8080"</span>)
+    http_serve(<span class="num">8080</span>, on_request)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">listening on :8080</pre>
+
+    <h2>Explicación</h2>
+    <p><code>http_serve(port, handler)</code> escucha en el puerto indicado y entra en un bucle de accept infinito. Para cada conexión, parsea la petición HTTP en un array, llama a la función handler, envía la respuesta y cierra la conexión.</p>
+    <p><code>http_response(status, body)</code> construye una respuesta HTTP/1.1 correctamente formateada con los headers Content-Length y Connection: close. Para headers personalizados (como Content-Type: application/json), usa <code>http_response_with_headers</code>.</p>
+    <p>Para servir con múltiples hilos, usa <code>http_serve_mt(port, num_workers, handler)</code>, que despacha las conexiones a un pool de hilos mediante channels — así es como nyx-serve logra 73K req/s.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/50-http-post.html">← Anterior</a>
+        <a href="/es/by-example/52-http-middleware.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/51-http-server.nx">examples/by-example/51-http-server.nx</a></small></p>
+</main>
+
+</body>
+</html>

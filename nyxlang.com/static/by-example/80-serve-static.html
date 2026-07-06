@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-serve static files — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-serve static files</h1>
+    <p><code>app_static(app, "/assets/", "./public/")</code> serves files from a directory. The runtime auto-detects MIME types for CSS, JS, images, and other common formats.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve static files -- serving CSS, JS, images from a directory</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">home</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> html: <span class="ty">String</span> = <span class="str">"&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;head&gt;&lt;link rel=\"stylesheet\" href=\"/assets/style.css\"&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Home&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;"</span>
+    <span class="kw">return</span> response_html(<span class="num">200</span>, html)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+
+    <span class="cm">// Register dynamic routes first</span>
+    app_get(app, <span class="str">"/"</span>, home)
+
+    <span class="cm">// Static file serving via app_static (from nyx-serve product):</span>
+    <span class="cm">//   app_static(app, "/assets/", "./public/")</span>
+    <span class="cm">//</span>
+    <span class="cm">// When a request path starts with "/assets/", the rest is looked up</span>
+    <span class="cm">// in ./public/. For example: GET /assets/style.css serves ./public/style.css</span>
+    <span class="cm">//</span>
+    <span class="cm">// The serve_app runtime auto-detects MIME types:</span>
+    <span class="cm">//   .css -&gt; text/css</span>
+    <span class="cm">//   .js  -&gt; application/javascript</span>
+    <span class="cm">//   .png -&gt; image/png</span>
+    <span class="cm">//   .svg -&gt; image/svg+xml</span>
+
+    print(<span class="str">"static file serving pattern:"</span>)
+    print(<span class="str">"  app_static(app, \"/assets/\", \"./public/\")"</span>)
+    print(<span class="str">"  GET /assets/style.css -&gt; ./public/style.css"</span>)
+    print(<span class="str">"  GET /assets/app.js    -&gt; ./public/app.js"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">static file serving pattern:
+  app_static(app, "/assets/", "./public/")
+  GET /assets/style.css -&gt; ./public/style.css
+  GET /assets/app.js    -&gt; ./public/app.js</pre>
+    <h2>Explanation</h2>
+    <p><code>app_static(app, url_prefix, fs_root)</code> mounts a filesystem directory under a URL prefix. At request time, nyx-serve strips <code>url_prefix</code> from the path, joins the remainder onto <code>fs_root</code>, and streams the file back with the appropriate <code>Content-Type</code>. Path traversal attempts (<code>..</code>, absolute paths, symlink escapes) are rejected before any filesystem access.</p>
+    <p>MIME detection is extension-based: <code>.css</code> becomes <code>text/css</code>, <code>.js</code> becomes <code>application/javascript</code>, <code>.png</code>/<code>.jpg</code>/<code>.svg</code>/<code>.webp</code> map to image types, <code>.html</code> to <code>text/html; charset=utf-8</code>. Unknown extensions fall back to <code>application/octet-stream</code>. Register dynamic routes before calling <code>app_static</code> so explicit handlers win over directory lookups.</p>
+    <p>For a production site, stack <code>app_static</code> behind nyx-proxy to add TLS termination, gzip, and an HTTP cache — the proxy handles the hot path so the backend only regenerates on cache misses.</p>
+    <div class="book-nav">
+        <a href="/by-example/79-serve-json-api.html">&larr; Previous</a>
+        <a href="/by-example/81-serve-sessions.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/80-serve-static.nx">examples/by-example/80-serve-static.nx</a></small></p>
+</main>
+</body>
+</html>

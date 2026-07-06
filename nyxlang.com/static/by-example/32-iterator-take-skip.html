@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: take() and skip() — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Iterator: take() and skip()</h1>
+
+    <p><code>take(n)</code> limits an iterator to its first <code>n</code> elements, while <code>skip(n)</code> discards the first <code>n</code> and yields the rest. Together they form the building blocks of windowing, slicing, and pagination over any sequence.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Iteradores: skip() y take() para componer pipelines de datos
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // skip(2): omitir los primeros 2 elementos
+    let sin_primeros2: Array = nums.iter().skip(2).collect()
+    print("skip(2): " + int_to_string(sin_primeros2.length()) + " elementos")
+
+    // take(3): tomar solo los primeros 3
+    let solo3: Array = nums.iter().take(3).collect()
+    print("take(3): " + int_to_string(solo3.length()) + " elementos")
+    let v0: int = solo3[0]
+    let v2: int = solo3[2]
+    print("  [0]=" + int_to_string(v0) + " [2]=" + int_to_string(v2))
+
+    // Combinacion: skip(2).take(3) — elementos 3, 4, 5
+    let ventana: Array = nums.iter().skip(2).take(3).collect()
+    print("skip(2).take(3): " + int_to_string(ventana.length()) + " elementos")
+    var i: int = 0
+    while i < ventana.length() {
+        let v: int = ventana[i]
+        print("  " + int_to_string(v))
+        i = i + 1
+    }
+
+    // Otro uso: paginar — página 2, tamaño 3
+    let pagina2: Array = nums.iter().skip(3).take(3).collect()
+    print("pagina 2 (skip 3, take 3): " + int_to_string(pagina2.length()) + " elementos")
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">skip(2): 8 elementos
+take(3): 3 elementos
+  [0]=1 [2]=3
+skip(2).take(3): 3 elementos
+  3
+  4
+  5
+pagina 2 (skip 3, take 3): 3 elementos</pre>
+
+    <h2>Explanation</h2>
+    <p><code>skip(2)</code> on a 10-element array yields elements at positions 2 through 9, giving 8 items. <code>take(3)</code> stops the iterator after the first 3 elements, producing <code>[1, 2, 3]</code> — so <code>[0]</code> is <code>1</code> and <code>[2]</code> is <code>3</code>.</p>
+    <p>Chaining <code>skip(2).take(3)</code> first discards two elements, then limits the remainder to three — yielding <code>[3, 4, 5]</code>. This is the classic sliding window pattern. The order matters: <code>take(3).skip(2)</code> would instead give a single element.</p>
+    <p>The pagination example at the end shows a direct real-world use: to fetch page <em>P</em> of size <em>N</em>, write <code>.skip((P-1) * N).take(N)</code>. Both adapters are lazy — no elements are allocated until <code>.collect()</code> is called.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/31-iterator-enumerate.html">← Previous</a>
+        <a href="/by-example/33-recursion.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/32-iterator-take-skip.nx">examples/by-example/32-iterator-take-skip.nx</a></small></p>
+</main>
+
+</body>
+</html>

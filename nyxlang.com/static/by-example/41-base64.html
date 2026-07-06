@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base64 — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Base64</h1>
+
+    <p><code>std/base64</code> provides RFC 4648 encoding and decoding for both standard Base64 (with <code>+/</code> and padding) and URL-safe Base64 (with <code>-_</code> and no padding). This is essential for encoding binary data in text-based protocols like HTTP headers, JWT tokens, and data URIs.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Base64 encoding and decoding (RFC 4648)</span>
+
+<span class="kw">import</span> <span class="str">"std/base64"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> original: <span class="ty">String</span> = <span class="str">"Hello, Nyx!"</span>
+    <span class="kw">let</span> encoded: <span class="ty">String</span> = base64_encode(original)
+    print(<span class="str">"original: "</span> + original)
+    print(<span class="str">"encoded:  "</span> + encoded)
+
+    <span class="kw">let</span> decoded: <span class="ty">String</span> = base64_decode(encoded)
+    print(<span class="str">"decoded:  "</span> + decoded)
+
+    <span class="cm">// URL-safe Base64 (no padding, - and _ instead of + and /)</span>
+    <span class="kw">let</span> url_enc: <span class="ty">String</span> = base64url_encode(<span class="str">"https://nyxlang.com/?q=hello world"</span>)
+    print(<span class="str">"url-safe: "</span> + url_enc)
+
+    <span class="kw">let</span> url_dec: <span class="ty">String</span> = base64url_decode(url_enc)
+    print(<span class="str">"url-dec:  "</span> + url_dec)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">original: Hello, Nyx!
+encoded:  SGVsbG8sIE55eCE=
+decoded:  Hello, Nyx!
+url-safe: aHR0cHM6Ly9ueXhsYW5nLmNvbS8_cT1oZWxsbyB3b3JsZA
+url-dec:  https://nyxlang.com/?q=hello world</pre>
+
+    <h2>Explanation</h2>
+    <p><code>base64_encode</code> and <code>base64_decode</code> use the standard Base64 alphabet (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>+</code>, <code>/</code>) with <code>=</code> padding. This is the format used in MIME, PEM certificates, and most APIs.</p>
+    <p><code>base64url_encode</code> and <code>base64url_decode</code> use the URL-safe variant: <code>-</code> replaces <code>+</code>, <code>_</code> replaces <code>/</code>, and padding is omitted. This is the format required by JWT (JSON Web Tokens) and safe for use in URLs and filenames.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/40-thread-spawn.html">← Previous</a>
+        <a href="/by-example/42-url-encode.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/41-base64.nx">examples/by-example/41-base64.nx</a></small></p>
+</main>
+
+</body>
+</html>

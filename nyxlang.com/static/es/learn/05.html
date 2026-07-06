@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funciones — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Funciones</h1>
+
+<h2>¿Qué es una función?</h2>
+<p>Una función es un bloque reutilizable de instrucciones con un nombre. Piensa en ella como una receta: defines los pasos una vez, y después puedes usar la receta cuando la necesites sin escribir los pasos de nuevo.</p>
+<p>Ya has estado usando funciones: <code>main()</code> es una función, y <code>print()</code> es una función incorporada en Nyx.</p>
+<h2>Definir una función</h2>
+<pre><span class="kw">fn</span> <span class="fn">saludar</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;¡Hola!&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Bienvenido a Nyx.&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">saludar</span>()    <span class="cm">// llamar la función</span>
+    <span class="fn">saludar</span>()    <span class="cm">// llamarla de nuevo</span>
+}</pre>
+<p>La función se define una vez pero se llama dos veces. Cada llamada ejecuta todas las instrucciones dentro de la función.</p>
+<h2>Parámetros — darle datos a una función</h2>
+<p>Las funciones pueden recibir entradas, llamadas <strong>parámetros</strong>:</p>
+<pre><span class="kw">fn</span> <span class="fn">saludar</span>(nombre: <span class="ty">String</span>) {
+    <span class="fn">print</span>(<span class="str">&quot;¡Hola, &quot;</span> <span class="op">+</span> nombre <span class="op">+</span> <span class="str">&quot;!&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">saludar</span>(<span class="str">&quot;Alicia&quot;</span>)     <span class="cm">// ¡Hola, Alicia!</span>
+    <span class="fn">saludar</span>(<span class="str">&quot;Roberto&quot;</span>)    <span class="cm">// ¡Hola, Roberto!</span>
+}</pre>
+<p>Múltiples parámetros se separan con comas:</p>
+<pre><span class="kw">fn</span> <span class="fn">sumar</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) {
+    <span class="fn">print</span>(a <span class="op">+</span> b)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">sumar</span>(<span class="num">3</span>, <span class="num">5</span>)      <span class="cm">// 8</span>
+    <span class="fn">sumar</span>(<span class="num">10</span>, <span class="num">20</span>)    <span class="cm">// 30</span>
+}</pre>
+<h2>Valores de retorno — obtener datos de vuelta</h2>
+<p>Las funciones pueden enviar un resultado de vuelta usando <code>return</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">cuadrado</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> n
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> resultado: <span class="ty">int</span> <span class="op">=</span> <span class="fn">cuadrado</span>(<span class="num">5</span>)
+    <span class="fn">print</span>(resultado)       <span class="cm">// 25</span>
+    <span class="fn">print</span>(<span class="fn">cuadrado</span>(<span class="num">8</span>))     <span class="cm">// 64</span>
+}</pre>
+<p>El <code>-> int</code> después de los parámetros declara qué tipo retorna la función. La palabra <code>return</code> envía el valor de vuelta a quien llamó la función.</p>
+<h2>Recursión — una función que se llama a sí misma</h2>
+<p>Una función puede llamarse a sí misma. Esto se llama <strong>recursión</strong>:</p>
+<pre><span class="kw">fn</span> <span class="fn">factorial</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">1</span> {
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> n <span class="op">*</span> <span class="fn">factorial</span>(n <span class="op">-</span> <span class="num">1</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">factorial</span>(<span class="num">5</span>))     <span class="cm">// 120 (5 × 4 × 3 × 2 × 1)</span>
+    <span class="fn">print</span>(<span class="fn">factorial</span>(<span class="num">10</span>))    <span class="cm">// 3628800</span>
+}</pre>
+<p>Cómo funciona:</p>
+<pre>factorial(5)
+= 5 * factorial(4)
+= 5 * 4 * factorial(3)
+= 5 * 4 * 3 * factorial(2)
+= 5 * 4 * 3 * 2 * factorial(1)
+= 5 * 4 * 3 * 2 * 1
+= 120</pre>
+<p>Toda función recursiva necesita un <strong>caso base</strong> — una condición donde deja de llamarse a sí misma. Sin él, la función se llamaría a sí misma para siempre.</p>
+<h3>Ejemplo clásico: Fibonacci</h3>
+<pre><span class="kw">fn</span> <span class="fn">fibonacci</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+    <span class="kw">if</span> n <span class="op">==</span> <span class="num">1</span> { <span class="kw">return</span> <span class="num">1</span> }
+    <span class="kw">return</span> <span class="fn">fibonacci</span>(n <span class="op">-</span> <span class="num">1</span>) <span class="op">+</span> <span class="fn">fibonacci</span>(n <span class="op">-</span> <span class="num">2</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">10</span> {
+        <span class="fn">print</span>(<span class="fn">fibonacci</span>(i))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="cm">// 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55</span>
+}</pre>
+<h2>Funciones como bloques de construcción</h2>
+<p>Los buenos programas se construyen con funciones pequeñas y enfocadas. Cada función hace una cosa bien:</p>
+<pre><span class="kw">fn</span> <span class="fn">celsius_a_fahrenheit</span>(c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">float</span> {
+    <span class="kw">return</span> c <span class="op">*</span> <span class="num">9.0</span> <span class="op">/</span> <span class="num">5.0</span> <span class="op">+</span> <span class="num">32.0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">esta_helando</span>(temp_c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> temp_c <span class="op">&lt;=</span> <span class="num">0.0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">describir_temperatura</span>(c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> <span class="fn">esta_helando</span>(c) {
+        <span class="kw">return</span> <span class="str">&quot;¡Helando!&quot;</span>
+    }
+    <span class="kw">if</span> c <span class="op">&gt;</span> <span class="num">35.0</span> {
+        <span class="kw">return</span> <span class="str">&quot;¡Muy caliente!&quot;</span>
+    }
+    <span class="kw">return</span> <span class="str">&quot;Confortable&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">describir_temperatura</span>(<span class="num">0.0</span>))     <span class="cm">// ¡Helando!</span>
+    <span class="fn">print</span>(<span class="fn">describir_temperatura</span>(<span class="num">22.0</span>))    <span class="cm">// Confortable</span>
+    <span class="fn">print</span>(<span class="fn">describir_temperatura</span>(<span class="num">40.0</span>))    <span class="cm">// ¡Muy caliente!</span>
+}</pre>
+<p>Nota cómo <code>describir_temperatura</code> llama a <code>celsius_a_fahrenheit</code> y <code>esta_helando</code>. Las funciones pueden llamar a otras funciones — así es como construyes programas complejos a partir de piezas simples.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe una función <code>maximo(a: int, b: int) -> int</code> que retorne el mayor de dos números.</li>
+<li>Escribe una función <code>es_par(n: int) -> bool</code> que retorne <code>true</code> si un número es par.</li>
+<li>Escribe una función <code>potencia(base: int, exp: int) -> int</code> que calcule base elevada a la potencia de exp usando un bucle while.</li>
+<li>Escribe una función <code>contar_digitos(n: int) -> int</code> que retorne cuántos dígitos tiene un número positivo.</li>
+<li>Escribe una función <code>mcd(a: int, b: int) -> int</code> que calcule el máximo común divisor usando el algoritmo de Euclides.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>fn nombre(params) -> TipoRetorno { ... }</code> define una función.</li>
+<li>Los parámetros te permiten pasar datos.</li>
+<li><code>return</code> envía datos de vuelta.</li>
+<li>La recursión es cuando una función se llama a sí misma (necesita un caso base).</li>
+<li>Construye programas con funciones pequeñas y enfocadas.</li>
+</ul>
+<p>Siguiente capítulo: <a href="06-arrays.md">Arrays →</a></p>
+
+    <div class="book-nav">
+        <a href="04.html" class="book-nav-prev">&larr; Anterior: Control de flujo</a>
+        <a href="06.html" class="book-nav-next">Siguiente: Arrays &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrays — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Arrays</h1>
+
+    <p>Los arrays en Nyx son colecciones dinámicas y ordenadas que crecen automáticamente. Se pueden crear con una sintaxis literal, acceder a los elementos por índice, agregar elementos con <code>push</code> e iterar con <code>for-in</code>.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Arrays: crear, push, length, acceso por índice, iterar
+
+fn main() -> int {
+    // Crear array literal
+    let numeros: Array = [10, 20, 30]
+
+    // Acceso por índice
+    print("primer: " + int_to_string(numeros[0]))
+    print("ultimo: " + int_to_string(numeros[2]))
+
+    // length
+    print("longitud: " + int_to_string(numeros.length()))
+
+    // Array mutable con push
+    var lista: Array = [1, 2, 3]
+    lista.push(4)
+    lista.push(5)
+    print("tras push, longitud: " + int_to_string(lista.length()))
+
+    // Iterar con for-in
+    print("elementos:")
+    for n: int in lista {
+        print("  " + int_to_string(n))
+    }
+
+    // Modificar elemento
+    lista[0] = 99
+    print("lista[0] tras modificar: " + int_to_string(lista[0]))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">primer: 10
+ultimo: 30
+longitud: 3
+tras push, longitud: 5
+elementos:
+  1
+  2
+  3
+  4
+  5
+lista[0] tras modificar: 99</pre>
+
+    <h2>Explicación</h2>
+    <p>Los arrays literales usan corchetes: <code>[10, 20, 30]</code>. Los elementos se indexan desde cero, así que <code>arr[0]</code> es el primer elemento y <code>arr[arr.length() - 1]</code> es el último. Acceder a un índice fuera de rango es un error en tiempo de ejecución.</p>
+    <p>El método <code>.length()</code> devuelve la cantidad de elementos que tiene el array actualmente como un <code>int</code>. El método <code>.push(value)</code> agrega un nuevo elemento al final, haciendo crecer el array automáticamente — no hace falta redimensionar manualmente.</p>
+    <p>Al iterar con <code>for n: int in lista</code>, la anotación de tipo <code>: int</code> le indica al compilador qué tipo esperar para cada elemento. Esto es opcional cuando el compilador puede inferirlo, pero ser explícito evita ambigüedades con arrays heterogéneos.</p>
+    <p>La asignación de elementos (<code>lista[0] = 99</code>) requiere que el array esté declarado con <code>var</code>, no con <code>let</code>. Un array declarado con <code>let</code> no se puede mutar después de creado.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/04-control-flow.html">← Anterior</a>
+        <a href="/es/by-example/06-maps.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/05-arrays.nx">examples/by-example/05-arrays.nx</a></small></p>
+</main>
+
+</body>
+</html>

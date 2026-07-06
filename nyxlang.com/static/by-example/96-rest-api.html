@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REST API — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>REST API</h1>
+    <p>A complete REST API: 5 endpoints (list/create/get/update/delete), middleware chain (logging + CORS), and nyx-kv as the persistence layer. This is the production pattern for all JSON APIs on nyxlang.com.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Full REST API — CRUD with nyx-serve + nyx-kv</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">kv_hset</span>(key: <span class="ty">String</span>, field: <span class="ty">String</span>, val: <span class="ty">String</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> -<span class="num">1</span> }
+    tcp_write(fd, resp_cmd([<span class="str">"HSET"</span>, key, field, val]))
+    tcp_read_line(fd)
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">list_users</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"[{\"id\": 1, \"name\": \"Alice\"}]"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">create_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// Parse JSON body (simplified — use std/json in real code)</span>
+    <span class="kw">let</span> name: <span class="ty">String</span> = <span class="str">"from_body"</span>
+    kv_hset(<span class="str">"user:1"</span>, <span class="str">"name"</span>, name)
+    <span class="kw">return</span> response_json(<span class="num">201</span>, <span class="str">"{\"id\": 1, \"created\": true}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">get_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"id\": "</span> + id + <span class="str">"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">update_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    kv_hset(<span class="str">"user:"</span> + id, <span class="str">"updated_at"</span>, int_to_string(time()))
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"updated\": true}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">delete_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_new(<span class="num">204</span>, <span class="str">""</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+    app_use(app, mw_logging)
+    app_use(app, mw_cors)
+
+    <span class="cm">// RESTful CRUD</span>
+    app_get(app, <span class="str">"/api/users"</span>, list_users)
+    app_post(app, <span class="str">"/api/users"</span>, create_user)
+    app_get(app, <span class="str">"/api/users/{id}"</span>, get_user)
+    app_put(app, <span class="str">"/api/users/{id}"</span>, update_user)
+    app_delete(app, <span class="str">"/api/users/{id}"</span>, delete_user)
+
+    print(<span class="str">"REST API with 5 endpoints + middleware + nyx-kv backend"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">REST API with 5 endpoints + middleware + nyx-kv backend</pre>
+    <h2>Explanation</h2>
+    <p>This is the template every Nyx web service follows. nyx-serve exposes the familiar app_get / app_post / app_put / app_delete verbs, URL patterns with {id} capture, and a middleware chain via app_use. The handlers return Response values (not side effects), which keeps them testable. Persistence is a TCP hop to nyx-kv on port 6380 — a Hash for each entity, so you get O(1) lookups without running a separate database. Swap in nyx-db if you need SQL queries.</p>
+    <div class="book-nav">
+        <a href="/by-example/95-http2-frames.html">&larr; Previous</a>
+        <a href="/by-example/97-realtime-pubsub.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/96-rest-api.nx">examples/by-example/96-rest-api.nx</a></small></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix D: Glossary — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Appendix D: Glossary</h1>
+
+<p>Terms are listed alphabetically. Page references point to the chapter where the concept is first introduced.</p>
+<hr>
+<p><strong>ADT (Algebraic Data Type)</strong> — An enum whose variants can carry data. <code>enum Shape { Circle(int), Rect(int, int) }</code> is an ADT. Each variant is a different "shape" of data. <em>(Chapter 14)</em></p>
+<p><strong>Array</strong> — An ordered, dynamically-sized collection of values. Created with <code>[1, 2, 3]</code> or <code>Array.new()</code>. Arrays in Nyx can hold values of mixed types. <em>(Chapter 6)</em></p>
+<p><strong>AST (Abstract Syntax Tree)</strong> — A tree representation of your source code, produced by the parser. Each node represents a construct (function, variable, expression). The compiler uses this tree to generate code. <em>(Chapter 20)</em></p>
+<p><strong>Async</strong> — A programming model where operations can be started without waiting for them to complete. In Nyx, <code>async</code>/<code>await</code> is syntactic sugar — real parallelism comes from <code>spawn</code> and <code>thread_spawn</code>. <em>(Chapter 23)</em></p>
+<p><strong>ACK (Acknowledgment)</strong> — A message sent by a consumer to confirm that a message has been successfully processed. In nyx-queue, <code>ACK queue msg_id</code> removes the message from the delivery list. <em>(Chapter 29)</em></p>
+<p><strong>Atomic operation</strong> — A CPU instruction that completes in one step, with no possibility of interruption by another thread. <code>atomic_load</code> and <code>atomic_store</code> are atomic. Used for lock-free programming. <em>(Chapter 24)</em></p>
+<p><strong>Binary</strong> — The executable file produced by the compiler. A binary contains machine code that the CPU can execute directly, with no interpreter needed. <em>(Chapter 1)</em></p>
+<p><strong>Bootstrap</strong> — The process of compiling a compiler with itself. Nyx's compiler is written in Nyx. The seed files (<code>compiler/<em>.ll</code>) are used to build the first compiler, which then compiles itself. </em>(Chapter 20)*</p>
+<p><strong>Boehm GC</strong> — The garbage collector used by Nyx. It is a conservative, mark-and-sweep collector that automatically frees memory that is no longer reachable. Named after Hans-Juergen Boehm. <em>(Chapter 20)</em></p>
+<p><strong>Borrow</strong> — Taking a reference to a value without taking ownership. In Nyx, <code>&x</code> creates a reference. Note: Nyx does not have a borrow checker — references are aliases for pointers. <em>(Chapter 22)</em></p>
+<p><strong>Channel</strong> — A thread-safe queue for sending values between threads or goroutines. Created with <code>channel_new(capacity)</code>. The primary way to communicate between concurrent tasks. <em>(Chapter 18)</em></p>
+<p><strong>Closure</strong> — A function that captures variables from its enclosing scope. When you write <code>fn(x: int) -> int { return x + offset }</code> inside another function, and <code>offset</code> comes from the outer function, that is a closure. <em>(Chapter 13)</em></p>
+<p><strong>Compiler</strong> — A program that translates source code into another form. The Nyx compiler translates <code>.nx</code> files into LLVM IR, which LLVM then compiles to machine code. <em>(Chapter 1)</em></p>
+<p><strong>Concurrency</strong> — Running multiple tasks that make progress during overlapping time periods. Does not require multiple CPUs — even one CPU can switch between tasks. <em>(Chapter 18)</em></p>
+<p><strong>Cross-compilation</strong> — Compiling a program on one architecture (e.g., x86) to run on a different architecture (e.g., ARM). <code>make cross TARGET=aarch64-linux-gnu</code>. <em>(Chapter 24)</em></p>
+<p><strong>Deadlock</strong> — A state where two or more threads are each waiting for the other to release a resource, so none can make progress. A common concurrency bug. <em>(Chapter 18)</em></p>
+<p><strong>Derive</strong> — A macro that automatically generates trait implementations. <code>#[derive(Clone, Debug, Display)]</code> generates <code>clone()</code>, <code>debug()</code>, and <code>to_string()</code> methods. <em>(Chapter 15)</em></p>
+<p><strong>Dynamic dispatch</strong> — Calling a trait method through a <code>dyn Trait</code> reference, where the actual function to call is determined at runtime via a vtable. Slower than static dispatch but more flexible. <em>(Chapter 15)</em></p>
+<p><strong>Enum</strong> — A type that can be one of several variants. Simple enums: <code>enum Color { Red, Green, Blue }</code>. Enums with data: <code>enum Option<T> { Some(T), None }</code>. <em>(Chapter 14)</em></p>
+<p><strong>epoll</strong> — A Linux system call for monitoring multiple file descriptors. Nyx uses epoll internally for its event loop, enabling efficient I/O multiplexing. <em>(Chapter 23)</em></p>
+<p><strong>Event loop</strong> — A programming pattern that waits for events (network data, timers) and dispatches them to handlers. Nyx's event loop is epoll-based and powers async I/O. <em>(Chapter 23)</em></p>
+<p><strong>Expression</strong> — Code that produces a value: <code>2 + 3</code>, <code>f(x)</code>, <code>if a > b { a } else { b }</code>. Contrast with <em>statement</em>. <em>(Chapter 2)</em></p>
+<p><strong>FFI (Foreign Function Interface)</strong> — A mechanism for calling functions written in another language. <code>extern "C" fn puts(s: String) -> int</code> declares a C function callable from Nyx. <em>(Chapter 21)</em></p>
+<p><strong>Fixed point</strong> — When compiling the compiler twice produces identical output. This proves the compiler is self-consistent. <em>(Chapter 20)</em></p>
+<p><strong>Float</strong> — A 64-bit floating-point number (IEEE 754 double precision). Written as <code>3.14</code>, <code>-0.5</code>. <em>(Chapter 3)</em></p>
+<p><strong>Frame</strong> — The basic unit of communication in HTTP/2. Each frame has a 9-byte header (length, type, flags, stream ID) followed by a payload. Frame types include DATA, HEADERS, SETTINGS, PING, and GOAWAY. <em>(Chapter 30)</em></p>
+<p><strong>Function</strong> — A named, reusable block of code. <code>fn add(a: int, b: int) -> int { return a + b }</code>. <em>(Chapter 5)</em></p>
+<p><strong>Garbage collector (GC)</strong> — A system that automatically frees memory that is no longer in use. Nyx uses the Boehm GC by default. No-GC mode is available for systems programming. <em>(Chapter 20)</em></p>
+<p><strong>Generic</strong> — A function or type parameterized by one or more type variables. <code>fn first<T>(arr: Array) -> T</code> works with any type. Nyx implements generics via monomorphization. <em>(Chapter 16)</em></p>
+<p><strong>Goroutine</strong> — A lightweight concurrent task created with <code>spawn { }</code>. Many goroutines map onto fewer OS threads via the M:N scheduler. Inspired by Go. <em>(Chapter 23)</em></p>
+<p><strong>HPACK</strong> — The header compression algorithm used by HTTP/2. Uses a static table of 61 common header name-value pairs and Huffman encoding to reduce header overhead. For example, <code>:status: 200</code> is encoded as a single byte <code>0x88</code>. <em>(Chapter 30)</em></p>
+<p><strong>Heap</strong> — A region of memory for dynamically allocated data. Objects on the heap live until freed (manually or by GC). Contrast with <em>stack</em>. <em>(Chapter 20)</em></p>
+<p><strong>Immutable</strong> — Cannot be changed after creation. Variables declared with <code>let</code> are immutable. <em>(Chapter 2)</em></p>
+<p><strong>Impl block</strong> — A block that defines methods on a type. <code>impl Point { fn new() -> Point { ... } }</code>. Also used to implement traits: <code>impl Display for Point { ... }</code>. <em>(Chapter 9)</em></p>
+<p><strong>Import</strong> — Bringing definitions from another module into the current scope. <code>import "std/json"</code> or <code>import { parse } from "std/json"</code>. <em>(Chapter 11)</em></p>
+<p><strong>Inline assembly</strong> — Writing CPU instructions directly in Nyx code: <code>unsafe { asm("nop") }</code>. Uses AT&T syntax. <em>(Chapter 24)</em></p>
+<p><strong>Int</strong> — A 64-bit signed integer. The default numeric type in Nyx. Written as <code>42</code>, <code>-7</code>, <code>0xFF</code>. <em>(Chapter 2)</em></p>
+<p><strong>IR (Intermediate Representation)</strong> — Code in a format between source and machine code. Nyx generates LLVM IR, which LLVM then optimizes and compiles to native code. <em>(Chapter 20)</em></p>
+<p><strong>Iterator</strong> — An object that produces a sequence of values one at a time. Created with <code>.iter()</code>. Supports chaining: <code>arr.iter().filter(f).map(g).collect()</code>. <em>(Chapter 7)</em></p>
+<p><strong>Lambda</strong> — An anonymous function. In Nyx: <code>fn(x: int) -> int { return x <em> 2 }</code>. Also called a closure when it captures variables. </em>(Chapter 13)*</p>
+<p><strong>LLVM</strong> — Low Level Virtual Machine. A compiler infrastructure that Nyx uses as its backend. LLVM takes IR and produces optimized machine code for many architectures. <em>(Chapter 20)</em></p>
+<p><strong>Lock-free</strong> — A concurrency approach that uses atomic operations instead of mutexes. No thread can block another. <em>(Chapter 24)</em></p>
+<p><strong>M:N scheduler</strong> — A scheduler that maps N user-level tasks (goroutines) onto M OS threads. Uses work-stealing for load balancing. <em>(Chapter 23)</em></p>
+<p><strong>Message queue</strong> — A buffer that holds messages until a consumer is ready to process them. Unlike Pub/Sub, each message goes to exactly one consumer (round-robin) and messages persist until acknowledged. nyx-queue implements this pattern. <em>(Chapter 29)</em></p>
+<p><strong>Middleware</strong> — A function that runs before route handlers in a web framework, processing or transforming requests. In nyx-serve, middleware is registered with <code>app_use()</code> and can short-circuit the chain by returning a non-zero status. <em>(Chapter 27)</em></p>
+<p><strong>Map</strong> — A hash table mapping keys to values. Created with <code>Map.new()</code>. Nyx Maps use Robin Hood hashing with open addressing. <em>(Chapter 8)</em></p>
+<p><strong>Match</strong> — Pattern matching on values. <code>match x { 0 => ..., 1 | 2 => ..., _ => ... }</code>. Exhaustive checking ensures all cases are covered. <em>(Chapter 14)</em></p>
+<p><strong>Method</strong> — A function defined inside an <code>impl</code> block that takes <code>self</code> as its first parameter. Called with dot syntax: <code>point.distance()</code>. <em>(Chapter 9)</em></p>
+<p><strong>Multiplexing</strong> — Sending multiple independent streams of data over a single connection. HTTP/2 multiplexes requests using stream IDs, allowing many concurrent request/response pairs without opening multiple TCP connections. <em>(Chapter 30)</em></p>
+<p><strong>Module</strong> — A file containing Nyx code that can be imported by other files. Symbols are made available with <code>export</code>. <em>(Chapter 11)</em></p>
+<p><strong>Monomorphization</strong> — The process of generating specialized versions of generic code for each concrete type used. <code>fn first<T></code> called with <code>int</code> generates <code>fn first_int</code>. <em>(Chapter 16)</em></p>
+<p><strong>Mutable</strong> — Can be changed after creation. Variables declared with <code>var</code> are mutable. <em>(Chapter 2)</em></p>
+<p><strong>Namespace</strong> — An isolated scope for keys or resources, preventing naming collisions between different users or services. In nyx-kv, AUTH creates per-user namespaces by transparently prepending <code>user_id::</code> to all keys. <em>(Chapter 25)</em></p>
+<p><strong>Mutex (Mutual Exclusion)</strong> — A lock that ensures only one thread can access a resource at a time. <code>mutex_new()</code>, <code>mutex_lock(m)</code>, <code>mutex_unlock(m)</code>. <em>(Chapter 18)</em></p>
+<p><strong>NACK (Negative Acknowledgment)</strong> — A message sent by a consumer to indicate that processing failed and the message should be returned to the queue for redelivery. In nyx-queue, <code>NACK queue msg_id</code>. <em>(Chapter 29)</em></p>
+<p><strong>Naked function</strong> — A function with <code>#[naked]</code> attribute that has no compiler-generated prologue or epilogue. Used for interrupt handlers and low-level code. <em>(Chapter 24)</em></p>
+<p><strong>Newtype</strong> — A struct with a single field, used to create a distinct type. <code>struct Meters(int)</code>. Provides type safety without runtime overhead. <em>(Chapter 9)</em></p>
+<p><strong>Null</strong> — The absence of a value. In Nyx, prefer <code>Option<T></code> (<code>Some(value)</code> or <code>None</code>) over null to make absence explicit. <em>(Chapter 14)</em></p>
+<p><strong>Parallelism</strong> — Executing multiple tasks simultaneously on multiple CPUs. Requires multiple threads or processes. Distinct from <em>concurrency</em>. <em>(Chapter 18)</em></p>
+<p><strong>Pattern matching</strong> — Destructuring values by their shape. <code>match opt { Some(x) => use(x), None => default() }</code>. Supports literals, enums, structs, guards, and wildcards. <em>(Chapter 14)</em></p>
+<p><strong>Pipe operator</strong> — <code>|></code> passes the result of the left expression as the first argument to the right function. <code>data |> transform |> print</code>. <em>(Chapter 7)</em></p>
+<p><strong>Pointer</strong> — A memory address. In Nyx, <code><em>int</code> is a pointer to an int. Raw pointers require <code>unsafe</code> blocks. </em>(Chapter 22)*</p>
+<p><strong>Pub/Sub (Publish/Subscribe)</strong> — A messaging pattern where publishers send messages to named channels and all subscribers receive them. Fire-and-forget — if nobody is listening, the message is lost. nyx-kv implements <code>SUBSCRIBE</code>, <code>PUBLISH</code>, and <code>UNSUBSCRIBE</code> commands. <em>(Chapter 28)</em></p>
+<p><strong>Race condition</strong> — A bug where program behavior depends on the timing of thread execution. Happens when threads access shared data without synchronization. <em>(Chapter 18)</em></p>
+<p><strong>RESP (Redis Serialization Protocol)</strong> — The text-based protocol used by Redis. nyx-kv implements RESP for compatibility with Redis clients. <em>(Chapter 25)</em></p>
+<p><strong>Robin Hood hashing</strong> — The hash table strategy used by Nyx Maps. Entries that are far from their ideal position "steal" from entries that are closer, reducing worst-case lookup time. <em>(Chapter 25)</em></p>
+<p><strong>Runtime</strong> — The code that supports a running Nyx program: garbage collector, string operations, networking, threading. Written in C (21 files). <em>(Chapter 20)</em></p>
+<p><strong>Scope</strong> — The region of code where a variable is visible. Variables declared inside <code>{ }</code> are only visible within those braces. <em>(Chapter 5)</em></p>
+<p><strong>Self-hosting</strong> — A compiler that can compile its own source code. Nyx's compiler is written in Nyx. <em>(Chapter 20)</em></p>
+<p><strong>Sized type</strong> — A type with a specific bit width: <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>f32</code>. Used for hardware interaction and binary protocols. <em>(Chapter 24)</em></p>
+<p><strong>Stack</strong> — A region of memory for local variables and function call frames. Fast to allocate/deallocate. Limited in size (~8KB per thread). Contrast with <em>heap</em>. <em>(Chapter 20)</em></p>
+<p><strong>Statement</strong> — Code that performs an action but does not produce a value: <code>let x: int = 5</code>, <code>print("hello")</code>, <code>return 0</code>. Contrast with <em>expression</em>. <em>(Chapter 2)</em></p>
+<p><strong>Static dispatch</strong> — Calling a trait method where the concrete type is known at compile time. The compiler inlines the call. Faster than dynamic dispatch. <em>(Chapter 15)</em></p>
+<p><strong>String</strong> — A sequence of UTF-8 characters. Created with double quotes: <code>"hello"</code>. Immutable in Nyx — concatenation creates new strings. Use <code>StringBuilder</code> for efficient building. <em>(Chapter 3)</em></p>
+<p><strong>Stream</strong> — In HTTP/2, a logical request/response pair within a single TCP connection. Streams have numeric IDs — odd for client-initiated, even for server push, 0 for connection-level frames. Multiple streams can be active simultaneously. <em>(Chapter 30)</em></p>
+<p><strong>StringBuilder</strong> — An efficient way to build strings incrementally. <code>sb_new()</code>, <code>sb_append(sb, str)</code>, <code>sb_to_string(sb)</code>. O(n) instead of O(n²) for concatenation. <em>(Chapter 20)</em></p>
+<p><strong>Struct</strong> — A composite type with named fields. <code>struct Point { x: int, y: int }</code>. Structs are value types in Nyx. <em>(Chapter 9)</em></p>
+<p><strong>Thread</strong> — An OS-level execution unit. Created with <code>thread_spawn(fn)</code>. Each thread has its own stack but shares heap memory. <em>(Chapter 18)</em></p>
+<p><strong>Trait</strong> — An interface that defines behavior. <code>trait Display { fn to_string(self) -> String }</code>. Types implement traits with <code>impl Trait for Type { ... }</code>. <em>(Chapter 15)</em></p>
+<p><strong>Trait bound</strong> — A constraint requiring a type parameter to implement a trait. <code>fn print_it<T: Display>(val: T)</code>. <em>(Chapter 16)</em></p>
+<p><strong>Tuple struct</strong> — A struct with unnamed fields, accessed by index. <code>struct Color(int, int, int)</code>. <em>(Chapter 9)</em></p>
+<p><strong>Type inference</strong> — The compiler deducing the type of a variable from its value. <code>let x = 42</code> infers <code>x: int</code>. <em>(Chapter 2)</em></p>
+<p><strong>Unsafe</strong> — Code that bypasses Nyx's safety guarantees. Required for raw pointers, manual memory, volatile access, and inline assembly. <code>unsafe { ... }</code>. <em>(Chapter 22)</em></p>
+<p><strong>Variable shadowing</strong> — Declaring a new variable with the same name as an existing one. The new variable hides the old one in its scope. <em>(Chapter 2)</em></p>
+<p><strong>Volatile</strong> — A memory access that the compiler cannot optimize away or reorder. Used for hardware register access. <code>volatile_read(ptr)</code>, <code>volatile_write(ptr, val)</code>. <em>(Chapter 24)</em></p>
+<p><strong>Vtable</strong> — A table of function pointers used for dynamic dispatch. When you use <code>dyn Trait</code>, the vtable maps method names to their implementations for the concrete type. <em>(Chapter 15)</em></p>
+<p><strong>WebAssembly (WASM)</strong> — A binary format for running code in web browsers. Nyx can compile to WASM with <code>make wasm</code>. <em>(Chapter 24)</em></p>
+<p><strong>Work-stealing</strong> — A scheduling strategy where idle threads take tasks from busy threads' queues. Used by Nyx's M:N scheduler. <em>(Chapter 23)</em></p>
+<p><strong>Worker pool</strong> — A fixed set of pre-spawned threads that process tasks from a shared queue. nyx-kv uses 128 workers. <code>http_serve_mt</code> uses a worker pool internally. <em>(Chapter 18)</em></p>
+<p><a href="00-index.md">← Back to Table of Contents</a></p>
+
+    <div class="book-nav">
+        <a href="appendix-c.html" class="book-nav-prev">&larr; Previous: Appendix C: Common error messages</a>
+        <a href="appendix-e.html" class="book-nav-next">Next: Appendix E: Syntax color standard &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

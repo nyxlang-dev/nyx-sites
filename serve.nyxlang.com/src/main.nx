@@ -1,0 +1,29 @@
+import "std/web"
+import "std/http"
+import "nyx-serve/src/server"
+import "nyx-serve/src/files"
+
+fn handle_index(req: Request) -> Response {
+    return response_html(200, read_file("static/index.html"))
+}
+
+fn handle_index_es(req: Request) -> Response {
+    return response_html(200, read_file("static/es/index.html"))
+}
+
+fn handle_health(req: Request) -> Response {
+    return response_json(200, "{\"status\":\"ok\"}")
+}
+
+fn main() {
+    let port_str: String = getenv("PORT")
+    var port: int = 3003
+    if port_str != "" { port = string_to_int(port_str) }
+
+    let app: App = app_new()
+    app_get(app, "/", handle_index)
+    app_get(app, "/es/", handle_index_es)
+    app_get(app, "/api/health", handle_health)
+    app_static_cached(app, "/shared/", "static/shared/", 3600)
+    serve_app(app, port, 16)
+}

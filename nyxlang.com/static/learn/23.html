@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Async and event loop — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Async and event loop</h1>
+
+<h2>The problem with blocking</h2>
+<p>In Chapter 17, you learned that <code>tcp_accept</code> blocks — the program stops and waits until a client connects. In Chapter 18, you solved this with threads: spawn a new thread for each client.</p>
+<p>But threads have costs. Each thread uses memory for its stack (~8KB minimum). With 10,000 concurrent connections, that is 80MB just for stacks. And switching between threads has overhead.</p>
+<p><strong>Async I/O</strong> is a different approach: instead of blocking on each operation, you tell the operating system "notify me when data is ready" and continue doing other work. One thread can handle thousands of connections.</p>
+<h2>Goroutines in Nyx</h2>
+<p>Nyx provides lightweight concurrency with <code>spawn</code> — similar to goroutines in Go:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">spawn</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Hello from goroutine 1&quot;</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Hello from goroutine 2&quot;</span>)
+    }
+
+    <span class="fn">sleep</span>(<span class="num">50</span>)    <span class="cm">// wait for goroutines to finish</span>
+    <span class="fn">print</span>(<span class="str">&quot;Main done&quot;</span>)
+}</pre>
+<p>Unlike <code>thread_spawn</code> (which creates an OS thread), <code>spawn</code> creates a <strong>lightweight task</strong> managed by Nyx's M:N scheduler. Many goroutines map onto fewer OS threads.</p>
+<h2>The M:N scheduler</h2>
+<p>Nyx's scheduler maps N goroutines onto M OS threads:</p>
+<pre>Goroutines:   [g1] [g2] [g3] [g4] [g5] [g6] [g7] [g8]
+                ↓    ↓    ↓    ↓    ↓    ↓    ↓    ↓
+OS Threads:   [Thread 1]  [Thread 2]  [Thread 3]  [Thread 4]</pre>
+<p>The scheduler uses <strong>work-stealing</strong>: if one thread runs out of goroutines, it steals work from another thread's queue. This keeps all CPU cores busy.</p>
+<h2>Select on channels</h2>
+<p>When you have multiple channels, <code>select</code> lets you wait for whichever one has data first:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ch1: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">4</span>)
+    <span class="kw">let</span> ch2: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">4</span>)
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">100</span>)
+        <span class="fn">channel_send</span>(ch1, <span class="num">42</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">50</span>)
+        <span class="fn">channel_send</span>(ch2, <span class="num">99</span>)
+    }
+
+    <span class="kw">select</span> {
+        <span class="kw">case</span> ch1 <span class="op">=&gt;</span> {
+            <span class="kw">let</span> v: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(ch1)
+            <span class="fn">print</span>(<span class="str">&quot;ch1: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(v))
+        }
+        <span class="kw">case</span> ch2 <span class="op">=&gt;</span> {
+            <span class="kw">let</span> v: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(ch2)
+            <span class="fn">print</span>(<span class="str">&quot;ch2: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(v))
+        }
+    }
+}</pre>
+<p><code>select</code> is like <code>match</code> for channels — it picks the first channel that has data. If none are ready, it blocks until one is.</p>
+<h2>The event loop</h2>
+<p>Under the hood, Nyx uses an <strong>epoll-based event loop</strong> (on Linux) for async I/O. When a goroutine needs to wait for network data, instead of blocking the entire OS thread, it:</p>
+<ol>
+<li>Registers interest with epoll ("tell me when this socket has data").</li>
+<li>Yields the goroutine, allowing others to run.</li>
+<li>Gets woken up when data arrives.</li>
+</ol>
+<p>This is why <code>http_serve_mt</code> can handle 73,000+ requests per second — it combines thread pools with event-driven I/O.</p>
+<h2>Async/await syntax</h2>
+<p>Nyx also provides <code>async</code>/<code>await</code> syntax:</p>
+<pre><span class="kw">async</span> <span class="kw">fn</span> <span class="fn">fetch_data</span>() <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;data loaded&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> result: <span class="ty">String</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">fetch_data</span>()
+    <span class="fn">print</span>(result)    <span class="cm">// data loaded</span>
+}</pre>
+<p><strong>Important note</strong>: In the current version, <code>async</code>/<code>await</code> is syntactic sugar — it does not provide additional parallelism beyond what <code>spawn</code> and threads offer. The <code>async fn</code> creates a closure, and <code>await</code> calls it. For real parallelism, use <code>spawn</code> or <code>thread_spawn</code>.</p>
+<h2>When to use what</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Tool</th>
+<th>Best for</th>
+<th>Overhead</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>thread_spawn</code></td>
+<td>CPU-intensive work</td>
+<td>~8KB per thread + OS overhead</td>
+</tr>
+<tr>
+<td><code>spawn</code></td>
+<td>I/O-bound goroutines</td>
+<td>~1KB per goroutine</td>
+</tr>
+<tr>
+<td><code>channel_new</code> + workers</td>
+<td>Task distribution</td>
+<td>Minimal</td>
+</tr>
+<tr>
+<td><code>http_serve_mt</code></td>
+<td>HTTP servers</td>
+<td>Combines threads + channels</td>
+</tr>
+<tr>
+<td><code>select</code></td>
+<td>Waiting on multiple channels</td>
+<td>Zero overhead</td>
+</tr>
+</tbody></table></div>
+<p><strong>Rule of thumb</strong>: Use <code>spawn</code> for I/O-bound work (network, files). Use <code>thread_spawn</code> for CPU-bound work (computation, compression). Use <code>http_serve_mt</code> for HTTP servers.</p>
+<h2>Practical example: concurrent fetcher</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> results: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">8</span>)
+
+    <span class="cm">// Simulate fetching data from 4 sources concurrently</span>
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">100</span>)    <span class="cm">// simulate network delay</span>
+        <span class="fn">channel_send</span>(results, <span class="num">1</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">200</span>)
+        <span class="fn">channel_send</span>(results, <span class="num">2</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">50</span>)
+        <span class="fn">channel_send</span>(results, <span class="num">3</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">150</span>)
+        <span class="fn">channel_send</span>(results, <span class="num">4</span>)
+    }
+
+    <span class="cm">// Collect all results</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">4</span> {
+        <span class="kw">let</span> r: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(results)
+        <span class="fn">print</span>(<span class="str">&quot;Got result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(r))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="fn">print</span>(<span class="str">&quot;All done!&quot;</span>)
+}</pre>
+<p>Results arrive in order of completion (fastest first), not in order of creation.</p>
+<h2>Practical example: timeout pattern</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> result: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">1</span>)
+    <span class="kw">let</span> timeout: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">1</span>)
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">500</span>)    <span class="cm">// simulate slow operation</span>
+        <span class="fn">channel_send</span>(result, <span class="num">42</span>)
+    }
+
+    <span class="kw">spawn</span> {
+        <span class="fn">sleep</span>(<span class="num">200</span>)    <span class="cm">// timeout after 200ms</span>
+        <span class="fn">channel_send</span>(timeout, <span class="num">0</span>)
+    }
+
+    <span class="kw">select</span> {
+        <span class="kw">case</span> result <span class="op">=&gt;</span> {
+            <span class="kw">let</span> v: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(result)
+            <span class="fn">print</span>(<span class="str">&quot;Got result: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(v))
+        }
+        <span class="kw">case</span> timeout <span class="op">=&gt;</span> {
+            <span class="fn">channel_recv</span>(timeout)
+            <span class="fn">print</span>(<span class="str">&quot;Timed out!&quot;</span>)
+        }
+    }
+}</pre>
+<p>If the operation takes longer than 200ms, the timeout fires first.</p>
+<h2>Exercises</h2>
+<ol>
+<li>Write a program that spawns 10 goroutines, each sending its ID through a channel. Collect and print all IDs.</li>
+</ol>
+<ol>
+<li>Implement a fan-out/fan-in pattern: one producer sends numbers 1-100 to a channel, 4 workers square each number, and a collector sums the results.</li>
+</ol>
+<ol>
+<li>Use <code>select</code> to implement a simple priority system: high-priority and low-priority channels, where high-priority is always checked first.</li>
+</ol>
+<ol>
+<li>Write a concurrent countdown: spawn 5 goroutines that each count down from 5 to 1 with different delays, all printing their progress.</li>
+</ol>
+<ol>
+<li>Implement a timeout wrapper: a function that runs a computation in a goroutine and returns a default value if it takes too long.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>spawn { }</code> creates lightweight goroutines managed by the M:N scheduler.</li>
+<li>The scheduler uses work-stealing to keep all CPU cores busy.</li>
+<li><code>select { case ch => { } }</code> waits on multiple channels.</li>
+<li>Nyx uses an epoll-based event loop for efficient async I/O.</li>
+<li><code>async</code>/<code>await</code> is syntactic sugar (not additional parallelism).</li>
+<li>Use <code>spawn</code> for I/O-bound work, <code>thread_spawn</code> for CPU-bound work.</li>
+<li>Channels + goroutines enable patterns: fan-out/fan-in, timeouts, priority queues.</li>
+</ul>
+<p>Next chapter: <a href="24-systems.md">Systems — inline assembly, volatile, atomic →</a></p>
+
+    <div class="book-nav">
+        <a href="22.html" class="book-nav-prev">&larr; Previous: Unsafe and raw pointers</a>
+        <a href="24.html" class="book-nav-next">Next: Systems — inline assembly, volatile, atomic &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

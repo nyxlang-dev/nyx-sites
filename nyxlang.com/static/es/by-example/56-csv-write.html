@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escritura CSV — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Escritura CSV</h1>
+
+    <p><code>std/csv</code> provee creación y serialización de CSV. <code>new_doc</code> crea un documento con encabezados, <code>add_row</code> agrega filas de datos, y <code>stringify</code> serializa a una cadena CSV. El módulo maneja el entrecomillado, el escape y delimitadores personalizados. Ver la receta 18 para el parseo de CSV.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// CSV creation and serialization with std/csv</span>
+
+<span class="kw">import</span> <span class="str">"std/csv"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> headers: <span class="ty">Array</span> = [<span class="str">"name"</span>, <span class="str">"age"</span>, <span class="str">"city"</span>]
+    <span class="kw">let</span> doc: <span class="ty">CsvDoc</span> = csv.new_doc(headers)
+
+    csv.add_row(doc, [<span class="str">"Alice"</span>, <span class="str">"30"</span>, <span class="str">"Buenos Aires"</span>])
+    csv.add_row(doc, [<span class="str">"Bob"</span>, <span class="str">"25"</span>, <span class="str">"New York"</span>])
+    csv.add_row(doc, [<span class="str">"Charlie"</span>, <span class="str">"35"</span>, <span class="str">"London"</span>])
+
+    <span class="kw">let</span> output: <span class="ty">String</span> = csv.stringify(doc)
+    print(output)
+    print(<span class="str">""</span>)
+
+    <span class="kw">let</span> parsed: <span class="ty">CsvDoc</span> = csv.parse(output)
+    <span class="kw">let</span> data: <span class="ty">Array</span> = csv.data_rows(parsed)
+    print(<span class="str">"rows: "</span> + int_to_string(data.length()))
+    print(<span class="str">"cols: "</span> + int_to_string(csv.col_count(parsed)))
+
+    <span class="kw">let</span> row0: <span class="ty">Array</span> = data[<span class="num">0</span>]
+    <span class="kw">let</span> name: <span class="ty">String</span> = csv.get_by_name(parsed, row0, <span class="str">"city"</span>)
+    print(<span class="str">"first city: "</span> + name)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">name,age,city
+Alice,30,Buenos Aires
+Bob,25,New York
+Charlie,35,London
+
+rows: 3
+cols: 3
+first city: Buenos Aires</pre>
+
+    <h2>Explicación</h2>
+    <p><code>csv.new_doc(headers)</code> crea una struct <code>CsvDoc</code> con la primera fila como encabezados. <code>add_row</code> agrega una fila (array de strings). <code>stringify</code> serializa todo el documento, escapando automáticamente los campos que contienen comas, comillas o saltos de línea.</p>
+    <p>El round-trip funciona: <code>parse</code> lee la cadena CSV de vuelta a un <code>CsvDoc</code>, y <code>get_by_name</code> permite acceder a los campos por nombre de columna en vez de por índice. Para TSV u otros formatos, usa <code>parse_with_delimiter</code> y <code>stringify_with_delimiter</code>.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/55-sqlite.html">← Anterior</a>
+        <a href="/es/by-example/57-mutex.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/56-csv-write.nx">examples/by-example/56-csv-write.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutex — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Mutex</h1>
+    <p><code>mutex_new()</code> crea un lock de exclusión mutua. <code>mutex_lock</code> y <code>mutex_unlock</code> aseguran que solo un hilo acceda al estado compartido a la vez. Sin un mutex, los incrementos concurrentes perderían actualizaciones debido a condiciones de carrera.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Mutex — protecting shared state between threads</span>
+<span class="cm">// Mutex — proteger estado compartido entre hilos</span>
+
+<span class="kw">var</span> counter: <span class="ty">int</span> = <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">increment_task</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> m: <span class="ty">int</span> = mutex_new()
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">1000</span> {
+        mutex_lock(m)
+        counter = counter + <span class="num">1</span>
+        mutex_unlock(m)
+        i = i + <span class="num">1</span>
+    }
+    mutex_destroy(m)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Without a mutex, concurrent increments would lose updates.</span>
+    <span class="cm">// The mutex ensures only one thread modifies counter at a time.</span>
+    <span class="kw">let</span> h1: <span class="ty">int</span> = thread_spawn(increment_task)
+    <span class="kw">let</span> h2: <span class="ty">int</span> = thread_spawn(increment_task)
+
+    thread_join(h1)
+    thread_join(h2)
+
+    print(<span class="str">"counter: "</span> + int_to_string(counter))
+    <span class="cm">// Expected: 2000 (1000 per thread, no lost updates)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">counter: 2000</pre>
+    <h2>Explicación</h2>
+    <p><code>mutex_new()</code> reserva un nuevo mutex y devuelve un handle opaco. Antes de acceder a la variable compartida <code>counter</code>, cada hilo llama a <code>mutex_lock(m)</code> para adquirir acceso exclusivo, y luego a <code>mutex_unlock(m)</code> para liberarlo.</p>
+    <p>Dos hilos incrementan el contador 1000 veces cada uno. Sin el mutex, algunos incrementos se perderían porque ambos hilos podrían leer el mismo valor simultáneamente. Con el mutex, el conteo final siempre es exactamente 2000.</p>
+    <p>Siempre llama a <code>mutex_destroy(m)</code> cuando el mutex ya no se necesita, para liberar recursos del sistema. En código de producción, considera envolver las secciones críticas en funciones auxiliares para asegurar que nunca se olvide el unlock.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/56-csv-write.html">&larr; Anterior</a>
+        <a href="/es/by-example/58-channel-patterns.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/57-mutex.nx">examples/by-example/57-mutex.nx</a></small></p>
+</main>
+</body>
+</html>

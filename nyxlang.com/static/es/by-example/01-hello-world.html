@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Hello World</h1>
+
+    <p>Todo camino en programación empieza acá. Este es el programa Nyx completo más pequeño posible: define una función <code>main</code>, llama a <code>print</code> dos veces y devuelve <code>0</code> para indicar éxito. Sin imports, sin código de relleno — solo el código que importa.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Programa mínimo: imprime un saludo al mundo
+
+fn main() -> int {
+    print("Hello, world!")
+    print("Bienvenido a Nyx")
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Hello, world!
+Bienvenido a Nyx</pre>
+
+    <h2>Explicación</h2>
+    <p>Todo programa Nyx comienza su ejecución desde la función <code>main</code>. El tipo de retorno <code>-> int</code> le indica al compilador que <code>main</code> devuelve un entero — por convención, <code>0</code> significa éxito y cualquier otro valor le señala un error al sistema operativo.</p>
+    <p>La función incorporada <code>print</code> escribe una cadena en la salida estándar seguida de un salto de línea. Acepta un único argumento de tipo <code>String</code>. A diferencia de muchos lenguajes, Nyx no requiere importar nada para usar <code>print</code> — siempre está disponible.</p>
+    <p>Los comentarios empiezan con <code>//</code> y se extienden hasta el final de la línea. El compilador los ignora y existen solo para quienes leen el código.</p>
+
+    <div class="book-nav">
+        <span></span>
+        <a href="/es/by-example/02-variables.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/01-hello-world.nx">examples/by-example/01-hello-world.nx</a></small></p>
+</main>
+
+</body>
+</html>

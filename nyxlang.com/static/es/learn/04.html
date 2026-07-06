@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de flujo — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Control de flujo</h1>
+
+<p>Los programas necesitan tomar decisiones y repetir acciones. El control de flujo es cómo le dices al programa cuándo hacer qué.</p>
+<h2>if / else — Tomar decisiones</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">18</span>
+
+    <span class="kw">if</span> edad <span class="op">&gt;=</span> <span class="num">18</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Puedes votar&quot;</span>)
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Todavía no puedes votar&quot;</span>)
+    }
+}</pre>
+<p>La condición después de <code>if</code> debe ser una expresión booleana. Si es <code>true</code>, se ejecuta el primer bloque. Si es <code>false</code>, se ejecuta el bloque <code>else</code> (si existe).</p>
+<h3>Múltiples condiciones con else if</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nota: <span class="ty">int</span> <span class="op">=</span> <span class="num">85</span>
+
+    <span class="kw">if</span> nota <span class="op">&gt;=</span> <span class="num">90</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Calificación: A&quot;</span>)
+    } <span class="kw">else</span> <span class="kw">if</span> nota <span class="op">&gt;=</span> <span class="num">80</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Calificación: B&quot;</span>)
+    } <span class="kw">else</span> <span class="kw">if</span> nota <span class="op">&gt;=</span> <span class="num">70</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Calificación: C&quot;</span>)
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Calificación: F&quot;</span>)
+    }
+}</pre>
+<p>Las condiciones se verifican de arriba hacia abajo. La primera que sea <code>true</code> se ejecuta, y las demás se omiten.</p>
+<h3>Combinar condiciones</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="kw">let</span> tiene_licencia: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+
+    <span class="kw">if</span> edad <span class="op">&gt;=</span> <span class="num">16</span> <span class="kw">and</span> tiene_licencia {
+        <span class="fn">print</span>(<span class="str">&quot;Puedes conducir&quot;</span>)
+    }
+
+    <span class="kw">let</span> es_fin_de_semana: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> es_feriado: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">false</span>
+
+    <span class="kw">if</span> es_fin_de_semana <span class="kw">or</span> es_feriado {
+        <span class="fn">print</span>(<span class="str">&quot;¡Día libre!&quot;</span>)
+    }
+}</pre>
+<div class="info-box">
+<p><strong>Evaluación en cortocircuito:</strong> <code>and</code> y <code>or</code> usan evaluación en cortocircuito. Con <code>and</code>, si el lado izquierdo es <code>false</code>, el lado derecho nunca se evalúa. Con <code>or</code>, si el lado izquierdo es <code>true</code>, el lado derecho se omite. Esto es seguro para proteger expresiones:</p>
+<pre><span class="kw">if</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() <span class="kw">and</span> arr[i] <span class="op">==</span> objetivo {
+    <span class="cm">// arr[i] solo se accede si i está dentro de los límites</span>
+}</pre>
+</div>
+<h2>while — Repetir acciones</h2>
+<p>Un bucle <code>while</code> repite un bloque de código mientras una condición sea <code>true</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> contador: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+
+    <span class="kw">while</span> contador <span class="op">&lt;=</span> <span class="num">5</span> {
+        <span class="fn">print</span>(contador)
+        contador <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="cm">// Imprime: 1, 2, 3, 4, 5</span>
+}</pre>
+<p>Cuidado: si la condición nunca se vuelve <code>false</code>, el bucle corre para siempre (un "bucle infinito"). Siempre asegúrate de que algo dentro del bucle cambie la condición.</p>
+<h3>Patrón común: contar</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+        <span class="fn">print</span>(i)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<h3>Patrón común: acumular</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Sumar números del 1 al 100</span>
+    <span class="kw">var</span> suma: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">100</span> {
+        suma <span class="op">+=</span> i
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="fn">print</span>(suma)    <span class="cm">// 5050</span>
+}</pre>
+<h2>break y continue</h2>
+<p><code>break</code> sale del bucle inmediatamente:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">100</span> {
+        <span class="kw">if</span> i <span class="op">==</span> <span class="num">5</span> {
+            <span class="kw">break</span>
+        }
+        <span class="fn">print</span>(i)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="cm">// Imprime: 0, 1, 2, 3, 4</span>
+}</pre>
+<p><code>continue</code> salta el resto de la iteración actual y pasa a la siguiente:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> {
+        i <span class="op">+=</span> <span class="num">1</span>
+        <span class="kw">if</span> i <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> {
+            <span class="kw">continue</span>    <span class="cm">// saltar números pares</span>
+        }
+        <span class="fn">print</span>(i)
+    }
+    <span class="cm">// Imprime: 1, 3, 5, 7, 9</span>
+}</pre>
+<h2>Anidamiento</h2>
+<p>Puedes poner <code>if</code> dentro de <code>while</code>, <code>while</code> dentro de <code>if</code>, y cualquier otra combinación:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">20</span> {
+        <span class="kw">if</span> i <span class="op">%</span> <span class="num">3</span> <span class="op">==</span> <span class="num">0</span> <span class="kw">and</span> i <span class="op">%</span> <span class="num">5</span> <span class="op">==</span> <span class="num">0</span> {
+            <span class="fn">print</span>(<span class="str">&quot;FizzBuzz&quot;</span>)
+        } <span class="kw">else</span> <span class="kw">if</span> i <span class="op">%</span> <span class="num">3</span> <span class="op">==</span> <span class="num">0</span> {
+            <span class="fn">print</span>(<span class="str">&quot;Fizz&quot;</span>)
+        } <span class="kw">else</span> <span class="kw">if</span> i <span class="op">%</span> <span class="num">5</span> <span class="op">==</span> <span class="num">0</span> {
+            <span class="fn">print</span>(<span class="str">&quot;Buzz&quot;</span>)
+        } <span class="kw">else</span> {
+            <span class="fn">print</span>(i)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Este es el clásico problema "FizzBuzz" — un ejercicio común de programación.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe un programa que verifique si un número es positivo, negativo o cero.</li>
+<li>Escribe un programa que imprima todos los números pares del 2 al 20.</li>
+<li>Escribe un programa FizzBuzz que vaya del 1 al 50.</li>
+<li>Escribe un programa que encuentre el primer número mayor a 1000 divisible por 7 y 13.</li>
+<li>Escribe un programa que cuente regresivamente del 10 al 1, y luego imprima "¡Despegue!".</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>if</code> / <code>else if</code> / <code>else</code> para decisiones.</li>
+<li><code>while</code> para repetición.</li>
+<li><code>break</code> sale de un bucle.</li>
+<li><code>continue</code> salta a la siguiente iteración.</li>
+<li>Las condiciones deben ser expresiones booleanas.</li>
+<li>Siempre asegúrate de que los bucles while eventualmente terminen.</li>
+</ul>
+<p>Siguiente capítulo: <a href="05-funciones.md">Funciones →</a></p>
+
+    <div class="book-nav">
+        <a href="03.html" class="book-nav-prev">&larr; Anterior: Operaciones y expresiones</a>
+        <a href="05.html" class="book-nav-next">Siguiente: Funciones &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

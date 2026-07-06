@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networking — TCP servers — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Networking — TCP servers</h1>
+
+<h2>Programs that talk</h2>
+<p>Every program you have written so far runs alone. It reads files, computes things, and prints output. But most software today is <strong>networked</strong> — it talks to other programs over the internet.</p>
+<p>When you open a website, your browser (a program) sends a request to a server (another program). The server reads the request, processes it, and sends back a response. That conversation happens over <strong>TCP</strong> (Transmission Control Protocol) — the foundation of the internet.</p>
+<p>In this chapter, you will learn to write both sides: clients that send requests and servers that handle them.</p>
+<h2>TCP basics</h2>
+<p>TCP works like a phone call:</p>
+<ol>
+<li><strong>Listen</strong> — the server starts listening on a port (like a phone number).</li>
+<li><strong>Connect</strong> — the client dials that port.</li>
+<li><strong>Accept</strong> — the server picks up.</li>
+<li><strong>Exchange</strong> — both sides read and write data.</li>
+<li><strong>Close</strong> — either side hangs up.</li>
+</ol>
+<p>A <strong>port</strong> is a number (0–65535) that identifies a service on a machine. Web servers typically use port 80 (HTTP) or 443 (HTTPS). For development, we use ports like 8080 or 9000.</p>
+<h2>Starting a TCP server</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, <span class="num">9000</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Server listening on port 9000...&quot;</span>)
+
+    <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+    <span class="fn">print</span>(<span class="str">&quot;Client connected!&quot;</span>)
+
+    <span class="fn">tcp_write</span>(client, <span class="str">&quot;Hello from Nyx!\n&quot;</span>)
+    <span class="fn">tcp_close</span>(client)
+    <span class="fn">tcp_close</span>(server)
+}</pre>
+<p>Let's break this down:</p>
+<ul>
+<li><code>tcp_listen("0.0.0.0", 9000)</code> — start listening on all interfaces, port 9000. Returns a server socket (an integer).</li>
+<li><code>tcp_accept(server)</code> — wait for a client to connect. This <strong>blocks</strong> — the program pauses here until someone connects. Returns a client socket.</li>
+<li><code>tcp_write(client, ...)</code> — send data to the client.</li>
+<li><code>tcp_close(...)</code> — close the connection.</li>
+</ul>
+<p>To test this, run the server in one terminal, then in another:</p>
+<pre>echo &quot;hi&quot; | nc localhost 9000</pre>
+<p>You will see "Hello from Nyx!" printed by <code>nc</code>.</p>
+<h2>Reading from a client</h2>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, <span class="num">9000</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Echo server on port 9000...&quot;</span>)
+
+    <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+
+    <span class="kw">let</span> message: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span>(client)
+    <span class="fn">print</span>(<span class="str">&quot;Received: &quot;</span> <span class="op">+</span> message)
+
+    <span class="fn">tcp_write</span>(client, <span class="str">&quot;Echo: &quot;</span> <span class="op">+</span> message <span class="op">+</span> <span class="str">&quot;\n&quot;</span>)
+
+    <span class="fn">tcp_close</span>(client)
+    <span class="fn">tcp_close</span>(server)
+}</pre>
+<p><code>tcp_read_line(client)</code> reads data from the client until it sees a newline character. This is perfect for text-based protocols.</p>
+<p>For reading raw bytes, use <code>tcp_read(client, max_bytes)</code> which reads up to <code>max_bytes</code> bytes.</p>
+<h2>A server that handles multiple clients</h2>
+<p>The examples above handle one client and then stop. A real server keeps running:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, <span class="num">9000</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Echo server running on port 9000...&quot;</span>)
+
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+
+        <span class="kw">let</span> line: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span>(client)
+        <span class="kw">if</span> line.<span class="fn">length</span>() <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="fn">print</span>(<span class="str">&quot;Got: &quot;</span> <span class="op">+</span> line)
+            <span class="fn">tcp_write</span>(client, <span class="str">&quot;Echo: &quot;</span> <span class="op">+</span> line <span class="op">+</span> <span class="str">&quot;\n&quot;</span>)
+        }
+
+        <span class="fn">tcp_close</span>(client)
+    }
+}</pre>
+<p>This infinite loop accepts a client, reads one line, echoes it back, closes the connection, and waits for the next client. This is a <strong>sequential</strong> server — it handles one client at a time. (In Chapter 18, you will learn to handle many clients concurrently.)</p>
+<h2>Writing a TCP client</h2>
+<p>The other side of the conversation — a program that connects to a server:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> sock: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_connect</span>(<span class="str">&quot;127.0.0.1&quot;</span>, <span class="num">9000</span>)
+    <span class="kw">if</span> sock <span class="op">&lt;</span> <span class="num">0</span> {
+        <span class="fn">print</span>(<span class="str">&quot;Could not connect&quot;</span>)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="fn">tcp_write</span>(sock, <span class="str">&quot;Hello server!\n&quot;</span>)
+
+    <span class="kw">let</span> response: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span>(sock)
+    <span class="fn">print</span>(<span class="str">&quot;Server said: &quot;</span> <span class="op">+</span> response)
+
+    <span class="fn">tcp_close</span>(sock)
+}</pre>
+<p><code>tcp_connect(host, port)</code> connects to a server and returns a socket. If the connection fails, it returns a negative value.</p>
+<h2>Building an HTTP response by hand</h2>
+<p>HTTP (the protocol of the web) is built on TCP. An HTTP response is just text with a specific format:</p>
+<pre><span class="kw">fn</span> <span class="fn">http_ok</span>(body: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> <span class="str">&quot;HTTP/1.1 200 OK\r\nContent-Length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(body.<span class="fn">length</span>()) <span class="op">+</span> <span class="str">&quot;\r\n\r\n&quot;</span> <span class="op">+</span> body
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, <span class="num">8080</span>)
+    <span class="fn">print</span>(<span class="str">&quot;HTTP server on http://localhost:8080&quot;</span>)
+
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+
+        <span class="cm">// Read the request (first line is enough)</span>
+        <span class="kw">let</span> request_line: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span>(client)
+        <span class="fn">print</span>(<span class="str">&quot;Request: &quot;</span> <span class="op">+</span> request_line)
+
+        <span class="cm">// Send a response</span>
+        <span class="kw">let</span> response: <span class="ty">String</span> <span class="op">=</span> <span class="fn">http_ok</span>(<span class="str">&quot;&lt;h1&gt;Hello from Nyx!&lt;/h1&gt;&quot;</span>)
+        <span class="fn">tcp_write</span>(client, response)
+
+        <span class="fn">tcp_close</span>(client)
+    }
+}</pre>
+<p>Open <code>http://localhost:8080</code> in a browser and you will see "Hello from Nyx!" — a web page served by your program.</p>
+<h2>Using the HTTP library</h2>
+<p>Building HTTP by hand is educational, but Nyx provides a much easier way:</p>
+<pre><span class="kw">import</span> { http_serve, http_response } from <span class="str">&quot;std/http&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(request: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> method: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">1</span>]
+    <span class="kw">let</span> path: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">2</span>]
+
+    <span class="kw">if</span> path <span class="op">==</span> <span class="str">&quot;/&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">&quot;Welcome to Nyx!&quot;</span>)
+    }
+    <span class="kw">if</span> path <span class="op">==</span> <span class="str">&quot;/about&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">&quot;Nyx is a compiled language.&quot;</span>)
+    }
+    <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">404</span>, <span class="str">&quot;Not Found&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Server running on http://localhost:8080&quot;</span>)
+    <span class="fn">http_serve</span>(<span class="num">8080</span>, on_request)
+}</pre>
+<p><code>http_serve</code> handles all the TCP plumbing for you. Your function receives a parsed request array and returns a response string. The request array contains:</p>
+<ul>
+<li><code>request[1]</code> — method (GET, POST, etc.)</li>
+<li><code>request[2]</code> — path (/about, /api/data, etc.)</li>
+<li><code>request[3]</code> — headers (flat array of key-value pairs)</li>
+<li><code>request[4]</code> — body (for POST requests)</li>
+</ul>
+<h2>DNS resolution</h2>
+<p>Before connecting to a remote server, you might need to resolve a hostname:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ip: <span class="ty">String</span> <span class="op">=</span> <span class="fn">resolve</span>(<span class="str">&quot;example.com&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;example.com is at &quot;</span> <span class="op">+</span> ip)
+
+    <span class="kw">let</span> sock: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_connect</span>(ip, <span class="num">80</span>)
+    <span class="fn">tcp_write</span>(sock, <span class="str">&quot;GET / HTTP/1.1\r\nHost: example.com\r\n\r\n&quot;</span>)
+    <span class="kw">let</span> response: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read</span>(sock, <span class="num">4096</span>)
+    <span class="fn">print</span>(response)
+    <span class="fn">tcp_close</span>(sock)
+}</pre>
+<p><code>resolve(hostname)</code> returns the IP address as a string.</p>
+<h2>Practical example: a key-value server</h2>
+<p>Let's build a simple server that stores and retrieves values:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> store: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, <span class="num">7000</span>)
+    <span class="fn">print</span>(<span class="str">&quot;KV server on port 7000&quot;</span>)
+
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+        <span class="kw">let</span> line: <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span>(client)
+
+        <span class="kw">if</span> line.<span class="fn">startsWith</span>(<span class="str">&quot;SET &quot;</span>) {
+            <span class="kw">let</span> rest: <span class="ty">String</span> <span class="op">=</span> line.<span class="fn">substring</span>(<span class="num">4</span>, line.<span class="fn">length</span>())
+            <span class="kw">let</span> space: <span class="ty">int</span> <span class="op">=</span> rest.<span class="fn">indexOf</span>(<span class="str">&quot; &quot;</span>)
+            <span class="kw">if</span> space <span class="op">&gt;</span> <span class="num">0</span> {
+                <span class="kw">let</span> key: <span class="ty">String</span> <span class="op">=</span> rest.<span class="fn">substring</span>(<span class="num">0</span>, space)
+                <span class="kw">let</span> value: <span class="ty">String</span> <span class="op">=</span> rest.<span class="fn">substring</span>(space <span class="op">+</span> <span class="num">1</span>, rest.<span class="fn">length</span>())
+                store.<span class="fn">insert</span>(key, value)
+                <span class="fn">tcp_write</span>(client, <span class="str">&quot;OK\n&quot;</span>)
+            }
+        }
+        <span class="kw">if</span> line.<span class="fn">startsWith</span>(<span class="str">&quot;GET &quot;</span>) {
+            <span class="kw">let</span> key: <span class="ty">String</span> <span class="op">=</span> line.<span class="fn">substring</span>(<span class="num">4</span>, line.<span class="fn">length</span>())
+            <span class="kw">if</span> store.<span class="fn">contains</span>(key) {
+                <span class="fn">tcp_write</span>(client, store.<span class="fn">get</span>(key) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>)
+            } <span class="kw">else</span> {
+                <span class="fn">tcp_write</span>(client, <span class="str">&quot;NOT FOUND\n&quot;</span>)
+            }
+        }
+
+        <span class="fn">tcp_close</span>(client)
+    }
+}</pre>
+<p>Test it:</p>
+<pre>echo &quot;SET name Alice&quot; | nc localhost 7000     # OK
+echo &quot;GET name&quot; | nc localhost 7000           # Alice
+echo &quot;GET unknown&quot; | nc localhost 7000        # NOT FOUND</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write an echo server that reads lines from a client and sends each line back in uppercase. Hint: convert each character using ASCII math.</li>
+</ol>
+<ol>
+<li>Write a "time server" that responds to any connection with the current message "Server uptime: N connections served" (count how many clients have connected).</li>
+</ol>
+<ol>
+<li>Write a TCP client that connects to your echo server and sends three messages, printing the responses.</li>
+</ol>
+<ol>
+<li>Build a simple HTTP server with three routes: <code>/</code> (home page), <code>/hello?name=X</code> (greeting), and <code>/stats</code> (request count).</li>
+</ol>
+<ol>
+<li>Build a chat-like server where the server reads lines from a client and responds based on keywords: "hello" → "Hi there!", "bye" → "Goodbye!", anything else → "I don't understand."</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>tcp_listen(host, port)</code> starts a TCP server. Returns a server socket.</li>
+<li><code>tcp_accept(server)</code> waits for a client. Returns a client socket.</li>
+<li><code>tcp_connect(host, port)</code> connects to a server. Returns a socket.</li>
+<li><code>tcp_read(sock, max)</code> reads up to <code>max</code> bytes. <code>tcp_read_line(sock)</code> reads one line.</li>
+<li><code>tcp_write(sock, data)</code> sends data.</li>
+<li><code>tcp_close(sock)</code> closes a connection.</li>
+<li><code>resolve(hostname)</code> converts a hostname to an IP address.</li>
+<li>HTTP is text over TCP. Nyx's <code>http_serve</code> handles the protocol for you.</li>
+<li>Sequential servers handle one client at a time — concurrency comes next.</li>
+</ul>
+<p>Next chapter: <a href="18-concurrency.md">Concurrency — threads and channels →</a></p>
+
+    <div class="book-nav">
+        <a href="16.html" class="book-nav-prev">&larr; Previous: Generics</a>
+        <a href="18.html" class="book-nav-next">Next: Concurrency — threads and channels &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

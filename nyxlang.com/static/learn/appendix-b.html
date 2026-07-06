@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix B: Standard library modules — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Appendix B: Standard library modules</h1>
+
+<p>Nyx ships with 37 standard library modules. Import them with <code>import "std/module_name"</code>.</p>
+<h2>Core</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/prelude</code></td>
+<td>Auto-loaded. Defines <code>Option</code>, <code>Result</code>, operator traits (<code>Add</code>, <code>Sub</code>, <code>Mul</code>, <code>Eq</code>, <code>Ord</code>, <code>Display</code>), and default implementations. You never need to import this — it is always available.</td>
+</tr>
+<tr>
+<td><code>std/math</code></td>
+<td>Mathematical functions: <code>abs</code>, <code>min</code>, <code>max</code>, <code>pow</code>, <code>sqrt</code>, <code>floor</code>, <code>ceil</code>, <code>round</code>, <code>log</code>, <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>PI</code>, <code>E</code>.</td>
+</tr>
+<tr>
+<td><code>std/math_ext</code></td>
+<td>Extended math: <code>gcd</code>, <code>lcm</code>, <code>factorial</code>, <code>fibonacci</code>, <code>is_prime</code>, <code>clamp</code>, <code>lerp</code>, matrix operations.</td>
+</tr>
+<tr>
+<td><code>std/array</code></td>
+<td>Array utilities: <code>map</code>, <code>filter</code>, <code>reduce</code>, <code>zip</code>, <code>enumerate</code>, <code>flatten</code>, <code>chunk</code>, <code>take</code>, <code>skip</code>, <code>find</code>, <code>any</code>, <code>all</code>, <code>sort_by</code>, <code>group_by</code>, <code>unique</code>.</td>
+</tr>
+<tr>
+<td><code>std/map</code></td>
+<td>Map utilities: <code>map_from_arrays</code>, <code>map_merge</code>, <code>map_filter</code>, <code>map_map_values</code>, <code>map_invert</code>.</td>
+</tr>
+<tr>
+<td><code>std/io</code></td>
+<td>I/O utilities: <code>read_line</code> (stdin), <code>print_err</code>, <code>format</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Data structures</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/collections</code></td>
+<td><code>Set</code> (backed by Map), <code>Deque</code> (double-ended queue), <code>PriorityQueue</code> (min-heap).</td>
+</tr>
+<tr>
+<td><code>std/btreemap</code></td>
+<td>Balanced binary search tree map. Ordered keys, O(log n) operations.</td>
+</tr>
+<tr>
+<td><code>std/linkedlist</code></td>
+<td>Doubly-linked list. O(1) insert/remove at head/tail.</td>
+</tr>
+<tr>
+<td><code>std/graph</code></td>
+<td>Graph data structure with BFS, DFS, Dijkstra's shortest path, topological sort.</td>
+</tr>
+<tr>
+<td><code>std/matrix</code></td>
+<td>Matrix operations: create, multiply, transpose, determinant, identity.</td>
+</tr>
+</tbody></table></div>
+<h2>Data formats</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/json</code></td>
+<td>JSON parser and serializer. <code>json_parse(str) -> Map</code>, <code>json_stringify(map) -> String</code>. Handles nested objects, arrays, strings, numbers, booleans, null.</td>
+</tr>
+<tr>
+<td><code>std/toml</code></td>
+<td>TOML parser. <code>toml_parse(str) -> Map</code>. Supports tables, arrays, strings, integers, booleans.</td>
+</tr>
+<tr>
+<td><code>std/csv</code></td>
+<td>CSV reader/writer. <code>csv_parse(str) -> Array</code>, <code>csv_stringify(rows) -> String</code>. Handles quoted fields and escaping.</td>
+</tr>
+<tr>
+<td><code>std/msgpack</code></td>
+<td>MessagePack binary serialization. <code>msgpack_encode(value) -> String</code>, <code>msgpack_decode(bytes) -> value</code>. Compact binary format.</td>
+</tr>
+</tbody></table></div>
+<h2>File and I/O</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/file</code></td>
+<td>File operations: <code>read_file(path) -> String</code>, <code>write_file(path, content)</code>, <code>file_exists(path) -> bool</code>, <code>file_size(path) -> int</code>, <code>list_dir(path) -> Array</code>, <code>delete_file(path)</code>, <code>rename_file(old, new)</code>.</td>
+</tr>
+<tr>
+<td><code>std/compress</code></td>
+<td>zlib compression: <code>deflate(data) -> String</code>, <code>inflate(data) -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Networking</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/http</code></td>
+<td>HTTP server and client. Server: <code>http_serve(port, handler)</code>, <code>http_serve_mt(port, workers, handler)</code>. Client: <code>http_get(url)</code>, <code>http_post(url, body)</code>. Handles requests as <code>[id, method, path, headers, body]</code>.</td>
+</tr>
+<tr>
+<td><code>std/web</code></td>
+<td>Web framework: <code>App</code>/<code>Request</code>/<code>Response</code> structs, routing (<code>app_get</code>, <code>app_post</code>, <code>app_put</code>, <code>app_delete</code>), middleware chain (<code>app_use</code>, <code>mw_logging</code>, <code>mw_cors</code>), JSON APIs (<code>req_json</code>, <code>response_json_map</code>), static file serving, query/form parsing.</td>
+</tr>
+<tr>
+<td><code>std/http2</code></td>
+<td>HTTP/2 server (h2c cleartext). <code>h2_serve(port, workers, callback)</code> — callback receives <code>(method, path, headers, body)</code> and returns <code>[status, headers, body]</code>. Binary framing, HPACK header compression, stream multiplexing. Runtime frame I/O in C (<code>runtime/http2.c</code>).</td>
+</tr>
+<tr>
+<td><code>std/session</code></td>
+<td>Cookie-backed sessions stored in nyx-kv via RESP. <code>session_configure(host, port, ttl)</code>, <code>session_start(req, resp)</code>, <code>session_get(req, key)</code>, <code>session_set(req, key, value)</code>, <code>session_destroy(req, resp)</code>.</td>
+</tr>
+<tr>
+<td><code>std/url</code></td>
+<td>URL encoding/decoding: <code>url_encode(str) -> String</code>, <code>url_decode(str) -> String</code>, <code>url_parse(str) -> Map</code>.</td>
+</tr>
+<tr>
+<td><code>std/websocket</code></td>
+<td>WebSocket RFC 6455: handshake, frame encoding/decoding, <code>ws_send</code>, <code>ws_recv</code>.</td>
+</tr>
+<tr>
+<td><code>std/proxy</code></td>
+<td>Reverse proxy utilities: backend selection, round-robin, health checking, header forwarding.</td>
+</tr>
+</tbody></table></div>
+<h2>Concurrency</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/sync</code></td>
+<td>Synchronization primitives: <code>WaitGroup</code> (wait for N tasks), <code>Semaphore</code> (limit concurrency), <code>Once</code> (run exactly once), <code>AtomicCounter</code> (thread-safe counter), <code>Barrier</code> (synchronize N threads).</td>
+</tr>
+</tbody></table></div>
+<h2>Database</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/sqlite</code></td>
+<td>SQLite3 bindings (via dlopen): <code>db_open(path)</code>, <code>db_exec(db, sql)</code>, <code>db_query(db, sql) -> Array</code>, <code>db_close(db)</code>. Supports transactions, prepared statements, migrations.</td>
+</tr>
+<tr>
+<td><code>std/pool</code></td>
+<td>Connection pool: <code>pool_new(factory, size)</code>, <code>pool_acquire(pool)</code>, <code>pool_release(pool, conn)</code>. Generic — works with any resource.</td>
+</tr>
+</tbody></table></div>
+<h2>Security</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/regex</code></td>
+<td>POSIX regular expressions: <code>regex_match(pattern, text) -> bool</code>, <code>regex_find(pattern, text) -> Array</code>, <code>regex_replace(pattern, text, replacement) -> String</code>.</td>
+</tr>
+<tr>
+<td><code>std/random</code></td>
+<td>Random number generation (xorshift64): <code>random_int(min, max)</code>, <code>random_float()</code>, <code>random_choice(array)</code>, <code>random_shuffle(array)</code>.</td>
+</tr>
+<tr>
+<td><code>std/uuid</code></td>
+<td>UUID generation: <code>uuid_v4() -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Text and encoding</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/semver</code></td>
+<td>Semantic versioning: <code>semver_parse(str) -> Map</code>, <code>semver_compare(a, b) -> int</code>, <code>semver_satisfies(version, range) -> bool</code>.</td>
+</tr>
+<tr>
+<td><code>std/base64</code></td>
+<td>Base64 and Base64URL encoding/decoding: <code>base64_encode(str) -> String</code>, <code>base64_decode(str) -> String</code>, <code>base64url_encode(str) -> String</code>, <code>base64url_decode(str) -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Patterns and architecture</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/events</code></td>
+<td>Event bus / observable pattern: <code>event_bus_new()</code>, <code>on(bus, event, handler)</code>, <code>emit(bus, event, data)</code>. Decoupled pub/sub communication.</td>
+</tr>
+<tr>
+<td><code>std/statemachine</code></td>
+<td>Generic finite state machine: <code>fsm_new(states, transitions)</code>, <code>fsm_transition(fsm, event)</code>, <code>fsm_current(fsm)</code>.</td>
+</tr>
+<tr>
+<td><code>std/owned</code></td>
+<td>Ownership wrappers: <code>Box<T></code> (unique ownership), <code>Rc<T></code> (reference counted), <code>MoveOnly<T></code> (non-copyable). Convention-based, not compiler-enforced.</td>
+</tr>
+<tr>
+<td><code>std/proptest</code></td>
+<td>Property-based testing (QuickCheck-style): <code>prop_check(name, generator, property)</code>, random input generation, shrinking on failure.</td>
+</tr>
+</tbody></table></div>
+<h2>System</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Module</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/log</code></td>
+<td>Logging: <code>log_info(msg)</code>, <code>log_warn(msg)</code>, <code>log_error(msg)</code>, <code>log_debug(msg)</code>. Configurable log level and output.</td>
+</tr>
+<tr>
+<td><code>std/args</code></td>
+<td>Command-line argument parsing: <code>args_parse(spec) -> Map</code>. Supports flags, options with values, positional arguments, help generation.</td>
+</tr>
+</tbody></table></div>
+<h2>Runtime builtins (added in v0.12.0)</h2>
+<p>These functions are implemented in the C runtime and available without imports:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>hmac_sha256(key, data)</code></td>
+<td>HMAC-SHA256 message authentication code. Returns hex string.</td>
+</tr>
+<tr>
+<td><code>getenv_default(name, default)</code></td>
+<td>Read environment variable with fallback value.</td>
+</tr>
+<tr>
+<td><code>crc32_bytes(data, len)</code></td>
+<td>CRC32 checksum for binary data.</td>
+</tr>
+<tr>
+<td><code>string_from_bytes(ptr, len)</code></td>
+<td>Create a Nyx string from a raw byte pointer and length.</td>
+</tr>
+<tr>
+<td><code>rename_file(old, new)</code></td>
+<td>Atomically rename a file.</td>
+</tr>
+<tr>
+<td><code>tcp_read_exact(fd, n)</code></td>
+<td>Read exactly <code>n</code> bytes from a TCP socket. Blocks until all bytes arrive.</td>
+</tr>
+<tr>
+<td><code>setup_shutdown_handler(callback)</code></td>
+<td>Register a callback for SIGTERM/SIGINT signals.</td>
+</tr>
+</tbody></table></div>
+<h2>Terminal I/O builtins (added in v0.12.0)</h2>
+<p>These functions provide raw terminal access for building interactive TUI applications:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>raw_mode_enter()</code></td>
+<td>Set terminal to raw mode (no echo, no line buffering). Use with <code>defer { raw_mode_exit() }</code> for safe cleanup.</td>
+</tr>
+<tr>
+<td><code>raw_mode_exit()</code></td>
+<td>Restore terminal to normal (cooked) mode.</td>
+</tr>
+<tr>
+<td><code>read_byte()</code></td>
+<td>Read a single byte from stdin. Returns <code>int</code> (0-255), or <code>-1</code> on EOF.</td>
+</tr>
+<tr>
+<td><code>chr(code)</code></td>
+<td>Convert an ASCII code (int) to a single-character <code>String</code>. Example: <code>chr(65)</code> returns <code>"A"</code>.</td>
+</tr>
+<tr>
+<td><code>term_cols()</code></td>
+<td>Return terminal width in columns (default 80 if unavailable).</td>
+</tr>
+<tr>
+<td><code>term_rows()</code></td>
+<td>Return terminal height in rows (default 24 if unavailable).</td>
+</tr>
+</tbody></table></div>
+<h2>Array insert/remove (added in v0.12.0)</h2>
+<p>Arrays now support inserting and removing at arbitrary positions:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Method</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>arr.insert(index, value)</code></td>
+<td>Insert <code>value</code> at <code>index</code>, shifting subsequent elements right. O(n) time.</td>
+</tr>
+<tr>
+<td><code>arr.remove(index)</code></td>
+<td>Remove and return element at <code>index</code>, shifting subsequent elements left. O(n) time.</td>
+</tr>
+</tbody></table></div>
+<h2>Process control builtins (added in v0.12.0)</h2>
+<p>POSIX process control primitives for building shells, pipelines, and process managers:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr><td><code>fork()</code></td><td>Fork process. Returns 0 in child, pid in parent, -1 on error.</td></tr>
+<tr><td><code>execvp(program, args)</code></td><td>Replace process image with program. <code>args</code> is an Array of Strings.</td></tr>
+<tr><td><code>waitpid(pid, opts)</code></td><td>Wait for child. <code>opts</code>: 0=block, 1=WNOHANG. Returns exit status.</td></tr>
+<tr><td><code>dup2(old_fd, new_fd)</code></td><td>Redirect file descriptor <code>new_fd</code> to refer to <code>old_fd</code>.</td></tr>
+<tr><td><code>pipe_new()</code></td><td>Create a pipe. Returns <code>[read_fd, write_fd]</code>.</td></tr>
+<tr><td><code>close_fd(fd)</code></td><td>Close a raw file descriptor.</td></tr>
+<tr><td><code>open_fd(path, mode)</code></td><td>Open file returning raw fd. mode: 0=read, 1=write(trunc), 2=append.</td></tr>
+<tr><td><code>getcwd()</code></td><td>Return current working directory as String.</td></tr>
+<tr><td><code>chdir(path)</code></td><td>Change working directory. Returns 0 on success.</td></tr>
+<tr><td><code>stat(path)</code></td><td>File info: <code>[size, mode, mtime, is_dir, is_file]</code>.</td></tr>
+<tr><td><code>isatty(fd)</code></td><td>Returns 1 if fd is a terminal, 0 otherwise.</td></tr>
+<tr><td><code>getpid()</code></td><td>Return current process ID.</td></tr>
+<tr><td><code>kill_process(pid, sig)</code></td><td>Send signal to process (e.g. 15=SIGTERM, 9=SIGKILL).</td></tr>
+</tbody></table></div>
+<p><strong>GC safety:</strong> After <code>fork()</code>, the child must call <code>execvp()</code> immediately without allocating GC memory.</p>
+<h2>Example usage</h2>
+<pre><span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Read and parse a config file</span>
+    <span class="kw">let</span> config_text: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;config.json&quot;</span>)
+    <span class="kw">let</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">json_parse</span>(config_text)
+
+    <span class="kw">let</span> port: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(config.<span class="fn">get</span>(<span class="str">&quot;port&quot;</span>))
+
+    <span class="cm">// Start a web server</span>
+    <span class="fn">http_serve_mt</span>(port, <span class="num">4</span>, <span class="kw">fn</span>(req: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">&quot;Hello from Nyx!&quot;</span>)
+    })
+}</pre>
+<p><a href="00-index.md">← Back to Table of Contents</a></p>
+
+    <div class="book-nav">
+        <a href="appendix-a.html" class="book-nav-prev">&larr; Previous: Appendix A: Syntax quick reference</a>
+        <a href="appendix-c.html" class="book-nav-next">Next: Appendix C: Common error messages &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

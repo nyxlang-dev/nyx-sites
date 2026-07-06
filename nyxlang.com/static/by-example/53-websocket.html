@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>WebSocket</h1>
+
+    <p><code>std/websocket</code> implements RFC 6455 WebSocket framing. <code>ws_frame</code> wraps a text payload into a WebSocket frame, <code>ws_parse</code> extracts the payload from a frame, and <code>ws_handshake_response</code> generates the HTTP 101 Upgrade response required to establish a WebSocket connection.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// WebSocket framing — build and parse frames (RFC 6455)</span>
+
+<span class="kw">import</span> <span class="str">"std/websocket"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> payload: <span class="ty">String</span> = <span class="str">"Hello, WebSocket!"</span>
+    <span class="kw">let</span> frame: <span class="ty">String</span> = ws_frame(payload)
+    print(<span class="str">"frame length: "</span> + int_to_string(frame.length()) + <span class="str">" bytes"</span>)
+    print(<span class="str">"payload length: "</span> + int_to_string(payload.length()) + <span class="str">" bytes"</span>)
+
+    <span class="kw">let</span> parsed: <span class="ty">String</span> = ws_parse(frame)
+    print(<span class="str">"parsed: "</span> + parsed)
+
+    <span class="kw">let</span> ws_key: <span class="ty">String</span> = <span class="str">"dGhlIHNhbXBsZSBub25jZQ=="</span>
+    <span class="kw">let</span> handshake: <span class="ty">String</span> = ws_handshake_response(ws_key)
+    print(<span class="str">"handshake response:"</span>)
+    print(handshake)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">frame length: 19 bytes
+payload length: 17 bytes
+parsed: Hello, WebSocket!
+handshake response:
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</pre>
+
+    <h2>Explanation</h2>
+    <p>A WebSocket frame has a 2-byte header (FIN bit, opcode, payload length) followed by the payload. <code>ws_frame</code> creates a text frame (opcode 0x81) with the correct length encoding. <code>ws_parse</code> reads the header and extracts the payload bytes.</p>
+    <p>The handshake response computes the <code>Sec-WebSocket-Accept</code> header by concatenating the client's key with a magic GUID and computing SHA-1. This is handled by <code>runtime/websocket.c</code>.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/52-http-middleware.html">← Previous</a>
+        <a href="/by-example/54-resp-protocol.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/53-websocket.nx">examples/by-example/53-websocket.nx</a></small></p>
+</main>
+
+</body>
+</html>

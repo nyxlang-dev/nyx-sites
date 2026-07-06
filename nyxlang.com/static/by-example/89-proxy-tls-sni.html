@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy TLS SNI — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Proxy TLS SNI</h1>
+    <p>SNI lets OpenSSL choose the right certificate based on the hostname the client requested. tls_server_add_cert registers additional domains beyond the default cert. This enables one IP:443 to serve many HTTPS sites.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-proxy TLS with SNI — multi-domain HTTPS on port 443</span>
+<span class="cm">// TLS con SNI nyx-proxy — HTTPS multi-dominio en puerto 443</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// SNI (Server Name Indication) lets one IP:443 serve multiple domains</span>
+    <span class="cm">// with different TLS certificates. The client sends the hostname in</span>
+    <span class="cm">// the TLS handshake, and the server picks the matching cert.</span>
+
+    <span class="cm">// Primary certificate (default)</span>
+    <span class="kw">let</span> default_cert: <span class="ty">String</span> = <span class="str">"/etc/letsencrypt/live/nyxlang.com/fullchain.pem"</span>
+    <span class="kw">let</span> default_key: <span class="ty">String</span> = <span class="str">"/etc/letsencrypt/live/nyxlang.com/privkey.pem"</span>
+
+    <span class="cm">// Initialize TLS server with default cert</span>
+    <span class="cm">// tls_server_init(default_cert, default_key)</span>
+
+    <span class="cm">// Add additional certs for other domains</span>
+    <span class="cm">// tls_server_add_cert("/etc/letsencrypt/live/nyxkv.com/fullchain.pem",</span>
+    <span class="cm">//                     "/etc/letsencrypt/live/nyxkv.com/privkey.pem")</span>
+    <span class="cm">// tls_server_add_cert("/etc/letsencrypt/live/serve.nyxlang.com/fullchain.pem",</span>
+    <span class="cm">//                     "/etc/letsencrypt/live/serve.nyxlang.com/privkey.pem")</span>
+
+    print(<span class="str">"SNI config example:"</span>)
+    print(<span class="str">"  default: nyxlang.com"</span>)
+    print(<span class="str">"  +cert: nyxkv.com"</span>)
+    print(<span class="str">"  +cert: serve.nyxlang.com"</span>)
+    print(<span class="str">"  +cert: proxy.nyxlang.com"</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"OpenSSL selects the cert based on the client's SNI hint."</span>)
+    print(<span class="str">"This is how nyx-proxy serves 4 domains on one port :443."</span>)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">SNI config example:
+  default: nyxlang.com
+  +cert: nyxkv.com
+  +cert: serve.nyxlang.com
+  +cert: proxy.nyxlang.com
+
+OpenSSL selects the cert based on the client's SNI hint.
+This is how nyx-proxy serves 4 domains on one port :443.</pre>
+    <h2>Explanation</h2>
+    <p>Before SNI, each HTTPS site needed its own IP address because the certificate had to be chosen before the client could say which domain it wanted — a chicken-and-egg problem hard-coded into the TLS handshake. SNI (RFC 6066) fixed that by letting the client send the hostname in the first ClientHello packet, in the clear, so the server can pick the matching cert before encrypting anything else. tls_server_init sets the default cert and tls_server_add_cert adds more; under the hood OpenSSL maintains a hostname-to-SSL_CTX table and switches contexts on each handshake. This is the magic that lets nyx-proxy serve nyxlang.com, nyxkv.com, serve.nyxlang.com, and proxy.nyxlang.com all from one IPv4 on port 443.</p>
+    <div class="book-nav">
+        <a href="/by-example/88-proxy-ratelimit.html">&larr; Previous</a>
+        <a href="/by-example/90-queue-enqueue.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/89-proxy-tls-sni.nx">examples/by-example/89-proxy-tls-sni.nx</a></small></p>
+</main>
+</body>
+</html>

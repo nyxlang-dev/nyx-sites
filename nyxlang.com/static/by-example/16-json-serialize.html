@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Serialize — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>JSON Serialize</h1>
+
+    <p>This example builds on the JSON foundations from the previous page to show how real-world data — a list of people — is serialized into a nested JSON response. A helper function encapsulates the per-record construction, keeping <code>main</code> clean and readable.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Serializar datos a JSON con std/json: json_object, json_array, json_stringify
+
+import "std/json"
+
+fn build_persona(nombre: String, edad: int, activo: bool) -> Array {
+    let keys: Array = ["nombre", "edad", "activo"]
+    let vals: Array = []
+    vals.push(json_string(nombre))
+    vals.push(json_number(edad))
+    vals.push(json_bool(activo))
+    return json_object(keys, vals)
+}
+
+fn main() -> int {
+    // Objeto simple
+    let persona: Array = build_persona("Bob", 25, true)
+    print(json_stringify(persona))
+
+    // Array de objetos
+    let lista: Array = []
+    lista.push(build_persona("Ana", 30, true))
+    lista.push(build_persona("Carlos", 40, false))
+    lista.push(build_persona("Dina", 22, true))
+
+    let arr: Array = json_array(lista)
+    print(json_stringify(arr))
+
+    // Objeto anidado
+    let meta_keys: Array = ["version", "total"]
+    let meta_vals: Array = []
+    meta_vals.push(json_number(1))
+    meta_vals.push(json_number(3))
+    let meta: Array = json_object(meta_keys, meta_vals)
+
+    let resp_keys: Array = ["meta", "data"]
+    let resp_vals: Array = []
+    resp_vals.push(meta)
+    resp_vals.push(arr)
+    let resp: Array = json_object(resp_keys, resp_vals)
+
+    print(json_stringify(resp))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">{"nombre":"Bob","edad":25,"activo":true}
+[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]
+{"meta":{"version":1,"total":3},"data":[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]}</pre>
+
+    <h2>Explanation</h2>
+    <p><code>build_persona</code> is a plain Nyx function that takes typed arguments and returns a JSON object node. Wrapping construction logic in a function prevents key/value array mismatches and makes the code self-documenting — the function signature tells you exactly what fields each record contains.</p>
+    <p>Arrays of objects are built by pushing individual object nodes into a plain <code>Array</code> and wrapping the result with <code>json_array</code>. Because JSON nodes are just tagged arrays, they compose naturally: you can push an object node as the value of another object's field to create arbitrarily deep nesting.</p>
+    <p>The final <code>resp</code> object wraps <code>meta</code> and <code>data</code> into a single API-style response envelope. This pattern — a metadata object plus a data array — is common in REST APIs and shows how <code>std/json</code> handles real production shapes without any special-case syntax.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/15-json-parse.html">← Previous</a>
+        <a href="/by-example/17-regex.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/16-json-serialize.nx">examples/by-example/16-json-serialize.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message queues with nyx-queue — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Message queues with nyx-queue</h1>
+
+<h2>What is a message queue?</h2>
+<p>A message queue is a buffer that holds messages until a consumer is ready to process them. Unlike Pub/Sub (where messages are lost if nobody listens), a queue <strong>persists messages</strong> and guarantees delivery.</p>
+<pre>Producer ──► ENQUEUE "emails" "welcome:alice" ──► nyx-queue
+                                                       │
+                                                    ┌──┴──┐
+                                                    │Queue│
+                                                    │     │
+                                                    │msg1 │
+                                                    │msg2 │
+                                                    │msg3 │
+                                                    └──┬──┘
+                                                       │ DEQUEUE
+                                            ┌──────────┼──────────┐
+                                            ▼          ▼          ▼
+                                       Consumer 1  Consumer 2  Consumer 3</pre>
+<p>Key difference from Pub/Sub: each message goes to <strong>exactly one consumer</strong> (round-robin), not all of them.</p>
+
+<h2>Getting started</h2>
+<p>nyx-queue speaks the RESP protocol, so you use <code>redis-cli</code> to interact with it:</p>
+<pre>$ redis-cli -p 6381
+127.0.0.1:6381&gt; PING
+PONG</pre>
+
+<h2>Producing messages</h2>
+<p>Send a message to a queue with <code>ENQUEUE</code>:</p>
+<pre>127.0.0.1:6381&gt; ENQUEUE emails "welcome:alice@example.com"
+"msg_1712001234_1"</pre>
+<p>The command returns a unique <strong>message ID</strong>. The queue is created automatically if it does not exist.</p>
+
+<h2>Consuming messages</h2>
+<p><code>DEQUEUE</code> retrieves the next message. It <strong>blocks</strong> until a message is available:</p>
+<pre>127.0.0.1:6381&gt; DEQUEUE emails
+1) "msg_1712001234_1"
+2) "welcome:alice@example.com"</pre>
+<p>The response is a two-element array: the message ID and the payload. For non-blocking mode:</p>
+<pre>127.0.0.1:6381&gt; DEQUEUE emails NOWAIT
+(nil)</pre>
+
+<h2>Acknowledging messages</h2>
+<p>After processing a message, acknowledge it with <code>ACK</code>:</p>
+<pre>127.0.0.1:6381&gt; ACK emails msg_1712001234_1
+OK</pre>
+<p>If processing fails, send <code>NACK</code> to return the message to the queue for redelivery:</p>
+<pre>127.0.0.1:6381&gt; NACK emails msg_1712001234_1
+OK</pre>
+
+<h2>Automatic redelivery</h2>
+<p>If a consumer crashes without sending <code>ACK</code> or <code>NACK</code>, the message is automatically returned to the queue after 30 seconds (configurable with <code>--ack-timeout</code>). This provides <strong>at-least-once delivery</strong> — every message will be processed at least once.</p>
+
+<h2>Queue management</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>QLEN queue</code></td><td>Number of pending messages</td></tr>
+<tr><td><code>QINFO queue</code></td><td>Returns [pending, delivered, total_enqueued, total_acked]</td></tr>
+<tr><td><code>QUEUES</code></td><td>List all queue names</td></tr>
+<tr><td><code>QDEL queue</code></td><td>Delete a queue and all its messages</td></tr>
+<tr><td><code>INFO</code></td><td>Server statistics</td></tr>
+</tbody></table></div>
+
+<h2>Persistence</h2>
+<p>Messages survive restarts. nyx-queue saves its state to a <code>queue.ndb</code> binary file using the same background-saver pattern as nyx-kv — every 60 seconds or after 100 changes. On restart, messages that were delivered but not acknowledged are reset to pending.</p>
+
+<h2>Example: background email processor</h2>
+<p>A web application enqueues emails. Three worker processes dequeue and send them:</p>
+<pre><span class="cm"># Producer (web app)</span>
+import redis
+q = redis.Redis(port=6381)
+q.execute_command("ENQUEUE", "emails", "welcome:alice@example.com")
+q.execute_command("ENQUEUE", "emails", "receipt:order_123")
+q.execute_command("ENQUEUE", "emails", "reset:bob@example.com")</pre>
+<pre><span class="cm"># Consumer (email worker)</span>
+import redis
+q = redis.Redis(port=6381)
+
+while True:
+    msg = q.execute_command("DEQUEUE", "emails")
+    msg_id, payload = msg[0], msg[1]
+    try:
+        send_email(payload)
+        q.execute_command("ACK", "emails", msg_id)
+    except Exception:
+        q.execute_command("NACK", "emails", msg_id)</pre>
+<p>Run three workers in parallel. nyx-queue distributes messages round-robin — no message is processed twice (unless NACKed).</p>
+
+<h2>Summary</h2>
+<ul>
+<li><code>ENQUEUE queue payload</code> adds a message and returns a unique ID.</li>
+<li><code>DEQUEUE queue</code> blocks until a message is available.</li>
+<li><code>ACK</code> marks a message as processed; <code>NACK</code> returns it for retry.</li>
+<li>Automatic redelivery after 30s ensures no messages are lost.</li>
+<li>Messages persist to disk and survive restarts.</li>
+<li>Round-robin delivery across multiple consumers.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="28.html" class="book-nav-prev">&larr; Previous: Real-time with Pub/Sub</a>
+        <a href="30.html" class="book-nav-next">Next: HTTP/2 — Binary protocols &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fork &amp; Exec — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Fork &amp; Exec</h1>
+    <p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Fork and exec — running external commands</span>
+<span class="cm">// Fork y exec — ejecutar comandos externos</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
+
+    <span class="kw">if</span> pid == <span class="num">0</span> {
+        <span class="cm">// Child process: exec immediately (GC requirement)</span>
+        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"echo"</span>, <span class="str">"hello from child"</span>]
+        execvp(<span class="str">"echo"</span>, args)
+        <span class="cm">// execvp replaces the process — this line never runs</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="kw">if</span> pid > <span class="num">0</span> {
+        <span class="cm">// Parent: wait for child to finish</span>
+        print(<span class="str">"parent: spawned child "</span> + int_to_string(pid))
+        <span class="kw">let</span> status: <span class="ty">int</span> = waitpid(pid, <span class="num">0</span>)
+        print(<span class="str">"parent: child exited with "</span> + int_to_string(status))
+    } <span class="kw">else</span> {
+        print(<span class="str">"fork failed"</span>)
+    }
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">parent: spawned child 12345
+hello from child
+parent: child exited with 0</pre>
+    <h2>Explanation</h2>
+    <p><code>fork()</code> duplicates the current process. It returns 0 in the child and the child's PID in the parent. Because Nyx uses the Boehm garbage collector, the child process must <strong>not</strong> allocate GC-managed memory — it must call <code>execvp()</code> immediately to replace its process image with a new program.</p>
+    <p><code>execvp(command, args)</code> replaces the current process with the given command. The first element of <code>args</code> is conventionally the program name. If <code>execvp</code> succeeds, it never returns.</p>
+    <p><code>waitpid(pid, 0)</code> blocks the parent until the child exits and returns the exit status. This is the standard Unix pattern for spawning subprocesses.</p>
+    <div class="book-nav">
+        <a href="/by-example/63-select-channel.html">&larr; Previous</a>
+        <a href="/by-example/65-pipes.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/64-fork-exec.nx">examples/by-example/64-fork-exec.nx</a></small></p>
+</main>
+</body>
+</html>

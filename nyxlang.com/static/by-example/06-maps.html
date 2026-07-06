@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Maps</h1>
+
+    <p>A <code>Map</code> stores key-value pairs with fast lookup by key. Maps are created with <code>Map.new()</code> and support insertion, retrieval, membership testing, and key enumeration.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Maps: Map.new(), insert, get, has, size, iterar con keys()
+
+fn main() -> int {
+    var capitales: Map = Map.new()
+
+    // Insertar pares clave-valor
+    capitales.insert("Argentina", "Buenos Aires")
+    capitales.insert("Francia", "Paris")
+    capitales.insert("Japon", "Tokio")
+
+    // size
+    print("paises: " + int_to_string(capitales.size()))
+
+    // get
+    let capital: String = capitales.get("Francia")
+    print("Capital de Francia: " + capital)
+
+    // has
+    print("tiene Argentina: " + int_to_string(capitales.has("Argentina")))
+    print("tiene Brasil: " + int_to_string(capitales.has("Brasil")))
+
+    // Iterar claves
+    let ks: Array = capitales.keys()
+    print("claves (" + int_to_string(ks.length()) + "):")
+    for k in ks {
+        print("  " + k)
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">paises: 3
+Capital de Francia: Paris
+tiene Argentina: 1
+tiene Brasil: 0
+claves (3):
+  Argentina
+  Francia
+  Japon</pre>
+
+    <h2>Explanation</h2>
+    <p>Maps in Nyx are created with <code>Map.new()</code> — there is no map literal syntax (it would be ambiguous with block expressions). Maps must be declared with <code>var</code> if you intend to insert or modify entries after creation.</p>
+    <p>The <code>.insert(key, value)</code> method adds or updates a key-value pair. <code>.get(key)</code> retrieves the value for a key, returning the stored value as a <code>String</code> (or the appropriate type). If the key does not exist, the behavior is undefined — use <code>.has(key)</code> first to check membership.</p>
+    <p><code>.has(key)</code> returns an <code>int</code>: <code>1</code> means the key exists, <code>0</code> means it does not. This integer-as-boolean pattern is common in Nyx's low-level output functions. <code>.size()</code> returns the number of entries currently in the map.</p>
+    <p><code>.keys()</code> returns an <code>Array</code> of all keys in the map. The iteration order over hash maps is not guaranteed to be insertion order, so key order in the output may differ between runs.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/05-arrays.html">← Previous</a>
+        <a href="/by-example/07-strings.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/06-maps.nx">examples/by-example/06-maps.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+[package]
+name = "nyxlang-com"
+version = "0.1.0"
+main = "src/main.nx"
+description = "nyxlang.com landing page and documentation"
+
+[dependencies]
+nyx-serve = "*"

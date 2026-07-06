@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trait Bounds — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Trait Bounds</h1>
+
+    <p>Trait bounds constrain generic type parameters so a function can call trait methods on values of unknown type. The syntax <code>&lt;T: TraitName&gt;</code> means "this function works for any type T that implements TraitName".</p>
+
+    <h2>Code</h2>
+    <pre><code>// Trait bounds: función genérica que acepta cualquier tipo con Display
+
+trait Display {
+    fn to_string(self) -> String
+}
+
+struct Point {
+    x: int,
+    y: int
+}
+
+impl Display for Point {
+    fn to_string(self) -> String {
+        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
+    }
+}
+
+struct Circle {
+    radius: int
+}
+
+impl Display for Circle {
+    fn to_string(self) -> String {
+        return "Circulo{radio=" + int_to_string(self.radius) + "}"
+    }
+}
+
+fn print_it&lt;T: Display&gt;(x: T) -> String {
+    return x.to_string()
+}
+
+fn show_twice&lt;T: Display&gt;(x: T) {
+    let s: String = x.to_string()
+    print(s)
+    print(s)
+}
+
+fn main() -> int {
+    let p: Point = Point { x: 7, y: 2 }
+    print(print_it&lt;Point&gt;(p))
+
+    let c: Circle = Circle { radius: 10 }
+    print(print_it&lt;Circle&gt;(c))
+
+    show_twice&lt;Point&gt;(p)
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">(7, 2)
+Circulo{radio=10}
+(7, 2)
+(7, 2)</pre>
+
+    <h2>Explanation</h2>
+    <p><code>print_it&lt;T: Display&gt;</code> is a generic function that accepts any type <code>T</code> as long as it implements <code>Display</code>. The bound <code>T: Display</code> tells the compiler two things: it may generate a specialized version for each concrete type used at the call site (monomorphization), and it guarantees that <code>x.to_string()</code> is always a valid call inside the function body.</p>
+    <p><code>show_twice</code> demonstrates that trait-bounded generics are ordinary functions — they can hold local variables, call the trait method multiple times, and produce any side effects. The compiler produces separate machine-code versions for <code>Point</code> and any other type you pass, so there is zero virtual dispatch overhead.</p>
+    <p>At the call site, the type argument is written explicitly as <code>print_it&lt;Point&gt;(p)</code>. Nyx can often infer the type argument, but being explicit is always valid and sometimes clearer when reading code.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/21-traits.html">← Previous</a>
+        <a href="/by-example/23-derive-clone.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/22-trait-bounds.nx">examples/by-example/22-trait-bounds.nx</a></small></p>
+</main>
+
+</body>
+</html>

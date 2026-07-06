@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocolo RESP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Protocolo RESP</h1>
+
+    <p>RESP (REdis Serialization Protocol) es el formato de wire basado en texto que usan Redis y nyx-kv. Cada tipo de dato tiene un prefijo de un solo carácter: <code>+</code> simple string, <code>-</code> error, <code>:</code> integer, <code>$</code> bulk string, <code>*</code> array. Todas las líneas terminan con <code>\r\n</code>. Esta receta muestra cómo construir mensajes RESP manualmente.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// RESP protocol — Redis serialization format</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Simple string: +OK\r\n</span>
+    <span class="kw">let</span> simple: <span class="ty">String</span> = <span class="str">"+OK\r\n"</span>
+    print(<span class="str">"simple string: "</span> + simple.trim())
+
+    <span class="cm">// Error: -ERR unknown command\r\n</span>
+    <span class="kw">let</span> error: <span class="ty">String</span> = <span class="str">"-ERR unknown command\r\n"</span>
+    print(<span class="str">"error: "</span> + error.trim())
+
+    <span class="cm">// Integer: :42\r\n</span>
+    <span class="kw">let</span> integer: <span class="ty">String</span> = <span class="str">":"</span> + int_to_string(<span class="num">42</span>) + <span class="str">"\r\n"</span>
+    print(<span class="str">"integer: "</span> + integer.trim())
+
+    <span class="cm">// Bulk string: $5\r\nhello\r\n</span>
+    <span class="kw">let</span> data: <span class="ty">String</span> = <span class="str">"hello"</span>
+    <span class="kw">let</span> bulk: <span class="ty">String</span> = <span class="str">"$"</span> + int_to_string(data.length()) + <span class="str">"\r\n"</span> + data + <span class="str">"\r\n"</span>
+    print(<span class="str">"bulk string: "</span> + bulk.trim())
+
+    <span class="cm">// Array: *3\r\n$3\r\nSET\r\n$4\r\nname\r\n$3\r\nNyx\r\n</span>
+    <span class="kw">let</span> cmd: <span class="ty">String</span> = <span class="str">"*3\r\n$3\r\nSET\r\n$4\r\nname\r\n$3\r\nNyx\r\n"</span>
+    print(<span class="str">"SET command: "</span> + cmd.replace(<span class="str">"\r\n"</span>, <span class="str">" "</span>).trim())
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">simple string: +OK
+error: -ERR unknown command
+integer: :42
+bulk string: $5 hello
+SET command: *3 $3 SET $4 name $3 Nyx</pre>
+
+    <h2>Explicación</h2>
+    <p>RESP es deliberadamente simple: cada mensaje es texto legible por humanos terminado con <code>\r\n</code>. Los bulk strings incluyen un prefijo de longitud (<code>$5\r\nhello\r\n</code>), lo que permite valores binary-safe. Los arrays usan <code>*N</code> para indicar la cantidad de elementos que siguen.</p>
+    <p>Los comandos de Redis se envían como arrays RESP de bulk strings. Por ejemplo, <code>SET name Nyx</code> se convierte en <code>*3\r\n$3\r\nSET\r\n$4\r\nname\r\n$3\r\nNyx\r\n</code>. Este es el mismo formato que habla nyx-kv en el puerto 6380, compatible con <code>redis-cli</code>.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/53-websocket.html">← Anterior</a>
+        <a href="/es/by-example/55-sqlite.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/54-resp-protocol.nx">examples/by-example/54-resp-protocol.nx</a></small></p>
+</main>
+
+</body>
+</html>

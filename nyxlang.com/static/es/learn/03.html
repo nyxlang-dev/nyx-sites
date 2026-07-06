@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operaciones y expresiones — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Operaciones y expresiones</h1>
+
+<h2>Aritmética</h2>
+<p>Nyx soporta las operaciones matemáticas estándar:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">let</span> b: <span class="ty">int</span> <span class="op">=</span> <span class="num">3</span>
+
+    <span class="fn">print</span>(a <span class="op">+</span> b)    <span class="cm">// 13   suma</span>
+    <span class="fn">print</span>(a <span class="op">-</span> b)    <span class="cm">// 7    resta</span>
+    <span class="fn">print</span>(a <span class="op">*</span> b)    <span class="cm">// 30   multiplicación</span>
+    <span class="fn">print</span>(a <span class="op">/</span> b)    <span class="cm">// 3    división (entera — sin decimales)</span>
+    <span class="fn">print</span>(a <span class="op">%</span> b)    <span class="cm">// 1    resto (módulo)</span>
+}</pre>
+<p>Al dividir dos enteros, el resultado es un entero — la parte decimal se descarta, no se redondea. <code>10 / 3</code> da <code>3</code>, no <code>3.33</code>.</p>
+<p>Para división decimal, usa floats:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">float</span> <span class="op">=</span> <span class="num">10.0</span>
+    <span class="kw">let</span> b: <span class="ty">float</span> <span class="op">=</span> <span class="num">3.0</span>
+    <span class="fn">print</span>(a <span class="op">/</span> b)    <span class="cm">// 3.333...</span>
+}</pre>
+<h2>Asignación compuesta</h2>
+<p>Cuando quieres actualizar una variable usando su valor actual, puedes usar operadores abreviados:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+
+    x <span class="op">+=</span> <span class="num">5</span>     <span class="cm">// igual que: x = x + 5    → 15</span>
+    x <span class="op">-=</span> <span class="num">3</span>     <span class="cm">// igual que: x = x - 3    → 12</span>
+    x <span class="op">*=</span> <span class="num">2</span>     <span class="cm">// igual que: x = x * 2    → 24</span>
+    x <span class="op">/=</span> <span class="num">4</span>     <span class="cm">// igual que: x = x / 4    → 6</span>
+    x <span class="op">%=</span> <span class="num">5</span>     <span class="cm">// igual que: x = x % 5    → 1</span>
+
+    <span class="fn">print</span>(x)   <span class="cm">// 1</span>
+}</pre>
+<h2>Operadores de comparación</h2>
+<p>Las comparaciones producen un valor <code>bool</code> — <code>true</code> o <code>false</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">let</span> b: <span class="ty">int</span> <span class="op">=</span> <span class="num">20</span>
+
+    <span class="fn">print</span>(a <span class="op">==</span> b)    <span class="cm">// false   igual a</span>
+    <span class="fn">print</span>(a <span class="op">!=</span> b)    <span class="cm">// true    diferente de</span>
+    <span class="fn">print</span>(a <span class="op">&lt;</span> b)     <span class="cm">// true    menor que</span>
+    <span class="fn">print</span>(a <span class="op">&gt;</span> b)     <span class="cm">// false   mayor que</span>
+    <span class="fn">print</span>(a <span class="op">&lt;=</span> b)    <span class="cm">// true    menor o igual</span>
+    <span class="fn">print</span>(a <span class="op">&gt;=</span> b)    <span class="cm">// false   mayor o igual</span>
+}</pre>
+<h2>Operadores lógicos</h2>
+<p>Los operadores lógicos combinan valores booleanos:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> soleado: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> calido: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">false</span>
+
+    <span class="fn">print</span>(soleado <span class="kw">and</span> calido)     <span class="cm">// false  (ambos deben ser true)</span>
+    <span class="fn">print</span>(soleado <span class="kw">or</span> calido)      <span class="cm">// true   (al menos uno es true)</span>
+    <span class="fn">print</span>(<span class="kw">not</span> soleado)            <span class="cm">// false  (invierte el valor)</span>
+}</pre>
+<h2>Concatenación de strings</h2>
+<p>El operador <code>+</code> une strings:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> primero: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola&quot;</span>
+    <span class="kw">let</span> segundo: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Mundo&quot;</span>
+    <span class="kw">let</span> resultado: <span class="ty">String</span> <span class="op">=</span> primero <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> segundo <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+
+    <span class="fn">print</span>(resultado)    <span class="cm">// Hola, Mundo!</span>
+}</pre>
+<p>Recuerda: no puedes sumar un string y un número directamente. Convierte el número primero:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alicia&quot;</span>
+    <span class="kw">let</span> edad: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="fn">print</span>(nombre <span class="op">+</span> <span class="str">&quot; tiene &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(edad) <span class="op">+</span> <span class="str">&quot; años&quot;</span>)
+}</pre>
+<h2>Orden de operaciones</h2>
+<p>Nyx sigue la precedencia matemática estándar:</p>
+<ol>
+<li>Paréntesis <code>()</code> — se evalúan primero</li>
+<li>Multiplicación <code>*</code>, división <code>/</code>, módulo <code>%</code></li>
+<li>Suma <code>+</code>, resta <code>-</code></li>
+<li>Comparaciones <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code><=</code>, <code>>=</code></li>
+<li>Lógicos <code>not</code>, luego <code>and</code>, luego <code>or</code></li>
+</ol>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="num">2</span> <span class="op">+</span> <span class="num">3</span> <span class="op">*</span> <span class="num">4</span>)       <span class="cm">// 14, no 20 (multiplicación primero)</span>
+    <span class="fn">print</span>((<span class="num">2</span> <span class="op">+</span> <span class="num">3</span>) <span class="op">*</span> <span class="num">4</span>)     <span class="cm">// 20 (paréntesis primero)</span>
+}</pre>
+<p>Cuando tengas duda, usa paréntesis. Hacen tu intención clara.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe un programa que calcule el área de un rectángulo de ancho 7 y alto 12.</li>
+<li>Una tienda tiene un artículo a 29.99 con 15% de descuento. Calcula el precio final.</li>
+<li>Convierte una temperatura de Celsius a Fahrenheit: <code>F = C * 9 / 5 + 32</code>. Prueba con 0°C, 100°C y 37°C.</li>
+<li>Dados <code>a = 5</code>, <code>b = 10</code>, <code>c = 3</code>, ¿cuál es el resultado de <code>a + b <em> c</code>? ¿Y <code>(a + b) </em> c</code>?</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li>Aritmética: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code></li>
+<li>Asignación compuesta: <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, <code>%=</code></li>
+<li>Comparación: <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code><=</code>, <code>>=</code></li>
+<li>Lógicos: <code>and</code>, <code>or</code>, <code>not</code></li>
+<li>Concatenación de strings: <code>+</code></li>
+<li>La división entera descarta decimales; usa floats para resultados decimales.</li>
+</ul>
+<p>Siguiente capítulo: <a href="04-control-de-flujo.md">Control de flujo →</a></p>
+
+    <div class="book-nav">
+        <a href="02.html" class="book-nav-prev">&larr; Anterior: Variables y tipos</a>
+        <a href="04.html" class="book-nav-next">Siguiente: Control de flujo &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

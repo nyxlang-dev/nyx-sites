@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Maps</h1>
+
+<h2>What is a map?</h2>
+<p>A <strong>map</strong> is a collection that stores <strong>key-value pairs</strong>. Think of it like a dictionary: you look up a word (the key) and find its definition (the value).</p>
+<p>Arrays use numbers (indices) to find values. Maps use any value — usually strings — as keys. This makes them perfect for situations where you want to associate one thing with another.</p>
+<pre>Key        →  Value
+&quot;name&quot;     →  &quot;Alice&quot;
+&quot;age&quot;      →  &quot;25&quot;
+&quot;city&quot;     →  &quot;Berlin&quot;</pre>
+<h2>Creating a map</h2>
+<p>In Nyx, you create a map with <code>Map.new()</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="fn">print</span>(m)
+}</pre>
+<p>Maps start empty. You fill them by inserting key-value pairs.</p>
+<h2>Inserting values</h2>
+<p>Use <code>.insert(key, value)</code> to add entries:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+
+    m.<span class="fn">insert</span>(<span class="str">&quot;name&quot;</span>, <span class="str">&quot;Alice&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;language&quot;</span>, <span class="str">&quot;Nyx&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;version&quot;</span>, <span class="str">&quot;0.12.0&quot;</span>)
+
+    <span class="fn">print</span>(m)
+}</pre>
+<p>If you insert a key that already exists, the old value is replaced:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+
+    m.<span class="fn">insert</span>(<span class="str">&quot;color&quot;</span>, <span class="str">&quot;red&quot;</span>)
+    <span class="fn">print</span>(m.<span class="fn">get</span>(<span class="str">&quot;color&quot;</span>))    <span class="cm">// red</span>
+
+    m.<span class="fn">insert</span>(<span class="str">&quot;color&quot;</span>, <span class="str">&quot;blue&quot;</span>)
+    <span class="fn">print</span>(m.<span class="fn">get</span>(<span class="str">&quot;color&quot;</span>))    <span class="cm">// blue</span>
+}</pre>
+<h2>Getting values</h2>
+<p>Use <code>.get(key)</code> to retrieve a value:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    m.<span class="fn">insert</span>(<span class="str">&quot;capital&quot;</span>, <span class="str">&quot;Paris&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;population&quot;</span>, <span class="str">&quot;67 million&quot;</span>)
+
+    <span class="fn">print</span>(m.<span class="fn">get</span>(<span class="str">&quot;capital&quot;</span>))       <span class="cm">// Paris</span>
+    <span class="fn">print</span>(m.<span class="fn">get</span>(<span class="str">&quot;population&quot;</span>))    <span class="cm">// 67 million</span>
+}</pre>
+<h2>Checking if a key exists</h2>
+<p>Use <code>.contains(key)</code> to check whether a key is in the map:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    m.<span class="fn">insert</span>(<span class="str">&quot;name&quot;</span>, <span class="str">&quot;Nyx&quot;</span>)
+
+    <span class="fn">print</span>(m.<span class="fn">contains</span>(<span class="str">&quot;name&quot;</span>))      <span class="cm">// true</span>
+    <span class="fn">print</span>(m.<span class="fn">contains</span>(<span class="str">&quot;version&quot;</span>))   <span class="cm">// false</span>
+}</pre>
+<p>This is useful to avoid errors when a key might not exist.</p>
+<h2>Removing entries</h2>
+<p>Use <code>.remove(key)</code> to delete a key-value pair:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    m.<span class="fn">insert</span>(<span class="str">&quot;x&quot;</span>, <span class="str">&quot;10&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;y&quot;</span>, <span class="str">&quot;20&quot;</span>)
+
+    <span class="fn">print</span>(m.<span class="fn">size</span>())    <span class="cm">// 2</span>
+
+    m.<span class="fn">remove</span>(<span class="str">&quot;x&quot;</span>)
+    <span class="fn">print</span>(m.<span class="fn">size</span>())    <span class="cm">// 1</span>
+    <span class="fn">print</span>(m.<span class="fn">contains</span>(<span class="str">&quot;x&quot;</span>))    <span class="cm">// false</span>
+}</pre>
+<h2>Map size</h2>
+<p>Use <code>.size()</code> to know how many entries a map has:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="fn">print</span>(m.<span class="fn">size</span>())    <span class="cm">// 0</span>
+
+    m.<span class="fn">insert</span>(<span class="str">&quot;a&quot;</span>, <span class="str">&quot;1&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;b&quot;</span>, <span class="str">&quot;2&quot;</span>)
+    m.<span class="fn">insert</span>(<span class="str">&quot;c&quot;</span>, <span class="str">&quot;3&quot;</span>)
+    <span class="fn">print</span>(m.<span class="fn">size</span>())    <span class="cm">// 3</span>
+}</pre>
+<h2>When to use maps vs arrays</h2>
+<p>Use an <strong>array</strong> when:</p>
+<ul>
+<li>You have an ordered list of items.</li>
+<li>You access items by their position (index 0, 1, 2...).</li>
+<li>The order matters.</li>
+</ul>
+<p>Use a <strong>map</strong> when:</p>
+<ul>
+<li>You want to look up values by name (key).</li>
+<li>Each item has a unique identifier.</li>
+<li>The order does not matter.</li>
+</ul>
+<p>For example, a list of scores by player name is a perfect use case for a map:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> scores: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    scores.<span class="fn">insert</span>(<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;95&quot;</span>)
+    scores.<span class="fn">insert</span>(<span class="str">&quot;Bob&quot;</span>, <span class="str">&quot;87&quot;</span>)
+    scores.<span class="fn">insert</span>(<span class="str">&quot;Charlie&quot;</span>, <span class="str">&quot;92&quot;</span>)
+
+    <span class="fn">print</span>(scores.<span class="fn">get</span>(<span class="str">&quot;Bob&quot;</span>))    <span class="cm">// 87</span>
+}</pre>
+<h2>Practical example: word counter</h2>
+<p>Count how many times each word appears in a list:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> words: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;hello&quot;</span>, <span class="str">&quot;world&quot;</span>, <span class="str">&quot;hello&quot;</span>, <span class="str">&quot;nyx&quot;</span>, <span class="str">&quot;hello&quot;</span>, <span class="str">&quot;world&quot;</span>]
+
+    <span class="kw">var</span> counts: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> words.<span class="fn">length</span>() {
+        <span class="kw">let</span> word: <span class="ty">String</span> <span class="op">=</span> words[i]
+        <span class="kw">if</span> counts.<span class="fn">contains</span>(word) {
+            <span class="kw">let</span> current: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(counts.<span class="fn">get</span>(word))
+            counts.<span class="fn">insert</span>(word, <span class="fn">int_to_string</span>(current <span class="op">+</span> <span class="num">1</span>))
+        } <span class="kw">else</span> {
+            counts.<span class="fn">insert</span>(word, <span class="str">&quot;1&quot;</span>)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">&quot;hello: &quot;</span> <span class="op">+</span> counts.<span class="fn">get</span>(<span class="str">&quot;hello&quot;</span>))    <span class="cm">// hello: 3</span>
+    <span class="fn">print</span>(<span class="str">&quot;world: &quot;</span> <span class="op">+</span> counts.<span class="fn">get</span>(<span class="str">&quot;world&quot;</span>))    <span class="cm">// world: 2</span>
+    <span class="fn">print</span>(<span class="str">&quot;nyx: &quot;</span> <span class="op">+</span> counts.<span class="fn">get</span>(<span class="str">&quot;nyx&quot;</span>))        <span class="cm">// nyx: 1</span>
+}</pre>
+<p>Note: map values are stored as strings in Nyx, so we convert between <code>int</code> and <code>String</code> with <code>string_to_int()</code> and <code>int_to_string()</code>.</p>
+<h2>Practical example: simple config</h2>
+<pre><span class="kw">fn</span> <span class="fn">load_defaults</span>() <span class="op">-&gt;</span> <span class="ty">Map</span> {
+    <span class="kw">var</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+    config.<span class="fn">insert</span>(<span class="str">&quot;port&quot;</span>, <span class="str">&quot;8080&quot;</span>)
+    config.<span class="fn">insert</span>(<span class="str">&quot;host&quot;</span>, <span class="str">&quot;localhost&quot;</span>)
+    config.<span class="fn">insert</span>(<span class="str">&quot;debug&quot;</span>, <span class="str">&quot;false&quot;</span>)
+    <span class="kw">return</span> config
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> cfg: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">load_defaults</span>()
+
+    <span class="fn">print</span>(<span class="str">&quot;Server: &quot;</span> <span class="op">+</span> cfg.<span class="fn">get</span>(<span class="str">&quot;host&quot;</span>) <span class="op">+</span> <span class="str">&quot;:&quot;</span> <span class="op">+</span> cfg.<span class="fn">get</span>(<span class="str">&quot;port&quot;</span>))
+    <span class="cm">// Server: localhost:8080</span>
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Create a map that stores the capitals of 5 countries. Then print the capital of each country.</li>
+</ol>
+<ol>
+<li>Write a function <code>map_has_value(m: Map, value: String) -> bool</code> that returns <code>true</code> if any key in the map has the given value. Hint: you will need to check each key you know about.</li>
+</ol>
+<ol>
+<li>Write a program that counts how many times each character appears in a string. Hint: loop through the string with <code>.charAt()</code>, convert each character to a string with <code>char_to_string()</code>, and use a map to count.</li>
+</ol>
+<ol>
+<li>Create a "phone book" map with 5 names and phone numbers. Write a function that takes a name and the map, and prints the phone number or "Not found".</li>
+</ol>
+<ol>
+<li>Write a function that takes two maps and returns a new map with all entries from both. If both maps have the same key, use the value from the second map.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Maps store key-value pairs: <code>var m: Map = Map.new()</code></li>
+<li><code>.insert(key, value)</code> adds or updates an entry.</li>
+<li><code>.get(key)</code> retrieves a value.</li>
+<li><code>.contains(key)</code> checks if a key exists.</li>
+<li><code>.remove(key)</code> deletes an entry.</li>
+<li><code>.size()</code> returns the number of entries.</li>
+<li>Map values are strings — convert with <code>int_to_string()</code> and <code>string_to_int()</code> as needed.</li>
+<li>Use arrays for ordered lists, maps for named lookups.</li>
+</ul>
+<p>Next chapter: <a href="09-structs.md">Structs →</a></p>
+
+    <div class="book-nav">
+        <a href="07.html" class="book-nav-prev">&larr; Previous: Strings</a>
+        <a href="09.html" class="book-nav-next">Next: Structs &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

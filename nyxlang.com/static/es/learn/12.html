@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivos — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Archivos</h1>
+
+<h2>¿Por qué archivos?</h2>
+<p>Hasta ahora, todos nuestros programas pierden sus datos cuando terminan de ejecutarse. Las variables solo existen mientras el programa está vivo. Pero ¿qué pasa si quieres guardar un puntaje alto, almacenar una configuración, o procesar un log? Para eso están los archivos.</p>
+<p>Los archivos permiten que tus programas <strong>persistan datos</strong> — guardarlos en disco para que sobrevivan después de que el programa termine, y leerlos de vuelta después.</p>
+<h2>Leer un archivo</h2>
+<p>La operación más simple es leer un archivo completo en un string:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;mensaje.txt&quot;</span>)
+    <span class="fn">print</span>(contenido)
+}</pre>
+<p>Si <code>mensaje.txt</code> contiene <code>¡Hola desde un archivo!</code>, el programa imprime exactamente eso.</p>
+<p><code>read_file</code> devuelve el archivo completo como un solo string, incluyendo saltos de línea. Es la forma más fácil de obtener datos de un archivo.</p>
+<h2>Escribir un archivo</h2>
+<p>Para guardar datos, usa <code>write_file</code>:</p>
+<pre><span class="kw">import</span> { write_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">write_file</span>(<span class="str">&quot;salida.txt&quot;</span>, <span class="str">&quot;¡Nyx estuvo aquí!&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Archivo escrito exitosamente&quot;</span>)
+}</pre>
+<p>Esto crea <code>salida.txt</code> (o lo sobrescribe si ya existe) con el texto <code>¡Nyx estuvo aquí!</code>.</p>
+<p><code>write_file</code> devuelve <code>1</code> en caso de éxito.</p>
+<h2>Verificar si un archivo existe</h2>
+<p>Antes de leer un archivo, podrías querer verificar si realmente existe:</p>
+<pre><span class="kw">import</span> { read_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">if</span> <span class="fn">file_exists</span>(<span class="str">&quot;config.txt&quot;</span>) {
+        <span class="kw">let</span> config: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;config.txt&quot;</span>)
+        <span class="fn">print</span>(<span class="str">&quot;Config cargada: &quot;</span> <span class="op">+</span> config)
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;No se encontró archivo de config, usando valores por defecto&quot;</span>)
+    }
+}</pre>
+<p><code>file_exists</code> devuelve <code>true</code> si el archivo está en disco, <code>false</code> en caso contrario.</p>
+<h2>Trabajar con líneas</h2>
+<p>Los archivos a menudo contienen múltiples líneas de datos. Puedes usar <code>.split()</code> para dividir el contenido en líneas:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;nombres.txt&quot;</span>)
+    <span class="kw">let</span> lineas: <span class="ty">Array</span> <span class="op">=</span> contenido.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lineas.<span class="fn">length</span>() {
+        <span class="fn">print</span>(<span class="str">&quot;Línea &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(i <span class="op">+</span> <span class="num">1</span>) <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> lineas[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}</pre>
+<p>Si <code>nombres.txt</code> contiene:</p>
+<pre>Alice
+Bob
+Charlie</pre>
+<p>Salida:</p>
+<pre>Línea 1: Alice
+Línea 2: Bob
+Línea 3: Charlie</pre>
+<h2>Escribir múltiples líneas</h2>
+<p>Para escribir múltiples líneas, únelas con caracteres de salto de línea:</p>
+<pre><span class="kw">import</span> { write_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nombres: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;Bob&quot;</span>, <span class="str">&quot;Charlie&quot;</span>, <span class="str">&quot;Diana&quot;</span>]
+
+    <span class="kw">var</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> nombres.<span class="fn">length</span>() {
+        contenido <span class="op">=</span> contenido <span class="op">+</span> nombres[i] <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">write_file</span>(<span class="str">&quot;nombres.txt&quot;</span>, contenido)
+    <span class="fn">print</span>(<span class="str">&quot;Se escribieron &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(nombres.<span class="fn">length</span>()) <span class="op">+</span> <span class="str">&quot; nombres&quot;</span>)
+}</pre>
+<h2>Ejemplo práctico: un archivo de configuración simple</h2>
+<p>Muchos programas usan archivos de configuración para almacenar ajustes. Construyamos un lector simple de config clave=valor:</p>
+<pre><span class="kw">import</span> { read_file, write_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">cargar_config</span>(ruta: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Map</span> {
+    <span class="kw">var</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+
+    <span class="kw">if</span> <span class="fn">file_exists</span>(ruta) {
+        <span class="kw">let</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(ruta)
+        <span class="kw">let</span> lineas: <span class="ty">Array</span> <span class="op">=</span> contenido.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> lineas.<span class="fn">length</span>() {
+            <span class="kw">let</span> linea: <span class="ty">String</span> <span class="op">=</span> lineas[i]
+            <span class="kw">let</span> pos_eq: <span class="ty">int</span> <span class="op">=</span> linea.<span class="fn">indexOf</span>(<span class="str">&quot;=&quot;</span>)
+            <span class="kw">if</span> pos_eq <span class="op">&gt;</span> <span class="num">0</span> {
+                <span class="kw">let</span> clave: <span class="ty">String</span> <span class="op">=</span> linea.<span class="fn">substring</span>(<span class="num">0</span>, pos_eq)
+                <span class="kw">let</span> valor: <span class="ty">String</span> <span class="op">=</span> linea.<span class="fn">substring</span>(pos_eq <span class="op">+</span> <span class="num">1</span>, linea.<span class="fn">length</span>())
+                config.<span class="fn">insert</span>(clave, valor)
+            }
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+    }
+
+    <span class="kw">return</span> config
+}
+
+<span class="kw">fn</span> <span class="fn">guardar_config</span>(ruta: <span class="ty">String</span>, config: <span class="ty">Map</span>) {
+    <span class="kw">var</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;host&quot;</span>) {
+        contenido <span class="op">=</span> contenido <span class="op">+</span> <span class="str">&quot;host=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;host&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;port&quot;</span>) {
+        contenido <span class="op">=</span> contenido <span class="op">+</span> <span class="str">&quot;port=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;port&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;debug&quot;</span>) {
+        contenido <span class="op">=</span> contenido <span class="op">+</span> <span class="str">&quot;debug=&quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;debug&quot;</span>) <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    }
+    <span class="fn">write_file</span>(ruta, contenido)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">cargar_config</span>(<span class="str">&quot;app.conf&quot;</span>)
+
+    <span class="kw">if</span> config.<span class="fn">contains</span>(<span class="str">&quot;host&quot;</span>) {
+        <span class="fn">print</span>(<span class="str">&quot;Host: &quot;</span> <span class="op">+</span> config.<span class="fn">get</span>(<span class="str">&quot;host&quot;</span>))
+    } <span class="kw">else</span> {
+        <span class="fn">print</span>(<span class="str">&quot;No se encontró config, creando valores por defecto...&quot;</span>)
+        <span class="kw">var</span> defaults: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;host&quot;</span>, <span class="str">&quot;localhost&quot;</span>)
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;port&quot;</span>, <span class="str">&quot;8080&quot;</span>)
+        defaults.<span class="fn">insert</span>(<span class="str">&quot;debug&quot;</span>, <span class="str">&quot;false&quot;</span>)
+        <span class="fn">guardar_config</span>(<span class="str">&quot;app.conf&quot;</span>, defaults)
+        <span class="fn">print</span>(<span class="str">&quot;Config por defecto guardada en app.conf&quot;</span>)
+    }
+}</pre>
+<h2>Ejemplo práctico: un logger simple</h2>
+<pre><span class="kw">import</span> { read_file, write_file, file_exists } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">registrar_mensaje</span>(ruta: <span class="ty">String</span>, mensaje: <span class="ty">String</span>) {
+    <span class="kw">var</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">if</span> <span class="fn">file_exists</span>(ruta) {
+        contenido <span class="op">=</span> <span class="fn">read_file</span>(ruta)
+    }
+    contenido <span class="op">=</span> contenido <span class="op">+</span> mensaje <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    <span class="fn">write_file</span>(ruta, contenido)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> archivo_log: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;app.log&quot;</span>
+
+    <span class="fn">registrar_mensaje</span>(archivo_log, <span class="str">&quot;Aplicación iniciada&quot;</span>)
+    <span class="fn">registrar_mensaje</span>(archivo_log, <span class="str">&quot;Procesando datos...&quot;</span>)
+    <span class="fn">registrar_mensaje</span>(archivo_log, <span class="str">&quot;¡Listo!&quot;</span>)
+
+    <span class="fn">print</span>(<span class="str">&quot;Contenido del log:&quot;</span>)
+    <span class="fn">print</span>(<span class="fn">read_file</span>(archivo_log))
+}</pre>
+<p>Salida:</p>
+<pre>Contenido del log:
+Aplicación iniciada
+Procesando datos...
+¡Listo!</pre>
+<h2>Ejemplo práctico: procesamiento de datos CSV</h2>
+<p>CSV (Valores Separados por Comas) es un formato de archivo común. Leamos y procesemos uno:</p>
+<pre><span class="kw">import</span> { read_file } from <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">struct</span> Producto {
+    nombre: <span class="ty">String</span>,
+    precio: <span class="ty">int</span>,
+    cantidad: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">parsear_csv</span>(contenido: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">let</span> lineas: <span class="ty">Array</span> <span class="op">=</span> contenido.<span class="fn">split</span>(<span class="str">&quot;\n&quot;</span>)
+    <span class="kw">var</span> productos: <span class="ty">Array</span> <span class="op">=</span> []
+
+    <span class="cm">// Saltar línea de encabezado, empezar en 1</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lineas.<span class="fn">length</span>() {
+        <span class="kw">let</span> linea: <span class="ty">String</span> <span class="op">=</span> lineas[i]
+        <span class="kw">if</span> linea.<span class="fn">length</span>() <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="kw">let</span> campos: <span class="ty">Array</span> <span class="op">=</span> linea.<span class="fn">split</span>(<span class="str">&quot;,&quot;</span>)
+            <span class="kw">let</span> p: Producto <span class="op">=</span> Producto {
+                nombre: campos[<span class="num">0</span>],
+                precio: <span class="fn">string_to_int</span>(campos[<span class="num">1</span>]),
+                cantidad: <span class="fn">string_to_int</span>(campos[<span class="num">2</span>])
+            }
+            productos.<span class="fn">push</span>(p)
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="kw">return</span> productos
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Asumimos que inventario.csv contiene:</span>
+    <span class="cm">// nombre,precio,cantidad</span>
+    <span class="cm">// Manzana,2,50</span>
+    <span class="cm">// Pan,3,20</span>
+    <span class="cm">// Leche,4,30</span>
+    <span class="kw">let</span> contenido: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;inventario.csv&quot;</span>)
+    <span class="kw">let</span> productos: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">parsear_csv</span>(contenido)
+
+    <span class="kw">var</span> valor_total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> productos.<span class="fn">length</span>() {
+        <span class="kw">let</span> p: Producto <span class="op">=</span> productos[i]
+        <span class="kw">let</span> valor: <span class="ty">int</span> <span class="op">=</span> p.precio <span class="op">*</span> p.cantidad
+        <span class="fn">print</span>(p.nombre <span class="op">+</span> <span class="str">&quot;: $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(valor))
+        valor_total <span class="op">+=</span> valor
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">&quot;Valor total del inventario: $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(valor_total))
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe un programa que lea un archivo de números (uno por línea) e imprima la suma, promedio, mínimo y máximo.</li>
+</ol>
+<ol>
+<li>Escribe un programa de "lista de tareas" que guarde tareas en <code>tareas.txt</code>. Debe poder agregar una tarea (añadir una línea) y mostrar todas las tareas (leer e imprimir).</li>
+</ol>
+<ol>
+<li>Escribe un programa que lea un archivo de texto y cuente cuántas veces aparece cada palabra. Imprime los conteos.</li>
+</ol>
+<ol>
+<li>Escribe un programa que copie un archivo a otro: lee el origen, escribe en el destino, e imprime un mensaje de confirmación.</li>
+</ol>
+<ol>
+<li>Escribe un programa que lea un CSV con nombres de estudiantes y notas, calcule el promedio de cada estudiante, y escriba un informe resumen en un archivo nuevo.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>read_file(ruta)</code> lee un archivo completo en un string.</li>
+<li><code>write_file(ruta, contenido)</code> escribe un string a un archivo (crea o sobrescribe).</li>
+<li><code>file_exists(ruta)</code> verifica si un archivo existe en disco.</li>
+<li>Usa <code>.split("\n")</code> para dividir el contenido en líneas.</li>
+<li>Usa concatenación de strings con <code>"\n"</code> para construir contenido multilínea.</li>
+<li>Los archivos permiten que tus programas guarden y carguen datos que persisten entre ejecuciones.</li>
+</ul>
+<p>Siguiente capítulo: <a href="13-closures.md">Closures y funciones de primera clase →</a></p>
+
+    <div class="book-nav">
+        <a href="11.html" class="book-nav-prev">&larr; Anterior: Imports y módulos</a>
+        <a href="13.html" class="book-nav-next">Siguiente: Closures y funciones de primera clase &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

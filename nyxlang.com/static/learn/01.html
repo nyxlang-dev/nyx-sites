@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What is programming? — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>What is programming?</h1>
+
+<h2>A conversation with your computer</h2>
+<p>When you use a calculator, you press buttons and it gives you answers. Programming is the same idea, but instead of pressing buttons one at a time, you write a complete set of instructions in advance. The computer reads your instructions and follows them exactly, one by one.</p>
+<p>These instructions are written in a <strong>programming language</strong>. Just like human languages (English, Spanish, Japanese), programming languages have their own vocabulary and grammar. Nyx is one of these languages.</p>
+<h2>What makes Nyx special?</h2>
+<p>There are hundreds of programming languages in the world. Each one has a different approach. Nyx was designed with three principles:</p>
+<p><strong>Simple</strong> — The syntax is clean and minimal. There are no unnecessary symbols or complicated rules. If you can read English, you can read Nyx code.</p>
+<p><strong>Fast</strong> — Nyx compiles your instructions into a native binary — a file that your computer's processor understands directly. There is no middleman. This makes Nyx programs extremely fast, comparable to C, one of the fastest languages ever created.</p>
+<p><strong>Efficient</strong> — Nyx programs are tiny. A complete web server fits in 150 kilobytes. A complete database fits in 132 kilobytes. For comparison, most programs today are measured in megabytes or gigabytes.</p>
+<h2>How does it work?</h2>
+<p>When you write code in Nyx, this is what happens:</p>
+<pre>Your code (hello.nx)
+    ↓
+Nyx compiler (nyx_bootstrap)
+    ↓
+Machine instructions (hello.ll)
+    ↓
+Clang linker
+    ↓
+Native binary (hello) ← your computer runs this directly</pre>
+<p>You write a text file with instructions. The Nyx compiler reads your text file and translates it into instructions that your processor can understand. The result is a <strong>binary</strong> — a standalone program that runs on its own, without needing Nyx or anything else installed.</p>
+<h2>Key terms</h2>
+<p>Before we begin, here are some words you will see throughout this book:</p>
+<p><strong>Program</strong>: A set of instructions that a computer follows to do something useful.</p>
+<p><strong>Source code</strong>: The text file where you write your instructions. In Nyx, these files end in <code>.nx</code>.</p>
+<p><strong>Compiler</strong>: A tool that translates source code into a binary that the computer can run. The Nyx compiler is called <code>nyx_bootstrap</code>.</p>
+<p><strong>Binary</strong>: The final result — a file that your computer's processor can execute directly. When you "compile" a program, you are creating a binary.</p>
+<p><strong>Terminal</strong>: A text-based interface where you type commands. You will use the terminal to compile and run your Nyx programs.</p>
+<p><strong>Bug</strong>: A mistake in your code that causes it to do something wrong or unexpected. Finding and fixing bugs is a normal part of programming.</p>
+<h2>Installing Nyx</h2>
+<p>To write Nyx programs, you need three things:</p>
+<ol>
+<li><strong>A text editor</strong> — Any editor that can save plain text files. VS Code, Sublime Text, Vim, Notepad++ — any of these work.</li>
+</ol>
+<ol>
+<li><strong>The Nyx compiler</strong> — This translates your code into a binary.</li>
+</ol>
+<ol>
+<li><strong>Clang</strong> — A tool that links the compiled code with the runtime. It comes pre-installed on most systems or can be installed with one command.</li>
+</ol>
+<p>To install Nyx on Linux or macOS:</p>
+<pre>curl -sSf https://nyxlang.com/install.sh | sh</pre>
+<p>To verify the installation:</p>
+<pre>nyx --version</pre>
+<p>You should see something like <code>Nyx v0.13.1</code>.</p>
+<h2>Your first program</h2>
+<p>Create a file called <code>hello.nx</code> in your text editor and type this:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Hello, World!&quot;</span>)
+}</pre>
+<p>Let's break this down:</p>
+<ul>
+<li><code>fn</code> means "function" — a named block of instructions.</li>
+<li><code>main</code> is the name of this function. Every Nyx program starts by running the function called <code>main</code>.</li>
+<li><code>()</code> means this function takes no inputs.</li>
+<li><code>{</code> and <code>}</code> mark the beginning and end of the function's instructions.</li>
+<li><code>print("Hello, World!")</code> is the instruction: display the text "Hello, World!" on the screen.</li>
+</ul>
+<h2>Compiling and running</h2>
+<p>Open your terminal, navigate to the folder where you saved <code>hello.nx</code>, and type:</p>
+<pre>nyx run hello.nx</pre>
+<p>You should see:</p>
+<pre>Hello, World!</pre>
+<p>That's it. You just wrote, compiled, and ran your first program. The <code>nyx run</code> command does two things automatically: it compiles your code into a binary and then runs that binary.</p>
+<p>If you want to compile without running (to create a binary you can share or deploy):</p>
+<pre>nyx build hello.nx
+./hello</pre>
+<p>This creates a binary called <code>hello</code> that you can run anytime, on any compatible machine, without needing Nyx installed.</p>
+<h2>What just happened?</h2>
+<ol>
+<li>You wrote instructions in a text file (<code>hello.nx</code>).</li>
+<li>The Nyx compiler translated those instructions into machine code.</li>
+<li>The resulting binary (<code>hello</code>) ran on your computer and printed text to the screen.</li>
+</ol>
+<p>This is the core cycle of programming: <strong>write → compile → run</strong>. Everything you learn from this point forward is about writing more sophisticated instructions.</p>
+<h2>Try it yourself</h2>
+<p>Before moving on, try modifying your program:</p>
+<ol>
+<li>Change the message to your name:</li>
+</ol>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Hello, I am learning Nyx!&quot;</span>)
+}</pre>
+<ol>
+<li>Add multiple lines:</li>
+</ol>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Line 1&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Line 2&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Line 3&quot;</span>)
+}</pre>
+<ol>
+<li>Try making an intentional mistake and see what happens:</li>
+</ol>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;This is missing a closing parenthesis&quot;</span>
+}</pre>
+<p>The compiler will show you an error message. Reading and understanding error messages is an important skill — they are the compiler trying to help you find the problem.</p>
+<h2>Summary</h2>
+<ul>
+<li>A program is a set of instructions for a computer.</li>
+<li>Nyx is a compiled language: your code is translated into a native binary.</li>
+<li>Every Nyx program starts with a <code>fn main()</code> function.</li>
+<li><code>print()</code> displays text on the screen.</li>
+<li>The cycle is: write → compile → run.</li>
+</ul>
+<p>Next chapter: <a href="02-variables-and-types.md">Variables and types →</a></p>
+
+    <div class="book-nav">
+        <span></span>
+        <a href="02.html" class="book-nav-next">Next: Variables and types &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

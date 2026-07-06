@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaitGroup — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>WaitGroup</h1>
+    <p><code>WaitGroup</code> from <code>std/sync</code> coordinates multiple threads. <code>wg_add</code> sets the expected count, each thread calls <code>wg_done</code> when finished, and <code>wg_wait</code> blocks until the count reaches zero.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// WaitGroup — waiting for multiple threads to finish</span>
+<span class="cm">// WaitGroup — esperar a que múltiples hilos terminen</span>
+
+<span class="kw">import</span> <span class="str">"std/sync"</span>
+
+<span class="kw">var</span> wg: <span class="ty">WaitGroup</span> = wg_new()
+
+<span class="kw">fn</span> <span class="fn">task_a</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task A running"</span>)
+    sleep(<span class="num">10</span>)
+    print(<span class="str">"task A done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">task_b</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task B running"</span>)
+    sleep(<span class="num">20</span>)
+    print(<span class="str">"task B done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">task_c</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"task C running"</span>)
+    sleep(<span class="num">5</span>)
+    print(<span class="str">"task C done"</span>)
+    wg_done(wg)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Set the counter to the number of tasks</span>
+    wg_add(wg, <span class="num">3</span>)
+
+    <span class="cm">// Spawn three concurrent tasks</span>
+    thread_spawn(task_a)
+    thread_spawn(task_b)
+    thread_spawn(task_c)
+
+    <span class="cm">// Block until all three call wg_done()</span>
+    wg_wait(wg)
+    print(<span class="str">"all tasks completed"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">task C running
+task C done
+task A running
+task A done
+task B running
+task B done
+all tasks completed</pre>
+    <h2>Explanation</h2>
+    <p><code>WaitGroup</code> is imported from <code>std/sync</code>. It maintains an internal counter: <code>wg_add(wg, 3)</code> sets it to 3, each <code>wg_done</code> call decrements it by 1, and <code>wg_wait</code> blocks until the counter reaches zero.</p>
+    <p>Three tasks run concurrently with different sleep durations (5ms, 10ms, 20ms). Task C finishes first because it sleeps the least. The exact ordering of output depends on thread scheduling, but "all tasks completed" always prints last because <code>wg_wait</code> guarantees all threads have called <code>wg_done</code>.</p>
+    <p>This pattern is ideal when you need to fan out work to multiple threads and wait for all of them to complete before proceeding. Unlike <code>thread_join</code>, you don't need to track individual thread handles.</p>
+    <div class="book-nav">
+        <a href="/by-example/60-producer-consumer.html">&larr; Previous</a>
+        <a href="/by-example/62-semaphore.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/61-waitgroup.nx">examples/by-example/61-waitgroup.nx</a></small></p>
+</main>
+</body>
+</html>

@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appendix A: Syntax quick reference — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Appendix A: Syntax quick reference</h1>
+
+<h2>Keywords</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Keyword</th>
+<th>Usage</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>fn</code></td>
+<td>Function declaration</td>
+<td><code>fn add(a: int, b: int) -> int</code></td>
+</tr>
+<tr>
+<td><code>let</code></td>
+<td>Immutable binding</td>
+<td><code>let x: int = 42</code></td>
+</tr>
+<tr>
+<td><code>var</code></td>
+<td>Mutable binding</td>
+<td><code>var count: int = 0</code></td>
+</tr>
+<tr>
+<td><code>if</code> / <code>else</code></td>
+<td>Conditional</td>
+<td><code>if x > 0 { } else { }</code></td>
+</tr>
+<tr>
+<td><code>while</code></td>
+<td>Loop</td>
+<td><code>while i < 10 { i += 1 }</code></td>
+</tr>
+<tr>
+<td><code>for</code></td>
+<td>Iterator loop</td>
+<td><code>for item in items { }</code></td>
+</tr>
+<tr>
+<td><code>match</code></td>
+<td>Pattern matching</td>
+<td><code>match shape { Circle(r) => ... }</code></td>
+</tr>
+<tr>
+<td><code>return</code></td>
+<td>Return from function</td>
+<td><code>return 42</code> or bare <code>return</code></td>
+</tr>
+<tr>
+<td><code>defer</code></td>
+<td>Run at scope exit</td>
+<td><code>defer { cleanup() }</code></td>
+</tr>
+<tr>
+<td><code>struct</code></td>
+<td>Structure definition</td>
+<td><code>struct Point { x: int, y: int }</code></td>
+</tr>
+<tr>
+<td><code>enum</code></td>
+<td>Enumeration / ADT</td>
+<td><code>enum Color { Red, Green, Blue }</code></td>
+</tr>
+<tr>
+<td><code>trait</code></td>
+<td>Trait definition</td>
+<td><code>trait Display { fn show(self) -> String }</code></td>
+</tr>
+<tr>
+<td><code>impl</code></td>
+<td>Implementation block</td>
+<td><code>impl Display for Point { }</code></td>
+</tr>
+<tr>
+<td><code>import</code></td>
+<td>Import module</td>
+<td><code>import "std/json"</code></td>
+</tr>
+<tr>
+<td><code>export</code></td>
+<td>Export symbol</td>
+<td><code>export fn create() -> Point</code></td>
+</tr>
+<tr>
+<td><code>spawn</code></td>
+<td>Launch goroutine</td>
+<td><code>spawn { do_work() }</code></td>
+</tr>
+<tr>
+<td><code>select</code></td>
+<td>Wait on channels</td>
+<td><code>select { case ch => { } }</code></td>
+</tr>
+<tr>
+<td><code>async</code></td>
+<td>Async function</td>
+<td><code>async fn fetch() -> String</code></td>
+</tr>
+<tr>
+<td><code>await</code></td>
+<td>Await async result</td>
+<td><code>let r: String = await fetch()</code></td>
+</tr>
+<tr>
+<td><code>unsafe</code></td>
+<td>Unsafe block</td>
+<td><code>unsafe { free(ptr) }</code></td>
+</tr>
+<tr>
+<td><code>extern</code></td>
+<td>Foreign function</td>
+<td><code>extern "C" fn puts(s: String) -> int</code></td>
+</tr>
+<tr>
+<td><code>true</code> / <code>false</code></td>
+<td>Boolean literals</td>
+<td><code>let ok: bool = true</code></td>
+</tr>
+<tr>
+<td><code>and</code> / <code>or</code> / <code>not</code></td>
+<td>Logical operators</td>
+<td><code>if a > 0 and b > 0</code></td>
+</tr>
+<tr>
+<td><code>as</code></td>
+<td>Type cast</td>
+<td><code>let p: <em>int = addr as </em>int</code></td>
+</tr>
+<tr>
+<td><code>self</code></td>
+<td>Current instance</td>
+<td><code>fn length(self) -> int</code></td>
+</tr>
+<tr>
+<td><code>derive</code></td>
+<td>Derive macro</td>
+<td><code>#[derive(Clone, Debug)]</code></td>
+</tr>
+<tr>
+<td><code>where</code></td>
+<td>Trait constraint</td>
+<td><code>fn f<T>() where T: Display</code></td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>Type alias</td>
+<td><code>type Callback = Fn(int) -> int</code></td>
+</tr>
+<tr>
+<td><code>macro</code></td>
+<td>Declarative macro</td>
+<td><code>macro log!(msg) { print(msg) }</code></td>
+</tr>
+</tbody></table></div>
+<h2>Operators</h2>
+<h3>Arithmetic</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>+</code></td>
+<td>Addition / string concat</td>
+<td><code>a + b</code>, <code>"hi" + name</code></td>
+</tr>
+<tr>
+<td><code>-</code></td>
+<td>Subtraction</td>
+<td><code>a - b</code></td>
+</tr>
+<tr>
+<td><code>*</code></td>
+<td>Multiplication</td>
+<td><code>a * b</code></td>
+</tr>
+<tr>
+<td><code>/</code></td>
+<td>Division</td>
+<td><code>a / b</code></td>
+</tr>
+<tr>
+<td><code>%</code></td>
+<td>Modulo</td>
+<td><code>a % 2</code></td>
+</tr>
+<tr>
+<td><code>**</code></td>
+<td>Power</td>
+<td><code>2 ** 10</code></td>
+</tr>
+</tbody></table></div>
+<h3>Comparison</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>==</code></td>
+<td>Equal</td>
+<td><code>a == b</code></td>
+</tr>
+<tr>
+<td><code>!=</code></td>
+<td>Not equal</td>
+<td><code>a != b</code></td>
+</tr>
+<tr>
+<td><code><</code></td>
+<td>Less than</td>
+<td><code>a < b</code></td>
+</tr>
+<tr>
+<td><code>></code></td>
+<td>Greater than</td>
+<td><code>a > b</code></td>
+</tr>
+<tr>
+<td><code><=</code></td>
+<td>Less or equal</td>
+<td><code>a <= b</code></td>
+</tr>
+<tr>
+<td><code>>=</code></td>
+<td>Greater or equal</td>
+<td><code>a >= b</code></td>
+</tr>
+</tbody></table></div>
+<h3>Assignment</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>=</code></td>
+<td>Assign</td>
+<td><code>x = 42</code></td>
+</tr>
+<tr>
+<td><code>+=</code></td>
+<td>Add-assign</td>
+<td><code>x += 1</code></td>
+</tr>
+<tr>
+<td><code>-=</code></td>
+<td>Sub-assign</td>
+<td><code>x -= 1</code></td>
+</tr>
+<tr>
+<td><code>*=</code></td>
+<td>Mul-assign</td>
+<td><code>x *= 2</code></td>
+</tr>
+<tr>
+<td><code>/=</code></td>
+<td>Div-assign</td>
+<td><code>x /= 2</code></td>
+</tr>
+</tbody></table></div>
+<h3>Bitwise</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>&</code></td>
+<td>Bitwise AND</td>
+<td><code>flags & mask</code></td>
+</tr>
+<tr>
+<td>`\</td>
+<td>`</td>
+<td>Bitwise OR</td>
+<td>`flags \</td>
+<td>bit`</td>
+</tr>
+<tr>
+<td><code>^</code></td>
+<td>Bitwise XOR</td>
+<td><code>a ^ b</code></td>
+</tr>
+<tr>
+<td><code>~</code></td>
+<td>Bitwise NOT</td>
+<td><code>~mask</code></td>
+</tr>
+<tr>
+<td><code><<</code></td>
+<td>Left shift</td>
+<td><code>1 << 8</code></td>
+</tr>
+<tr>
+<td><code>>></code></td>
+<td>Right shift</td>
+<td><code>value >> 4</code></td>
+</tr>
+</tbody></table></div>
+<h3>Other</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Operator</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>..</code></td>
+<td>Range</td>
+<td><code>0..10</code></td>
+</tr>
+<tr>
+<td>`\</td>
+<td>>`</td>
+<td>Pipe</td>
+<td>`data \</td>
+<td>> transform \</td>
+<td>> print`</td>
+</tr>
+<tr>
+<td><code>=></code></td>
+<td>Match arm</td>
+<td><code>Some(x) => x</code></td>
+</tr>
+<tr>
+<td><code>-></code></td>
+<td>Return type</td>
+<td><code>fn f() -> int</code></td>
+</tr>
+</tbody></table></div>
+<h2>Declarations</h2>
+<h3>Variables</h3>
+<pre><span class="kw">let</span> name: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alice&quot;</span>       <span class="cm">// immutable</span>
+<span class="kw">var</span> count: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>               <span class="cm">// mutable</span>
+<span class="kw">let</span> inferred <span class="op">=</span> <span class="num">42</span>                <span class="cm">// type inferred as int</span></pre>
+<h3>Functions</h3>
+<pre><span class="kw">fn</span> <span class="fn">add</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> a <span class="op">+</span> b
+}
+
+<span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>, greeting: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hello&quot;</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> greeting <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> name
+}
+
+<span class="kw">fn</span> <span class="fn">apply</span><span class="op">&lt;</span>T<span class="op">&gt;</span>(value: T, f: <span class="ty">Fn</span>(T) <span class="op">-&gt;</span> T) <span class="op">-&gt;</span> T {
+    <span class="kw">return</span> <span class="fn">f</span>(value)
+}</pre>
+<h3>Structs</h3>
+<pre><span class="kw">struct</span> Point {
+    x: <span class="ty">int</span>,
+    y: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Pair<span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    first: T,
+    second: T
+}
+
+<span class="cm">// Tuple struct</span>
+<span class="kw">struct</span> <span class="fn">Meters</span>(<span class="ty">int</span>)</pre>
+<h3>Enums</h3>
+<pre><span class="kw">enum</span> Color { Red, Green, Blue }
+
+<span class="kw">enum</span> <span class="ty">Option</span><span class="op">&lt;</span>T<span class="op">&gt;</span> {
+    <span class="ty">Some</span>(T),
+    <span class="ty">None</span>
+}
+
+<span class="kw">enum</span> Shape {
+    <span class="fn">Circle</span>(<span class="ty">int</span>),
+    <span class="fn">Rect</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="fn">Triangle</span>(<span class="ty">int</span>, <span class="ty">int</span>, <span class="ty">int</span>)
+}</pre>
+<h3>Traits and impl</h3>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Point {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.x) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.y) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> Point {
+    <span class="kw">fn</span> <span class="fn">new</span>(x: <span class="ty">int</span>, y: <span class="ty">int</span>) <span class="op">-&gt;</span> Point {
+        <span class="kw">return</span> Point { x: x, y: y }
+    }
+}</pre>
+<h3>Imports</h3>
+<pre><span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> { parse, stringify } from <span class="str">&quot;std/json&quot;</span></pre>
+<h2>Types</h2>
+<h3>Primitive types</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>int</code></td>
+<td>64-bit integer</td>
+<td><code>42</code>, <code>-7</code>, <code>0xFF</code></td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td>64-bit float</td>
+<td><code>3.14</code>, <code>-0.5</code></td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td>Boolean</td>
+<td><code>true</code>, <code>false</code></td>
+</tr>
+<tr>
+<td><code>char</code></td>
+<td>Character (ASCII)</td>
+<td><code>'A'</code>, <code>'z'</code></td>
+</tr>
+<tr>
+<td><code>String</code></td>
+<td>UTF-8 string</td>
+<td><code>"hello"</code></td>
+</tr>
+</tbody></table></div>
+<h3>Compound types</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>Array</code></td>
+<td>Dynamic array</td>
+<td><code>[1, 2, 3]</code></td>
+</tr>
+<tr>
+<td><code>Map</code></td>
+<td>Hash map</td>
+<td><code>Map.new()</code></td>
+</tr>
+<tr>
+<td><code>Fn(A) -> B</code></td>
+<td>Function type</td>
+<td><code>Fn(int) -> int</code></td>
+</tr>
+</tbody></table></div>
+<h3>Sized types (systems programming)</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Type</th>
+<th>Size</th>
+<th>Range</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>i8</code></td>
+<td>1 byte</td>
+<td>-128 to 127</td>
+</tr>
+<tr>
+<td><code>i16</code></td>
+<td>2 bytes</td>
+<td>-32768 to 32767</td>
+</tr>
+<tr>
+<td><code>i32</code></td>
+<td>4 bytes</td>
+<td>-2^31 to 2^31-1</td>
+</tr>
+<tr>
+<td><code>i64</code></td>
+<td>8 bytes</td>
+<td>-2^63 to 2^63-1</td>
+</tr>
+<tr>
+<td><code>u8</code></td>
+<td>1 byte</td>
+<td>0 to 255</td>
+</tr>
+<tr>
+<td><code>u16</code></td>
+<td>2 bytes</td>
+<td>0 to 65535</td>
+</tr>
+<tr>
+<td><code>u32</code></td>
+<td>4 bytes</td>
+<td>0 to 2^32-1</td>
+</tr>
+<tr>
+<td><code>u64</code></td>
+<td>8 bytes</td>
+<td>0 to 2^64-1</td>
+</tr>
+<tr>
+<td><code>f32</code></td>
+<td>4 bytes</td>
+<td>IEEE 754 single</td>
+</tr>
+<tr>
+<td><code>usize</code></td>
+<td>8 bytes</td>
+<td>Platform pointer size</td>
+</tr>
+</tbody></table></div>
+<h3>Pointer types</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Type</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>*T</code></td>
+<td>Raw pointer to T</td>
+</tr>
+<tr>
+<td><code>*int</code></td>
+<td>Raw pointer to int</td>
+</tr>
+</tbody></table></div>
+<h2>Control flow</h2>
+<h3>If / else</h3>
+<pre><span class="kw">if</span> condition {
+    <span class="cm">// ...</span>
+} <span class="kw">else</span> <span class="kw">if</span> other {
+    <span class="cm">// ...</span>
+} <span class="kw">else</span> {
+    <span class="cm">// ...</span>
+}</pre>
+<h3>While</h3>
+<pre><span class="kw">while</span> condition {
+    <span class="cm">// ...</span>
+}</pre>
+<h3>For</h3>
+<pre><span class="kw">for</span> item <span class="kw">in</span> collection {
+    <span class="cm">// ...</span>
+}
+
+<span class="kw">for</span> i <span class="kw">in</span> <span class="num">0..10</span> {
+    <span class="cm">// ...</span>
+}</pre>
+<h3>Match</h3>
+<pre><span class="kw">match</span> value {
+    <span class="num">0</span> <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;zero&quot;</span>),
+    <span class="num">1</span> <span class="op">|</span> <span class="num">2</span> <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;one or two&quot;</span>),
+    n <span class="kw">if</span> n <span class="op">&gt;</span> <span class="num">100</span> <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;big&quot;</span>),
+    _ <span class="op">=&gt;</span> <span class="fn">print</span>(<span class="str">&quot;other&quot;</span>)
+}
+
+<span class="kw">match</span> option {
+    <span class="ty">Some</span>(x) <span class="op">=&gt;</span> <span class="kw">use</span>(x),
+    <span class="ty">None</span> <span class="op">=&gt;</span> <span class="fn">default</span>()
+}</pre>
+<h3>If-let / While-let</h3>
+<pre><span class="kw">if</span> <span class="kw">let</span> <span class="ty">Some</span>(x) <span class="op">=</span> maybe_value {
+    <span class="fn">print</span>(<span class="fn">int_to_string</span>(x))
+}
+
+<span class="kw">while</span> <span class="kw">let</span> <span class="ty">Some</span>(item) <span class="op">=</span> iterator.<span class="fn">next</span>() {
+    <span class="fn">process</span>(item)
+}</pre>
+<h2>Function attributes</h2>
+<pre><span class="kw">#[naked]                          // No prologue/epilogue</span>
+<span class="kw">#[interrupt]                      // Hardware interrupt handler</span>
+<span class="kw">#[link_section(&quot;.text.boot&quot;)]     // Place in specific section</span>
+<span class="kw">#[export_name(&quot;_start&quot;)]          // Control symbol name</span>
+<span class="kw">#[derive(Clone, Debug, Display)]  // Derive trait implementations</span>
+<span class="kw">#[repr(C)]                        // C-compatible memory layout</span></pre>
+<h2>String methods</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Method</th>
+<th>Returns</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>.length()</code></td>
+<td><code>int</code></td>
+<td>String length</td>
+</tr>
+<tr>
+<td><code>.charAt(i)</code></td>
+<td><code>int</code></td>
+<td>ASCII value at index</td>
+</tr>
+<tr>
+<td><code>.substring(start, len)</code></td>
+<td><code>String</code></td>
+<td>Extract substring</td>
+</tr>
+<tr>
+<td><code>.indexOf(sub)</code></td>
+<td><code>int</code></td>
+<td>Find substring (-1 if not found)</td>
+</tr>
+<tr>
+<td><code>.contains(sub)</code></td>
+<td><code>bool</code></td>
+<td>Check if contains substring</td>
+</tr>
+<tr>
+<td><code>.split(delim)</code></td>
+<td><code>Array</code></td>
+<td>Split into array</td>
+</tr>
+<tr>
+<td><code>.trim()</code></td>
+<td><code>String</code></td>
+<td>Remove whitespace</td>
+</tr>
+<tr>
+<td><code>.toUpper()</code></td>
+<td><code>String</code></td>
+<td>Uppercase</td>
+</tr>
+<tr>
+<td><code>.toLower()</code></td>
+<td><code>String</code></td>
+<td>Lowercase</td>
+</tr>
+<tr>
+<td><code>.startsWith(prefix)</code></td>
+<td><code>bool</code></td>
+<td>Check prefix</td>
+</tr>
+<tr>
+<td><code>.endsWith(suffix)</code></td>
+<td><code>bool</code></td>
+<td>Check suffix</td>
+</tr>
+<tr>
+<td><code>.replace(old, new)</code></td>
+<td><code>String</code></td>
+<td>Replace occurrences</td>
+</tr>
+</tbody></table></div>
+<h2>Array methods</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Method</th>
+<th>Returns</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>.length()</code></td>
+<td><code>int</code></td>
+<td>Array length</td>
+</tr>
+<tr>
+<td><code>.push(item)</code></td>
+<td><code>void</code></td>
+<td>Add to end</td>
+</tr>
+<tr>
+<td><code>.pop()</code></td>
+<td><code>any</code></td>
+<td>Remove from end</td>
+</tr>
+<tr>
+<td><code>.get(index)</code></td>
+<td><code>any</code></td>
+<td>Get by index</td>
+</tr>
+<tr>
+<td><code>.set(index, val)</code></td>
+<td><code>void</code></td>
+<td>Set by index</td>
+</tr>
+<tr>
+<td><code>.slice(start, end)</code></td>
+<td><code>Array</code></td>
+<td>Extract sub-array</td>
+</tr>
+<tr>
+<td><code>.contains(item)</code></td>
+<td><code>bool</code></td>
+<td>Check membership</td>
+</tr>
+<tr>
+<td><code>.indexOf(item)</code></td>
+<td><code>int</code></td>
+<td>Find index</td>
+</tr>
+<tr>
+<td><code>.join(sep)</code></td>
+<td><code>String</code></td>
+<td>Join into string</td>
+</tr>
+<tr>
+<td><code>.reverse()</code></td>
+<td><code>Array</code></td>
+<td>Reverse array</td>
+</tr>
+<tr>
+<td><code>.sort()</code></td>
+<td><code>Array</code></td>
+<td>Sort array</td>
+</tr>
+<tr>
+<td><code>.insert(index, val)</code></td>
+<td><code>void</code></td>
+<td>Insert at index</td>
+</tr>
+<tr>
+<td><code>.remove(index)</code></td>
+<td><code>any</code></td>
+<td>Remove at index</td>
+</tr>
+</tbody></table></div>
+<h2>Map methods</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Method</th>
+<th>Returns</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>Map.new()</code></td>
+<td><code>Map</code></td>
+<td>Create empty map</td>
+</tr>
+<tr>
+<td><code>.get(key)</code></td>
+<td><code>any</code></td>
+<td>Get value by key</td>
+</tr>
+<tr>
+<td><code>.set(key, val)</code></td>
+<td><code>void</code></td>
+<td>Set key-value pair</td>
+</tr>
+<tr>
+<td><code>.contains(key)</code></td>
+<td><code>bool</code></td>
+<td>Check if key exists</td>
+</tr>
+<tr>
+<td><code>.remove(key)</code></td>
+<td><code>void</code></td>
+<td>Remove key</td>
+</tr>
+<tr>
+<td><code>.keys()</code></td>
+<td><code>Array</code></td>
+<td>Get all keys</td>
+</tr>
+<tr>
+<td><code>.values()</code></td>
+<td><code>Array</code></td>
+<td>Get all values</td>
+</tr>
+<tr>
+<td><code>.size()</code></td>
+<td><code>int</code></td>
+<td>Number of entries</td>
+</tr>
+<tr>
+<td><code>.clear()</code></td>
+<td><code>void</code></td>
+<td>Remove all entries</td>
+</tr>
+</tbody></table></div>
+<h2>Built-in functions</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>print(value)</code></td>
+<td>Print to stdout</td>
+</tr>
+<tr>
+<td><code>println(value)</code></td>
+<td>Print with newline</td>
+</tr>
+<tr>
+<td><code>int_to_string(n)</code></td>
+<td>Convert int to string</td>
+</tr>
+<tr>
+<td><code>float_to_string(f)</code></td>
+<td>Convert float to string</td>
+</tr>
+<tr>
+<td><code>string_to_int(s)</code></td>
+<td>Parse string to int</td>
+</tr>
+<tr>
+<td><code>string_to_float(s)</code></td>
+<td>Parse string to float</td>
+</tr>
+<tr>
+<td><code>typeof(value)</code></td>
+<td>Get type name as string</td>
+</tr>
+<tr>
+<td><code>time_us()</code></td>
+<td>Current time in microseconds</td>
+</tr>
+<tr>
+<td><code>sleep(ms)</code></td>
+<td>Sleep for milliseconds</td>
+</tr>
+<tr>
+<td><code>exit(code)</code></td>
+<td>Exit program</td>
+</tr>
+<tr>
+<td><code>chr(code)</code></td>
+<td>Convert ASCII code to single-character string</td>
+</tr>
+<tr>
+<td><code>read_byte()</code></td>
+<td>Read one byte from stdin (returns int, -1 on EOF)</td>
+</tr>
+<tr>
+<td><code>raw_mode_enter()</code></td>
+<td>Set terminal to raw mode (no echo, no buffering)</td>
+</tr>
+<tr>
+<td><code>raw_mode_exit()</code></td>
+<td>Restore terminal to cooked mode</td>
+</tr>
+<tr>
+<td><code>term_cols()</code></td>
+<td>Terminal width in columns</td>
+</tr>
+<tr>
+<td><code>term_rows()</code></td>
+<td>Terminal height in rows</td>
+</tr>
+</tbody></table></div>
+<h3>Process control builtins <small>(v0.12.0)</small></h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Function</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>fork()</code></td>
+<td>Fork process. Returns 0 in child, PID in parent, -1 on error</td>
+</tr>
+<tr>
+<td><code>execvp(program, args)</code></td>
+<td>Replace process with program. <code>args</code> is an Array of strings</td>
+</tr>
+<tr>
+<td><code>waitpid(pid, opts)</code></td>
+<td>Wait for child process. opts: 0=block, 1=WNOHANG. Returns exit status</td>
+</tr>
+<tr>
+<td><code>dup2(old_fd, new_fd)</code></td>
+<td>Duplicate file descriptor (for redirects)</td>
+</tr>
+<tr>
+<td><code>pipe_new()</code></td>
+<td>Create pipe. Returns <code>[read_fd, write_fd]</code></td>
+</tr>
+<tr>
+<td><code>close_fd(fd)</code></td>
+<td>Close a raw file descriptor</td>
+</tr>
+<tr>
+<td><code>open_fd(path, mode)</code></td>
+<td>Open file as fd. mode: 0=read, 1=write(trunc), 2=append</td>
+</tr>
+<tr>
+<td><code>getcwd()</code></td>
+<td>Get current working directory as String</td>
+</tr>
+<tr>
+<td><code>chdir(path)</code></td>
+<td>Change working directory. Returns 0 on success</td>
+</tr>
+<tr>
+<td><code>stat(path)</code></td>
+<td>File info: returns <code>[size, mode, mtime, is_dir, is_file]</code></td>
+</tr>
+<tr>
+<td><code>isatty(fd)</code></td>
+<td>Returns 1 if fd is a terminal, 0 otherwise</td>
+</tr>
+<tr>
+<td><code>getpid()</code></td>
+<td>Get current process ID</td>
+</tr>
+<tr>
+<td><code>kill_process(pid, signal)</code></td>
+<td>Send signal to process</td>
+</tr>
+</tbody></table></div>
+<h2>Build configuration (nyx.toml)</h2>
+<p>Every Nyx project can have a <code>nyx.toml</code> file at its root. This file describes the project metadata, entry point, and dependencies.</p>
+<pre>[package]
+name = "myapp"
+version = "0.1.0"
+main = "src/main.nx"
+description = "My first Nyx project"
+no_gc = false
+
+[dependencies]
+somelib = "*"
+otherlib = "https://github.com/org/otherlib"</pre>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Field</th>
+<th>Section</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>[package]</code></td>
+<td>Project name (used for binary output)</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td><code>[package]</code></td>
+<td>Semantic version (MAJOR.MINOR.PATCH)</td>
+</tr>
+<tr>
+<td><code>main</code></td>
+<td><code>[package]</code></td>
+<td>Entry point file (default: <code>src/main.nx</code>)</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td><code>[package]</code></td>
+<td>One-line project description</td>
+</tr>
+<tr>
+<td><code>no_gc</code></td>
+<td><code>[package]</code></td>
+<td>Disable garbage collector (default: <code>false</code>)</td>
+</tr>
+<tr>
+<td><code>&lt;name&gt; = "&lt;version&gt;"</code></td>
+<td><code>[dependencies]</code></td>
+<td>Dependency with semver constraint (<code>"*"</code> for any)</td>
+</tr>
+<tr>
+<td><code>&lt;name&gt; = "&lt;url&gt;"</code></td>
+<td><code>[dependencies]</code></td>
+<td>Git dependency (cloned to <code>packages/</code>)</td>
+</tr>
+</tbody></table></div>
+<p>Run <code>nyx init</code> to scaffold a new project with a <code>nyx.toml</code> and <code>src/main.nx</code>. Run <code>nyx build</code> to compile, which also generates a <code>nyx.lock</code> file pinning dependency versions.</p>
+
+<p><a href="00-index.md">← Back to Table of Contents</a></p>
+
+    <div class="book-nav">
+        <a href="31.html" class="book-nav-prev">&larr; Previous: Building a database — nyx-db</a>
+        <a href="appendix-b.html" class="book-nav-next">Next: Appendix B: Standard library modules &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

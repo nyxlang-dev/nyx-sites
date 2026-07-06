@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Virtual Hosts — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Proxy Virtual Hosts</h1>
+    <p>Virtual host routing maps the HTTP Host header (or TLS SNI for HTTPS) to different upstreams. This is how nyx-proxy serves 4 domains on port :443 simultaneously.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-proxy virtual host routing — match Host header to upstream</span>
+<span class="cm">// Routing nyx-proxy — mapear Host header a upstream</span>
+
+<span class="kw">fn</span> <span class="fn">route_for_host</span>(host: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
+    <span class="cm">// Map each domain to an upstream IP:port</span>
+    <span class="kw">if</span> host == <span class="str">"nyxlang.com"</span> { <span class="kw">return</span> <span class="str">"127.0.0.1:3001"</span> }
+    <span class="kw">if</span> host == <span class="str">"nyxkv.com"</span> { <span class="kw">return</span> <span class="str">"127.0.0.1:3002"</span> }
+    <span class="kw">if</span> host == <span class="str">"serve.nyxlang.com"</span> { <span class="kw">return</span> <span class="str">"127.0.0.1:3003"</span> }
+    <span class="kw">if</span> host == <span class="str">"proxy.nyxlang.com"</span> { <span class="kw">return</span> <span class="str">"127.0.0.1:3005"</span> }
+    <span class="cm">// Default upstream</span>
+    <span class="kw">return</span> <span class="str">"127.0.0.1:3001"</span>
+}
+
+<span class="kw">fn</span> <span class="fn">parse_host_header</span>(request: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
+    <span class="cm">// Find "Host: " in the request headers</span>
+    <span class="kw">let</span> idx: <span class="ty">int</span> = request.indexOf(<span class="str">"Host: "</span>)
+    <span class="kw">if</span> idx &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="str">""</span> }
+    <span class="kw">let</span> start: <span class="ty">int</span> = idx + <span class="num">6</span>
+    <span class="kw">let</span> end: <span class="ty">int</span> = request.indexOf(<span class="str">"\r\n"</span>, start)
+    <span class="kw">if</span> end &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="str">""</span> }
+    <span class="kw">return</span> request.substring(start, end)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Simulate reading an HTTP request</span>
+    <span class="kw">let</span> request: <span class="ty">String</span> = <span class="str">"GET / HTTP/1.1\r\nHost: nyxkv.com\r\nUser-Agent: test\r\n\r\n"</span>
+
+    <span class="kw">let</span> host: <span class="ty">String</span> = parse_host_header(request)
+    <span class="kw">let</span> upstream: <span class="ty">String</span> = route_for_host(host)
+
+    print(<span class="str">"incoming Host: "</span> + host)
+    print(<span class="str">"route to -&gt; "</span> + upstream)
+
+    <span class="cm">// In production, nyx-proxy tls_accept() reads SNI, matches the cert,</span>
+    <span class="cm">// then Host header matches the vhost config, forwards the request</span>
+    <span class="cm">// via tcp_connect to the upstream, and pipes bytes bidirectionally.</span>
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">incoming Host: nyxkv.com
+route to -&gt; 127.0.0.1:3002</pre>
+    <h2>Explanation</h2>
+    <p>Virtual hosting is how one server IP hosts many websites. For plain HTTP, the Host header inside the request tells you which site the client wants; for HTTPS, the SNI extension in the TLS ClientHello does the same thing before any HTTP flows. nyx-proxy uses both in layers: SNI to pick the right certificate at TLS handshake, then Host header to pick the right upstream at L7. route_for_host here is a flat lookup, but the real config loads this table from proxy.toml so operations can add domains without recompiling. This exact pattern serves the four nyxlang.com-family domains from a single port :443.</p>
+    <div class="book-nav">
+        <a href="/by-example/85-proxy-config.html">&larr; Previous</a>
+        <a href="/by-example/87-proxy-health.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/86-proxy-vhost.nx">examples/by-example/86-proxy-vhost.nx</a></small></p>
+</main>
+</body>
+</html>

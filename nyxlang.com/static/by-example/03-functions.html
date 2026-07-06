@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functions — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Functions</h1>
+
+    <p>Functions in Nyx are defined with <code>fn</code>, take typed parameters, and declare their return type after <code>-&gt;</code>. They support default parameter values, making call sites cleaner when a sensible default exists.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Funciones: parámetros, valor de retorno, default parameters
+
+fn suma(a: int, b: int) -> int {
+    return a + b
+}
+
+fn saludar(nombre: String, saludo: String = "Hola") -> String {
+    return saludo + ", " + nombre + "!"
+}
+
+fn describir(n: int) -> String {
+    if n > 0 {
+        return "positivo"
+    }
+    if n < 0 {
+        return "negativo"
+    }
+    return "cero"
+}
+
+fn main() -> int {
+    let resultado: int = suma(3, 4)
+    print("3 + 4 = " + int_to_string(resultado))
+
+    print(saludar("Mundo"))
+    print(saludar("Nyx", "Buenos dias"))
+
+    print("42 es " + describir(42))
+    print("-5 es " + describir(-5))
+    print("0 es " + describir(0))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">3 + 4 = 7
+Hola, Mundo!
+Buenos dias, Nyx!
+42 es positivo
+-5 es negativo
+0 es cero</pre>
+
+    <h2>Explanation</h2>
+    <p>Functions are declared with the <code>fn</code> keyword followed by the function name, a parenthesized parameter list, and the return type. Each parameter has a name and a type separated by a colon. The function body is a block enclosed in <code>{ }</code>.</p>
+    <p>Default parameter values are written as <code>param: Type = value</code>. When a caller omits that argument, the default is used automatically. In <code>saludar</code>, calling <code>saludar("Mundo")</code> uses the default greeting <code>"Hola"</code>, while <code>saludar("Nyx", "Buenos dias")</code> overrides it.</p>
+    <p>The built-in <code>int_to_string</code> function converts an integer to its string representation. Nyx does not coerce types implicitly, so you must convert explicitly when building strings from non-string values.</p>
+    <p>Functions can have multiple <code>return</code> statements. The compiler requires that all paths return a value of the declared type — any branch that falls off without returning causes a compile-time error.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/02-variables.html">← Previous</a>
+        <a href="/by-example/04-control-flow.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/03-functions.nx">examples/by-example/03-functions.nx</a></small></p>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variables de Entorno — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Variables de Entorno</h1>
+
+    <p>Nyx expone el entorno del proceso mediante dos funciones integradas: <code>getenv</code> devuelve el valor de una variable o un string vacío si no está definida, mientras que <code>getenv_default</code> te permite proveer un valor por defecto, haciendo que el código de configuración sea más seguro y legible.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Variables de entorno: getenv(), getenv_default()
+
+fn main() -> int {
+    // getenv retorna el valor o "" si no existe
+    let home: String = getenv("HOME")
+    print("HOME=" + home)
+
+    let path: String = getenv("PATH")
+    // Mostrar solo los primeros 40 chars para no saturar la salida
+    if path.length() > 40 {
+        print("PATH=" + path.substring(0, 40) + "...")
+    } else {
+        print("PATH=" + path)
+    }
+
+    // getenv_default: retorna el segundo argumento si la variable no existe
+    let mi_var: String = getenv_default("MI_VAR_NX", "valor_por_defecto")
+    print("MI_VAR_NX=" + mi_var)
+
+    let usuario: String = getenv_default("USER", "desconocido")
+    print("USER=" + usuario)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">HOME=/home/alice
+PATH=/usr/local/bin:/usr/bin:/bin...
+MI_VAR_NX=valor_por_defecto
+USER=alice</pre>
+
+    <h2>Explicación</h2>
+    <p><code>getenv(name)</code> envuelve la llamada POSIX <code>getenv(3)</code> y convierte el resultado a un <code>String</code> de Nyx. Si la variable no está definida en el entorno del proceso, devuelve un string vacío <code>""</code> en lugar de fallar — esto hace que sea seguro llamarla incondicionalmente.</p>
+    <p><code>getenv_default(name, fallback)</code> es un envoltorio de conveniencia que devuelve el valor de la variable cuando existe, o <code>fallback</code> en caso contrario. Este patrón es común en aplicaciones "twelve-factor" donde cada valor de configuración debería tener un valor por defecto documentado.</p>
+    <p>La variable <code>PATH</code> suele ser muy larga, así que el ejemplo la recorta a 40 caracteres usando <code>.substring(0, 40)</code> para mantener la salida legible. La verificación de <code>.length()</code> antes de recortar evita un error de fuera de rango cuando <code>PATH</code> resulta ser más corta de lo esperado.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/13-cli-args.html">← Anterior</a>
+        <a href="/es/by-example/15-json-parse.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/14-env-vars.nx">examples/by-example/14-env-vars.nx</a></small></p>
+</main>
+
+</body>
+</html>

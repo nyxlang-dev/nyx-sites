@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limiting del Proxy — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Rate Limiting del Proxy</h1>
+    <p>Rate limiting por IP usando una ventana deslizante. Cuenta requests en ventanas de 1 segundo; devuelve HTTP 429 al superarse el límite. Para rate limiting distribuido entre múltiples instancias del proxy, usar nyx-kv INCR + EXPIRE.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-proxy rate limiting — per-IP sliding window</span>
+<span class="cm">// Rate limiting nyx-proxy — ventana deslizante por IP</span>
+
+<span class="kw">var</span> ip_counts: <span class="ty">Map</span> = Map.new()
+<span class="kw">var</span> window_start: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">now_seconds</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">return</span> time()
+}
+
+<span class="cm">// Check if an IP has exceeded the rate limit</span>
+<span class="cm">// Returns true if allowed, false if rate-limited</span>
+<span class="kw">fn</span> <span class="fn">rate_check</span>(ip: <span class="ty">String</span>, max_per_sec: <span class="ty">int</span>) -&gt; <span class="ty">bool</span> {
+    <span class="kw">let</span> now: <span class="ty">int</span> = now_seconds()
+
+    <span class="cm">// Initialize window if new IP</span>
+    <span class="kw">if</span> <span class="kw">not</span> ip_counts.contains(ip) {
+        ip_counts.insert(ip, <span class="str">"1"</span>)
+        window_start.insert(ip, int_to_string(now))
+        <span class="kw">return</span> <span class="kw">true</span>
+    }
+
+    <span class="cm">// Reset window if more than 1 second elapsed</span>
+    <span class="kw">let</span> start_s: <span class="ty">String</span> = window_start.get(ip)
+    <span class="kw">let</span> start: <span class="ty">int</span> = string_to_int(start_s)
+    <span class="kw">if</span> now - start &gt;= <span class="num">1</span> {
+        ip_counts.insert(ip, <span class="str">"1"</span>)
+        window_start.insert(ip, int_to_string(now))
+        <span class="kw">return</span> <span class="kw">true</span>
+    }
+
+    <span class="cm">// Increment count</span>
+    <span class="kw">let</span> count_s: <span class="ty">String</span> = ip_counts.get(ip)
+    <span class="kw">let</span> count: <span class="ty">int</span> = string_to_int(count_s) + <span class="num">1</span>
+    ip_counts.insert(ip, int_to_string(count))
+
+    <span class="kw">return</span> count &lt;= max_per_sec
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> max_rps: <span class="ty">int</span> = <span class="num">5</span>  <span class="cm">// allow 5 requests per second per IP</span>
+    <span class="kw">let</span> ip: <span class="ty">String</span> = <span class="str">"192.168.1.100"</span>
+
+    <span class="cm">// Simulate 8 rapid requests from the same IP</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">8</span> {
+        <span class="kw">let</span> ok: <span class="ty">bool</span> = rate_check(ip, max_rps)
+        <span class="kw">if</span> ok {
+            print(<span class="str">"request "</span> + int_to_string(i + <span class="num">1</span>) + <span class="str">": ALLOWED"</span>)
+        } <span class="kw">else</span> {
+            print(<span class="str">"request "</span> + int_to_string(i + <span class="num">1</span>) + <span class="str">": 429 Too Many Requests"</span>)
+        }
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">request 1: ALLOWED
+request 2: ALLOWED
+request 3: ALLOWED
+request 4: ALLOWED
+request 5: ALLOWED
+request 6: 429 Too Many Requests
+request 7: 429 Too Many Requests
+request 8: 429 Too Many Requests</pre>
+    <h2>Explicación</h2>
+    <p>El rate limiting es la primera línea de defensa tanto contra el abuso como contra clientes descontrolados. El contador de ventana fija que se ve aquí es la implementación más simple: para cada IP, recordar cuándo empezó su ventana y cuántos requests han llegado; reiniciar el contador en cada segundo nuevo. No es perfecto — un cliente que golpea el límite exacto puede llegar a ráfagas de 2x el límite — pero es barato y suficientemente bueno para la mayoría de los proxies. En un despliegue con múltiples instancias los contadores se desincronizan porque cada instancia solo ve su propio tráfico; la solución es mantener los conteos en nyx-kv con INCR + EXPIRE para que todas las instancias compartan una única vista. Para una equidad más estricta, el token bucket o una ventana deslizante real son los siguientes pasos.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/87-proxy-health.html">&larr; Anterior</a>
+        <a href="/es/by-example/89-proxy-tls-sni.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/88-proxy-ratelimit.nx">examples/by-example/88-proxy-ratelimit.nx</a></small></p>
+</main>
+</body>
+</html>

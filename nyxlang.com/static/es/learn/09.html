@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structs — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Structs</h1>
+
+<h2>¿Qué es un struct?</h2>
+<p>Hasta ahora, has usado variables individuales para almacenar datos: un nombre aquí, una edad allá, un puntaje en otro lado. Pero ¿qué pasa si quieres agrupar datos relacionados?</p>
+<p>Un <strong>struct</strong> (abreviatura de "structure", estructura) te permite crear tu propio tipo de dato agrupando variables. Piensa en él como un formulario: un formulario de "Persona" tiene campos para nombre, edad y ciudad — y cada persona que creas llena esos mismos campos.</p>
+<h2>Definir un struct</h2>
+<pre><span class="kw">struct</span> Persona {
+    nombre: <span class="ty">String</span>,
+    edad: <span class="ty">int</span>,
+    ciudad: <span class="ty">String</span>
+}</pre>
+<p>Esto define un nuevo tipo llamado <code>Persona</code> con tres <strong>campos</strong>. No se crea ningún dato todavía — esto es solo la plantilla.</p>
+<h2>Crear una instancia</h2>
+<p>Para crear una <code>Persona</code> real, llena los campos:</p>
+<pre><span class="kw">struct</span> Persona {
+    nombre: <span class="ty">String</span>,
+    edad: <span class="ty">int</span>,
+    ciudad: <span class="ty">String</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> alice: Persona <span class="op">=</span> Persona { nombre: <span class="str">&quot;Alice&quot;</span>, edad: <span class="num">30</span>, ciudad: <span class="str">&quot;Berlín&quot;</span> }
+    <span class="fn">print</span>(alice.nombre)    <span class="cm">// Alice</span>
+    <span class="fn">print</span>(alice.edad)      <span class="cm">// 30</span>
+    <span class="fn">print</span>(alice.ciudad)    <span class="cm">// Berlín</span>
+}</pre>
+<p>La notación con punto (<code>alice.nombre</code>) accede a un campo del struct.</p>
+<h2>Modificar campos</h2>
+<p>Usa <code>var</code> para crear un struct mutable, luego modifica sus campos:</p>
+<pre><span class="kw">struct</span> Contador {
+    valor: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> c: Contador <span class="op">=</span> Contador { valor: <span class="num">0</span> }
+    <span class="fn">print</span>(c.valor)    <span class="cm">// 0</span>
+
+    c.valor <span class="op">=</span> c.valor <span class="op">+</span> <span class="num">1</span>
+    c.valor <span class="op">=</span> c.valor <span class="op">+</span> <span class="num">1</span>
+    <span class="fn">print</span>(c.valor)    <span class="cm">// 2</span>
+}</pre>
+<h2>Structs como parámetros de funciones</h2>
+<p>Puedes pasar structs a funciones:</p>
+<pre><span class="kw">struct</span> Rectangulo {
+    ancho: <span class="ty">int</span>,
+    alto: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">area</span>(r: Rectangulo) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> r.ancho <span class="op">*</span> r.alto
+}
+
+<span class="kw">fn</span> <span class="fn">perimetro</span>(r: Rectangulo) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="num">2</span> <span class="op">*</span> (r.ancho <span class="op">+</span> r.alto)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> rect: Rectangulo <span class="op">=</span> Rectangulo { ancho: <span class="num">10</span>, alto: <span class="num">5</span> }
+    <span class="fn">print</span>(<span class="fn">area</span>(rect))        <span class="cm">// 50</span>
+    <span class="fn">print</span>(<span class="fn">perimetro</span>(rect))   <span class="cm">// 30</span>
+}</pre>
+<h2>Structs como valores de retorno</h2>
+<p>Las funciones también pueden devolver structs:</p>
+<pre><span class="kw">struct</span> Punto {
+    x: <span class="ty">int</span>,
+    y: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">crear_punto</span>(x: <span class="ty">int</span>, y: <span class="ty">int</span>) <span class="op">-&gt;</span> Punto {
+    <span class="kw">return</span> Punto { x: x, y: y }
+}
+
+<span class="kw">fn</span> <span class="fn">sumar_puntos</span>(a: Punto, b: Punto) <span class="op">-&gt;</span> Punto {
+    <span class="kw">return</span> Punto { x: a.x <span class="op">+</span> b.x, y: a.y <span class="op">+</span> b.y }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> p1: Punto <span class="op">=</span> <span class="fn">crear_punto</span>(<span class="num">3</span>, <span class="num">4</span>)
+    <span class="kw">let</span> p2: Punto <span class="op">=</span> <span class="fn">crear_punto</span>(<span class="num">1</span>, <span class="num">2</span>)
+    <span class="kw">let</span> p3: Punto <span class="op">=</span> <span class="fn">sumar_puntos</span>(p1, p2)
+
+    <span class="fn">print</span>(p3.x)    <span class="cm">// 4</span>
+    <span class="fn">print</span>(p3.y)    <span class="cm">// 6</span>
+}</pre>
+<h2>¿Por qué usar structs?</h2>
+<p>Sin structs, una función que describe a una persona podría verse así:</p>
+<pre><span class="kw">fn</span> <span class="fn">describir</span>(nombre: <span class="ty">String</span>, edad: <span class="ty">int</span>, ciudad: <span class="ty">String</span>) {
+    <span class="fn">print</span>(nombre <span class="op">+</span> <span class="str">&quot; tiene &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(edad) <span class="op">+</span> <span class="str">&quot; años, de &quot;</span> <span class="op">+</span> ciudad)
+}</pre>
+<p>Con tres parámetros es manejable. Pero ¿qué pasa si una persona tiene 10 campos? La firma de la función se vuelve ilegible. Los structs resuelven esto:</p>
+<pre><span class="kw">struct</span> Persona {
+    nombre: <span class="ty">String</span>,
+    edad: <span class="ty">int</span>,
+    ciudad: <span class="ty">String</span>
+}
+
+<span class="kw">fn</span> <span class="fn">describir</span>(p: Persona) {
+    <span class="fn">print</span>(p.nombre <span class="op">+</span> <span class="str">&quot; tiene &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(p.edad) <span class="op">+</span> <span class="str">&quot; años, de &quot;</span> <span class="op">+</span> p.ciudad)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> alice: Persona <span class="op">=</span> Persona { nombre: <span class="str">&quot;Alice&quot;</span>, edad: <span class="num">30</span>, ciudad: <span class="str">&quot;Berlín&quot;</span> }
+    <span class="fn">describir</span>(alice)    <span class="cm">// Alice tiene 30 años, de Berlín</span>
+}</pre>
+<p>Un parámetro en vez de tres. Y si agregas más campos después, la firma de la función no cambia.</p>
+<h2>Structs con arrays</h2>
+<p>Puedes poner structs en arrays:</p>
+<pre><span class="kw">struct</span> Estudiante {
+    nombre: <span class="ty">String</span>,
+    nota: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">mejor_estudiante</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> mejor_nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> mejor_nota: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="kw">if</span> s.nota <span class="op">&gt;</span> mejor_nota {
+            mejor_nota <span class="op">=</span> s.nota
+            mejor_nombre <span class="op">=</span> s.nombre
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor_nombre
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> estudiantes: <span class="ty">Array</span> <span class="op">=</span> [
+        Estudiante { nombre: <span class="str">&quot;Alice&quot;</span>, nota: <span class="num">92</span> },
+        Estudiante { nombre: <span class="str">&quot;Bob&quot;</span>, nota: <span class="num">88</span> },
+        Estudiante { nombre: <span class="str">&quot;Charlie&quot;</span>, nota: <span class="num">97</span> }
+    ]
+
+    <span class="fn">print</span>(<span class="fn">mejor_estudiante</span>(estudiantes))    <span class="cm">// Charlie</span>
+}</pre>
+<h2>Ejemplo práctico: un inventario simple</h2>
+<pre><span class="kw">struct</span> Articulo {
+    nombre: <span class="ty">String</span>,
+    cantidad: <span class="ty">int</span>,
+    precio: <span class="ty">int</span>
+}
+
+<span class="kw">fn</span> <span class="fn">valor_total</span>(articulos: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> articulos.<span class="fn">length</span>() {
+        <span class="kw">let</span> item: Articulo <span class="op">=</span> articulos[i]
+        total <span class="op">+=</span> item.cantidad <span class="op">*</span> item.precio
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> inventario: <span class="ty">Array</span> <span class="op">=</span> [
+        Articulo { nombre: <span class="str">&quot;Manzana&quot;</span>, cantidad: <span class="num">50</span>, precio: <span class="num">2</span> },
+        Articulo { nombre: <span class="str">&quot;Pan&quot;</span>, cantidad: <span class="num">20</span>, precio: <span class="num">3</span> },
+        Articulo { nombre: <span class="str">&quot;Leche&quot;</span>, cantidad: <span class="num">30</span>, precio: <span class="num">4</span> }
+    ]
+
+    <span class="fn">print</span>(<span class="fn">valor_total</span>(inventario))    <span class="cm">// 50*2 + 20*3 + 30*4 = 280</span>
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Define un struct <code>Libro</code> con <code>titulo: String</code>, <code>autor: String</code> y <code>paginas: int</code>. Crea 3 libros e imprime sus títulos.</li>
+</ol>
+<ol>
+<li>Escribe una función <code>libro_mas_largo(libros: Array) -> String</code> que devuelva el título del libro con más páginas.</li>
+</ol>
+<ol>
+<li>Define un struct <code>Circulo</code> con <code>radio: int</code>. Escribe funciones <code>area_circulo(c: Circulo) -> int</code> y <code>circunferencia_circulo(c: Circulo) -> int</code> que calculen valores aproximados (usa 3 como aproximación de pi).</li>
+</ol>
+<ol>
+<li>Define un struct <code>CuentaBancaria</code> con <code>propietario: String</code> y <code>saldo: int</code>. Escribe funciones <code>depositar(cuenta: CuentaBancaria, monto: int) -> CuentaBancaria</code> y <code>retirar(cuenta: CuentaBancaria, monto: int) -> CuentaBancaria</code> que devuelvan nuevas cuentas con saldos actualizados.</li>
+</ol>
+<ol>
+<li>Crea un array de 5 structs <code>Punto</code>. Escribe una función que encuentre el punto más cercano al origen (0, 0). Usa distancia al cuadrado (<code>x<em>x + y</em>y</code>) para evitar necesitar raíces cuadradas.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>struct Nombre { campo: Tipo, ... }</code> define un nuevo tipo de dato.</li>
+<li><code>Nombre { campo: valor, ... }</code> crea una instancia.</li>
+<li>Accede a campos con notación de punto: <code>instancia.campo</code></li>
+<li>Los structs se pueden pasar a funciones y devolver desde funciones.</li>
+<li>Usa structs para agrupar datos relacionados.</li>
+<li>Structs + arrays te permiten trabajar con colecciones de datos complejos.</li>
+</ul>
+<p>Siguiente capítulo: <a href="10-primer-proyecto.md">Tu primer proyecto →</a></p>
+
+    <div class="book-nav">
+        <a href="08.html" class="book-nav-prev">&larr; Anterior: Maps</a>
+        <a href="10.html" class="book-nav-next">Siguiente: Tu primer proyecto &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

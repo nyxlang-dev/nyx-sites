@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parseo de JSON — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Parseo de JSON</h1>
+
+    <p>El módulo <code>std/json</code> provee un parser y constructor de JSON completo. Los valores JSON se representan como nodos <code>Array</code> etiquetados — el primer elemento es la etiqueta de tipo y el segundo es el valor — lo que facilita inspeccionar y recorrer cualquier documento JSON.</p>
+
+    <h2>Código</h2>
+    <pre><code>// JSON con std/json: construir objetos, arrays y serializar/parsear números
+
+import "std/json"
+
+fn main() -> int {
+    // Construir un objeto JSON programáticamente
+    let keys: Array = ["name", "age", "activo"]
+    let vals: Array = []
+    vals.push(json_string("Alice"))
+    vals.push(json_number(30))
+    vals.push(json_bool(true))
+
+    let obj: Array = json_object(keys, vals)
+    let serializado: String = json_stringify(obj)
+    print("Objeto: " + serializado)
+
+    // Construir un array JSON
+    let items: Array = []
+    items.push(json_number(10))
+    items.push(json_number(20))
+    items.push(json_number(30))
+    let arr: Array = json_array(items)
+    print("Array:  " + json_stringify(arr))
+
+    // Parsear un número
+    let parsed: Array = json_parse("42")
+    print("Tipo: " + json_type(parsed))
+    let val: int = parsed[1]
+    print("Valor: " + int_to_string(val))
+
+    // Parsear un array de números
+    let parsed2: Array = json_parse("[1,2,3]")
+    print("Array parseado: " + json_stringify(parsed2))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Objeto: {"name":"Alice","age":30,"activo":true}
+Array:  [10,20,30]
+Tipo: number
+Valor: 42
+Array parseado: [1,2,3]</pre>
+
+    <h2>Explicación</h2>
+    <p>Los valores JSON se construyen con funciones constructoras tipadas: <code>json_string</code>, <code>json_number</code>, <code>json_bool</code>, <code>json_object</code> y <code>json_array</code>. Cada una devuelve un <code>Array</code> etiquetado donde <code>node[0]</code> es el string de tipo (p. ej. <code>"number"</code>) y <code>node[1]</code> es el contenido. Esta representación uniforme hace que el recorrido recursivo sea directo.</p>
+    <p><code>json_stringify</code> serializa cualquier nodo JSON de vuelta a un string compacto. <code>json_parse</code> hace lo inverso — acepta un string JSON y devuelve la misma estructura de array etiquetado, que luego puedes inspeccionar con <code>json_type</code> o indexar directamente.</p>
+    <p>Para leer campos anidados, encadenarías indexación de arrays: <code>obj[1][1]</code> llega al primer valor dentro de un nodo de objeto JSON. El próximo ejemplo (16) se enfoca en construir estructuras anidadas complejas para serialización.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/14-env-vars.html">← Anterior</a>
+        <a href="/es/by-example/16-json-serialize.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/15-json-parse.nx">examples/by-example/15-json-parse.nx</a></small></p>
+</main>
+
+</body>
+</html>

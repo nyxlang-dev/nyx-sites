@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+    <style>
+        .by-example-intro {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0 3rem;
+        }
+        @media (max-width: 700px) {
+            .by-example-intro { grid-template-columns: 1fr; }
+        }
+        .intro-block {
+            padding: 1.25rem 1.5rem;
+            border-radius: 8px;
+            background: var(--surface, #f8f9fa);
+            border: 1px solid var(--border, #e2e8f0);
+        }
+        .intro-block .lang-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted, #94a3b8);
+            margin-bottom: 0.5rem;
+        }
+        .recipe-section h2 {
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted, #94a3b8);
+            margin: 0 0 1.25rem;
+        }
+        .recipe-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+        .recipe-card {
+            display: block;
+            padding: 1.1rem 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border, #e2e8f0);
+            background: var(--surface, #fafafa);
+            text-decoration: none;
+            color: inherit;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .recipe-card:hover {
+            border-color: var(--accent, #6366f1);
+            box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+        }
+        .recipe-card .recipe-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--muted, #94a3b8);
+            margin-bottom: 0.3rem;
+        }
+        .recipe-card .recipe-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 0.35rem;
+        }
+        .recipe-card .recipe-desc {
+            font-size: 0.85rem;
+            color: var(--muted, #64748b);
+            line-height: 1.4;
+        }
+        .by-example-footer {
+            border-top: 1px solid var(--border, #e2e8f0);
+            padding-top: 2rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--muted, #64748b);
+        }
+        .by-example-footer a {
+            color: var(--accent, #6366f1);
+        }
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+        .coming-soon {
+            margin-top: 1.5rem;
+            padding: 0.9rem 1.25rem;
+            background: var(--surface, #f8f9fa);
+            border-radius: 8px;
+            border: 1px solid var(--border, #e2e8f0);
+            font-size: 0.85rem;
+            color: var(--muted, #64748b);
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/" class="active">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <h1>Nyx con Ejemplos</h1>
+
+    <div class="by-example-intro">
+        <div class="intro-block">
+            <div class="lang-label">English</div>
+            <p>The best way to learn a language is to read real code. This collection of short, focused examples walks you through Nyx one concept at a time. Each recipe is self-contained: you can copy it, run it, and modify it to explore further.</p>
+            <p>No prior experience with Nyx is required. If you can read code in any C-like language, you will feel at home immediately.</p>
+        </div>
+        <div class="intro-block">
+            <div class="lang-label">Español</div>
+            <p>La mejor forma de aprender un lenguaje es leer código real. Esta colección de ejemplos cortos y enfocados recorre Nyx concepto por concepto. Cada receta es autocontenida: se puede copiar, ejecutar y modificar para explorar más.</p>
+            <p>No se requiere experiencia previa con Nyx. Si se puede leer código en cualquier lenguaje similar a C, resultará familiar de inmediato.</p>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Fundamentos</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/01-hello-world.html" class="recipe-card">
+                <div class="recipe-num">01</div>
+                <div class="recipe-title">Hola Mundo</div>
+                <div class="recipe-desc">El programa Nyx más simple — imprimir texto en la terminal.</div>
+            </a>
+            <a href="/es/by-example/02-variables.html" class="recipe-card">
+                <div class="recipe-num">02</div>
+                <div class="recipe-title">Variables</div>
+                <div class="recipe-desc"><code>let</code> inmutable, <code>var</code> mutable, tipos básicos e interpolación de strings.</div>
+            </a>
+            <a href="/es/by-example/03-functions.html" class="recipe-card">
+                <div class="recipe-num">03</div>
+                <div class="recipe-title">Funciones</div>
+                <div class="recipe-desc">Definir funciones con parámetros, tipos de retorno y argumentos por defecto.</div>
+            </a>
+            <a href="/es/by-example/04-control-flow.html" class="recipe-card">
+                <div class="recipe-num">04</div>
+                <div class="recipe-title">Flujo de Control</div>
+                <div class="recipe-desc">if/else, bucles while, for-range, for-in, break y continue.</div>
+            </a>
+            <a href="/es/by-example/05-arrays.html" class="recipe-card">
+                <div class="recipe-num">05</div>
+                <div class="recipe-title">Arrays</div>
+                <div class="recipe-desc">Crear, indexar, agregar elementos e iterar sobre arrays dinámicos.</div>
+            </a>
+            <a href="/es/by-example/06-maps.html" class="recipe-card">
+                <div class="recipe-num">06</div>
+                <div class="recipe-title">Maps</div>
+                <div class="recipe-desc">Almacenamiento clave-valor con <code>Map.new()</code>, insert, get, has e iteración de claves.</div>
+            </a>
+            <a href="/es/by-example/07-strings.html" class="recipe-card">
+                <div class="recipe-num">07</div>
+                <div class="recipe-title">Strings</div>
+                <div class="recipe-desc">trim, length, substring, toUpper, split, contains e interpolación.</div>
+            </a>
+            <a href="/es/by-example/08-structs.html" class="recipe-card">
+                <div class="recipe-num">08</div>
+                <div class="recipe-title">Structs</div>
+                <div class="recipe-desc">Definir tipos de datos con campos y agregar métodos vía <code>impl</code>.</div>
+            </a>
+            <a href="/es/by-example/09-enums.html" class="recipe-card">
+                <div class="recipe-num">09</div>
+                <div class="recipe-title">Enums</div>
+                <div class="recipe-desc">Tipos de datos algebraicos con variantes que portan datos y <code>match</code> exhaustivo.</div>
+            </a>
+            <a href="/es/by-example/10-closures.html" class="recipe-card">
+                <div class="recipe-num">10</div>
+                <div class="recipe-title">Closures</div>
+                <div class="recipe-desc">Funciones de primera clase que capturan su entorno circundante.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>E/S y Datos</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/11-file-read-write.html" class="recipe-card">
+                <div class="recipe-num">11</div>
+                <div class="recipe-title">Lectura y Escritura de Archivos</div>
+                <div class="recipe-desc">Leer y escribir archivos con <code>read_file</code> y <code>write_file</code>.</div>
+            </a>
+            <a href="/es/by-example/12-stdin-input.html" class="recipe-card">
+                <div class="recipe-num">12</div>
+                <div class="recipe-title">Entrada por Stdin</div>
+                <div class="recipe-desc">Leer entrada del usuario desde la terminal con <code>read_line</code>.</div>
+            </a>
+            <a href="/es/by-example/13-cli-args.html" class="recipe-card">
+                <div class="recipe-num">13</div>
+                <div class="recipe-title">Argumentos de CLI</div>
+                <div class="recipe-desc">Acceder a los argumentos de línea de comandos con <code>get_args</code>.</div>
+            </a>
+            <a href="/es/by-example/14-env-vars.html" class="recipe-card">
+                <div class="recipe-num">14</div>
+                <div class="recipe-title">Variables de Entorno</div>
+                <div class="recipe-desc">Leer variables de entorno con <code>getenv</code> y <code>getenv_default</code>.</div>
+            </a>
+            <a href="/es/by-example/15-json-parse.html" class="recipe-card">
+                <div class="recipe-num">15</div>
+                <div class="recipe-title">Parseo de JSON</div>
+                <div class="recipe-desc">Parsear strings JSON hacia Maps y Arrays.</div>
+            </a>
+            <a href="/es/by-example/16-json-serialize.html" class="recipe-card">
+                <div class="recipe-num">16</div>
+                <div class="recipe-title">Serialización de JSON</div>
+                <div class="recipe-desc">Convertir estructuras de datos de vuelta a strings JSON.</div>
+            </a>
+            <a href="/es/by-example/17-regex.html" class="recipe-card">
+                <div class="recipe-num">17</div>
+                <div class="recipe-title">Expresiones Regulares</div>
+                <div class="recipe-desc">Match, extracción y reemplazo con regex POSIX.</div>
+            </a>
+            <a href="/es/by-example/18-csv.html" class="recipe-card">
+                <div class="recipe-num">18</div>
+                <div class="recipe-title">Parseo de CSV</div>
+                <div class="recipe-desc">Dividir líneas y campos para procesar datos tabulares.</div>
+            </a>
+            <a href="/es/by-example/19-datetime.html" class="recipe-card">
+                <div class="recipe-num">19</div>
+                <div class="recipe-title">Fecha y Hora</div>
+                <div class="recipe-desc">Timestamps, fechas formateadas y medición de tiempo.</div>
+            </a>
+            <a href="/es/by-example/20-spawn-channel.html" class="recipe-card">
+                <div class="recipe-num">20</div>
+                <div class="recipe-title">Threads y Channels</div>
+                <div class="recipe-desc">Crear threads y comunicarse mediante channels.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Tipos y Patrones</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/21-traits.html" class="recipe-card">
+                <div class="recipe-num">21</div>
+                <div class="recipe-title">Traits</div>
+                <div class="recipe-desc">Definir comportamiento compartido con <code>trait</code> e <code>impl ... for</code>.</div>
+            </a>
+            <a href="/es/by-example/22-trait-bounds.html" class="recipe-card">
+                <div class="recipe-num">22</div>
+                <div class="recipe-title">Trait Bounds</div>
+                <div class="recipe-desc">Restringir genéricos con <code>&lt;T: Display&gt;</code>.</div>
+            </a>
+            <a href="/es/by-example/23-derive-clone.html" class="recipe-card">
+                <div class="recipe-num">23</div>
+                <div class="recipe-title">Derive Macros</div>
+                <div class="recipe-desc">Generar automáticamente implementaciones de Clone, Debug y otros traits.</div>
+            </a>
+            <a href="/es/by-example/24-option-some-none.html" class="recipe-card">
+                <div class="recipe-num">24</div>
+                <div class="recipe-title">Option</div>
+                <div class="recipe-desc">Manejar valores opcionales con <code>Some</code> y <code>None</code>.</div>
+            </a>
+            <a href="/es/by-example/25-result-ok-err.html" class="recipe-card">
+                <div class="recipe-num">25</div>
+                <div class="recipe-title">Result</div>
+                <div class="recipe-desc">Manejo de errores con <code>Ok</code> y <code>Err</code>.</div>
+            </a>
+            <a href="/es/by-example/26-try-operator.html" class="recipe-card">
+                <div class="recipe-num">26</div>
+                <div class="recipe-title">Operador Try</div>
+                <div class="recipe-desc">Propagación de errores con cortocircuito usando <code>?</code>.</div>
+            </a>
+            <a href="/es/by-example/27-if-let.html" class="recipe-card">
+                <div class="recipe-num">27</div>
+                <div class="recipe-title">If Let</div>
+                <div class="recipe-desc">Desestructurar enums en condiciones con <code>if let</code>.</div>
+            </a>
+            <a href="/es/by-example/28-match-guard.html" class="recipe-card">
+                <div class="recipe-num">28</div>
+                <div class="recipe-title">Match Guards</div>
+                <div class="recipe-desc">Agregar condiciones a los brazos de match con guardas <code>if</code>.</div>
+            </a>
+            <a href="/es/by-example/29-iterator-map-filter.html" class="recipe-card">
+                <div class="recipe-num">29</div>
+                <div class="recipe-title">Iterator: Map y Filter</div>
+                <div class="recipe-desc">Transformaciones perezosas con <code>.iter().filter().map().collect()</code>.</div>
+            </a>
+            <a href="/es/by-example/30-iterator-fold.html" class="recipe-card">
+                <div class="recipe-num">30</div>
+                <div class="recipe-title">Iterator: Fold</div>
+                <div class="recipe-desc">Reducir una secuencia a un único valor con <code>fold</code>.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Avanzado</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/31-iterator-enumerate.html" class="recipe-card">
+                <div class="recipe-num">31</div>
+                <div class="recipe-title">Iterator: Enumerate</div>
+                <div class="recipe-desc">Obtener pares índice-valor durante la iteración.</div>
+            </a>
+            <a href="/es/by-example/32-iterator-take-skip.html" class="recipe-card">
+                <div class="recipe-num">32</div>
+                <div class="recipe-title">Iterator: Take y Skip</div>
+                <div class="recipe-desc">Recortar secuencias con <code>take</code> y <code>skip</code>.</div>
+            </a>
+            <a href="/es/by-example/33-recursion.html" class="recipe-card">
+                <div class="recipe-num">33</div>
+                <div class="recipe-title">Recursión</div>
+                <div class="recipe-desc">Resolver problemas con funciones que se llaman a sí mismas.</div>
+            </a>
+            <a href="/es/by-example/34-sorting.html" class="recipe-card">
+                <div class="recipe-num">34</div>
+                <div class="recipe-title">Ordenamiento</div>
+                <div class="recipe-desc">Ordenar arrays de enteros y strings.</div>
+            </a>
+            <a href="/es/by-example/35-error-handling.html" class="recipe-card">
+                <div class="recipe-num">35</div>
+                <div class="recipe-title">Manejo de Errores</div>
+                <div class="recipe-desc">Bloques try/catch para recuperarse de errores en tiempo de ejecución.</div>
+            </a>
+            <a href="/es/by-example/36-defer-cleanup.html" class="recipe-card">
+                <div class="recipe-num">36</div>
+                <div class="recipe-title">Defer</div>
+                <div class="recipe-desc">Limpieza garantizada con bloques <code>defer { ... }</code>.</div>
+            </a>
+            <a href="/es/by-example/37-sleep-timer.html" class="recipe-card">
+                <div class="recipe-num">37</div>
+                <div class="recipe-title">Sleep y Timer</div>
+                <div class="recipe-desc">Pausar la ejecución y medir tiempo transcurrido.</div>
+            </a>
+            <a href="/es/by-example/38-crypto-hash.html" class="recipe-card">
+                <div class="recipe-num">38</div>
+                <div class="recipe-title">Crypto: Hashing</div>
+                <div class="recipe-desc">SHA-256, MD5 y HMAC-SHA256 para verificación de integridad.</div>
+            </a>
+            <a href="/es/by-example/39-random-uuid.html" class="recipe-card">
+                <div class="recipe-num">39</div>
+                <div class="recipe-title">Random y UUID</div>
+                <div class="recipe-desc">Generar números aleatorios e identificadores únicos.</div>
+            </a>
+            <a href="/es/by-example/40-thread-spawn.html" class="recipe-card">
+                <div class="recipe-num">40</div>
+                <div class="recipe-title">Thread Spawn</div>
+                <div class="recipe-desc">Ejecutar funciones de forma concurrente con <code>thread_spawn</code>.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Redes y Protocolos</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/41-base64.html" class="recipe-card">
+                <div class="recipe-num">41</div>
+                <div class="recipe-title">Base64</div>
+                <div class="recipe-desc">Codificación/decodificación RFC 4648 — variantes estándar y URL-safe.</div>
+            </a>
+            <a href="/es/by-example/42-url-encode.html" class="recipe-card">
+                <div class="recipe-num">42</div>
+                <div class="recipe-title">URL Encode</div>
+                <div class="recipe-desc">Percent-encoding, query strings y escape de entidades HTML.</div>
+            </a>
+            <a href="/es/by-example/43-toml-config.html" class="recipe-card">
+                <div class="recipe-num">43</div>
+                <div class="recipe-title">Configuración TOML</div>
+                <div class="recipe-desc">Parsear strings de configuración con <code>std/toml</code>.</div>
+            </a>
+            <a href="/es/by-example/44-msgpack.html" class="recipe-card">
+                <div class="recipe-num">44</div>
+                <div class="recipe-title">MessagePack</div>
+                <div class="recipe-desc">Serialización binaria — ~30% más liviana que JSON.</div>
+            </a>
+            <a href="/es/by-example/45-dns-resolve.html" class="recipe-card">
+                <div class="recipe-num">45</div>
+                <div class="recipe-title">Resolución DNS</div>
+                <div class="recipe-desc">Convertir nombres de host a direcciones IP con <code>resolve</code>.</div>
+            </a>
+            <a href="/es/by-example/46-tcp-client.html" class="recipe-card">
+                <div class="recipe-num">46</div>
+                <div class="recipe-title">Cliente TCP</div>
+                <div class="recipe-desc">Conectar, escribir y leer sobre sockets TCP crudos.</div>
+            </a>
+            <a href="/es/by-example/47-tcp-server.html" class="recipe-card">
+                <div class="recipe-num">47</div>
+                <div class="recipe-title">Servidor TCP</div>
+                <div class="recipe-desc">Escuchar, aceptar y hacer eco con <code>tcp_listen</code>.</div>
+            </a>
+            <a href="/es/by-example/48-udp-socket.html" class="recipe-card">
+                <div class="recipe-num">48</div>
+                <div class="recipe-title">Socket UDP</div>
+                <div class="recipe-desc">Datagramas sin conexión con <code>udp_bind</code> y <code>udp_sendto</code>.</div>
+            </a>
+            <a href="/es/by-example/49-http-get.html" class="recipe-card">
+                <div class="recipe-num">49</div>
+                <div class="recipe-title">HTTP GET</div>
+                <div class="recipe-desc">Peticiones de cliente HTTP de alto nivel con <code>std/http</code>.</div>
+            </a>
+            <a href="/es/by-example/50-http-post.html" class="recipe-card">
+                <div class="recipe-num">50</div>
+                <div class="recipe-title">HTTP POST</div>
+                <div class="recipe-desc">Peticiones POST y métodos personalizados con <code>http_request</code>.</div>
+            </a>
+            <a href="/es/by-example/51-http-server.html" class="recipe-card">
+                <div class="recipe-num">51</div>
+                <div class="recipe-title">Servidor HTTP</div>
+                <div class="recipe-desc">Servidor mínimo con <code>http_serve</code> y enrutamiento de peticiones.</div>
+            </a>
+            <a href="/es/by-example/52-http-middleware.html" class="recipe-card">
+                <div class="recipe-num">52</div>
+                <div class="recipe-title">Middleware HTTP</div>
+                <div class="recipe-desc">Framework web con <code>App</code>, rutas, logging y CORS.</div>
+            </a>
+            <a href="/es/by-example/53-websocket.html" class="recipe-card">
+                <div class="recipe-num">53</div>
+                <div class="recipe-title">WebSocket</div>
+                <div class="recipe-desc">Framing RFC 6455, parseo y respuestas de handshake.</div>
+            </a>
+            <a href="/es/by-example/54-resp-protocol.html" class="recipe-card">
+                <div class="recipe-num">54</div>
+                <div class="recipe-title">Protocolo RESP</div>
+                <div class="recipe-desc">Construir manualmente mensajes en el formato de cable de Redis.</div>
+            </a>
+            <a href="/es/by-example/55-sqlite.html" class="recipe-card">
+                <div class="recipe-num">55</div>
+                <div class="recipe-title">SQLite</div>
+                <div class="recipe-desc">Base de datos SQL en memoria con <code>sqlite_open</code> y <code>sqlite_query</code>.</div>
+            </a>
+            <a href="/es/by-example/56-csv-write.html" class="recipe-card">
+                <div class="recipe-num">56</div>
+                <div class="recipe-title">Escritura de CSV</div>
+                <div class="recipe-desc">Crear y serializar documentos CSV con <code>std/csv</code>.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Concurrencia</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/57-mutex.html" class="recipe-card">
+                <div class="recipe-num">57</div>
+                <div class="recipe-title">Mutex</div>
+                <div class="recipe-desc">Proteger estado compartido entre threads con locks.</div>
+            </a>
+            <a href="/es/by-example/58-channel-patterns.html" class="recipe-card">
+                <div class="recipe-num">58</div>
+                <div class="recipe-title">Patrones de Channel</div>
+                <div class="recipe-desc">Paso de mensajes con channels con buffer y centinelas.</div>
+            </a>
+            <a href="/es/by-example/59-worker-pool.html" class="recipe-card">
+                <div class="recipe-num">59</div>
+                <div class="recipe-title">Worker Pool</div>
+                <div class="recipe-desc">Despachar tareas a N threads mediante channels compartidos.</div>
+            </a>
+            <a href="/es/by-example/60-producer-consumer.html" class="recipe-card">
+                <div class="recipe-num">60</div>
+                <div class="recipe-title">Productor-Consumidor</div>
+                <div class="recipe-desc">Pipeline desacoplado con contrapresión de channel acotado.</div>
+            </a>
+            <a href="/es/by-example/61-waitgroup.html" class="recipe-card">
+                <div class="recipe-num">61</div>
+                <div class="recipe-title">WaitGroup</div>
+                <div class="recipe-desc">Esperar a múltiples threads con <code>wg_add</code>/<code>wg_done</code>/<code>wg_wait</code>.</div>
+            </a>
+            <a href="/es/by-example/62-semaphore.html" class="recipe-card">
+                <div class="recipe-num">62</div>
+                <div class="recipe-title">Semáforo</div>
+                <div class="recipe-desc">Limitar el acceso concurrente con <code>sem_acquire</code>/<code>sem_release</code>.</div>
+            </a>
+            <a href="/es/by-example/63-select-channel.html" class="recipe-card">
+                <div class="recipe-num">63</div>
+                <div class="recipe-title">Select Channel</div>
+                <div class="recipe-desc">Multiplexar channels con la sentencia <code>select</code>.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Sistemas</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/64-fork-exec.html" class="recipe-card">
+                <div class="recipe-num">64</div>
+                <div class="recipe-title">Fork y Exec</div>
+                <div class="recipe-desc">Ejecutar comandos externos con <code>fork</code>, <code>execvp</code> y <code>waitpid</code>.</div>
+            </a>
+            <a href="/es/by-example/65-pipes.html" class="recipe-card">
+                <div class="recipe-num">65</div>
+                <div class="recipe-title">Pipes</div>
+                <div class="recipe-desc">Conectar procesos con <code>pipe_new</code> y <code>dup2</code>.</div>
+            </a>
+            <a href="/es/by-example/66-signal-handling.html" class="recipe-card">
+                <div class="recipe-num">66</div>
+                <div class="recipe-title">Manejo de Señales</div>
+                <div class="recipe-desc">Registrar callbacks de señales con <code>signal_handle</code>.</div>
+            </a>
+            <a href="/es/by-example/67-file-watcher.html" class="recipe-card">
+                <div class="recipe-num">67</div>
+                <div class="recipe-title">Monitor de Archivos</div>
+                <div class="recipe-desc">Detectar cambios en archivos mediante polling con <code>stat</code>.</div>
+            </a>
+            <a href="/es/by-example/68-process-control.html" class="recipe-card">
+                <div class="recipe-num">68</div>
+                <div class="recipe-title">Control de Procesos</div>
+                <div class="recipe-desc">PID, directorio de trabajo, detección de terminal y stat de archivos.</div>
+            </a>
+            <a href="/es/by-example/69-raw-terminal.html" class="recipe-card">
+                <div class="recipe-num">69</div>
+                <div class="recipe-title">Terminal Raw</div>
+                <div class="recipe-desc">Entrada carácter por carácter con <code>raw_mode_enter</code>.</div>
+            </a>
+            <a href="/es/by-example/70-shebang-script.html" class="recipe-card">
+                <div class="recipe-num">70</div>
+                <div class="recipe-title">Script con Shebang</div>
+                <div class="recipe-desc">Ejecutar archivos Nyx como scripts ejecutables con <code>#!/usr/bin/env nyx</code>.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>nyx-kv (Almacén Clave-Valor)</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/71-kv-basic.html" class="recipe-card">
+                <div class="recipe-num">71</div>
+                <div class="recipe-title">KV Básico</div>
+                <div class="recipe-desc">Conectarse a nyx-kv y emitir comandos SET/GET/DEL sobre RESP.</div>
+            </a>
+            <a href="/es/by-example/72-kv-lists.html" class="recipe-card">
+                <div class="recipe-num">72</div>
+                <div class="recipe-title">KV Listas</div>
+                <div class="recipe-desc">RPUSH, LPOP, LRANGE, LLEN para colas FIFO y pilas.</div>
+            </a>
+            <a href="/es/by-example/73-kv-hashes.html" class="recipe-card">
+                <div class="recipe-num">73</div>
+                <div class="recipe-title">KV Hashes</div>
+                <div class="recipe-desc">HSET/HGET/HLEN para datos estructurados como perfiles de usuario.</div>
+            </a>
+            <a href="/es/by-example/74-kv-auth.html" class="recipe-card">
+                <div class="recipe-num">74</div>
+                <div class="recipe-title">KV Auth</div>
+                <div class="recipe-desc">Autenticación multi-tenant con tokens y namespaces.</div>
+            </a>
+            <a href="/es/by-example/75-kv-pubsub.html" class="recipe-card">
+                <div class="recipe-num">75</div>
+                <div class="recipe-title">KV Pub/Sub</div>
+                <div class="recipe-desc">Mensajería en tiempo real con SUBSCRIBE y PUBLISH.</div>
+            </a>
+            <a href="/es/by-example/76-kv-expire.html" class="recipe-card">
+                <div class="recipe-num">76</div>
+                <div class="recipe-title">KV Expire</div>
+                <div class="recipe-desc">TTL con EXPIRE, PERSIST y SET EX para caché y sesiones.</div>
+            </a>
+            <a href="/es/by-example/77-kv-pipelined.html" class="recipe-card">
+                <div class="recipe-num">77</div>
+                <div class="recipe-title">KV Pipelined</div>
+                <div class="recipe-desc">Comandos en lote para un throughput de 250K+ ops/seg.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>nyx-serve (Framework Web)</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/78-serve-routes.html" class="recipe-card">
+                <div class="recipe-num">78</div>
+                <div class="recipe-title">Rutas de Serve</div>
+                <div class="recipe-desc">Enrutamiento RESTful con GET/POST/PUT/DELETE y parámetros de ruta.</div>
+            </a>
+            <a href="/es/by-example/79-serve-json-api.html" class="recipe-card">
+                <div class="recipe-num">79</div>
+                <div class="recipe-title">API JSON</div>
+                <div class="recipe-desc">Parsear cuerpos de petición y construir respuestas JSON con helpers.</div>
+            </a>
+            <a href="/es/by-example/80-serve-static.html" class="recipe-card">
+                <div class="recipe-num">80</div>
+                <div class="recipe-title">Archivos Estáticos</div>
+                <div class="recipe-desc">Servir CSS, JS e imágenes con <code>app_static</code> y detección de MIME.</div>
+            </a>
+            <a href="/es/by-example/81-serve-sessions.html" class="recipe-card">
+                <div class="recipe-num">81</div>
+                <div class="recipe-title">Sesiones</div>
+                <div class="recipe-desc">Sesiones basadas en cookies respaldadas por nyx-kv con TTL.</div>
+            </a>
+            <a href="/es/by-example/82-serve-multithread.html" class="recipe-card">
+                <div class="recipe-num">82</div>
+                <div class="recipe-title">Multi-hilo</div>
+                <div class="recipe-desc"><code>http_serve_mt</code> con N threads de trabajo para 73K req/s.</div>
+            </a>
+            <a href="/es/by-example/83-serve-cors.html" class="recipe-card">
+                <div class="recipe-num">83</div>
+                <div class="recipe-title">CORS</div>
+                <div class="recipe-desc">Headers cross-origin con <code>mw_cors</code> y <code>cors_configure</code>.</div>
+            </a>
+            <a href="/es/by-example/84-serve-fullstack.html" class="recipe-card">
+                <div class="recipe-num">84</div>
+                <div class="recipe-title">Full-stack</div>
+                <div class="recipe-desc">Servidor HTTP + API JSON + backend nyx-kv en un solo binario.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>nyx-proxy (Proxy Reverso)</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/85-proxy-config.html" class="recipe-card">
+                <div class="recipe-num">85</div>
+                <div class="recipe-title">Configuración de Proxy</div>
+                <div class="recipe-desc">Parsear <code>proxy.toml</code> con <code>std/toml</code>.</div>
+            </a>
+            <a href="/es/by-example/86-proxy-vhost.html" class="recipe-card">
+                <div class="recipe-num">86</div>
+                <div class="recipe-title">Hosts Virtuales</div>
+                <div class="recipe-desc">Enrutar por el header Host hacia distintos upstreams.</div>
+            </a>
+            <a href="/es/by-example/87-proxy-health.html" class="recipe-card">
+                <div class="recipe-num">87</div>
+                <div class="recipe-title">Health Checks</div>
+                <div class="recipe-desc">Sondear upstreams por TCP con umbral y recuperación automática.</div>
+            </a>
+            <a href="/es/by-example/88-proxy-ratelimit.html" class="recipe-card">
+                <div class="recipe-num">88</div>
+                <div class="recipe-title">Rate Limit</div>
+                <div class="recipe-desc">Ventana deslizante por IP que devuelve HTTP 429 al exceder el límite.</div>
+            </a>
+            <a href="/es/by-example/89-proxy-tls-sni.html" class="recipe-card">
+                <div class="recipe-num">89</div>
+                <div class="recipe-title">TLS SNI</div>
+                <div class="recipe-desc">HTTPS multi-dominio en un solo puerto con certificados de Let's Encrypt.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Queue, DB y HTTP/2</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/90-queue-enqueue.html" class="recipe-card">
+                <div class="recipe-num">90</div>
+                <div class="recipe-title">Queue Enqueue</div>
+                <div class="recipe-desc">Cola de mensajes persistente con ENQUEUE y QLEN.</div>
+            </a>
+            <a href="/es/by-example/91-queue-consumer.html" class="recipe-card">
+                <div class="recipe-num">91</div>
+                <div class="recipe-title">Queue Consumer</div>
+                <div class="recipe-desc">Bucle DEQUEUE + ACK/NACK con reentrega automática.</div>
+            </a>
+            <a href="/es/by-example/92-db-sql.html" class="recipe-card">
+                <div class="recipe-num">92</div>
+                <div class="recipe-title">DB SQL</div>
+                <div class="recipe-desc">CREATE/INSERT/SELECT sobre el protocolo RESP de nyx-db.</div>
+            </a>
+            <a href="/es/by-example/93-db-transactions.html" class="recipe-card">
+                <div class="recipe-num">93</div>
+                <div class="recipe-title">Transacciones de DB</div>
+                <div class="recipe-desc">BEGIN/COMMIT/ROLLBACK para operaciones atómicas.</div>
+            </a>
+            <a href="/es/by-example/94-http2-server.html" class="recipe-card">
+                <div class="recipe-num">94</div>
+                <div class="recipe-title">Servidor HTTP/2</div>
+                <div class="recipe-desc">Multiplexado de streams y compresión de headers con HPACK.</div>
+            </a>
+            <a href="/es/by-example/95-http2-frames.html" class="recipe-card">
+                <div class="recipe-num">95</div>
+                <div class="recipe-title">Frames de HTTP/2</div>
+                <div class="recipe-desc">Tipos de frame binarios: DATA, HEADERS, SETTINGS, PING.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="recipe-section">
+        <h2>Patrones Full-stack</h2>
+        <div class="recipe-grid">
+            <a href="/es/by-example/96-rest-api.html" class="recipe-card">
+                <div class="recipe-num">96</div>
+                <div class="recipe-title">API REST</div>
+                <div class="recipe-desc">API CRUD completa con middleware y backend nyx-kv.</div>
+            </a>
+            <a href="/es/by-example/97-realtime-pubsub.html" class="recipe-card">
+                <div class="recipe-num">97</div>
+                <div class="recipe-title">Pub/Sub en Tiempo Real</div>
+                <div class="recipe-desc">WebSocket + Pub/Sub de nyx-kv para actualizaciones en vivo.</div>
+            </a>
+            <a href="/es/by-example/98-microservice.html" class="recipe-card">
+                <div class="recipe-num">98</div>
+                <div class="recipe-title">Microservicio</div>
+                <div class="recipe-desc">Consumidor de cola con patrón cache-aside vía nyx-kv.</div>
+            </a>
+            <a href="/es/by-example/99-rate-limited-api.html" class="recipe-card">
+                <div class="recipe-num">99</div>
+                <div class="recipe-title">API con Rate Limit</div>
+                <div class="recipe-desc">INCR + EXPIRE atómicos para límites de tasa por usuario.</div>
+            </a>
+            <a href="/es/by-example/100-production-stack.html" class="recipe-card">
+                <div class="recipe-num">100</div>
+                <div class="recipe-title">Stack de Producción</div>
+                <div class="recipe-desc">Arquitectura completa de nyxlang.com: proxy + web + kv + queue.</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="by-example-footer">
+        <strong>Ver también:</strong>
+        <div class="footer-links">
+            <a href="https://github.com/nyxlang-dev/nyx/tree/main/examples/by-example">Archivos fuente en GitHub</a>
+            <a href="/es/learn/">El Libro de Nyx</a>
+            <a href="/playground/">Playground</a>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

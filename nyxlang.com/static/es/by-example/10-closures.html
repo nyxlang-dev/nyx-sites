@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Closures — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Closures</h1>
+
+    <p>Los closures son funciones que capturan variables de su ámbito envolvente. En Nyx, las funciones son valores de primera clase de tipo <code>Fn</code> — pueden retornarse desde funciones, almacenarse en variables y pasarse como argumentos.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Closures: función que retorna closure, tipo Fn, captura de entorno
+
+fn make_counter(start: int) -> Fn {
+    var count: int = start
+    fn increment() -> int {
+        count = count + 1
+        return count
+    }
+    return increment
+}
+
+fn make_adder(n: int) -> Fn {
+    fn add(x: int) -> int {
+        return n + x
+    }
+    return add
+}
+
+fn apply(f: Fn, value: int) -> int {
+    return f(value)
+}
+
+fn main() -> int {
+    // Counter: cada llamada retorna el siguiente valor
+    let counter: Fn = make_counter(0)
+    print("counter: " + int_to_string(counter()))
+    print("counter: " + int_to_string(counter()))
+    print("counter: " + int_to_string(counter()))
+
+    // Dos contadores independientes
+    let c2: Fn = make_counter(10)
+    print("c2: " + int_to_string(c2()))
+    print("c2: " + int_to_string(c2()))
+
+    // Adder: closure que captura n del entorno
+    let add5: Fn = make_adder(5)
+    print("add5(3) = " + int_to_string(add5(3)))
+    print("add5(10) = " + int_to_string(add5(10)))
+
+    // Pasar closure como argumento
+    let add100: Fn = make_adder(100)
+    print("apply(add100, 7) = " + int_to_string(apply(add100, 7)))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">counter: 1
+counter: 2
+counter: 3
+c2: 11
+c2: 12
+add5(3) = 8
+add5(10) = 15
+apply(add100, 7) = 107</pre>
+
+    <h2>Explicación</h2>
+    <p>Un closure es una función anidada que hace referencia a variables de su función envolvente. En <code>make_counter</code>, la función interna <code>increment</code> captura la variable <code>count</code> declarada en el ámbito externo. Cada vez que se llama a <code>increment</code>, lee y modifica su propia copia de <code>count</code> — esto se llama un entorno compartido.</p>
+    <p>El tipo de retorno <code>-> Fn</code> indica que una función retorna otra función. El tipo <code>Fn</code> es el tipo de función genérico en Nyx; representa cualquier valor invocable, sin importar sus tipos específicos de parámetros y retorno.</p>
+    <p>Cada llamada a <code>make_counter</code> crea un closure independiente con su propio <code>count</code> privado. Los dos contadores <code>counter</code> y <code>c2</code> no interfieren entre sí — comienzan en valores distintos y avanzan de forma independiente.</p>
+    <p>La función <code>apply</code> demuestra las funciones de orden superior: recibe un <code>Fn</code> y un <code>int</code>, y llama a la función con el valor. Este patrón es la base de los estilos de programación funcional — mapear, filtrar y componer comportamiento pasando funciones como datos.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/09-enums.html">← Anterior</a>
+        <a href="/es/by-example/">Todas las recetas →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/10-closures.nx">examples/by-example/10-closures.nx</a></small></p>
+</main>
+
+</body>
+</html>

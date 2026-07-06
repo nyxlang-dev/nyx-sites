@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-proxy — HTTPS reverse proxy in 170KB</title>
+    <meta name="description" content="HTTPS reverse proxy with TLS 1.2+, SNI multi-domain, health checks, access logs, and rate limiting. Zero dependencies.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-proxy</span></a>
+    <div class="nav-right">
+        <a href="#features" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-proxy" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <span class="hero-label">TLS 1.2+ &middot; HEALTH CHECKS &middot; WEBSOCKETS</span>
+    <h1>HTTPS reverse proxy in 170KB</h1>
+    <p class="subtitle">
+        TLS termination with SNI, virtual hosts, health checks, access logs,
+        bidirectional WebSocket tunneling, and per-IP rate limiting.
+        Replaces Nginx for simple deployments.
+    </p>
+    <div class="hero-buttons">
+        <a href="#config" class="btn btn-accent">Get Started</a>
+        <a href="https://github.com/nyxlang-dev/nyx-proxy" class="btn btn-outline">GitHub</a>
+    </div>
+</section>
+
+<!-- CONFIG -->
+<section id="config">
+    <div class="section-label">Simple config</div>
+    <h2 class="section-title">One file to rule them all</h2>
+    <p class="section-subtitle">Define upstreams, TLS certs, and limits in a single TOML file.</p>
+
+    <pre style="margin-top:1.5rem"><span class="cm"># proxy.toml</span>
+<span class="op">[</span><span class="kw">server</span><span class="op">]</span>
+listen      = <span class="num">443</span>
+workers     = <span class="num">64</span>
+tls_cert    = <span class="str">"/etc/letsencrypt/live/example.com/fullchain.pem"</span>
+tls_key     = <span class="str">"/etc/letsencrypt/live/example.com/privkey.pem"</span>
+rate_limit  = <span class="num">100</span>
+access_log  = <span class="str">"/var/log/nyx-proxy/access.log"</span>
+
+<span class="op">[</span><span class="kw">upstream.0</span><span class="op">]</span>
+name        = <span class="str">"web"</span>
+host        = <span class="str">"127.0.0.1"</span>
+port        = <span class="num">3000</span>
+hostname    = <span class="str">"example.com"</span>
+
+<span class="op">[</span><span class="kw">upstream.1</span><span class="op">]</span>
+name        = <span class="str">"api"</span>
+host        = <span class="str">"127.0.0.1"</span>
+port        = <span class="num">3001</span>
+hostname    = <span class="str">"api.example.com"</span></pre>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need</h2>
+
+    <div class="card-grid cols-2" style="margin-top:1.5rem">
+        <div class="card">
+            <div class="card-title">Multi-domain TLS with SNI</div>
+            <div class="card-desc">Serve multiple domains on a single IP. Each domain gets its own TLS certificate via SNI negotiation. Currently serving 4 domains on one server.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Health checks</div>
+            <div class="card-desc">Active TCP health checks every N seconds. Failed backends are automatically removed from rotation and restored when they recover.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Access logs</div>
+            <div class="card-desc">Structured log format: timestamp, method, path, status, latency. Grep-friendly, mutex-protected writes.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Rate limiting</div>
+            <div class="card-desc">Per-IP sliding window counter. Returns HTTP 429 with Retry-After header. Configurable in proxy.toml.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Connection pooling</div>
+            <div class="card-desc">HTTP keep-alive between proxy and backends. Reduces connection overhead for high-throughput scenarios.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">HTTP redirect</div>
+            <div class="card-desc">Automatic HTTP-to-HTTPS redirect on port 80. All traffic securely upgraded.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ACCESS LOG EXAMPLE -->
+<section>
+    <div class="section-label">Observability</div>
+    <h2 class="section-title">Structured access logs</h2>
+
+    <div class="terminal" style="margin-top:1.5rem">
+        <div class="terminal-bar">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+        </div>
+        <pre><span class="result">2026-04-02 10:15:23</span> GET / <span class="num">200</span> <span class="comment">12ms</span>
+<span class="result">2026-04-02 10:15:24</span> GET /api/users <span class="num">200</span> <span class="comment">3ms</span>
+<span class="result">2026-04-02 10:15:24</span> POST /api/data <span class="num">201</span> <span class="comment">8ms</span>
+<span class="result">2026-04-02 10:15:25</span> GET /assets/style.css <span class="num">200</span> <span class="comment">1ms</span>
+<span class="result">2026-04-02 10:15:30</span> GET /api/spam <span class="num">429</span> <span class="comment">0ms</span></pre>
+    </div>
+</section>
+
+<!-- REPLACES NGINX -->
+<section>
+    <div class="section-label">Comparison</div>
+    <h2 class="section-title">Replaces Nginx</h2>
+    <p class="section-subtitle">For simple reverse proxy setups, nyx-proxy does the same job in a fraction of the size.</p>
+
+    <div class="card-grid cols-2" style="margin-top:1.5rem">
+        <div class="card">
+            <div class="card-title">Nginx</div>
+            <div class="card-desc">~1.5MB binary. Complex configuration syntax. Module system. Dozens of dependencies.</div>
+        </div>
+        <div class="card" style="border-color:var(--accent)">
+            <div class="card-title">nyx-proxy</div>
+            <div class="card-desc">~170KB binary. Simple TOML config. TLS, health checks, rate limiting, access logs built-in. Zero dependencies.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ECOSYSTEM -->
+<section>
+    <div class="section-label">Ecosystem</div>
+    <h2 class="section-title">Part of the Nyx ecosystem</h2>
+
+    <div class="card-grid cols-3" style="margin-top:1.5rem">
+        <a href="https://nyxkv.com" class="card">
+            <div class="card-title">NyxKV</div>
+            <div class="card-desc">Redis-compatible KV store with Pub/Sub.</div>
+            <div class="card-stat">82K ops/s</div>
+        </a>
+        <a href="https://serve.nyxlang.com" class="card">
+            <div class="card-title">nyx-serve</div>
+            <div class="card-desc">HTTP framework with middleware and sessions.</div>
+            <div class="card-stat">9,971 req/s</div>
+        </a>
+        <a href="https://nyxlang.com" class="card">
+            <div class="card-title">nyx-queue</div>
+            <div class="card-desc">Persistent message queue with ACK/redelivery.</div>
+            <div class="card-stat">3,252 msg/s</div>
+        </a>
+    </div>
+</section>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Product</h4>
+            <a href="#features">Documentation</a>
+            <a href="https://github.com/nyxlang-dev/nyx-proxy">GitHub</a>
+        </div>
+        <div class="footer-col">
+            <h4>Ecosystem</h4>
+            <a href="https://nyxlang.com">Nyx Language</a>
+            <a href="https://nyxkv.com">NyxKV</a>
+            <a href="https://serve.nyxlang.com">nyx-serve</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="https://nyxlang.com/learn/">The Nyx Book</a>
+            <a href="https://nyxlang.com/playground/">Playground</a>
+        </div>
+        <div class="footer-col">
+            <h4>Connect</h4>
+            <a href="https://github.com/nyxlang-dev">GitHub Org</a>
+        </div>
+    </div>
+    <div class="footer-bottom">nyx-proxy &mdash; built with <a href="https://nyxlang.com">Nyx</a></div>
+</footer>
+
+</body>
+</html>

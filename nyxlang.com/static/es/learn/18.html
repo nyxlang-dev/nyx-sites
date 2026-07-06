@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concurrencia — Threads y channels — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Concurrencia — Threads y channels</h1>
+
+<h2>¿Por qué concurrencia?</h2>
+<p>En el Capítulo 17, construiste un servidor TCP que maneja un cliente a la vez. Mientras habla con el cliente A, los clientes B, C y D tienen que esperar. Para una app de chat o un servidor web, eso es inaceptable.</p>
+<p><strong>Concurrencia</strong> significa hacer múltiples cosas a la vez — o al menos aparentarlo. Con concurrencia, tu servidor puede manejar cientos de clientes simultáneamente.</p>
+<p>Nyx proporciona tres herramientas para concurrencia: <strong>threads</strong>, <strong>channels</strong> y <strong>mutexes</strong>.</p>
+<h2>¿Qué es un thread?</h2>
+<p>Un thread es como un segundo trabajador dentro de tu programa. Tu programa principal es un thread. Cuando creas un nuevo thread, obtienes un segundo trabajador que se ejecuta al mismo tiempo que el primero.</p>
+<p>Piensa en la cocina de un restaurante: un chef solo puede cocinar un plato a la vez. Dos chefs pueden cocinar dos platos simultáneamente. Los threads son tus chefs extra.</p>
+<h2>Crear un thread</h2>
+<pre><span class="kw">fn</span> <span class="fn">computar</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> {
+        total <span class="op">+=</span> <span class="num">1</span>
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Iniciando thread...&quot;</span>)
+    <span class="kw">let</span> handle: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(computar)
+
+    <span class="fn">print</span>(<span class="str">&quot;El thread principal continúa mientras el worker computa...&quot;</span>)
+
+    <span class="kw">let</span> resultado: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span>(handle)
+    <span class="fn">print</span>(<span class="str">&quot;Thread terminó con: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(resultado))
+}</pre>
+<ul>
+<li><code>thread_spawn(funcion)</code> inicia un nuevo thread ejecutando la función dada. Devuelve un handle.</li>
+<li><code>thread_join(handle)</code> espera a que el thread termine y devuelve su resultado.</li>
+</ul>
+<p>Entre <code>spawn</code> y <code>join</code>, ambos threads se ejecutan simultáneamente.</p>
+<h2>Múltiples threads</h2>
+<pre><span class="kw">fn</span> <span class="fn">trabajo_a</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="fn">print</span>(<span class="str">&quot;Worker A iniciado&quot;</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">500000</span> { i <span class="op">+=</span> <span class="num">1</span> }
+    <span class="fn">print</span>(<span class="str">&quot;Worker A terminado&quot;</span>)
+    <span class="kw">return</span> <span class="num">1</span>
+}
+
+<span class="kw">fn</span> <span class="fn">trabajo_b</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="fn">print</span>(<span class="str">&quot;Worker B iniciado&quot;</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">500000</span> { i <span class="op">+=</span> <span class="num">1</span> }
+    <span class="fn">print</span>(<span class="str">&quot;Worker B terminado&quot;</span>)
+    <span class="kw">return</span> <span class="num">2</span>
+}
+
+<span class="kw">fn</span> <span class="fn">trabajo_c</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="fn">print</span>(<span class="str">&quot;Worker C iniciado&quot;</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">500000</span> { i <span class="op">+=</span> <span class="num">1</span> }
+    <span class="fn">print</span>(<span class="str">&quot;Worker C terminado&quot;</span>)
+    <span class="kw">return</span> <span class="num">3</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ha: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(trabajo_a)
+    <span class="kw">let</span> hb: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(trabajo_b)
+    <span class="kw">let</span> hc: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(trabajo_c)
+
+    <span class="kw">let</span> ra: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span>(ha)
+    <span class="kw">let</span> rb: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span>(hb)
+    <span class="kw">let</span> rc: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span>(hc)
+
+    <span class="fn">print</span>(<span class="str">&quot;Resultados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(ra) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(rb) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(rc))
+}</pre>
+<p>Los tres workers se ejecutan concurrentemente. El orden de los mensajes "iniciado"/"terminado" puede variar entre ejecuciones — eso es la concurrencia en acción.</p>
+<h2>El problema de los datos compartidos</h2>
+<p>¿Qué pasa cuando dos threads intentan modificar la misma variable?</p>
+<pre>Thread A: lee contador (0)
+Thread B: lee contador (0)
+Thread A: escribe contador (1)
+Thread B: escribe contador (1)   ← debería ser 2, ¡pero es 1!</pre>
+<p>Esto se llama una <strong>condición de carrera</strong> — ambos threads "compiten" por usar los datos, y el resultado depende de quién llegue primero. Las condiciones de carrera causan bugs sutiles y difíciles de reproducir.</p>
+<h2>Mutexes: proteger datos compartidos</h2>
+<p>Un <strong>mutex</strong> (exclusión mutua) es un candado. Solo un thread puede tener el candado a la vez. Si el thread B intenta bloquear un mutex que el thread A ya tiene, el thread B espera hasta que el thread A lo desbloquee.</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> m: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">mutex_new</span>()
+    <span class="kw">var</span> contador: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">fn</span> <span class="fn">worker_a</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">100</span> {
+            <span class="fn">mutex_lock</span>(m)
+            contador <span class="op">=</span> contador <span class="op">+</span> <span class="num">1</span>
+            <span class="fn">mutex_unlock</span>(m)
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">worker_b</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">100</span> {
+            <span class="fn">mutex_lock</span>(m)
+            contador <span class="op">=</span> contador <span class="op">+</span> <span class="num">1</span>
+            <span class="fn">mutex_unlock</span>(m)
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">let</span> ha: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker_a)
+    <span class="kw">let</span> hb: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker_b)
+
+    <span class="fn">thread_join</span>(ha)
+    <span class="fn">thread_join</span>(hb)
+
+    <span class="fn">print</span>(<span class="str">&quot;Contador: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(contador))    <span class="cm">// 200</span>
+}</pre>
+<p>Sin el mutex, el contador podría terminar en menos de 200 por condiciones de carrera. Con él, exactamente un thread modifica <code>contador</code> a la vez.</p>
+<p>Reglas clave:</p>
+<ul>
+<li><code>mutex_new()</code> crea un nuevo mutex.</li>
+<li><code>mutex_lock(m)</code> adquiere el candado (espera si otro thread lo tiene).</li>
+<li><code>mutex_unlock(m)</code> libera el candado.</li>
+<li>Siempre desbloquea lo que bloqueas. Olvidar desbloquear causa <strong>deadlocks</strong> — threads esperando para siempre.</li>
+</ul>
+<h2>Channels: comunicación segura entre threads</h2>
+<p>Un <strong>channel</strong> es una tubería entre threads. Un thread envía valores, otro thread los recibe. Los channels son la forma más segura de comunicación entre threads.</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ch: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">8</span>)
+
+    <span class="kw">fn</span> <span class="fn">productor</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> {
+            <span class="fn">channel_send</span>(ch, i <span class="op">*</span> <span class="num">10</span>)
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">let</span> handle: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(productor)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> {
+        <span class="kw">let</span> valor: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(ch)
+        <span class="fn">print</span>(<span class="str">&quot;Recibido: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(valor))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">thread_join</span>(handle)
+}</pre>
+<p>Salida:</p>
+<pre>Recibido: 0
+Recibido: 10
+Recibido: 20
+Recibido: 30
+Recibido: 40</pre>
+<ul>
+<li><code>channel_new(capacidad)</code> crea un channel que puede almacenar hasta <code>capacidad</code> items.</li>
+<li><code>channel_send(ch, valor)</code> envía un valor. Bloquea si el channel está lleno.</li>
+<li><code>channel_recv(ch)</code> recibe un valor. Bloquea si el channel está vacío.</li>
+<li><code>channel_try_recv(ch)</code> intenta recibir sin bloquear. Devuelve -1 si está vacío.</li>
+</ul>
+<h2>Patrón: pool de workers</h2>
+<p>Un patrón común es tener múltiples threads worker leyendo del mismo channel:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> trabajos: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">16</span>)
+    <span class="kw">let</span> resultados: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">16</span>)
+
+    <span class="kw">fn</span> <span class="fn">worker</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+            <span class="kw">let</span> trabajo: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(trabajos)
+            <span class="kw">if</span> trabajo <span class="op">&lt;</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+            <span class="cm">// &quot;Procesar&quot; el trabajo: elevar al cuadrado</span>
+            <span class="fn">channel_send</span>(resultados, trabajo <span class="op">*</span> trabajo)
+        }
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="cm">// Iniciar 4 workers</span>
+    <span class="kw">let</span> w1: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker)
+    <span class="kw">let</span> w2: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker)
+    <span class="kw">let</span> w3: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker)
+    <span class="kw">let</span> w4: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(worker)
+
+    <span class="cm">// Enviar 8 trabajos</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">8</span> {
+        <span class="fn">channel_send</span>(trabajos, i)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Recolectar 8 resultados</span>
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    i <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">8</span> {
+        <span class="kw">let</span> r: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(resultados)
+        <span class="fn">print</span>(<span class="str">&quot;Resultado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(r))
+        total <span class="op">+=</span> r
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="fn">print</span>(<span class="str">&quot;Total: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(total))
+
+    <span class="cm">// Señalar a los workers que paren</span>
+    <span class="fn">channel_send</span>(trabajos, <span class="num">-1</span>)
+    <span class="fn">channel_send</span>(trabajos, <span class="num">-1</span>)
+    <span class="fn">channel_send</span>(trabajos, <span class="num">-1</span>)
+    <span class="fn">channel_send</span>(trabajos, <span class="num">-1</span>)
+
+    <span class="fn">thread_join</span>(w1)
+    <span class="fn">thread_join</span>(w2)
+    <span class="fn">thread_join</span>(w3)
+    <span class="fn">thread_join</span>(w4)
+}</pre>
+<p>Los workers se ejecutan en paralelo, cada uno tomando el siguiente trabajo disponible del channel. Así es como los servidores del mundo real distribuyen trabajo entre los núcleos de CPU.</p>
+<h2>Servidor HTTP multi-threaded</h2>
+<p>La biblioteca estándar de Nyx incluye <code>http_serve_mt</code> — un servidor HTTP multi-threaded que usa un pool de threads internamente:</p>
+<pre><span class="kw">import</span> { http_serve_mt, http_response } from <span class="str">&quot;std/http&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">al_recibir_solicitud</span>(request: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> ruta: <span class="ty">String</span> <span class="op">=</span> request[<span class="num">2</span>]
+
+    <span class="kw">if</span> ruta <span class="op">==</span> <span class="str">&quot;/&quot;</span> {
+        <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">&quot;¡Hola desde un servidor multi-threaded!&quot;</span>)
+    }
+    <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">404</span>, <span class="str">&quot;No Encontrado&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Servidor multi-threaded en http://localhost:8080&quot;</span>)
+    <span class="fn">http_serve_mt</span>(<span class="num">8080</span>, <span class="num">4</span>, al_recibir_solicitud)
+}</pre>
+<p>El segundo parámetro (<code>4</code>) es el número de threads worker. Cada thread maneja solicitudes independientemente, así que múltiples clientes son atendidos simultáneamente. Así es como Nyx logra más de 73,000 solicitudes por segundo.</p>
+<h2>Ejemplo práctico: computación paralela</h2>
+<p>Divide una tarea grande entre múltiples threads:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ch: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">4</span>)
+
+    <span class="kw">fn</span> <span class="fn">sumar_rango_1</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+        <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">250000</span> {
+            total <span class="op">+=</span> i
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="fn">channel_send</span>(ch, total)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">sumar_rango_2</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">250001</span>
+        <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">500000</span> {
+            total <span class="op">+=</span> i
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="fn">channel_send</span>(ch, total)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">sumar_rango_3</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">500001</span>
+        <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">750000</span> {
+            total <span class="op">+=</span> i
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="fn">channel_send</span>(ch, total)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">sumar_rango_4</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">750001</span>
+        <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">1000000</span> {
+            total <span class="op">+=</span> i
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+        <span class="fn">channel_send</span>(ch, total)
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+
+    <span class="kw">let</span> h1: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(sumar_rango_1)
+    <span class="kw">let</span> h2: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(sumar_rango_2)
+    <span class="kw">let</span> h3: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(sumar_rango_3)
+    <span class="kw">let</span> h4: <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span>(sumar_rango_4)
+
+    <span class="kw">var</span> gran_total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">4</span> {
+        gran_total <span class="op">+=</span> <span class="fn">channel_recv</span>(ch)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">thread_join</span>(h1)
+    <span class="fn">thread_join</span>(h2)
+    <span class="fn">thread_join</span>(h3)
+    <span class="fn">thread_join</span>(h4)
+
+    <span class="fn">print</span>(<span class="str">&quot;Suma de 1 a 1,000,000 = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(gran_total))
+    <span class="cm">// 500000500000</span>
+}</pre>
+<p>Cuatro threads computan cada uno un cuarto de la suma, luego el thread principal suma los resultados parciales.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe un programa que cree 3 threads, cada uno imprimiendo su propio mensaje, y espera a que todos terminen.</li>
+</ol>
+<ol>
+<li>Usa un mutex para incrementar de forma segura un contador compartido desde 5 threads, cada uno sumando 1000. El resultado final debe ser 5000.</li>
+</ol>
+<ol>
+<li>Construye un sistema productor-consumidor: un thread genera números del 1 al 20 y los envía por un channel. Otro thread los recibe e imprime.</li>
+</ol>
+<ol>
+<li>Escribe un <code>map</code> paralelo: divide un array en partes, procesa cada parte en un thread separado, y recolecta resultados via un channel.</li>
+</ol>
+<ol>
+<li>Construye un servidor echo multi-threaded usando <code>tcp_listen</code>, <code>tcp_accept</code>, y <code>thread_spawn</code> — crea un nuevo thread para cada conexión de cliente.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>thread_spawn(fn)</code> inicia un nuevo thread. <code>thread_join(handle)</code> espera a que termine.</li>
+<li>Las <strong>condiciones de carrera</strong> ocurren cuando los threads acceden a datos compartidos sin coordinación.</li>
+<li><code>mutex_new()</code>, <code>mutex_lock(m)</code>, <code>mutex_unlock(m)</code> protegen datos compartidos.</li>
+<li><code>channel_new(cap)</code>, <code>channel_send(ch, val)</code>, <code>channel_recv(ch)</code> permiten a los threads comunicarse de forma segura.</li>
+<li>Los pools de workers usan channels para distribuir trabajo entre threads.</li>
+<li><code>http_serve_mt(puerto, workers, handler)</code> ejecuta un servidor HTTP multi-threaded.</li>
+<li>Regla general: prefiere channels sobre mutexes. "No comuniques compartiendo memoria; comparte memoria comunicando."</li>
+</ul>
+<p>Siguiente capítulo: <a href="19-proyecto-servidor-web.md">Tu segundo proyecto — Un servidor web →</a></p>
+
+    <div class="book-nav">
+        <a href="17.html" class="book-nav-prev">&larr; Anterior: Networking — Servidores TCP</a>
+        <a href="19.html" class="book-nav-next">Siguiente: Tu segundo proyecto — Un servidor web &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

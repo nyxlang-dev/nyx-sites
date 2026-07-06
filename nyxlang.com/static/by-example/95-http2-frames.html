@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP/2 Frames — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>HTTP/2 Frames</h1>
+    <p>HTTP/2 is a binary protocol. Every message is a typed frame with a 9-byte header. DATA carries bodies, HEADERS carries HPACK-compressed metadata, SETTINGS negotiates connection parameters, WINDOW_UPDATE controls flow.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-http2 frames — HEADERS, DATA, SETTINGS frame types</span>
+
+<span class="kw">import</span> <span class="str">"std/http2"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// HTTP/2 is a binary protocol with typed frames.</span>
+    <span class="cm">// Each frame has a 9-byte header + payload.</span>
+
+    print(<span class="str">"HTTP/2 frame types:"</span>)
+    print(<span class="str">"  H2_DATA      = "</span> + int_to_string(H2_DATA) + <span class="str">"  — request/response bodies"</span>)
+    print(<span class="str">"  H2_HEADERS   = "</span> + int_to_string(H2_HEADERS) + <span class="str">"  — HPACK-compressed headers"</span>)
+    print(<span class="str">"  H2_SETTINGS  = "</span> + int_to_string(H2_SETTINGS) + <span class="str">"  — connection parameters"</span>)
+    print(<span class="str">"  H2_PING      = "</span> + int_to_string(H2_PING) + <span class="str">"  — keep-alive"</span>)
+    print(<span class="str">"  H2_GOAWAY    = "</span> + int_to_string(H2_GOAWAY) + <span class="str">"  — graceful shutdown"</span>)
+    print(<span class="str">"  H2_WINDOW_UPDATE = "</span> + int_to_string(H2_WINDOW_UPDATE) + <span class="str">"  — flow control"</span>)
+
+    print(<span class="str">""</span>)
+    print(<span class="str">"Connection preface: client sends 24-byte magic string"</span>)
+    print(<span class="str">"\"PRI * HTTP/2.0\\r\\n\\r\\nSM\\r\\n\\r\\n\" followed by SETTINGS frame."</span>)
+    print(<span class="str">""</span>)
+    print(<span class="str">"Each request opens a new stream_id (odd for client-initiated)."</span>)
+    print(<span class="str">"HPACK compresses repeated headers: Host, User-Agent, etc."</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">HTTP/2 frame types:
+  H2_DATA      = 0  — request/response bodies
+  H2_HEADERS   = 1  — HPACK-compressed headers
+  H2_SETTINGS  = 4  — connection parameters
+  H2_PING      = 6  — keep-alive
+  H2_GOAWAY    = 7  — graceful shutdown
+  H2_WINDOW_UPDATE = 8  — flow control
+
+Connection preface: client sends 24-byte magic string
+"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n" followed by SETTINGS frame.
+
+Each request opens a new stream_id (odd for client-initiated).
+HPACK compresses repeated headers: Host, User-Agent, etc.</pre>
+    <h2>Explanation</h2>
+    <p>Where HTTP/1.1 was a text protocol you could debug with telnet, HTTP/2 is binary and framed. The 9-byte header encodes length (24 bits), type (8 bits), flags (8 bits), and a 31-bit stream identifier. Understanding frame types is the key to reading HTTP/2 traces: SETTINGS is sent at startup to negotiate limits, HEADERS opens a stream, DATA carries the body, WINDOW_UPDATE prevents fast senders from overwhelming slow receivers, and GOAWAY politely tells the peer to stop opening new streams.</p>
+    <div class="book-nav">
+        <a href="/by-example/94-http2-server.html">&larr; Previous</a>
+        <a href="/by-example/96-rest-api.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/95-http2-frames.nx">examples/by-example/95-http2-frames.nx</a></small></p>
+</main>
+</body>
+</html>

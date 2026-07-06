@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep y Temporizadores — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Sleep y Temporizadores</h1>
+
+    <p><code>time_ms()</code> retorna la hora actual del reloj de pared en milisegundos como <code>int</code>. Restar dos lecturas da una duración transcurrida. <code>sleep(ms)</code> suspende el hilo actual por la cantidad de milisegundos especificada.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Timer y sleep: medir tiempo transcurrido con time_ms() y pausar con sleep()
+
+fn main() -> int {
+    print("start")
+
+    let t0: int = time_ms()
+
+    // Pausar 500 milisegundos
+    sleep(500)
+
+    let t1: int = time_ms()
+    let elapsed: int = t1 - t0
+
+    print("500ms passed")
+    print("tiempo real: " + int_to_string(elapsed) + "ms")
+
+    // Medir una operacion costosa
+    let t2: int = time_ms()
+    var suma: int = 0
+    var i: int = 0
+    while i < 1000000 {
+        suma = suma + i
+        i = i + 1
+    }
+    let t3: int = time_ms()
+    let dur: int = t3 - t2
+    print("suma de 0..1M = " + int_to_string(suma))
+    print("duracion loop: " + int_to_string(dur) + "ms")
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">start
+500ms passed
+tiempo real: 500ms
+suma de 0..1M = 499999500000
+duracion loop: 0ms</pre>
+
+    <h2>Explicación</h2>
+    <p><code>time_ms()</code> es un envoltorio liviano sobre el reloj del sistema, que retorna una marca de tiempo monotónica en milisegundos adecuada para medir duraciones. Tomar la diferencia <code>t1 - t0</code> después de un <code>sleep(500)</code> debería producir un valor igual o apenas por encima de 500, dependiendo de la precisión del planificador del sistema operativo.</p>
+    <p>La segunda medición envuelve un loop ajustado que suma enteros de 0 a 999 999. El resultado — 499 999 500 000 — es la suma estándar de la serie aritmética <code>n*(n-1)/2</code> para <code>n = 1 000 000</code>. La duración se redondea a <code>0ms</code> porque LLVM optimiza el loop de forma agresiva al momento de generar código nativo.</p>
+    <p>Tanto <code>time_ms</code> como <code>sleep</code> son funciones integradas disponibles sin necesidad de ningún import. Están implementadas en el módulo <code>time.c</code> del runtime y se mapean directamente a <code>clock_gettime(CLOCK_MONOTONIC)</code> y <code>nanosleep</code> en Linux.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/36-defer-cleanup.html">← Anterior</a>
+        <a href="/es/by-example/38-crypto-hash.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/37-sleep-timer.nx">examples/by-example/37-sleep-timer.nx</a></small></p>
+</main>
+
+</body>
+</html>

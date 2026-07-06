@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Closures y funciones de primera clase — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Closures y funciones de primera clase</h1>
+
+<h2>Funciones como valores</h2>
+<p>En la Parte 1, aprendiste a definir y llamar funciones. Pero en Nyx, las funciones son más poderosas que eso — son <strong>valores</strong>, igual que los enteros o los strings. Puedes almacenar una función en una variable, pasarla a otra función, o devolverla desde una función.</p>
+<p>Este concepto se llama <strong>funciones de primera clase</strong>, y desbloquea toda una nueva forma de pensar sobre los programas.</p>
+<h2>Pasar funciones a funciones</h2>
+<p>Empecemos con un ejemplo simple. Supón que tienes dos funciones que transforman un número:</p>
+<pre><span class="kw">fn</span> <span class="fn">doble</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span>
+}
+
+<span class="kw">fn</span> <span class="fn">cuadrado</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> n
+}</pre>
+<p>Ahora quieres una función que aplique cualquier transformación a un número:</p>
+<pre><span class="kw">fn</span> <span class="fn">aplicar</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="fn">f</span>(x)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">aplicar</span>(doble, <span class="num">5</span>))      <span class="cm">// 10</span>
+    <span class="fn">print</span>(<span class="fn">aplicar</span>(cuadrado, <span class="num">5</span>))   <span class="cm">// 25</span>
+}</pre>
+<p>El tipo <code>Fn</code> significa "una función." Pasas <code>doble</code> y <code>cuadrado</code> por nombre — sin paréntesis, porque no las estás llamando, las estás pasando.</p>
+<h2>¿Por qué es útil?</h2>
+<p>Imagina que quieres aplicar una transformación a cada elemento de un array. Sin funciones de primera clase, necesitarías escribir un bucle separado para cada transformación. Con ellas:</p>
+<pre><span class="kw">fn</span> <span class="fn">doble</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span> }
+<span class="kw">fn</span> <span class="fn">negar</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> <span class="num">0</span> <span class="op">-</span> n }
+<span class="kw">fn</span> <span class="fn">sumar_diez</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">+</span> <span class="num">10</span> }
+
+<span class="kw">fn</span> <span class="fn">mapear_array</span>(arr: <span class="ty">Array</span>, f: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">var</span> resultado: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        resultado.<span class="fn">push</span>(<span class="fn">f</span>(arr[i]))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+    <span class="kw">let</span> duplicados: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">mapear_array</span>(nums, doble)
+    <span class="fn">print</span>(duplicados)    <span class="cm">// [2, 4, 6, 8, 10]</span>
+
+    <span class="kw">let</span> negados: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">mapear_array</span>(nums, negar)
+    <span class="fn">print</span>(negados)       <span class="cm">// [-1, -2, -3, -4, -5]</span>
+
+    <span class="kw">let</span> desplazados: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">mapear_array</span>(nums, sumar_diez)
+    <span class="fn">print</span>(desplazados)   <span class="cm">// [11, 12, 13, 14, 15]</span>
+}</pre>
+<p>Una sola función (<code>mapear_array</code>) maneja los tres casos. El comportamiento cambia según qué función pases.</p>
+<h2>Filtrar y reducir</h2>
+<p>Dos patrones más que funcionan muy bien con funciones de primera clase:</p>
+<pre><span class="kw">fn</span> <span class="fn">es_par</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> { <span class="kw">return</span> n <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> }
+<span class="kw">fn</span> <span class="fn">es_positivo</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> { <span class="kw">return</span> n <span class="op">&gt;</span> <span class="num">0</span> }
+
+<span class="kw">fn</span> <span class="fn">filtrar_array</span>(arr: <span class="ty">Array</span>, predicado: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">var</span> resultado: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        <span class="kw">if</span> <span class="fn">predicado</span>(arr[i]) {
+            resultado.<span class="fn">push</span>(arr[i])
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">sumar</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">+</span> b }
+<span class="kw">fn</span> <span class="fn">multiplicar</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">*</span> b }
+
+<span class="kw">fn</span> <span class="fn">reducir_array</span>(arr: <span class="ty">Array</span>, inicial: <span class="ty">int</span>, f: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> acc: <span class="ty">int</span> <span class="op">=</span> inicial
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        acc <span class="op">=</span> <span class="fn">f</span>(acc, arr[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> acc
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>, <span class="num">6</span>, <span class="num">7</span>, <span class="num">8</span>]
+
+    <span class="kw">let</span> pares: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">filtrar_array</span>(nums, es_par)
+    <span class="fn">print</span>(pares)    <span class="cm">// [2, 4, 6, 8]</span>
+
+    <span class="kw">let</span> suma: <span class="ty">int</span> <span class="op">=</span> <span class="fn">reducir_array</span>(nums, <span class="num">0</span>, sumar)
+    <span class="fn">print</span>(suma)     <span class="cm">// 36</span>
+
+    <span class="kw">let</span> producto: <span class="ty">int</span> <span class="op">=</span> <span class="fn">reducir_array</span>(nums, <span class="num">1</span>, multiplicar)
+    <span class="fn">print</span>(producto) <span class="cm">// 40320</span>
+}</pre>
+<p>Estos tres — <strong>map</strong>, <strong>filter</strong>, <strong>reduce</strong> — son los bloques fundamentales del procesamiento de datos en muchos lenguajes.</p>
+<h2>¿Qué es un closure?</h2>
+<p>Un <strong>closure</strong> es una función que recuerda variables del ámbito donde fue definida. En Nyx, creas closures definiendo funciones dentro de otras funciones:</p>
+<pre><span class="kw">fn</span> <span class="fn">crear_sumador</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Fn</span> {
+    <span class="kw">fn</span> <span class="fn">sumar</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> n <span class="op">+</span> x
+    }
+    <span class="kw">return</span> sumar
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> sumar5: <span class="ty">Fn</span> <span class="op">=</span> <span class="fn">crear_sumador</span>(<span class="num">5</span>)
+    <span class="kw">let</span> sumar10: <span class="ty">Fn</span> <span class="op">=</span> <span class="fn">crear_sumador</span>(<span class="num">10</span>)
+
+    <span class="fn">print</span>(<span class="fn">sumar5</span>(<span class="num">3</span>))     <span class="cm">// 8</span>
+    <span class="fn">print</span>(<span class="fn">sumar10</span>(<span class="num">3</span>))    <span class="cm">// 13</span>
+    <span class="fn">print</span>(<span class="fn">sumar5</span>(<span class="num">100</span>))   <span class="cm">// 105</span>
+}</pre>
+<p>Cuando <code>crear_sumador(5)</code> se ejecuta, crea una función <code>sumar</code> que recuerda <code>n = 5</code>. Incluso después de que <code>crear_sumador</code> retorna, la función interna todavía tiene acceso a <code>n</code>. Ese entorno capturado es lo que la convierte en un closure.</p>
+<h2>Los closures capturan variables</h2>
+<p>Los closures pueden capturar e incluso modificar variables de su ámbito envolvente:</p>
+<pre><span class="kw">fn</span> <span class="fn">contador</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> cuenta: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">fn</span> <span class="fn">incrementar</span>() {
+        cuenta <span class="op">=</span> cuenta <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="kw">fn</span> <span class="fn">obtener_cuenta</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> cuenta
+    }
+
+    <span class="fn">incrementar</span>()
+    <span class="fn">incrementar</span>()
+    <span class="fn">incrementar</span>()
+
+    <span class="kw">return</span> <span class="fn">obtener_cuenta</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">contador</span>())    <span class="cm">// 3</span>
+}</pre>
+<p>Tanto <code>incrementar</code> como <code>obtener_cuenta</code> comparten la misma variable <code>cuenta</code>. Cuando <code>incrementar</code> la modifica, <code>obtener_cuenta</code> ve el valor actualizado.</p>
+<h2>Closures como acumuladores</h2>
+<pre><span class="kw">fn</span> <span class="fn">acumular</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">fn</span> <span class="fn">sumar_al_total</span>(x: <span class="ty">int</span>) {
+        total <span class="op">=</span> total <span class="op">+</span> x
+    }
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> n {
+        <span class="fn">sumar_al_total</span>(i)
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="kw">return</span> total
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">acumular</span>(<span class="num">10</span>))    <span class="cm">// 55 (1+2+3+...+10)</span>
+    <span class="fn">print</span>(<span class="fn">acumular</span>(<span class="num">5</span>))     <span class="cm">// 15 (1+2+3+4+5)</span>
+}</pre>
+<h2>Aplicar funciones múltiples veces</h2>
+<pre><span class="kw">fn</span> <span class="fn">aplicar_dos_veces</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="fn">f</span>(<span class="fn">f</span>(x))
+}
+
+<span class="kw">fn</span> <span class="fn">aplicar_n_veces</span>(f: <span class="ty">Fn</span>, x: <span class="ty">int</span>, n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> resultado: <span class="ty">int</span> <span class="op">=</span> x
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> n {
+        resultado <span class="op">=</span> <span class="fn">f</span>(resultado)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">doble</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">*</span> <span class="num">2</span> }
+<span class="kw">fn</span> <span class="fn">incrementar</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> n <span class="op">+</span> <span class="num">1</span> }
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">aplicar_dos_veces</span>(doble, <span class="num">3</span>))         <span class="cm">// 12 (3*2=6, 6*2=12)</span>
+    <span class="fn">print</span>(<span class="fn">aplicar_n_veces</span>(doble, <span class="num">1</span>, <span class="num">10</span>))       <span class="cm">// 1024 (2^10)</span>
+    <span class="fn">print</span>(<span class="fn">aplicar_n_veces</span>(incrementar, <span class="num">0</span>, <span class="num">100</span>))   <span class="cm">// 100</span>
+}</pre>
+<h2>Ejemplo práctico: ordenamiento con comparador</h2>
+<p>Puedes usar funciones de primera clase para hacer un ordenamiento genérico:</p>
+<pre><span class="kw">fn</span> <span class="fn">ordenar_array</span>(arr: <span class="ty">Array</span>, comparar: <span class="ty">Fn</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="cm">// Bubble sort simple</span>
+    <span class="kw">var</span> resultado: <span class="ty">Array</span> <span class="op">=</span> []
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+        resultado.<span class="fn">push</span>(arr[i])
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="kw">var</span> hubo_cambio: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">while</span> hubo_cambio {
+        hubo_cambio <span class="op">=</span> <span class="kw">false</span>
+        i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> resultado.<span class="fn">length</span>() <span class="op">-</span> <span class="num">1</span> {
+            <span class="kw">if</span> <span class="fn">comparar</span>(resultado[i], resultado[i <span class="op">+</span> <span class="num">1</span>]) <span class="op">&gt;</span> <span class="num">0</span> {
+                <span class="kw">let</span> temp: <span class="ty">int</span> <span class="op">=</span> resultado[i]
+                resultado[i] <span class="op">=</span> resultado[i <span class="op">+</span> <span class="num">1</span>]
+                resultado[i <span class="op">+</span> <span class="num">1</span>] <span class="op">=</span> temp
+                hubo_cambio <span class="op">=</span> <span class="kw">true</span>
+            }
+            i <span class="op">+=</span> <span class="num">1</span>
+        }
+    }
+
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">ascendente</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> a <span class="op">-</span> b }
+<span class="kw">fn</span> <span class="fn">descendente</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> b <span class="op">-</span> a }
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> nums: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>, <span class="num">9</span>, <span class="num">3</span>]
+
+    <span class="kw">let</span> asc: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">ordenar_array</span>(nums, ascendente)
+    <span class="fn">print</span>(asc)     <span class="cm">// [1, 2, 3, 5, 8, 9]</span>
+
+    <span class="kw">let</span> desc: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">ordenar_array</span>(nums, descendente)
+    <span class="fn">print</span>(desc)    <span class="cm">// [9, 8, 5, 3, 2, 1]</span>
+}</pre>
+<p>Mismo algoritmo de ordenamiento, comportamiento diferente según la función que pases.</p>
+<h2>Ejemplo práctico: callbacks de eventos</h2>
+<p>Los closures son perfectos para patrones orientados a eventos:</p>
+<pre><span class="kw">fn</span> <span class="fn">al_superar_umbral</span>(valores: <span class="ty">Array</span>, umbral: <span class="ty">int</span>, callback: <span class="ty">Fn</span>) {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> valores.<span class="fn">length</span>() {
+        <span class="kw">if</span> valores[i] <span class="op">&gt;</span> umbral {
+            <span class="fn">callback</span>(valores[i])
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">alerta</span>(valor: <span class="ty">int</span>) {
+    <span class="fn">print</span>(<span class="str">&quot;ALERTA: valor &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(valor) <span class="op">+</span> <span class="str">&quot; supera el umbral!&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> temperaturas: <span class="ty">Array</span> <span class="op">=</span> [<span class="num">22</span>, <span class="num">35</span>, <span class="num">28</span>, <span class="num">41</span>, <span class="num">19</span>, <span class="num">38</span>, <span class="num">45</span>]
+    <span class="fn">al_superar_umbral</span>(temperaturas, <span class="num">37</span>, alerta)
+}</pre>
+<p>Salida:</p>
+<pre>ALERTA: valor 41 supera el umbral!
+ALERTA: valor 38 supera el umbral!
+ALERTA: valor 45 supera el umbral!</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe una función <code>aplicar_a_todos(arr: Array, f: Fn) -> Array</code> que aplique una función a cada elemento y devuelva un nuevo array. Pruébala con al menos tres funciones diferentes.</li>
+</ol>
+<ol>
+<li>Escribe <code>contar_coincidencias(arr: Array, predicado: Fn) -> int</code> que cuente cuántos elementos satisfacen una función predicado.</li>
+</ol>
+<ol>
+<li>Escribe <code>componer(f: Fn, g: Fn, x: int) -> int</code> que aplique <code>g</code> primero, luego <code>f</code>: <code>componer(f, g, x)</code> es igual a <code>f(g(x))</code>.</li>
+</ol>
+<ol>
+<li>Crea un closure <code>crear_multiplicador(factor: int) -> Fn</code> que devuelva una función que multiplique su argumento por <code>factor</code>. Úsalo para crear funciones <code>triple</code> y <code>cuadruple</code>.</li>
+</ol>
+<ol>
+<li>Escribe <code>encontrar_primero(arr: Array, predicado: Fn) -> int</code> que devuelva el primer elemento que cumpla el predicado, o <code>-1</code> si ninguno cumple.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li>Las funciones son valores en Nyx — puedes pasarlas, almacenarlas y devolverlas.</li>
+<li>El tipo <code>Fn</code> representa un valor de función.</li>
+<li>Pasa una función por nombre (sin paréntesis): <code>aplicar(doble, 5)</code>.</li>
+<li><strong>Map</strong>, <strong>filter</strong> y <strong>reduce</strong> son patrones poderosos construidos sobre funciones de primera clase.</li>
+<li>Un <strong>closure</strong> es una función que captura variables de su ámbito envolvente.</li>
+<li>Los closures pueden leer y modificar variables capturadas.</li>
+<li>Usa closures para crear funciones con estado incorporado (contadores, sumadores, multiplicadores).</li>
+</ul>
+<p>Siguiente capítulo: <a href="14-enums.md">Enums y pattern matching →</a></p>
+
+    <div class="book-nav">
+        <a href="12.html" class="book-nav-prev">&larr; Anterior: Archivos</a>
+        <a href="14.html" class="book-nav-next">Siguiente: Enums y pattern matching &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

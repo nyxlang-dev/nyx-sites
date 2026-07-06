@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Middleware HTTP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Middleware HTTP</h1>
+
+    <p>El framework <code>std/web</code> ofrece una API estilo Flask para construir aplicaciones web. <code>App</code> guarda las rutas y el middleware, <code>app_get</code>/<code>app_post</code> registran los handlers de ruta, y <code>app_use</code> agrega middleware que se ejecuta antes de cada petición. El middleware incluido de fábrica incluye <code>mw_logging</code> y <code>mw_cors</code>.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Web framework — registering routes and middleware</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">handle_root</span>(req: <span class="ty">Request</span>) -> <span class="ty">Response</span> {
+    <span class="kw">return</span> response_new(<span class="num">200</span>, <span class="str">"Welcome to Nyx!"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">handle_api</span>(req: <span class="ty">Request</span>) -> <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"status\": \"ok\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+
+    <span class="cm">// Middleware runs before each request</span>
+    app_use(app, mw_logging)
+    app_use(app, mw_cors)
+
+    <span class="cm">// Routes match method + path pattern</span>
+    app_get(app, <span class="str">"/"</span>, handle_root)
+    app_get(app, <span class="str">"/api/status"</span>, handle_api)
+
+    print(<span class="str">"app configured with 2 routes and 2 middlewares"</span>)
+    print(<span class="str">"routes: GET / and GET /api/status"</span>)
+    print(<span class="str">"middleware: logging + CORS"</span>)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">app configured with 2 routes and 2 middlewares
+routes: GET / and GET /api/status
+middleware: logging + CORS</pre>
+
+    <h2>Explicación</h2>
+    <p><code>app_new()</code> crea una aplicación vacía. Los handlers de ruta reciben una struct <code>Request</code> (con los campos: method, path, query, headers_flat, body) y retornan una struct <code>Response</code>. Funciones auxiliares como <code>response_new</code> y <code>response_json</code> crean respuestas con los headers apropiados.</p>
+    <p><code>mw_logging</code> registra el método, la ruta, el status y la latencia de cada petición. <code>mw_cors</code> maneja las peticiones OPTIONS de preflight y agrega los headers CORS. Puedes configurar CORS con <code>cors_configure(origin, methods, headers)</code>.</p>
+    <p>En producción, pasa la app a <code>serve_app(app, port, workers)</code> de <code>nyx-serve</code> para levantar un servidor HTTP multi-hilo. Así están construidos los cuatro sitios de nyxlang.com.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/51-http-server.html">← Anterior</a>
+        <a href="/es/by-example/53-websocket.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/52-http-middleware.nx">examples/by-example/52-http-middleware.nx</a></small></p>
+</main>
+
+</body>
+</html>

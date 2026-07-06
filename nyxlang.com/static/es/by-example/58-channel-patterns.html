@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patrones de Canales — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Patrones de Canales</h1>
+    <p>Los canales son el mecanismo principal de paso de mensajes en Nyx. <code>channel_new(capacity)</code> crea un canal con buffer, <code>channel_send</code> envía un valor, y <code>channel_recv</code> bloquea hasta que un valor esté disponible. Los canales se declaran con el tipo <code>Map</code>.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Channels — typed message passing between threads</span>
+<span class="cm">// Canales — paso de mensajes tipado entre hilos</span>
+
+<span class="kw">var</span> ch: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">producer</span>() -> <span class="ty">int</span> {
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">5</span> {
+        channel_send(ch, i)
+        i = i + <span class="num">1</span>
+    }
+    <span class="cm">// Send sentinel to signal done</span>
+    channel_send(ch, <span class="num">-1</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Create a buffered channel (capacity 10)</span>
+    ch = channel_new(<span class="num">10</span>)
+
+    <span class="cm">// Spawn producer thread</span>
+    <span class="kw">let</span> h: <span class="ty">int</span> = thread_spawn(producer)
+
+    <span class="cm">// Receive messages until sentinel</span>
+    <span class="kw">var</span> running: <span class="ty">bool</span> = <span class="kw">true</span>
+    <span class="kw">while</span> running {
+        <span class="kw">let</span> val: <span class="ty">int</span> = channel_recv(ch)
+        <span class="kw">if</span> val == <span class="num">-1</span> {
+            running = <span class="kw">false</span>
+        } <span class="kw">else</span> {
+            print(<span class="str">"received: "</span> + int_to_string(val))
+        }
+    }
+
+    thread_join(h)
+    channel_destroy(ch)
+    print(<span class="str">"done"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">received: 0
+received: 1
+received: 2
+received: 3
+received: 4
+done</pre>
+    <h2>Explicación</h2>
+    <p>Los canales en Nyx usan el tipo <code>Map</code> como tipo de declaración -- este es un detalle clave a recordar. <code>channel_new(10)</code> crea un canal con buffer que puede contener hasta 10 valores antes de que un emisor se bloquee.</p>
+    <p>El productor envía los enteros del 0 al 4, y luego envía <code>-1</code> como valor centinela para señalar la finalización. El hilo principal recorre llamando a <code>channel_recv</code>, que bloquea hasta que hay datos disponibles, y se detiene cuando recibe el centinela.</p>
+    <p>Siempre llama a <code>channel_destroy</code> después de que tanto el emisor como el receptor terminaron, para liberar los recursos subyacentes. La llamada a <code>thread_join</code> asegura que el productor haya terminado antes de la limpieza.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/57-mutex.html">&larr; Anterior</a>
+        <a href="/es/by-example/59-worker-pool.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/58-channel-patterns.nx">examples/by-example/58-channel-patterns.nx</a></small></p>
+</main>
+</body>
+</html>

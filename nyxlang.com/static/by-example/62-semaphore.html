@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semaphore — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Semaphore</h1>
+    <p>A <code>Semaphore</code> from <code>std/sync</code> limits the number of concurrent accesses to a resource. <code>sem_new(n)</code> creates a semaphore with n permits, <code>sem_acquire</code> takes a permit (blocking if none available), and <code>sem_release</code> returns one.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Semaphore — limiting concurrent access to a resource</span>
+<span class="cm">// Semáforo — limitar acceso concurrente a un recurso</span>
+
+<span class="kw">import</span> <span class="str">"std/sync"</span>
+
+<span class="kw">var</span> sem: <span class="ty">Semaphore</span> = sem_new(<span class="num">2</span>)
+<span class="kw">var</span> done: <span class="ty">WaitGroup</span> = wg_new()
+
+<span class="kw">fn</span> <span class="fn">access_resource</span>() -> <span class="ty">int</span> {
+    sem_acquire(sem)
+    print(<span class="str">"acquired (count: "</span> + int_to_string(sem_count(sem)) + <span class="str">")"</span>)
+    sleep(<span class="num">50</span>)
+    sem_release(sem)
+    print(<span class="str">"released"</span>)
+    wg_done(done)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Allow at most 2 concurrent accesses</span>
+    wg_add(done, <span class="num">5</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">5</span> {
+        thread_spawn(access_resource)
+        i = i + <span class="num">1</span>
+    }
+
+    wg_wait(done)
+    print(<span class="str">"all done"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+released
+all done</pre>
+    <h2>Explanation</h2>
+    <p><code>sem_new(2)</code> creates a semaphore with 2 permits. At most 2 threads can hold a permit simultaneously. When a third thread calls <code>sem_acquire</code>, it blocks until one of the first two calls <code>sem_release</code>.</p>
+    <p>Five threads compete for the semaphore. <code>sem_count</code> returns the number of remaining permits, which drops to 0 when both are taken. After sleeping 50ms (simulating work), each thread releases its permit and signals the WaitGroup.</p>
+    <p>This pattern is useful for rate-limiting access to external resources like database connections, file descriptors, or API endpoints where you want controlled concurrency rather than full mutual exclusion.</p>
+    <div class="book-nav">
+        <a href="/by-example/61-waitgroup.html">&larr; Previous</a>
+        <a href="/by-example/63-select-channel.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/62-semaphore.nx">examples/by-example/62-semaphore.nx</a></small></p>
+</main>
+</body>
+</html>

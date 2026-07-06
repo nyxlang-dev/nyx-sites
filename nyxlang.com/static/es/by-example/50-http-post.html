@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP POST — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>HTTP POST</h1>
+
+    <p><code>http_post(url, body)</code> envía una solicitud POST con <code>Content-Type: text/plain</code>. Para encabezados y métodos personalizados, usa <code>http_request(method, url, headers, body)</code>, que da control total sobre la solicitud.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// HTTP POST request with a body</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> resp: <span class="ty">Array</span> = http_post(<span class="str">"http://httpbin.org/post"</span>, <span class="str">"hello from Nyx"</span>)
+
+    <span class="kw">let</span> status: <span class="ty">int</span> = http_status(resp)
+    print(<span class="str">"status: "</span> + int_to_string(status))
+
+    <span class="kw">let</span> body: <span class="ty">String</span> = http_body(resp)
+    <span class="kw">if</span> body.length() > <span class="num">200</span> {
+        print(<span class="str">"body (first 200 chars): "</span> + body.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(<span class="str">"body: "</span> + body)
+    }
+
+    <span class="cm">// Custom headers and methods with http_request</span>
+    <span class="kw">let</span> headers: <span class="ty">Array</span> = [<span class="str">"Content-Type"</span>, <span class="str">"application/json"</span>]
+    <span class="kw">let</span> json_body: <span class="ty">String</span> = <span class="str">"{\"key\": \"value\"}"</span>
+    <span class="kw">let</span> resp2: <span class="ty">Array</span> = http_request(<span class="str">"PUT"</span>, <span class="str">"http://httpbin.org/put"</span>, headers, json_body)
+    print(<span class="str">"PUT status: "</span> + int_to_string(http_status(resp2)))
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">status: 200
+body (first 200 chars): { "args": {}, "data": "hello from Nyx", ...}
+PUT status: 200</pre>
+
+    <h2>Explicación</h2>
+    <p><code>http_post</code> es un envoltorio de conveniencia que fija <code>Content-Type: text/plain</code>. Para APIs JSON, usa <code>http_request</code> con encabezados explícitos — el array de encabezados usa un formato plano clave-valor: <code>["Header-Name", "value", "Another", "value"]</code>.</p>
+    <p><code>http_request</code> admite cualquier método HTTP (GET, POST, PUT, DELETE, PATCH, etc.) y da control total sobre los encabezados y el contenido del cuerpo.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/49-http-get.html">← Anterior</a>
+        <a href="/es/by-example/51-http-server.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/50-http-post.nx">examples/by-example/50-http-post.nx</a></small></p>
+</main>
+
+</body>
+</html>

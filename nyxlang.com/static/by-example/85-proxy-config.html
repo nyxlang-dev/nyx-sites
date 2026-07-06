@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Config — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Proxy Config</h1>
+    <p>std/toml parses TOML config files into a flat Map with dot-notation keys. Helpers toml_get_int/bool/string convert values with defaults. Arrays-of-tables ([[upstream]]) require custom parsing.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-proxy config — parsing proxy.toml with std/toml</span>
+<span class="cm">// Config nyx-proxy — parsear proxy.toml con std/toml</span>
+
+<span class="kw">import</span> <span class="str">"std/toml"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// A typical proxy.toml config file</span>
+    <span class="kw">let</span> config_text: <span class="ty">String</span> = <span class="str">"[server]\nport = 443\ntls = true\n\n[[upstream]]\nname = \"api\"\nhost = \"127.0.0.1\"\nport = 3000\n\n[[upstream]]\nname = \"static\"\nhost = \"127.0.0.1\"\nport = 3001\n\n[health]\ninterval = 5\ntimeout = 2\nthreshold = 3\n\n[ratelimit]\nper_ip_per_sec = 100"</span>
+
+    <span class="kw">let</span> parsed: <span class="ty">Map</span> = toml_parse(config_text)
+
+    <span class="cm">// Read server config</span>
+    <span class="kw">let</span> port: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"server.port"</span>, <span class="num">443</span>)
+    <span class="kw">let</span> tls: <span class="ty">bool</span> = toml_get_bool(parsed, <span class="str">"server.tls"</span>, <span class="kw">false</span>)
+    print(<span class="str">"server: port="</span> + int_to_string(port) + <span class="str">" tls="</span> + int_to_string(tls))
+
+    <span class="cm">// Read health config</span>
+    <span class="kw">let</span> interval: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"health.interval"</span>, <span class="num">10</span>)
+    <span class="kw">let</span> threshold: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"health.threshold"</span>, <span class="num">3</span>)
+    print(<span class="str">"health: interval="</span> + int_to_string(interval) + <span class="str">"s threshold="</span> + int_to_string(threshold))
+
+    <span class="cm">// Read rate limit config</span>
+    <span class="kw">let</span> rate: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"ratelimit.per_ip_per_sec"</span>, <span class="num">50</span>)
+    print(<span class="str">"ratelimit: "</span> + int_to_string(rate) + <span class="str">" req/s per IP"</span>)
+
+    <span class="cm">// Note: TOML arrays-of-tables ([[upstream]]) are not supported by std/toml</span>
+    <span class="cm">// nyx-proxy uses a custom config loader for those</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">server: port=443 tls=1
+health: interval=5s threshold=3
+ratelimit: 100 req/s per IP</pre>
+    <h2>Explanation</h2>
+    <p>Config-as-code is nice until you need a human to edit it. TOML is the sweet spot: it's readable like INI, typed like JSON, and doesn't have YAML's whitespace footguns. std/toml flattens nested tables into dot-notation keys ([server] + port becomes "server.port"), which keeps the API a simple Map. The toml_get_* helpers handle the two things you always want: type coercion and defaults — so missing keys don't crash, they fall back to a sane value. Arrays-of-tables ([[upstream]]) are common in proxy configs for defining a list of backends; std/toml doesn't handle those yet, so nyx-proxy ships a small custom parser for its upstream block.</p>
+    <div class="book-nav">
+        <a href="/by-example/84-serve-fullstack.html">&larr; Previous</a>
+        <a href="/by-example/86-proxy-vhost.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/85-proxy-config.nx">examples/by-example/85-proxy-config.nx</a></small></p>
+</main>
+</body>
+</html>

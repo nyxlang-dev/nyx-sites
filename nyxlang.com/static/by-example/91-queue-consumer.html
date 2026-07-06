@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Consumer — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Queue Consumer</h1>
+    <p>Consumers DEQUEUE a message, process it, then ACK on success or NACK on failure. NACK triggers redelivery (with optional backoff). Multiple consumers on the same queue get round-robin distribution.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-queue consumer — DEQUEUE + ACK loop with redelivery</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">process_message</span>(payload: <span class="ty">String</span>) -&gt; <span class="ty">bool</span> {
+    <span class="cm">// Your business logic here — return true if successful</span>
+    print(<span class="str">"  processing: "</span> + payload)
+    <span class="kw">return</span> <span class="kw">true</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6381</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Consumer loop: dequeue, process, ack/nack</span>
+    <span class="kw">var</span> processed: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> processed &lt; <span class="num">3</span> {
+        <span class="cm">// DEQUEUE returns an array: [msg_id, payload] or nil if empty</span>
+        tcp_write(fd, resp_cmd([<span class="str">"DEQUEUE"</span>, <span class="str">"tasks"</span>]))
+        <span class="kw">let</span> hdr: <span class="ty">String</span> = tcp_read_line(fd)
+        <span class="kw">if</span> hdr.trim() == <span class="str">"$-1"</span> {
+            print(<span class="str">"queue empty"</span>)
+            processed = <span class="num">3</span>
+        } <span class="kw">else</span> {
+            <span class="cm">// Read msg_id and payload</span>
+            <span class="kw">let</span> id_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+            <span class="kw">let</span> msg_id: <span class="ty">String</span> = tcp_read_line(fd)
+            <span class="kw">let</span> payload_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+            <span class="kw">let</span> payload: <span class="ty">String</span> = tcp_read_line(fd)
+
+            <span class="kw">let</span> success: <span class="ty">bool</span> = process_message(payload)
+            <span class="kw">if</span> success {
+                <span class="cm">// ACK removes the message from in-flight</span>
+                tcp_write(fd, resp_cmd([<span class="str">"ACK"</span>, <span class="str">"tasks"</span>, msg_id.trim()]))
+                tcp_read_line(fd)
+            } <span class="kw">else</span> {
+                <span class="cm">// NACK triggers redelivery</span>
+                tcp_write(fd, resp_cmd([<span class="str">"NACK"</span>, <span class="str">"tasks"</span>, msg_id.trim()]))
+                tcp_read_line(fd)
+            }
+            processed = processed + <span class="num">1</span>
+        }
+    }
+    print(<span class="str">"consumer processed "</span> + int_to_string(processed) + <span class="str">" messages"</span>)
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">  processing: {"task":"send_email","to":"a@b.com"}
+  processing: {"task":"send_email","to":"c@d.com"}
+queue empty
+consumer processed 3 messages</pre>
+    <h2>Explanation</h2>
+    <p>The consumer loop is the core of any queue worker. DEQUEUE atomically reserves a message (moving it to in-flight state), your handler processes it, then ACK confirms completion or NACK returns it for redelivery. If the consumer crashes before ACK, nyx-queue automatically re-delivers after a visibility timeout. With multiple consumers connected, nyx-queue distributes messages round-robin — horizontal scaling comes for free.</p>
+    <div class="book-nav">
+        <a href="/by-example/90-queue-enqueue.html">&larr; Previous</a>
+        <a href="/by-example/92-db-sql.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/91-queue-consumer.nx">examples/by-example/91-queue-consumer.nx</a></small></p>
+</main>
+</body>
+</html>

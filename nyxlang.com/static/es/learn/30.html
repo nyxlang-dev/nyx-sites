@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP/2 — Protocolos binarios — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>HTTP/2 — Protocolos binarios</h1>
+
+<h2>Por que HTTP/2?</h2>
+<p>HTTP/1.1 esta basado en texto. Cada solicitud se ve asi:</p>
+<pre>GET /index.html HTTP/1.1\r\n
+Host: example.com\r\n
+Accept: text/html\r\n
+\r\n</pre>
+<p>Esto tiene dos problemas. Primero, las cabeceras se envian como texto plano en cada solicitud — incluso cuando se repiten. Segundo, HTTP/1.1 permite solo <strong>una solicitud a la vez</strong> por conexion TCP. Si necesitas cargar 10 recursos, o abres 10 conexiones o esperas cada respuesta antes de enviar la siguiente solicitud.</p>
+<p>HTTP/2 resuelve ambos problemas con una <strong>capa de enmarcado binario</strong>:</p>
+<ul>
+<li><strong>Multiplexacion</strong> — multiples solicitudes y respuestas se intercalan en una sola conexion TCP.</li>
+<li><strong>Compresion de cabeceras (HPACK)</strong> — las cabeceras se comprimen usando una tabla estatica y codificacion Huffman.</li>
+<li><strong>Formato binario</strong> — sin sobrecarga de parseo de texto.</li>
+</ul>
+
+<h2>Estructura del frame</h2>
+<p>Todo en HTTP/2 es un <strong>frame</strong>. Cada frame tiene una cabecera de 9 bytes:</p>
+<pre>+-----------------------------------------------+
+|                Length (24 bits)                |
++---------------+---------------+---------------+
+|   Type (8)    |   Flags (8)   |
++-+-------------+---------------+---------------+
+|R|         Stream Identifier (31 bits)         |
++-+---------------------------------------------+
+|                Frame Payload ...               |
++-----------------------------------------------+</pre>
+<ul>
+<li><strong>Length</strong> — tamano del payload en bytes (maximo 16.384 por defecto).</li>
+<li><strong>Type</strong> — que tipo de frame es.</li>
+<li><strong>Flags</strong> — flags especificas del tipo (ej. END_STREAM, END_HEADERS).</li>
+<li><strong>Stream ID</strong> — a que stream pertenece este frame (0 para nivel de conexion).</li>
+</ul>
+
+<h2>Tipos de frame</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Tipo</th><th>ID</th><th>Proposito</th></tr></thead>
+<tbody>
+<tr><td>DATA</td><td>0</td><td>Cuerpo de solicitud/respuesta</td></tr>
+<tr><td>HEADERS</td><td>1</td><td>Cabeceras HTTP (comprimidas con HPACK)</td></tr>
+<tr><td>SETTINGS</td><td>4</td><td>Configuracion de conexion</td></tr>
+<tr><td>PING</td><td>6</td><td>Keep-alive / medicion de latencia</td></tr>
+<tr><td>GOAWAY</td><td>7</td><td>Cierre graceful</td></tr>
+<tr><td>WINDOW_UPDATE</td><td>8</td><td>Control de flujo</td></tr>
+<tr><td>RST_STREAM</td><td>3</td><td>Cancelar un stream</td></tr>
+</tbody></table></div>
+
+<h2>Streams y multiplexacion</h2>
+<p>Un <strong>stream</strong> es un par logico de solicitud/respuesta dentro de una conexion. Los streams tienen IDs numericos:</p>
+<ul>
+<li><strong>IDs impares</strong> (1, 3, 5, ...) — solicitudes iniciadas por el cliente.</li>
+<li><strong>IDs pares</strong> (2, 4, 6, ...) — server push.</li>
+<li><strong>Stream 0</strong> — frames a nivel de conexion (SETTINGS, PING, GOAWAY).</li>
+</ul>
+<p>Multiples streams pueden estar activos simultaneamente. Un cliente envia HEADERS en el stream 1, luego HEADERS en el stream 3, sin esperar respuestas. El servidor envia respuestas en cualquier orden.</p>
+
+<h2>Compresion de cabeceras HPACK</h2>
+<p>HTTP/2 comprime las cabeceras usando una <strong>tabla estatica</strong> de 61 pares comunes de nombre-valor. Por ejemplo:</p>
+<div class="table-wrapper"><table>
+<thead><tr><th>Indice</th><th>Nombre</th><th>Valor</th></tr></thead>
+<tbody>
+<tr><td>2</td><td><code>:method</code></td><td><code>GET</code></td></tr>
+<tr><td>4</td><td><code>:path</code></td><td><code>/</code></td></tr>
+<tr><td>8</td><td><code>:status</code></td><td><code>200</code></td></tr>
+<tr><td>13</td><td><code>:status</code></td><td><code>404</code></td></tr>
+</tbody></table></div>
+<p>En lugar de enviar <code>:status: 200</code> como 12 bytes de texto, HPACK envia un solo byte: <code>0x88</code> (representacion indexada de la entrada 8). Esto reduce la sobrecarga de cabeceras dramaticamente.</p>
+
+<h2>Prefacio de conexion</h2>
+<p>Una conexion HTTP/2 comienza con el cliente enviando una <strong>cadena magica</strong> de 24 bytes:</p>
+<pre>PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n</pre>
+<p>Seguida de un frame SETTINGS. El servidor responde con su propio SETTINGS y un ACK. Este handshake establece los parametros de conexion. En modo h2c (texto claro), no se necesita TLS.</p>
+
+<h2>Construir un servidor HTTP/2 en Nyx</h2>
+<p>Nyx proporciona <code>std/http2.nx</code> para servidores HTTP/2. La API esta basada en callbacks:</p>
+<pre><span class="kw">import</span> <span class="str">"std/http2"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(method: <span class="ty">String</span>, path: <span class="ty">String</span>, headers: <span class="ty">Array</span>, body: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="kw">if</span> path <span class="op">==</span> <span class="str">"/"</span> {
+        <span class="kw">let</span> hdrs: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">"content-type"</span>, <span class="str">"text/html"</span>]
+        <span class="kw">return</span> [<span class="num">200</span>, hdrs, <span class="str">"&lt;h1&gt;Hello from HTTP/2!&lt;/h1&gt;"</span>]
+    }
+    <span class="kw">let</span> hdrs: <span class="ty">Array</span> <span class="op">=</span> [<span class="str">"content-type"</span>, <span class="str">"text/plain"</span>]
+    <span class="kw">return</span> [<span class="num">404</span>, hdrs, <span class="str">"Not Found"</span>]
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="fn">h2_serve</span>(<span class="num">3000</span>, <span class="num">4</span>, on_request)
+    <span class="kw">return</span> <span class="num">0</span>
+}</pre>
+<p>El callback recibe el metodo, la ruta, las cabeceras (como un array plano <code>[clave1, valor1, clave2, valor2, ...]</code>) y el cuerpo. Devuelve un array de tres elementos: <code>[estado, cabeceras, cuerpo]</code>.</p>
+
+<h2>Probar con curl</h2>
+<p>Usa <code>curl --http2-prior-knowledge</code> para conectar via h2c:</p>
+<pre>$ curl --http2-prior-knowledge http://localhost:3000/
+&lt;h1&gt;Hello from HTTP/2!&lt;/h1&gt;</pre>
+<p>El flag <code>--http2-prior-knowledge</code> le indica a curl que use HTTP/2 directamente sin un handshake de upgrade.</p>
+
+<h2>Que hace Nyx internamente</h2>
+<p>La implementacion de HTTP/2 esta dividida entre C y Nyx:</p>
+<ul>
+<li><code>runtime/http2.c</code> — E/S de frames, codificacion/decodificacion HPACK, tablas Huffman (todas las operaciones binarias en C por rendimiento).</li>
+<li><code>std/http2.nx</code> — maquina de estados del protocolo, validacion del prefacio de conexion, bucle de despacho de frames, construccion de respuestas (toda la logica en Nyx).</li>
+</ul>
+<p>Este enfoque hibrido — C para operaciones a nivel de bytes, Nyx para la logica del protocolo — es el mismo patron usado para WebSockets, TCP y el parser RESP.</p>
+
+<h2>Resumen</h2>
+<ul>
+<li>HTTP/2 reemplaza el protocolo de texto de HTTP/1.1 con enmarcado binario.</li>
+<li>La multiplexacion permite multiples solicitudes en una sola conexion TCP.</li>
+<li>HPACK comprime cabeceras usando una tabla estatica y codificacion Huffman.</li>
+<li>Los frames tienen una cabecera de 9 bytes: longitud, tipo, flags, stream ID.</li>
+<li><code>h2_serve(port, workers, callback)</code> inicia un servidor HTTP/2.</li>
+<li>Prueba con <code>curl --http2-prior-knowledge</code>.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="29.html" class="book-nav-prev">&larr; Anterior: Colas de mensajes con nyx-queue</a>
+        <a href="31.html" class="book-nav-next">Siguiente: Construyendo una base de datos — nyx-db &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

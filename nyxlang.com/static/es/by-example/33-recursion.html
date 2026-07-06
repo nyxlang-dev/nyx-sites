@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursión — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Recursión</h1>
+
+    <p>Nyx soporta funciones recursivas sin ninguna sintaxis especial. Una función simplemente se llama a sí misma por nombre. La clásica secuencia de Fibonacci es la demostración canónica: los casos base retornan de inmediato, y cualquier otra llamada reduce el problema hacia uno de esos casos base.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Recursión: fibonacci recursivo clásico
+
+fn fib(n: int) -> int {
+    if n <= 1 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+fn main() -> int {
+    // Imprimir la secuencia de fibonacci del 0 al 10
+    print("Secuencia fibonacci (0..10):")
+    var i: int = 0
+    while i <= 10 {
+        let resultado: int = fib(i)
+        print("fib(" + int_to_string(i) + ") = " + int_to_string(resultado))
+        i = i + 1
+    }
+
+    // Calcular fib(20)
+    let f20: int = fib(20)
+    print("fib(20) = " + int_to_string(f20))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Secuencia fibonacci (0..10):
+fib(0) = 0
+fib(1) = 1
+fib(2) = 1
+fib(3) = 2
+fib(4) = 3
+fib(5) = 5
+fib(6) = 8
+fib(7) = 13
+fib(8) = 21
+fib(9) = 34
+fib(10) = 55
+fib(20) = 6765</pre>
+
+    <h2>Explicación</h2>
+    <p><code>fib</code> tiene dos casos base: <code>n == 0</code> retorna <code>0</code> y <code>n == 1</code> retorna <code>1</code>. Ambos quedan cubiertos por la única guarda <code>n &lt;= 1</code>. Para cualquier <code>n</code> mayor, la función se llama a sí misma dos veces y suma los resultados. Cada llamada recursiva avanza uno o dos pasos hacia el caso base, así que la recursión siempre termina.</p>
+    <p>La implementación ingenua con doble recursión tiene complejidad temporal exponencial — <code>fib(n)</code> recalcula subproblemas muchas veces. Para <code>fib(20)</code> esto sigue siendo instantáneo, pero para entradas grandes (digamos <code>fib(40)</code>) se prefiere una versión con memoización o iterativa. Los benchmarks de Nyx muestran que <code>fib(40)</code> se completa en ~166 ms con el enfoque ingenuo.</p>
+    <p>La recursión en Nyx compila directamente a llamadas de función nativas vía LLVM. No hay overhead de intérprete, y el código generado es equivalente al que se escribiría en C.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/32-iterator-take-skip.html">← Anterior</a>
+        <a href="/es/by-example/34-sorting.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/33-recursion.nx">examples/by-example/33-recursion.nx</a></small></p>
+</main>
+
+</body>
+</html>

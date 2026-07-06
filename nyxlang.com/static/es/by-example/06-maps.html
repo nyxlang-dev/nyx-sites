@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Maps</h1>
+
+    <p>Un <code>Map</code> almacena pares clave-valor con búsqueda rápida por clave. Los maps se crean con <code>Map.new()</code> y soportan inserción, recuperación, prueba de pertenencia y enumeración de claves.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Maps: Map.new(), insert, get, has, size, iterar con keys()
+
+fn main() -> int {
+    var capitales: Map = Map.new()
+
+    // Insertar pares clave-valor
+    capitales.insert("Argentina", "Buenos Aires")
+    capitales.insert("Francia", "Paris")
+    capitales.insert("Japon", "Tokio")
+
+    // size
+    print("paises: " + int_to_string(capitales.size()))
+
+    // get
+    let capital: String = capitales.get("Francia")
+    print("Capital de Francia: " + capital)
+
+    // has
+    print("tiene Argentina: " + int_to_string(capitales.has("Argentina")))
+    print("tiene Brasil: " + int_to_string(capitales.has("Brasil")))
+
+    // Iterar claves
+    let ks: Array = capitales.keys()
+    print("claves (" + int_to_string(ks.length()) + "):")
+    for k in ks {
+        print("  " + k)
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">paises: 3
+Capital de Francia: Paris
+tiene Argentina: 1
+tiene Brasil: 0
+claves (3):
+  Argentina
+  Francia
+  Japon</pre>
+
+    <h2>Explicación</h2>
+    <p>Los maps en Nyx se crean con <code>Map.new()</code> — no existe una sintaxis de map literal (sería ambigua con las expresiones de bloque). Los maps deben declararse con <code>var</code> si se pretende insertar o modificar entradas después de la creación.</p>
+    <p>El método <code>.insert(key, value)</code> agrega o actualiza un par clave-valor. <code>.get(key)</code> obtiene el valor de una clave, devolviendo el valor almacenado como <code>String</code> (o el tipo correspondiente). Si la clave no existe, el comportamiento es indefinido — use <code>.has(key)</code> primero para verificar la pertenencia.</p>
+    <p><code>.has(key)</code> devuelve un <code>int</code>: <code>1</code> significa que la clave existe, <code>0</code> que no existe. Este patrón de entero como booleano es común en las funciones de salida de bajo nivel de Nyx. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
+    <p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map. El orden de iteración sobre los hash maps no está garantizado que sea el orden de inserción, por lo que el orden de las claves en la salida puede variar entre ejecuciones.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/05-arrays.html">← Anterior</a>
+        <a href="/es/by-example/07-strings.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/06-maps.nx">examples/by-example/06-maps.nx</a></small></p>
+</main>
+
+</body>
+</html>

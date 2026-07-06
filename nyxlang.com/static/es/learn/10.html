@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu primer proyecto — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Tu primer proyecto</h1>
+
+<h2>Juntando todo</h2>
+<p>A lo largo de los últimos nueve capítulos, has aprendido variables, tipos, operaciones, flujo de control, funciones, arrays, strings, maps y structs. ¡Es mucho! Ahora es momento de combinar todo en un programa real.</p>
+<p>Vamos a construir un <strong>seguimiento de notas de estudiantes</strong>: un programa que almacena estudiantes y sus notas, calcula promedios, encuentra al mejor y peor estudiante, e imprime un informe resumen.</p>
+<h2>Paso 1: Definir los datos</h2>
+<p>Primero, definamos cómo se ve un estudiante:</p>
+<pre><span class="kw">struct</span> Estudiante {
+    nombre: <span class="ty">String</span>,
+    notas: <span class="ty">Array</span>
+}</pre>
+<p>Cada estudiante tiene un nombre y un array de notas (enteros).</p>
+<h2>Paso 2: Crear los estudiantes</h2>
+<pre><span class="kw">fn</span> <span class="fn">crear_estudiante</span>(nombre: <span class="ty">String</span>, notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> Estudiante {
+    <span class="kw">return</span> Estudiante { nombre: nombre, notas: notas }
+}</pre>
+<p>Esta función auxiliar facilita la creación de estudiantes.</p>
+<h2>Paso 3: Calcular el promedio</h2>
+<pre><span class="kw">fn</span> <span class="fn">promedio</span>(notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> notas.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> {
+        <span class="kw">return</span> <span class="num">0</span>
+    }
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> notas.<span class="fn">length</span>() {
+        total <span class="op">+=</span> notas[i]
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total <span class="op">/</span> notas.<span class="fn">length</span>()
+}</pre>
+<p>Esta función suma todas las notas y divide por la cantidad. Como usamos división entera, el resultado se redondea hacia abajo.</p>
+<h2>Paso 4: Encontrar la nota más alta</h2>
+<pre><span class="kw">fn</span> <span class="fn">nota_mas_alta</span>(notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> mejor: <span class="ty">int</span> <span class="op">=</span> notas[<span class="num">0</span>]
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> notas.<span class="fn">length</span>() {
+        <span class="kw">if</span> notas[i] <span class="op">&gt;</span> mejor {
+            mejor <span class="op">=</span> notas[i]
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor
+}</pre>
+<h2>Paso 5: Determinar la letra de calificación</h2>
+<pre><span class="kw">fn</span> <span class="fn">letra_nota</span>(prom: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">90</span> { <span class="kw">return</span> <span class="str">&quot;A&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">80</span> { <span class="kw">return</span> <span class="str">&quot;B&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">70</span> { <span class="kw">return</span> <span class="str">&quot;C&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">60</span> { <span class="kw">return</span> <span class="str">&quot;D&quot;</span> }
+    <span class="kw">return</span> <span class="str">&quot;F&quot;</span>
+}</pre>
+<h2>Paso 6: Imprimir el informe de un estudiante</h2>
+<pre><span class="kw">fn</span> <span class="fn">imprimir_informe</span>(s: Estudiante) {
+    <span class="kw">let</span> prom: <span class="ty">int</span> <span class="op">=</span> <span class="fn">promedio</span>(s.notas)
+    <span class="kw">let</span> mejor: <span class="ty">int</span> <span class="op">=</span> <span class="fn">nota_mas_alta</span>(s.notas)
+    <span class="kw">let</span> letra: <span class="ty">String</span> <span class="op">=</span> <span class="fn">letra_nota</span>(prom)
+
+    <span class="fn">print</span>(<span class="str">&quot;Estudiante: &quot;</span> <span class="op">+</span> s.nombre)
+    <span class="fn">print</span>(<span class="str">&quot;  Notas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(s.notas.<span class="fn">length</span>()) <span class="op">+</span> <span class="str">&quot; tareas&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;  Promedio: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(prom))
+    <span class="fn">print</span>(<span class="str">&quot;  Mejor: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(mejor))
+    <span class="fn">print</span>(<span class="str">&quot;  Letra: &quot;</span> <span class="op">+</span> letra)
+    <span class="fn">print</span>(<span class="str">&quot;&quot;</span>)
+}</pre>
+<h2>Paso 7: Encontrar al mejor estudiante</h2>
+<pre><span class="kw">fn</span> <span class="fn">mejor_estudiante</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> mejor_nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> mejor_prom: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="kw">let</span> prom: <span class="ty">int</span> <span class="op">=</span> <span class="fn">promedio</span>(s.notas)
+        <span class="kw">if</span> prom <span class="op">&gt;</span> mejor_prom {
+            mejor_prom <span class="op">=</span> prom
+            mejor_nombre <span class="op">=</span> s.nombre
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor_nombre
+}</pre>
+<h2>Paso 8: Estadísticas de la clase</h2>
+<pre><span class="kw">fn</span> <span class="fn">promedio_clase</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        total <span class="op">+=</span> <span class="fn">promedio</span>(s.notas)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total <span class="op">/</span> estudiantes.<span class="fn">length</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">contar_aprobados</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> cuenta: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="kw">if</span> <span class="fn">promedio</span>(s.notas) <span class="op">&gt;=</span> <span class="num">60</span> {
+            cuenta <span class="op">+=</span> <span class="num">1</span>
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> cuenta
+}</pre>
+<h2>El programa completo</h2>
+<p>Aquí está todo junto:</p>
+<pre><span class="kw">struct</span> Estudiante {
+    nombre: <span class="ty">String</span>,
+    notas: <span class="ty">Array</span>
+}
+
+<span class="kw">fn</span> <span class="fn">crear_estudiante</span>(nombre: <span class="ty">String</span>, notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> Estudiante {
+    <span class="kw">return</span> Estudiante { nombre: nombre, notas: notas }
+}
+
+<span class="kw">fn</span> <span class="fn">promedio</span>(notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> notas.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> notas.<span class="fn">length</span>() {
+        total <span class="op">+=</span> notas[i]
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total <span class="op">/</span> notas.<span class="fn">length</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">nota_mas_alta</span>(notas: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> mejor: <span class="ty">int</span> <span class="op">=</span> notas[<span class="num">0</span>]
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> notas.<span class="fn">length</span>() {
+        <span class="kw">if</span> notas[i] <span class="op">&gt;</span> mejor { mejor <span class="op">=</span> notas[i] }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor
+}
+
+<span class="kw">fn</span> <span class="fn">letra_nota</span>(prom: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">90</span> { <span class="kw">return</span> <span class="str">&quot;A&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">80</span> { <span class="kw">return</span> <span class="str">&quot;B&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">70</span> { <span class="kw">return</span> <span class="str">&quot;C&quot;</span> }
+    <span class="kw">if</span> prom <span class="op">&gt;=</span> <span class="num">60</span> { <span class="kw">return</span> <span class="str">&quot;D&quot;</span> }
+    <span class="kw">return</span> <span class="str">&quot;F&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">imprimir_informe</span>(s: Estudiante) {
+    <span class="kw">let</span> prom: <span class="ty">int</span> <span class="op">=</span> <span class="fn">promedio</span>(s.notas)
+    <span class="kw">let</span> mejor: <span class="ty">int</span> <span class="op">=</span> <span class="fn">nota_mas_alta</span>(s.notas)
+    <span class="kw">let</span> letra: <span class="ty">String</span> <span class="op">=</span> <span class="fn">letra_nota</span>(prom)
+    <span class="fn">print</span>(<span class="str">&quot;Estudiante: &quot;</span> <span class="op">+</span> s.nombre)
+    <span class="fn">print</span>(<span class="str">&quot;  Promedio: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(prom) <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> letra <span class="op">+</span> <span class="str">&quot;)&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;  Mejor nota: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(mejor))
+    <span class="fn">print</span>(<span class="str">&quot;&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">mejor_estudiante</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">var</span> mejor_nombre: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> mejor_prom: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="kw">let</span> prom: <span class="ty">int</span> <span class="op">=</span> <span class="fn">promedio</span>(s.notas)
+        <span class="kw">if</span> prom <span class="op">&gt;</span> mejor_prom {
+            mejor_prom <span class="op">=</span> prom
+            mejor_nombre <span class="op">=</span> s.nombre
+        }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> mejor_nombre
+}
+
+<span class="kw">fn</span> <span class="fn">promedio_clase</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        total <span class="op">+=</span> <span class="fn">promedio</span>(s.notas)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total <span class="op">/</span> estudiantes.<span class="fn">length</span>()
+}
+
+<span class="kw">fn</span> <span class="fn">contar_aprobados</span>(estudiantes: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> cuenta: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="kw">if</span> <span class="fn">promedio</span>(s.notas) <span class="op">&gt;=</span> <span class="num">60</span> { cuenta <span class="op">+=</span> <span class="num">1</span> }
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> cuenta
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> estudiantes: <span class="ty">Array</span> <span class="op">=</span> [
+        <span class="fn">crear_estudiante</span>(<span class="str">&quot;Alice&quot;</span>,   [<span class="num">92</span>, <span class="num">88</span>, <span class="num">95</span>, <span class="num">90</span>]),
+        <span class="fn">crear_estudiante</span>(<span class="str">&quot;Bob&quot;</span>,     [<span class="num">78</span>, <span class="num">65</span>, <span class="num">72</span>, <span class="num">80</span>]),
+        <span class="fn">crear_estudiante</span>(<span class="str">&quot;Charlie&quot;</span>, [<span class="num">95</span>, <span class="num">98</span>, <span class="num">92</span>, <span class="num">97</span>]),
+        <span class="fn">crear_estudiante</span>(<span class="str">&quot;Diana&quot;</span>,   [<span class="num">55</span>, <span class="num">62</span>, <span class="num">58</span>, <span class="num">61</span>]),
+        <span class="fn">crear_estudiante</span>(<span class="str">&quot;Eve&quot;</span>,     [<span class="num">88</span>, <span class="num">85</span>, <span class="num">90</span>, <span class="num">87</span>])
+    ]
+
+    <span class="fn">print</span>(<span class="str">&quot;=== Informe de Notas ===&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;&quot;</span>)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> estudiantes.<span class="fn">length</span>() {
+        <span class="kw">let</span> s: Estudiante <span class="op">=</span> estudiantes[i]
+        <span class="fn">imprimir_informe</span>(s)
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">&quot;=== Resumen de la Clase ===&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Estudiantes: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(estudiantes.<span class="fn">length</span>()))
+    <span class="fn">print</span>(<span class="str">&quot;Promedio de la clase: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="fn">promedio_clase</span>(estudiantes)))
+    <span class="fn">print</span>(<span class="str">&quot;Aprobados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="fn">contar_aprobados</span>(estudiantes)) <span class="op">+</span> <span class="str">&quot;/&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(estudiantes.<span class="fn">length</span>()))
+    <span class="fn">print</span>(<span class="str">&quot;Mejor estudiante: &quot;</span> <span class="op">+</span> <span class="fn">mejor_estudiante</span>(estudiantes))
+}</pre>
+<p>Salida esperada:</p>
+<pre>=== Informe de Notas ===
+
+Estudiante: Alice
+  Promedio: 91 (A)
+  Mejor nota: 95
+
+Estudiante: Bob
+  Promedio: 73 (C)
+  Mejor nota: 80
+
+Estudiante: Charlie
+  Promedio: 95 (A)
+  Mejor nota: 98
+
+Estudiante: Diana
+  Promedio: 59 (F)
+  Mejor nota: 62
+
+Estudiante: Eve
+  Promedio: 87 (B)
+  Mejor nota: 90
+
+=== Resumen de la Clase ===
+Estudiantes: 5
+Promedio de la clase: 81
+Aprobados: 4/5
+Mejor estudiante: Charlie</pre>
+<h2>Lo que construiste</h2>
+<p>Mira lo que hace este programa:</p>
+<ul>
+<li><strong>Struct</strong> para modelar un estudiante con nombre y notas.</li>
+<li><strong>Arrays</strong> para almacenar notas y listas de estudiantes.</li>
+<li><strong>Funciones</strong> para cada tarea: promedio, nota más alta, letra, informe.</li>
+<li><strong>Strings</strong> para formatear mensajes de salida.</li>
+<li><strong>Flujo de control</strong> (if/while) para tomar decisiones y recorrer datos.</li>
+<li><strong>Aritmética entera</strong> para promedios y conteos.</li>
+</ul>
+<p>Así es como se construyen los programas reales: funciones pequeñas y enfocadas que hacen una sola cosa, combinadas para resolver un problema más grande.</p>
+<h2>Desafíos</h2>
+<p>Ahora que has completado la Parte 1, prueba estos desafíos para poner a prueba tus habilidades:</p>
+<ol>
+<li><strong>Agregar nota más baja</strong>: Escribe <code>nota_mas_baja(notas: Array) -> int</code> e inclúyela en el informe.</li>
+</ol>
+<ol>
+<li><strong>Distribución de calificaciones</strong>: Cuenta cuántos estudiantes obtuvieron cada letra (A, B, C, D, F) e imprime un resumen.</li>
+</ol>
+<ol>
+<li><strong>Notas con curva</strong>: Escribe una función que sume 5 puntos a cada nota (con tope en 100) y recalcula el informe.</li>
+</ol>
+<ol>
+<li><strong>Cuadro de honor</strong>: Imprime una lista separada de estudiantes con promedio de 90 o más.</li>
+</ol>
+<ol>
+<li><strong>Construye tu propio proyecto</strong>: Elige algo que te interese — un registro de recetas, un marcador deportivo, una lista de reproducción de música — y constrúyelo usando todo lo que has aprendido.</li>
+</ol>
+<h2>¿Qué sigue?</h2>
+<p>¡Felicitaciones! Has completado la Parte 1 de El Libro de Nyx. Ahora conoces los fundamentos de la programación: variables, tipos, flujo de control, funciones, arrays, strings, maps y structs.</p>
+<p>En la Parte 2, aprenderás a construir programas más grandes con <strong>módulos e imports</strong>, leer y escribir <strong>archivos</strong>, usar <strong>closures</strong>, <strong>enums</strong>, <strong>traits</strong>, <strong>generics</strong>, y eventualmente construir un <strong>servidor web</strong> — todo en Nyx.</p>
+<p>Siguiente capítulo: <a href="11-modulos.md">Imports y módulos →</a></p>
+
+    <div class="book-nav">
+        <a href="09.html" class="book-nav-prev">&larr; Anterior: Structs</a>
+        <a href="11.html" class="book-nav-next">Siguiente: Imports y módulos &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

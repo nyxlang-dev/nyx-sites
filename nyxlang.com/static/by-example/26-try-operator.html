@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Try Operator — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Try Operator</h1>
+
+    <p>The <code>?</code> operator is syntactic sugar for propagating errors. Appending <code>?</code> to a <code>Result</code>-returning expression either unwraps the <code>Ok</code> value or immediately returns the <code>Err</code> to the caller — without requiring an explicit match.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Try operator (?): encadenar operaciones que pueden fallar, short-circuit en Err
+
+enum Result {
+    Ok(int),
+    Err(String)
+}
+
+fn parse_positive(s: String) -> Result {
+    let n: int = string_to_int(s)
+    if n &lt;= 0 {
+        return Result.Err("no es positivo: " + s)
+    }
+    return Result.Ok(n)
+}
+
+fn double_it(n: int) -> Result {
+    if n &gt; 1000 {
+        return Result.Err("numero demasiado grande")
+    }
+    return Result.Ok(n * 2)
+}
+
+// ? propaga el Err automáticamente sin match explícito
+fn pipeline(s: String) -> Result {
+    let n: int = parse_positive(s)?
+    let d: int = double_it(n)?
+    return Result.Ok(d + 1)
+}
+
+fn show(r: Result) {
+    match r {
+        Result.Ok(v)  =&gt; print("ok: " + int_to_string(v)),
+        Result.Err(e) =&gt; print("err: " + e)
+    }
+}
+
+fn main() -> int {
+    show(pipeline("42"))     // ok: 85  (42*2+1)
+    show(pipeline("-5"))     // err: no es positivo
+    show(pipeline("2000"))   // err: numero demasiado grande
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">ok: 85
+err: no es positivo: -5
+err: numero demasiado grande</pre>
+
+    <h2>Explanation</h2>
+    <p>Without <code>?</code>, every fallible call would require a <code>match</code> expression to check for errors before proceeding. The <code>?</code> operator automates this: if the result is <code>Ok(v)</code>, it unwraps <code>v</code> and continues; if it is <code>Err(e)</code>, it immediately returns <code>Err(e)</code> from the enclosing function. The function signature must also return a <code>Result</code> for this to work.</p>
+    <p>The <code>pipeline</code> function chains two fallible steps: parsing a positive integer and doubling it within a limit. Both lines use <code>?</code>, so the first error encountered short-circuits the rest of the function. When <code>"-5"</code> is passed, <code>parse_positive</code> returns <code>Err</code> immediately and <code>double_it</code> is never called.</p>
+    <p>This pattern keeps the happy-path logic clean and readable — <code>pipeline</code> reads almost like sequential imperative code — while preserving complete, explicit error handling. It is the preferred style for multi-step operations in Nyx over deeply nested match expressions.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/25-result-ok-err.html">← Previous</a>
+        <a href="/by-example/27-if-let.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/26-try-operator.nx">examples/by-example/26-try-operator.nx</a></small></p>
+</main>
+
+</body>
+</html>

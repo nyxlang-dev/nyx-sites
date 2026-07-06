@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Handling — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Signal Handling</h1>
+    <p><code>signal_handle(signum, fn)</code> registers a callback for an OS signal. <code>signal_reset</code> restores the default behavior. This recipe sends SIGUSR1 to itself and catches it.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Signal handling — reacting to OS signals</span>
+<span class="cm">// Manejo de señales — reaccionar a señales del SO</span>
+
+<span class="kw">var</span> got_signal: <span class="ty">int</span> = <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">on_sigusr1</span>() -> <span class="ty">int</span> {
+    got_signal = <span class="num">1</span>
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Register a handler for SIGUSR1 (signal 10)</span>
+    signal_handle(<span class="num">10</span>, on_sigusr1)
+    print(<span class="str">"handler registered for SIGUSR1"</span>)
+
+    <span class="cm">// Send SIGUSR1 to ourselves</span>
+    <span class="kw">let</span> my_pid: <span class="ty">int</span> = getpid()
+    print(<span class="str">"my pid: "</span> + int_to_string(my_pid))
+    kill_process(my_pid, <span class="num">10</span>)
+
+    <span class="cm">// Give time for signal delivery</span>
+    sleep(<span class="num">10</span>)
+
+    <span class="kw">if</span> got_signal == <span class="num">1</span> {
+        print(<span class="str">"signal received!"</span>)
+    } <span class="kw">else</span> {
+        print(<span class="str">"no signal yet"</span>)
+    }
+
+    <span class="cm">// Reset signal to default behavior</span>
+    signal_reset(<span class="num">10</span>)
+    print(<span class="str">"handler reset to default"</span>)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">handler registered for SIGUSR1
+my pid: 12345
+signal received!
+handler reset to default</pre>
+    <h2>Explanation</h2>
+    <p><code>signal_handle(signum, fn)</code> installs a callback function for the given signal number. SIGUSR1 is signal 10 on Linux. The handler function must have the signature <code>fn() -> int</code>.</p>
+    <p>The program uses <code>kill_process(pid, signal)</code> to send SIGUSR1 to itself. After a brief <code>sleep</code> to allow delivery, it checks the global flag that the handler set.</p>
+    <p><code>signal_reset(signum)</code> restores the default OS behavior for the signal. For SIGUSR1, the default action is to terminate the process, so you would not want to send it again after resetting.</p>
+    <div class="book-nav">
+        <a href="/by-example/65-pipes.html">&larr; Previous</a>
+        <a href="/by-example/67-file-watcher.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/66-signal-handling.nx">examples/by-example/66-signal-handling.nx</a></small></p>
+</main>
+</body>
+</html>

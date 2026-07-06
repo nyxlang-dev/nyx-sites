@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variables — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Variables</h1>
+
+    <p>Nyx distinguishes between immutable bindings (<code>let</code>) and mutable variables (<code>var</code>). Types are written explicitly after a colon, and string interpolation with <code>${...}</code> makes it easy to embed values inside strings.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Variables: let (inmutable), var (mutable), tipos básicos e interpolación
+
+fn main() -> int {
+    // let es inmutable
+    let nombre: String = "Nyx"
+    let version: int = 12
+    let activo: bool = true
+    let precio: float = 3.14
+
+    print("Nombre: ${nombre}")
+    print("Version: ${version}")
+    print("Activo: ${activo}")
+
+    // var es mutable — se puede reasignar
+    var contador: int = 0
+    contador = contador + 1
+    contador = contador + 1
+    print("Contador: ${contador}")
+
+    // Interpolación con expresión
+    let doble: int = contador * 2
+    print("Doble: ${doble}")
+
+    // Concatenación de strings
+    let saludo: String = "Hola, " + nombre + "!"
+    print(saludo)
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Nombre: Nyx
+Version: 12
+Activo: true
+Contador: 2
+Doble: 4
+Hola, Nyx!</pre>
+
+    <h2>Explanation</h2>
+    <p><code>let</code> declares an immutable binding. Once assigned, you cannot reassign it — any attempt to do so is a compile-time error. This is the default and preferred form in Nyx, since most values do not need to change.</p>
+    <p><code>var</code> declares a mutable variable. You can reassign it freely after its initial declaration. Use <code>var</code> only when mutation is genuinely needed — counters, accumulators, and loop variables are good candidates.</p>
+    <p>The four basic scalar types shown here are <code>String</code> (UTF-8 text), <code>int</code> (64-bit signed integer), <code>bool</code> (<code>true</code> or <code>false</code>), and <code>float</code> (64-bit double-precision floating point).</p>
+    <p>String interpolation uses the <code>${expr}</code> syntax inside a double-quoted string. Any expression can appear inside the braces, and its value is automatically converted to a string. You can also concatenate strings with the <code>+</code> operator.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/01-hello-world.html">← Previous</a>
+        <a href="/by-example/03-functions.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/02-variables.nx">examples/by-example/02-variables.nx</a></small></p>
+</main>
+
+</body>
+</html>

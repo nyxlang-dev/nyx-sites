@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mutex — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Mutex</h1>
+    <p><code>mutex_new()</code> creates a mutual exclusion lock. <code>mutex_lock</code> and <code>mutex_unlock</code> ensure only one thread accesses shared state at a time. Without a mutex, concurrent increments would lose updates due to race conditions.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Mutex — protecting shared state between threads</span>
+<span class="cm">// Mutex — proteger estado compartido entre hilos</span>
+
+<span class="kw">var</span> counter: <span class="ty">int</span> = <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">increment_task</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> m: <span class="ty">int</span> = mutex_new()
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; <span class="num">1000</span> {
+        mutex_lock(m)
+        counter = counter + <span class="num">1</span>
+        mutex_unlock(m)
+        i = i + <span class="num">1</span>
+    }
+    mutex_destroy(m)
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Without a mutex, concurrent increments would lose updates.</span>
+    <span class="cm">// The mutex ensures only one thread modifies counter at a time.</span>
+    <span class="kw">let</span> h1: <span class="ty">int</span> = thread_spawn(increment_task)
+    <span class="kw">let</span> h2: <span class="ty">int</span> = thread_spawn(increment_task)
+
+    thread_join(h1)
+    thread_join(h2)
+
+    print(<span class="str">"counter: "</span> + int_to_string(counter))
+    <span class="cm">// Expected: 2000 (1000 per thread, no lost updates)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">counter: 2000</pre>
+    <h2>Explanation</h2>
+    <p><code>mutex_new()</code> allocates a new mutex and returns an opaque handle. Before accessing the shared <code>counter</code> variable, each thread calls <code>mutex_lock(m)</code> to acquire exclusive access, then <code>mutex_unlock(m)</code> to release it.</p>
+    <p>Two threads each increment the counter 1000 times. Without the mutex, some increments would be lost because both threads could read the same value simultaneously. With the mutex, the final count is always exactly 2000.</p>
+    <p>Always call <code>mutex_destroy(m)</code> when the mutex is no longer needed to free system resources. In production code, consider wrapping critical sections in helper functions to ensure unlock is never forgotten.</p>
+    <div class="book-nav">
+        <a href="/by-example/56-csv-write.html">&larr; Previous</a>
+        <a href="/by-example/58-channel-patterns.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/57-mutex.nx">examples/by-example/57-mutex.nx</a></small></p>
+</main>
+</body>
+</html>

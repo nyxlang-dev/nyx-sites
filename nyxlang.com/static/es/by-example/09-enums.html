@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enums — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Enums</h1>
+
+    <p>Los enums de Nyx son tipos de datos algebraicos (ADTs): cada variante puede transportar datos distintos, y las expresiones <code>match</code> las desestructuran de forma exhaustiva. Esto hace imposible olvidar un caso en tiempo de compilación.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Enums: definición, variantes con datos, match exhaustivo
+
+enum Shape {
+    Circle(int),
+    Square(int),
+    Rectangle(int, int)
+}
+
+fn area(s: Shape) -> int {
+    return match s {
+        Shape.Circle(r)        => r * r * 3,
+        Shape.Square(l)        => l * l,
+        Shape.Rectangle(w, h)  => w * h
+    }
+}
+
+fn describe(s: Shape) -> String {
+    return match s {
+        Shape.Circle(r)        => "circulo de radio " + int_to_string(r),
+        Shape.Square(l)        => "cuadrado de lado " + int_to_string(l),
+        Shape.Rectangle(w, h)  => "rectangulo " + int_to_string(w) + "x" + int_to_string(h)
+    }
+}
+
+fn main() -> int {
+    let c: Shape = Shape.Circle(5)
+    let sq: Shape = Shape.Square(4)
+    let rect: Shape = Shape.Rectangle(3, 7)
+
+    print(describe(c) + " -> area aprox " + int_to_string(area(c)))
+    print(describe(sq) + " -> area " + int_to_string(area(sq)))
+    print(describe(rect) + " -> area " + int_to_string(area(rect)))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">circulo de radio 5 -> area aprox 75
+cuadrado de lado 4 -> area 16
+rectangulo 3x7 -> area 21</pre>
+
+    <h2>Explicación</h2>
+    <p>Un enum se declara con la palabra clave <code>enum</code> seguida de un nombre y una lista de variantes. Cada variante puede transportar cero o más valores tipados entre paréntesis: <code>Circle(int)</code> transporta un entero (el radio), <code>Rectangle(int, int)</code> transporta dos (ancho y alto). Las variantes sin paréntesis serían simples etiquetas.</p>
+    <p>Los valores de enum se construyen con notación de punto: <code>Shape.Circle(5)</code>. Nótese que Nyx usa <code>Shape.Circle</code>, no <code>Shape::Circle</code> — el punto es el separador de variantes en todo el lenguaje.</p>
+    <p>La expresión <code>match</code> desestructura un valor de enum y vincula los datos internos a nombres locales. Cada rama tiene la forma <code>Patrón => expresión</code>. El compilador exige exhaustividad: si falta alguna variante en un <code>match</code>, el programa no compilará.</p>
+    <p>La fórmula de área para el círculo usa aritmética de enteros (<code>r * r * 3</code> como aproximación de π·r²), por lo que el resultado está etiquetado como "aprox". Los programas reales usarían <code>float</code> y la biblioteca estándar <code>math</code> para obtener resultados precisos.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/08-structs.html">← Anterior</a>
+        <a href="/es/by-example/10-closures.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/09-enums.nx">examples/by-example/09-enums.nx</a></small></p>
+</main>
+
+</body>
+</html>

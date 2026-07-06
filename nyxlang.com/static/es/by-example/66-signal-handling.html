@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manejo de Señales — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Manejo de Señales</h1>
+    <p><code>signal_handle(signum, fn)</code> registra un callback para una señal del sistema operativo. <code>signal_reset</code> restaura el comportamiento por defecto. Esta receta envía SIGUSR1 a sí mismo y la captura.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Signal handling — reacting to OS signals</span>
+<span class="cm">// Manejo de señales — reaccionar a señales del SO</span>
+
+<span class="kw">var</span> got_signal: <span class="ty">int</span> = <span class="num">0</span>
+
+<span class="kw">fn</span> <span class="fn">on_sigusr1</span>() -> <span class="ty">int</span> {
+    got_signal = <span class="num">1</span>
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// Register a handler for SIGUSR1 (signal 10)</span>
+    signal_handle(<span class="num">10</span>, on_sigusr1)
+    print(<span class="str">"handler registered for SIGUSR1"</span>)
+
+    <span class="cm">// Send SIGUSR1 to ourselves</span>
+    <span class="kw">let</span> my_pid: <span class="ty">int</span> = getpid()
+    print(<span class="str">"my pid: "</span> + int_to_string(my_pid))
+    kill_process(my_pid, <span class="num">10</span>)
+
+    <span class="cm">// Give time for signal delivery</span>
+    sleep(<span class="num">10</span>)
+
+    <span class="kw">if</span> got_signal == <span class="num">1</span> {
+        print(<span class="str">"signal received!"</span>)
+    } <span class="kw">else</span> {
+        print(<span class="str">"no signal yet"</span>)
+    }
+
+    <span class="cm">// Reset signal to default behavior</span>
+    signal_reset(<span class="num">10</span>)
+    print(<span class="str">"handler reset to default"</span>)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">handler registered for SIGUSR1
+my pid: 12345
+signal received!
+handler reset to default</pre>
+    <h2>Explicación</h2>
+    <p><code>signal_handle(signum, fn)</code> instala una función callback para el número de señal dado. SIGUSR1 es la señal 10 en Linux. La función manejadora debe tener la firma <code>fn() -> int</code>.</p>
+    <p>El programa usa <code>kill_process(pid, signal)</code> para enviarse SIGUSR1 a sí mismo. Tras un breve <code>sleep</code> para permitir la entrega, verifica la bandera global que estableció el manejador.</p>
+    <p><code>signal_reset(signum)</code> restaura el comportamiento por defecto del sistema operativo para la señal. Para SIGUSR1, la acción por defecto es terminar el proceso, así que no conviene enviarla de nuevo después de restablecerla.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/65-pipes.html">&larr; Anterior</a>
+        <a href="/es/by-example/67-file-watcher.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/66-signal-handling.nx">examples/by-example/66-signal-handling.nx</a></small></p>
+</main>
+</body>
+</html>

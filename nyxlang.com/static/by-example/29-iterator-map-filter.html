@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: map and filter — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Iterator: map and filter</h1>
+
+    <p>Nyx iterators are lazy chains of transformations. Calling <code>.iter()</code> on an array creates an iterator, <code>.filter(pred)</code> keeps only elements satisfying a predicate, <code>.map(f)</code> transforms each element, and <code>.collect()</code> materializes the result into a new array.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Iterators: filter + map + collect en cadena
+
+fn is_even(x: int) -> bool {
+    return x % 2 == 0
+}
+
+fn double(x: int) -> int {
+    return x * 2
+}
+
+fn square(x: int) -> int {
+    return x * x
+}
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // Filtrar pares y duplicarlos
+    let result: Array = nums.iter().filter(is_even).map(double).collect()
+    print("pares duplicados: " + int_to_string(result.length()) + " elementos")
+    let r0: int = result[0]
+    let r4: int = result[4]
+    print("primero: " + int_to_string(r0))   // 4  (2*2)
+    print("ultimo:  " + int_to_string(r4))   // 20 (10*2)
+
+    // Solo map: elevar al cuadrado todos
+    let squares: Array = nums.iter().map(square).collect()
+    print("cuadrados: " + int_to_string(squares.length()) + " elementos")
+    let s0: int = squares[0]
+    let s9: int = squares[9]
+    print("1^2 = " + int_to_string(s0))
+    print("10^2 = " + int_to_string(s9))
+
+    // Filtrar, mapear y tomar los primeros 3
+    let top3: Array = nums.iter().filter(is_even).map(double).take(3).collect()
+    print("top3 pares*2:")
+    let t0: int = top3[0]
+    let t1: int = top3[1]
+    let t2: int = top3[2]
+    print(int_to_string(t0) + " " + int_to_string(t1) + " " + int_to_string(t2))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">pares duplicados: 5 elementos
+primero: 4
+ultimo:  20
+cuadrados: 10 elementos
+1^2 = 1
+10^2 = 100
+top3 pares*2:
+4 8 12</pre>
+
+    <h2>Explanation</h2>
+    <p>Iterator pipelines in Nyx follow a consistent pattern: start with <code>.iter()</code>, chain zero or more intermediate adapters (<code>filter</code>, <code>map</code>, <code>take</code>, <code>skip</code>, etc.), and terminate with a consumer (<code>collect</code>, <code>fold</code>, <code>for_each</code>). Each adapter is lazy — no element is processed until the consumer drives the pipeline. This avoids allocating intermediate arrays for each step.</p>
+    <p>The first pipeline, <code>nums.iter().filter(is_even).map(double).collect()</code>, walks through all 10 numbers: <code>filter</code> passes only the 5 even ones (2, 4, 6, 8, 10), then <code>map</code> doubles each, producing [4, 8, 12, 16, 20]. Functions passed to <code>filter</code> and <code>map</code> are named top-level functions here, but closures work equally well.</p>
+    <p>Adding <code>.take(3)</code> to the chain stops the pipeline after the first three results are collected, so the third example yields [4, 8, 12] without processing the remaining elements. This composability — mixing filter, map, take, and other adapters in any order — is the core strength of Nyx's iterator design.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/28-match-guard.html">← Previous</a>
+        <a href="/by-example/30-iterator-fold.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/29-iterator-map-filter.nx">examples/by-example/29-iterator-map-filter.nx</a></small></p>
+</main>
+
+</body>
+</html>

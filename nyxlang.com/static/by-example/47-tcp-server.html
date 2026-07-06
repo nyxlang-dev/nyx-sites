@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCP Server — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>TCP Server</h1>
+
+    <p>A minimal TCP echo server using built-in primitives. <code>tcp_listen</code> binds to a port, <code>tcp_accept</code> waits for a client connection, then you read and write data on the client socket. This is the foundation for all Nyx network servers.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// TCP echo server — listen, accept, echo back</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> server: <span class="ty">int</span> = tcp_listen(<span class="str">"0.0.0.0"</span>, <span class="num">9000</span>)
+    <span class="kw">if</span> server &lt; <span class="num">0</span> {
+        print(<span class="str">"failed to listen on port 9000"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+    print(<span class="str">"echo server listening on :9000"</span>)
+
+    <span class="kw">let</span> client: <span class="ty">int</span> = tcp_accept(server)
+    <span class="kw">if</span> client &lt; <span class="num">0</span> {
+        print(<span class="str">"accept failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+    print(<span class="str">"client connected"</span>)
+
+    <span class="kw">let</span> msg: <span class="ty">String</span> = tcp_read_line(client)
+    print(<span class="str">"received: "</span> + msg)
+    tcp_write(client, <span class="str">"echo: "</span> + msg + <span class="str">"\n"</span>)
+
+    tcp_close(client)
+    tcp_close(server)
+    print(<span class="str">"done"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">echo server listening on :9000
+client connected
+received: hello
+done</pre>
+
+    <h2>Explanation</h2>
+    <p><code>tcp_listen("0.0.0.0", port)</code> creates a listening socket on all interfaces. <code>tcp_accept</code> blocks until a client connects and returns a new file descriptor for that connection. The server reads one line, echoes it back prefixed with "echo: ", and closes both sockets.</p>
+    <p>For a production server, you would wrap the accept in a <code>while</code> loop and spawn a thread per client, or use <code>http_serve_mt</code> which handles the thread pool automatically.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/46-tcp-client.html">← Previous</a>
+        <a href="/by-example/48-udp-socket.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/47-tcp-server.nx">examples/by-example/47-tcp-server.nx</a></small></p>
+</main>
+
+</body>
+</html>

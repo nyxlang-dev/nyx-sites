@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: enumerate() — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Iterator: enumerate()</h1>
+
+    <p><code>enumerate()</code> transforms any iterator into one that yields pairs of <code>[index, value]</code>. It is the idiomatic way to track the position of each element without managing a counter variable by hand.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Iteradores: enumerate() para obtener pares (índice, valor)
+
+fn print_pair(idx: int, val: int) {
+    print("[" + int_to_string(idx) + "] = " + int_to_string(val))
+}
+
+fn main() -> int {
+    let frutas: Array = [10, 20, 30, 40, 50]
+
+    // enumerate() retorna un iterador de pares {index, value}
+    // Se puede iterar con for-in desempaquetando idx y val
+    let enumerado: Array = frutas.iter().enumerate().collect()
+
+    // Cada elemento es un array [indice, valor]
+    var i: int = 0
+    while i < enumerado.length() {
+        let par: Array = enumerado[i]
+        let idx: int = par[0]
+        let val: int = par[1]
+        print_pair(idx, val)
+        i = i + 1
+    }
+
+    // También se puede combinar con otros adapters
+    let primeros: Array = frutas.iter().enumerate().take(3).collect()
+    print("primeros 3 enumerados: " + int_to_string(primeros.length()))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">[0] = 10
+[1] = 20
+[2] = 30
+[3] = 40
+[4] = 50
+primeros 3 enumerados: 3</pre>
+
+    <h2>Explanation</h2>
+    <p>Calling <code>.iter()</code> on an array produces a lazy iterator. Chaining <code>.enumerate()</code> wraps each item into a two-element array <code>[index, value]</code>, and <code>.collect()</code> materializes the whole pipeline into a concrete <code>Array</code>. Each element of the result is itself an array, so <code>par[0]</code> gives the index and <code>par[1]</code> gives the original value.</p>
+    <p>Because <code>enumerate()</code> is just another iterator adapter, it composes freely with the rest of the iterator API. The second pipeline in this example adds <code>.take(3)</code> after <code>.enumerate()</code> to collect only the first three indexed pairs — demonstrating that adapters can be stacked in any order.</p>
+    <p>This pattern eliminates the error-prone pattern of maintaining a separate counter variable alongside a loop, and makes the intent of the code immediately clear to any reader.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/30-iterator-fold.html">← Previous</a>
+        <a href="/by-example/32-iterator-take-skip.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/31-iterator-enumerate.nx">examples/by-example/31-iterator-enumerate.nx</a></small></p>
+</main>
+
+</body>
+</html>

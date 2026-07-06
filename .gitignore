@@ -1,0 +1,14 @@
+# Binarios compilados por site
+nyxlang.com/nyxlang-com
+serve.nyxlang.com/serve-nyxlang-com
+proxy.nyxlang.com/proxy-nyxlang-com
+
+# Artefactos de build del PM
+*/script.nx
+*/script.ll
+__pycache__/
+*.o
+.DS_Store
+
+# OJO: */packages/nyx-serve SÍ se commitea (vendoring pineado — decisión
+# 2026-07-06, ver PROJECT_STATE.md). No agregar packages/ acá.

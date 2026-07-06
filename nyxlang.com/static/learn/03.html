@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations and expressions — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Operations and expressions</h1>
+
+<h2>Arithmetic</h2>
+<p>Nyx supports the standard math operations:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">let</span> b: <span class="ty">int</span> <span class="op">=</span> <span class="num">3</span>
+
+    <span class="fn">print</span>(a <span class="op">+</span> b)    <span class="cm">// 13   addition</span>
+    <span class="fn">print</span>(a <span class="op">-</span> b)    <span class="cm">// 7    subtraction</span>
+    <span class="fn">print</span>(a <span class="op">*</span> b)    <span class="cm">// 30   multiplication</span>
+    <span class="fn">print</span>(a <span class="op">/</span> b)    <span class="cm">// 3    division (integer — no decimals)</span>
+    <span class="fn">print</span>(a <span class="op">%</span> b)    <span class="cm">// 1    remainder (modulo)</span>
+}</pre>
+<p>When dividing two integers, the result is an integer — the decimal part is dropped, not rounded. <code>10 / 3</code> gives <code>3</code>, not <code>3.33</code>.</p>
+<p>For decimal division, use floats:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">float</span> <span class="op">=</span> <span class="num">10.0</span>
+    <span class="kw">let</span> b: <span class="ty">float</span> <span class="op">=</span> <span class="num">3.0</span>
+    <span class="fn">print</span>(a <span class="op">/</span> b)    <span class="cm">// 3.333...</span>
+}</pre>
+<h2>Compound assignment</h2>
+<p>When you want to update a variable using its current value, you can use shorthand operators:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+
+    x <span class="op">+=</span> <span class="num">5</span>     <span class="cm">// same as: x = x + 5    → 15</span>
+    x <span class="op">-=</span> <span class="num">3</span>     <span class="cm">// same as: x = x - 3    → 12</span>
+    x <span class="op">*=</span> <span class="num">2</span>     <span class="cm">// same as: x = x * 2    → 24</span>
+    x <span class="op">/=</span> <span class="num">4</span>     <span class="cm">// same as: x = x / 4    → 6</span>
+    x <span class="op">%=</span> <span class="num">5</span>     <span class="cm">// same as: x = x % 5    → 1</span>
+
+    <span class="fn">print</span>(x)   <span class="cm">// 1</span>
+}</pre>
+<h2>Comparison operators</h2>
+<p>Comparisons produce a <code>bool</code> value — either <code>true</code> or <code>false</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">let</span> b: <span class="ty">int</span> <span class="op">=</span> <span class="num">20</span>
+
+    <span class="fn">print</span>(a <span class="op">==</span> b)    <span class="cm">// false   equal to</span>
+    <span class="fn">print</span>(a <span class="op">!=</span> b)    <span class="cm">// true    not equal to</span>
+    <span class="fn">print</span>(a <span class="op">&lt;</span> b)     <span class="cm">// true    less than</span>
+    <span class="fn">print</span>(a <span class="op">&gt;</span> b)     <span class="cm">// false   greater than</span>
+    <span class="fn">print</span>(a <span class="op">&lt;=</span> b)    <span class="cm">// true    less than or equal</span>
+    <span class="fn">print</span>(a <span class="op">&gt;=</span> b)    <span class="cm">// false   greater than or equal</span>
+}</pre>
+<p>You can compare strings too:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> name: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alice&quot;</span>
+    <span class="fn">print</span>(name <span class="op">==</span> <span class="str">&quot;Alice&quot;</span>)    <span class="cm">// true</span>
+    <span class="fn">print</span>(name <span class="op">==</span> <span class="str">&quot;Bob&quot;</span>)      <span class="cm">// false</span>
+    <span class="fn">print</span>(name <span class="op">!=</span> <span class="str">&quot;Bob&quot;</span>)      <span class="cm">// true</span>
+}</pre>
+<h2>Logical operators</h2>
+<p>Logical operators combine boolean values:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> sunny: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> warm: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">false</span>
+
+    <span class="fn">print</span>(sunny <span class="kw">and</span> warm)     <span class="cm">// false  (both must be true)</span>
+    <span class="fn">print</span>(sunny <span class="kw">or</span> warm)      <span class="cm">// true   (at least one is true)</span>
+    <span class="fn">print</span>(<span class="kw">not</span> sunny)          <span class="cm">// false  (inverts the value)</span>
+}</pre>
+<p>Truth table:</p>
+<pre>A       B       A and B     A or B      not A
+true    true    true        true        false
+true    false   false       true        false
+false   true    false       true        true
+false   false   false       false       true</pre>
+<h2>String concatenation</h2>
+<p>The <code>+</code> operator joins strings together:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> first: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hello&quot;</span>
+    <span class="kw">let</span> second: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;World&quot;</span>
+    <span class="kw">let</span> result: <span class="ty">String</span> <span class="op">=</span> first <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> second <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+
+    <span class="fn">print</span>(result)    <span class="cm">// Hello, World!</span>
+}</pre>
+<p>Remember: you cannot add a string and a number directly. Convert the number first:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> name: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Alice&quot;</span>
+    <span class="kw">let</span> age: <span class="ty">int</span> <span class="op">=</span> <span class="num">25</span>
+    <span class="fn">print</span>(name <span class="op">+</span> <span class="str">&quot; is &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(age) <span class="op">+</span> <span class="str">&quot; years old&quot;</span>)
+    <span class="cm">// Alice is 25 years old</span>
+}</pre>
+<h2>Order of operations</h2>
+<p>Nyx follows standard math precedence:</p>
+<ol>
+<li>Parentheses <code>()</code> — evaluated first</li>
+<li>Multiplication <code>*</code>, division <code>/</code>, modulo <code>%</code></li>
+<li>Addition <code>+</code>, subtraction <code>-</code></li>
+<li>Comparisons <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code><=</code>, <code>>=</code></li>
+<li>Logical <code>not</code>, then <code>and</code>, then <code>or</code></li>
+</ol>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="num">2</span> <span class="op">+</span> <span class="num">3</span> <span class="op">*</span> <span class="num">4</span>)       <span class="cm">// 14, not 20 (multiplication first)</span>
+    <span class="fn">print</span>((<span class="num">2</span> <span class="op">+</span> <span class="num">3</span>) <span class="op">*</span> <span class="num">4</span>)     <span class="cm">// 20 (parentheses first)</span>
+    <span class="fn">print</span>(<span class="num">10</span> <span class="op">-</span> <span class="num">2</span> <span class="op">*</span> <span class="num">3</span> <span class="op">+</span> <span class="num">1</span>)  <span class="cm">// 5</span>
+}</pre>
+<p>When in doubt, use parentheses. They make your intent clear.</p>
+<h2>Exercises</h2>
+<ol>
+<li>Write a program that calculates the area of a rectangle with width 7 and height 12.</li>
+</ol>
+<ol>
+<li>A store has an item priced at 29.99 with a 15% discount. Calculate the final price.</li>
+</ol>
+<ol>
+<li>Write a program that converts a temperature from Celsius to Fahrenheit. The formula is: <code>F = C * 9 / 5 + 32</code>. Test with 0°C, 100°C, and 37°C.</li>
+</ol>
+<ol>
+<li>Given the values <code>a = 5</code>, <code>b = 10</code>, <code>c = 3</code>, what is the result of <code>a + b <em> c</code>? What about <code>(a + b) </em> c</code>? Verify with Nyx.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Arithmetic: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code></li>
+<li>Compound assignment: <code>+=</code>, <code>-=</code>, <code>*=</code>, <code>/=</code>, <code>%=</code></li>
+<li>Comparison: <code>==</code>, <code>!=</code>, <code><</code>, <code>></code>, <code><=</code>, <code>>=</code></li>
+<li>Logical: <code>and</code>, <code>or</code>, <code>not</code></li>
+<li>String concatenation: <code>+</code></li>
+<li>Integer division drops decimals; use floats for decimal results.</li>
+<li>Use parentheses when the order of operations isn't obvious.</li>
+</ul>
+<p>Next chapter: <a href="04-control-flow.md">Control flow →</a></p>
+
+    <div class="book-nav">
+        <a href="02.html" class="book-nav-prev">&larr; Previous: Variables and types</a>
+        <a href="04.html" class="book-nav-next">Next: Control flow &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

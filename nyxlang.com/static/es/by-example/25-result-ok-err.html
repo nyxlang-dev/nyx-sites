@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result: Ok y Err — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Result: Ok y Err</h1>
+
+    <p><code>Result</code> es el tipo idiomático de Nyx para operaciones que pueden fallar con un mensaje de error. Una función retorna <code>Result.Ok(value)</code> cuando tiene éxito y <code>Result.Err(message)</code> cuando algo sale mal — lo cual hace que el manejo de errores sea explícito e imposible de ignorar por accidente.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Result: función que retorna Ok o Err, match exhaustivo para manejar ambos
+
+enum Result {
+    Ok(int),
+    Err(String)
+}
+
+fn safe_divide(a: int, b: int) -> Result {
+    if b == 0 {
+        return Result.Err("division por cero")
+    }
+    return Result.Ok(a / b)
+}
+
+fn safe_sqrt(n: int) -> Result {
+    if n &lt; 0 {
+        return Result.Err("raiz de negativo")
+    }
+    var i: int = 0
+    while i * i &lt;= n {
+        i = i + 1
+    }
+    return Result.Ok(i - 1)
+}
+
+fn describe(r: Result) -> String {
+    return match r {
+        Result.Ok(v)  =&gt; "ok: " + int_to_string(v),
+        Result.Err(e) =&gt; "error: " + e
+    }
+}
+
+fn main() -> int {
+    let r1: Result = safe_divide(100, 4)
+    print(describe(r1))
+
+    let r2: Result = safe_divide(10, 0)
+    print(describe(r2))
+
+    let r3: Result = safe_sqrt(16)
+    print(describe(r3))
+
+    let r4: Result = safe_sqrt(-5)
+    print(describe(r4))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">ok: 25
+error: division por cero
+ok: 4
+error: raiz de negativo</pre>
+
+    <h2>Explicación</h2>
+    <p><code>Result</code> es un enum común con dos variantes. En este ejemplo se define localmente con <code>Ok(int)</code> y <code>Err(String)</code>, pero en programas Nyx reales normalmente usás el <code>Result&lt;T, E&gt;</code> genérico del prelude. De cualquier forma el patrón es idéntico: retornar una variante en caso de éxito, la otra en caso de fallo, y dejar que quien llama decida qué hacer.</p>
+    <p><code>safe_divide</code> se protege contra la división por cero antes de realizar la operación. <code>safe_sqrt</code> usa un bucle entero manual para calcular raíces cuadradas por defecto (floor) sin aritmética de punto flotante, retornando un error para entradas negativas. Ambas funciones comunican el fallo a través del sistema de tipos en lugar de excepciones o códigos de error fuera de banda.</p>
+    <p>El helper <code>describe</code> hace match exhaustivo sobre ambas variantes. El compilador exige que se maneje cada variante — si más adelante agregás una tercera variante al enum, cada sitio de match existente se convierte en un error de compilación hasta que manejes el nuevo caso. Esta verificación de exhaustividad es una de las propiedades de seguridad más poderosas de los tipos algebraicos.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/24-option-some-none.html">← Anterior</a>
+        <a href="/es/by-example/26-try-operator.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/25-result-ok-err.nx">examples/by-example/25-result-ok-err.nx</a></small></p>
+</main>
+
+</body>
+</html>

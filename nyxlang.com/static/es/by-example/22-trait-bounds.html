@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotas de Trait — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Cotas de Trait</h1>
+
+    <p>Las cotas de trait (trait bounds) restringen parámetros de tipo genérico para que una función pueda llamar métodos de trait sobre valores de tipo desconocido. La sintaxis <code>&lt;T: TraitName&gt;</code> significa "esta función funciona para cualquier tipo T que implemente TraitName".</p>
+
+    <h2>Código</h2>
+    <pre><code>// Trait bounds: función genérica que acepta cualquier tipo con Display
+
+trait Display {
+    fn to_string(self) -> String
+}
+
+struct Point {
+    x: int,
+    y: int
+}
+
+impl Display for Point {
+    fn to_string(self) -> String {
+        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
+    }
+}
+
+struct Circle {
+    radius: int
+}
+
+impl Display for Circle {
+    fn to_string(self) -> String {
+        return "Circulo{radio=" + int_to_string(self.radius) + "}"
+    }
+}
+
+fn print_it&lt;T: Display&gt;(x: T) -> String {
+    return x.to_string()
+}
+
+fn show_twice&lt;T: Display&gt;(x: T) {
+    let s: String = x.to_string()
+    print(s)
+    print(s)
+}
+
+fn main() -> int {
+    let p: Point = Point { x: 7, y: 2 }
+    print(print_it&lt;Point&gt;(p))
+
+    let c: Circle = Circle { radius: 10 }
+    print(print_it&lt;Circle&gt;(c))
+
+    show_twice&lt;Point&gt;(p)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">(7, 2)
+Circulo{radio=10}
+(7, 2)
+(7, 2)</pre>
+
+    <h2>Explicación</h2>
+    <p><code>print_it&lt;T: Display&gt;</code> es una función genérica que acepta cualquier tipo <code>T</code> siempre que implemente <code>Display</code>. La cota <code>T: Display</code> le indica al compilador dos cosas: que puede generar una versión especializada para cada tipo concreto usado en el sitio de la llamada (monomorfización), y que garantiza que <code>x.to_string()</code> siempre es una llamada válida dentro del cuerpo de la función.</p>
+    <p><code>show_twice</code> demuestra que los genéricos con cota de trait son funciones ordinarias — pueden tener variables locales, llamar al método del trait varias veces y producir cualquier efecto secundario. El compilador produce versiones de código máquina separadas para <code>Point</code> y cualquier otro tipo que le pases, así que no hay sobrecarga de despacho virtual.</p>
+    <p>En el sitio de la llamada, el argumento de tipo se escribe explícitamente como <code>print_it&lt;Point&gt;(p)</code>. Nyx a menudo puede inferir el argumento de tipo, pero ser explícito siempre es válido y a veces resulta más claro al leer el código.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/21-traits.html">← Anterior</a>
+        <a href="/es/by-example/23-derive-clone.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/22-trait-bounds.nx">examples/by-example/22-trait-bounds.nx</a></small></p>
+</main>
+
+</body>
+</html>

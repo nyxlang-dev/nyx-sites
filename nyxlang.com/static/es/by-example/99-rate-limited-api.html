@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API con Límite de Tasa — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>API con Límite de Tasa</h1>
+    <p>Límite de tasa por usuario usando INCR + EXPIRE atómicos en nyx-kv. La primera solicitud establece un TTL de 60 segundos; las solicitudes siguientes incrementan un contador. Cuando el conteo supera el límite, se retorna 429 con el header Retry-After.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Rate-limited API — token bucket per user in nyx-kv</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = StringBuilder.new()
+    sb.append(<span class="str">"*"</span> + int_to_string(parts.length()) + <span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span> + int_to_string(p.length()) + <span class="str">"\r\n"</span> + p + <span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="cm">// Check if user has remaining quota, decrement if allowed</span>
+<span class="cm">// Uses INCR + EXPIRE for atomic per-window counting</span>
+<span class="kw">fn</span> <span class="fn">rate_check</span>(user_id: <span class="ty">String</span>, max_per_minute: <span class="ty">int</span>) -&gt; <span class="ty">bool</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="kw">false</span> }
+
+    <span class="kw">let</span> key: <span class="ty">String</span> = <span class="str">"rate:"</span> + user_id
+    <span class="cm">// Atomic increment</span>
+    tcp_write(fd, resp_cmd([<span class="str">"INCR"</span>, key]))
+    <span class="kw">let</span> reply: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">let</span> count: <span class="ty">int</span> = string_to_int(reply.substring(<span class="num">1</span>, reply.length()).trim())
+
+    <span class="cm">// Set 60s expiration on first request</span>
+    <span class="kw">if</span> count == <span class="num">1</span> {
+        tcp_write(fd, resp_cmd([<span class="str">"EXPIRE"</span>, key, <span class="str">"60"</span>]))
+        tcp_read_line(fd)
+    }
+    tcp_close(fd)
+
+    <span class="kw">return</span> count &lt;= max_per_minute
+}
+
+<span class="kw">fn</span> <span class="fn">api_handler</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> user: <span class="ty">String</span> = req.headers_flat[<span class="num">0</span>]  <span class="cm">// in real code: extract from JWT</span>
+    <span class="kw">let</span> allowed: <span class="ty">bool</span> = rate_check(user, <span class="num">60</span>)
+
+    <span class="kw">if</span> <span class="kw">not</span> allowed {
+        <span class="kw">let</span> hdrs: <span class="ty">Array</span> = [<span class="str">"Retry-After"</span>, <span class="str">"60"</span>]
+        <span class="kw">return</span> Response { status: <span class="num">429</span>, headers_flat: hdrs, body: <span class="str">"{\"error\":\"rate limit exceeded\"}"</span> }
+    }
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"data\": \"result\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+    app_get(app, <span class="str">"/api/data"</span>, api_handler)
+
+    print(<span class="str">"rate-limited API: 60 req/min per user"</span>)
+    print(<span class="str">"state stored in nyx-kv with 60s TTL"</span>)
+    print(<span class="str">"atomic INCR ensures no race conditions under concurrency"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">rate-limited API: 60 req/min per user
+state stored in nyx-kv with 60s TTL
+atomic INCR ensures no race conditions under concurrency</pre>
+    <h2>Explicación</h2>
+    <p>Este es el algoritmo de contador de ventana fija y compila a dos idas y vueltas con nyx-kv por solicitud. INCR es atómico — un millón de solicitudes concurrentes seguirán viendo cada una un conteo distinto — de modo que no hay condición de carrera donde dos threads crean tener el último cupo. EXPIRE se ejecuta solo cuando count == 1, creando una ventana nueva de 60 segundos. Cuando el conteo supera el límite, se retorna HTTP 429 Too Many Requests con Retry-After: 60 para que los clientes sepan exactamente cuándo reintentar. Bajo carga, el overhead es de menos de un milisegundo.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/98-microservice.html">&larr; Anterior</a>
+        <a href="/es/by-example/100-production-stack.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/99-rate-limited-api.nx">examples/by-example/99-rate-limited-api.nx</a></small></p>
+</main>
+</body>
+</html>

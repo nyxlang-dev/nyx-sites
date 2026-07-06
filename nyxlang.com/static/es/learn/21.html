@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFI — Llamar código C — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>FFI — Llamar código C</h1>
+
+<h2>¿Por qué llamar a C?</h2>
+<p>Nyx es poderoso, pero el mundo funciona con C. Sistemas operativos, bibliotecas gráficas, bases de datos, algoritmos de compresión — décadas de código C probado en batalla existen. En lugar de reescribir todo, Nyx te permite llamar funciones C directamente. Esto se llama <strong>FFI</strong> — Interfaz de Funciones Foráneas.</p>
+<h2>Declarar una función externa</h2>
+<p>Para llamar una función C desde Nyx, la declaras con <code>extern "C"</code>:</p>
+<pre><span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">abs</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">abs</span>(<span class="num">-42</span>))    <span class="cm">// 42</span>
+    <span class="fn">print</span>(<span class="fn">abs</span>(<span class="num">10</span>))     <span class="cm">// 10</span>
+}</pre>
+<p>Esto le dice al compilador: "hay una función C llamada <code>abs</code> que recibe un <code>int</code> y devuelve un <code>int</code>. La proporcionaré en tiempo de enlace."</p>
+<p>La biblioteca estándar de C se enlaza automáticamente, así que funciones como <code>abs</code> simplemente funcionan.</p>
+<h2>Mapeo de tipos</h2>
+<p>Cuando llamas a C, los tipos deben coincidir. Así es como los tipos de Nyx se mapean a C:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Tipo Nyx</th>
+<th>Tipo C</th>
+<th>LLVM IR</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>int</code></td>
+<td><code>long long</code> (64-bit)</td>
+<td><code>i64</code></td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td><code>double</code> (64-bit)</td>
+<td><code>double</code></td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td><code>_Bool</code></td>
+<td><code>i1</code></td>
+</tr>
+<tr>
+<td><code>String</code></td>
+<td><code>const char*</code></td>
+<td><code>i8*</code></td>
+</tr>
+<tr>
+<td><code>*int</code></td>
+<td><code>int64_t*</code></td>
+<td><code>i64*</code></td>
+</tr>
+<tr>
+<td><code>i32</code></td>
+<td><code>int</code> (32-bit)</td>
+<td><code>i32</code></td>
+</tr>
+<tr>
+<td><code>i8</code></td>
+<td><code>char</code> (8-bit)</td>
+<td><code>i8</code></td>
+</tr>
+</tbody></table></div>
+<p>Cuando pasas un <code>String</code> de Nyx a una función C, el compilador lo convierte automáticamente a un <code>char*</code> terminado en null.</p>
+<h2>Llamar funciones matemáticas</h2>
+<pre><span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">sqrt</span>(x: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">float</span>
+<span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">pow</span>(base: <span class="ty">float</span>, exp: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">float</span>
+<span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">log</span>(x: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">float</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> raiz: <span class="ty">float</span> <span class="op">=</span> <span class="fn">sqrt</span>(<span class="num">144.0</span>)
+    <span class="fn">print</span>(raiz)    <span class="cm">// 12.0</span>
+
+    <span class="kw">let</span> resultado: <span class="ty">float</span> <span class="op">=</span> <span class="fn">pow</span>(<span class="num">2.0</span>, <span class="num">10.0</span>)
+    <span class="fn">print</span>(resultado)    <span class="cm">// 1024.0</span>
+}</pre>
+<p>Enlaza con <code>-lm</code> (la biblioteca matemática) al compilar.</p>
+<h2>Llamar funciones de strings</h2>
+<pre><span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">strlen</span>(s: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+<span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">strcmp</span>(a: <span class="ty">String</span>, b: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">strlen</span>(<span class="str">&quot;Hello&quot;</span>))     <span class="cm">// 5</span>
+
+    <span class="kw">let</span> cmp: <span class="ty">int</span> <span class="op">=</span> <span class="fn">strcmp</span>(<span class="str">&quot;apple&quot;</span>, <span class="str">&quot;banana&quot;</span>)
+    <span class="kw">if</span> cmp <span class="op">&lt;</span> <span class="num">0</span> {
+        <span class="fn">print</span>(<span class="str">&quot;apple va primero&quot;</span>)
+    }
+}</pre>
+<h2>Structs compatibles con C</h2>
+<p>Para pasar structs a C, deben tener layout de memoria compatible con C. Usa <code>#[repr(C)]</code>:</p>
+<pre><span class="kw">#[repr(C)]</span>
+<span class="kw">struct</span> Punto {
+    x: <span class="ty">i64</span>,
+    y: <span class="ty">i64</span>
+}
+
+<span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">procesar_punto</span>(p: <span class="op">*</span>Punto) <span class="op">-&gt;</span> <span class="ty">int</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> p: Punto <span class="op">=</span> Punto { x: <span class="num">10</span>, y: <span class="num">20</span> }
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> resultado: <span class="ty">int</span> <span class="op">=</span> <span class="fn">procesar_punto</span>(<span class="op">&amp;</span>p)
+    }
+}</pre>
+<p>Sin <code>#[repr(C)]</code>, los structs de Nyx se asignan en el heap con punteros del GC — no son compatibles con C. Con él, el struct se dispone exactamente como C espera.</p>
+<h2>Cómo el runtime usa FFI</h2>
+<p>El propio runtime de Nyx está construido sobre FFI. Cuando llamas <code>tcp_listen</code>, <code>thread_spawn</code> o <code>print</code>, esas son funciones C en el runtime:</p>
+<pre>// runtime/net.c
+int64_t nyx_tcp_listen(const char* host, int64_t port) {
+    // ... crear socket, bind, listen
+}</pre>
+<p>El compilador conoce estas funciones y genera llamadas a ellas. Tus declaraciones FFI usan exactamente el mismo mecanismo.</p>
+<h2>Ejemplo práctico: llamar zlib para compresión</h2>
+<pre><span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">nyx_compress</span>(data: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+<span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">nyx_decompress</span>(data: <span class="ty">String</span>, original_size: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> original: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola Hola Hola Hola Hola&quot;</span>
+    <span class="kw">let</span> comprimido: <span class="ty">String</span> <span class="op">=</span> <span class="fn">nyx_compress</span>(original)
+    <span class="fn">print</span>(<span class="str">&quot;Tamaño original: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(original.<span class="fn">length</span>()))
+    <span class="fn">print</span>(<span class="str">&quot;Tamaño comprimido: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(comprimido.<span class="fn">length</span>()))
+
+    <span class="kw">let</span> restaurado: <span class="ty">String</span> <span class="op">=</span> <span class="fn">nyx_decompress</span>(comprimido, original.<span class="fn">length</span>())
+    <span class="fn">print</span>(<span class="str">&quot;Restaurado: &quot;</span> <span class="op">+</span> restaurado)
+}</pre>
+<h2>Ejemplo práctico: obtener la hora</h2>
+<pre><span class="kw">extern</span> <span class="str">&quot;C&quot;</span> <span class="kw">fn</span> <span class="fn">time</span>(ptr: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> ahora: <span class="ty">int</span> <span class="op">=</span> <span class="fn">time</span>(<span class="num">0</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Timestamp Unix: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(ahora))
+}</pre>
+<h2>Consideraciones de seguridad</h2>
+<p>FFI es inherentemente unsafe. Las funciones C pueden:</p>
+<ul>
+<li>Crashear si reciben punteros inválidos</li>
+<li>Escribir más allá de los límites de un buffer</li>
+<li>Devolver datos inválidos</li>
+<li>Fugar memoria</li>
+</ul>
+<p>Siempre valida las entradas antes de pasarlas a C, y prueba exhaustivamente. FFI es un puente entre Nyx seguro y C inseguro — trátalo con cuidado.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Declara y llama <code>atoi(s: String) -> int</code> de la biblioteca estándar de C para convertir un string a entero. Compara con <code>string_to_int()</code>.</li>
+</ol>
+<ol>
+<li>Llama <code>rand() -> int</code> y <code>srand(seed: int)</code> de C para generar números aleatorios.</li>
+</ol>
+<ol>
+<li>Declara <code>getenv(name: String) -> String</code> y úsala para leer una variable de entorno.</li>
+</ol>
+<ol>
+<li>Escribe un programa que llame <code>strlen</code> en varios strings y compare los resultados con <code>.length()</code> de Nyx.</li>
+</ol>
+<ol>
+<li>Crea un struct <code>#[repr(C)]</code> representando un rectángulo 2D y escribe una función C (en un archivo <code>.c</code>) que calcule su área. Llámala desde Nyx.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>extern "C" fn nombre(params) -> TipoRetorno</code> declara una función C.</li>
+<li>Los tipos de Nyx se mapean a C: <code>int</code> → <code>i64</code>, <code>String</code> → <code>char*</code>, <code>float</code> → <code>double</code>.</li>
+<li>La conversión de strings (Nyx a C <code>char*</code>) ocurre automáticamente.</li>
+<li><code>#[repr(C)]</code> hace el layout del struct compatible con C.</li>
+<li>El propio runtime de Nyx usa FFI para todas las operaciones del sistema.</li>
+<li>FFI es poderoso pero unsafe — valida entradas y prueba cuidadosamente.</li>
+</ul>
+<p>Siguiente capítulo: <a href="22-unsafe.md">Unsafe y raw pointers →</a></p>
+
+    <div class="book-nav">
+        <a href="20.html" class="book-nav-prev">&larr; Anterior: LLVM y rendimiento</a>
+        <a href="22.html" class="book-nav-next">Siguiente: Unsafe y punteros raw &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

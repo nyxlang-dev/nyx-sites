@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MessagePack — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>MessagePack</h1>
+
+    <p><code>std/msgpack</code> provides binary serialization that is roughly 30% smaller than JSON for typical data. Each value is packed into a compact binary string that preserves its type. This is used internally by nyx-kv for its <code>.ndb</code> persistence format.</p>
+
+    <h2>Code</h2>
+    <pre><code><span class="cm">// MessagePack binary serialization</span>
+
+<span class="kw">import</span> <span class="str">"std/msgpack"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> packed_int: <span class="ty">String</span> = msgpack_int(<span class="num">42</span>)
+    <span class="kw">let</span> packed_str: <span class="ty">String</span> = msgpack_str(<span class="str">"hello"</span>)
+    <span class="kw">let</span> packed_bool: <span class="ty">String</span> = msgpack_bool(<span class="kw">true</span>)
+    <span class="kw">let</span> packed_nil: <span class="ty">String</span> = msgpack_nil()
+
+    print(<span class="str">"int type:  "</span> + msgpack_type(packed_int))
+    print(<span class="str">"str type:  "</span> + msgpack_type(packed_str))
+    print(<span class="str">"bool type: "</span> + msgpack_type(packed_bool))
+    print(<span class="str">"nil type:  "</span> + msgpack_type(packed_nil))
+
+    <span class="kw">let</span> val_int: <span class="ty">int</span> = msgpack_unpack_int(packed_int)
+    <span class="kw">let</span> val_str: <span class="ty">String</span> = msgpack_unpack_str(packed_str)
+    print(<span class="str">"unpacked int: "</span> + int_to_string(val_int))
+    print(<span class="str">"unpacked str: "</span> + val_str)
+
+    <span class="kw">let</span> items: <span class="ty">Array</span> = [msgpack_int(<span class="num">1</span>), msgpack_str(<span class="str">"two"</span>), msgpack_bool(<span class="kw">false</span>)]
+    <span class="kw">let</span> packed_arr: <span class="ty">String</span> = msgpack_array(items)
+    print(<span class="str">"array type: "</span> + msgpack_type(packed_arr))
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">int type:  positive_int
+str type:  str
+bool type: bool_true
+nil type:  nil
+unpacked int: 42
+unpacked str: hello
+array type: array</pre>
+
+    <h2>Explanation</h2>
+    <p>MessagePack encodes each value into a compact binary representation. Small integers (0-127) fit in a single byte, short strings use a 1-byte header, and booleans/nil are always 1 byte. The <code>msgpack_type</code> function inspects the first byte to determine what kind of value is stored.</p>
+    <p><code>msgpack_array</code> takes an array of already-packed values and prepends an array header. This lets you build arbitrarily nested structures: pack individual values first, then compose them into arrays.</p>
+    <p>The pack/unpack functions operate on Nyx strings (which are byte sequences), making them compatible with network transmission and file storage without additional encoding.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/43-toml-config.html">← Previous</a>
+        <a href="/by-example/45-dns-resolve.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/44-msgpack.nx">examples/by-example/44-msgpack.nx</a></small></p>
+</main>
+
+</body>
+</html>

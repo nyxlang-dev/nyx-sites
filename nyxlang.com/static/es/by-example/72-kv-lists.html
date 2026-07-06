@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listas en nyx-kv — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Listas en nyx-kv</h1>
+    <p>nyx-kv soporta operaciones de listas compatibles con Redis: RPUSH/LPUSH agregan, LPOP/RPOP quitan, LRANGE lee un rango. Las listas se almacenan como arrays nativos con push/pop O(1).</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// nyx-kv lists -- LPUSH, LPOP, LRANGE, LLEN</span>
+
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Push items to a list (RPUSH appends to the right)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"RPUSH"</span>, <span class="str">"tasks"</span>, <span class="str">"build"</span>, <span class="str">"test"</span>, <span class="str">"deploy"</span>]))
+    <span class="kw">let</span> push_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"RPUSH tasks -&gt; "</span> + push_reply.trim())
+
+    <span class="cm">// Get list length</span>
+    tcp_write(fd, resp_cmd([<span class="str">"LLEN"</span>, <span class="str">"tasks"</span>]))
+    <span class="kw">let</span> len_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"LLEN -&gt; "</span> + len_reply.trim())
+
+    <span class="cm">// LRANGE returns a RESP array. For brevity, just read the header.</span>
+    tcp_write(fd, resp_cmd([<span class="str">"LRANGE"</span>, <span class="str">"tasks"</span>, <span class="str">"0"</span>, <span class="str">"-1"</span>]))
+    <span class="kw">let</span> range_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"LRANGE header -&gt; "</span> + range_hdr.trim())
+
+    <span class="cm">// LPOP removes from the left (FIFO queue pattern)</span>
+    tcp_write(fd, resp_cmd([<span class="str">"LPOP"</span>, <span class="str">"tasks"</span>]))
+    <span class="kw">let</span> pop_hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">let</span> pop_val: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"LPOP -&gt; "</span> + pop_val.trim())
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">RPUSH tasks -&gt; :3
+LLEN -&gt; :3
+LRANGE header -&gt; *3
+LPOP -&gt; build</pre>
+    <h2>Explicación</h2>
+    <p>Las listas en nyx-kv son estructuras doblemente enlazadas con push y pop O(1) en cualquiera de los extremos. <code>RPUSH</code> agrega al final; combinado con <code>LPOP</code> al inicio se obtiene una cola FIFO. Invirtiendo la dirección (<code>LPUSH</code> + <code>LPOP</code>) se obtiene una pila.</p>
+    <p><code>LRANGE key start stop</code> devuelve un fragmento. Los índices negativos cuentan desde el final: <code>-1</code> es el último elemento, así que <code>LRANGE tasks 0 -1</code> devuelve todo. La respuesta es un array RESP — la primera línea es el encabezado <code>*N\r\n</code>, seguido de N bulk strings.</p>
+    <p>Las listas son ideales para colas de trabajos, líneas de tiempo de actividad, y pilas de deshacer. Como push/pop son operaciones atómicas del lado del servidor, múltiples clientes pueden encolar y desencolar de forma segura sin coordinación.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/71-kv-basic.html">&larr; Anterior</a>
+        <a href="/es/by-example/73-kv-hashes.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/72-kv-lists.nx">examples/by-example/72-kv-lists.nx</a></small></p>
+</main>
+</body>
+</html>

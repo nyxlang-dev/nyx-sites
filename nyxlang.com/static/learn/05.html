@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functions — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>Functions</h1>
+
+<h2>What is a function?</h2>
+<p>A function is a reusable block of instructions with a name. Think of it like a recipe: you define the steps once, and then you can use the recipe whenever you need it without writing the steps again.</p>
+<p>You have already been using functions: <code>main()</code> is a function, and <code>print()</code> is a function built into Nyx.</p>
+<h2>Defining a function</h2>
+<pre><span class="kw">fn</span> <span class="fn">greet</span>() {
+    <span class="fn">print</span>(<span class="str">&quot;Hello!&quot;</span>)
+    <span class="fn">print</span>(<span class="str">&quot;Welcome to Nyx.&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">greet</span>()    <span class="cm">// call the function</span>
+    <span class="fn">greet</span>()    <span class="cm">// call it again</span>
+}</pre>
+<p>Output:</p>
+<pre>Hello!
+Welcome to Nyx.
+Hello!
+Welcome to Nyx.</pre>
+<p>The function is defined once but called twice. Each call executes all the instructions inside the function.</p>
+<h2>Parameters — giving data to a function</h2>
+<p>Functions can receive inputs, called <strong>parameters</strong>:</p>
+<pre><span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>) {
+    <span class="fn">print</span>(<span class="str">&quot;Hello, &quot;</span> <span class="op">+</span> name <span class="op">+</span> <span class="str">&quot;!&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">greet</span>(<span class="str">&quot;Alice&quot;</span>)     <span class="cm">// Hello, Alice!</span>
+    <span class="fn">greet</span>(<span class="str">&quot;Bob&quot;</span>)       <span class="cm">// Hello, Bob!</span>
+    <span class="fn">greet</span>(<span class="str">&quot;Charlie&quot;</span>)   <span class="cm">// Hello, Charlie!</span>
+}</pre>
+<p>Multiple parameters are separated by commas:</p>
+<pre><span class="kw">fn</span> <span class="fn">add</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) {
+    <span class="fn">print</span>(a <span class="op">+</span> b)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">add</span>(<span class="num">3</span>, <span class="num">5</span>)      <span class="cm">// 8</span>
+    <span class="fn">add</span>(<span class="num">10</span>, <span class="num">20</span>)    <span class="cm">// 30</span>
+}</pre>
+<h2>Return values — getting data back from a function</h2>
+<p>Functions can send a result back using <code>return</code>:</p>
+<pre><span class="kw">fn</span> <span class="fn">square</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> n <span class="op">*</span> n
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> result: <span class="ty">int</span> <span class="op">=</span> <span class="fn">square</span>(<span class="num">5</span>)
+    <span class="fn">print</span>(result)    <span class="cm">// 25</span>
+    <span class="fn">print</span>(<span class="fn">square</span>(<span class="num">8</span>)) <span class="cm">// 64</span>
+}</pre>
+<p>The <code>-> int</code> after the parameters declares what type the function returns. The <code>return</code> keyword sends the value back to whoever called the function.</p>
+<h3>Functions that return different types</h3>
+<pre><span class="kw">fn</span> <span class="fn">is_adult</span>(age: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> age <span class="op">&gt;=</span> <span class="num">18</span>
+}
+
+<span class="kw">fn</span> <span class="fn">full_name</span>(first: <span class="ty">String</span>, last: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">return</span> first <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> last
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">is_adult</span>(<span class="num">25</span>))                    <span class="cm">// true</span>
+    <span class="fn">print</span>(<span class="fn">is_adult</span>(<span class="num">12</span>))                    <span class="cm">// false</span>
+    <span class="fn">print</span>(<span class="fn">full_name</span>(<span class="str">&quot;Alice&quot;</span>, <span class="str">&quot;Smith&quot;</span>))     <span class="cm">// Alice Smith</span>
+}</pre>
+<h2>Recursion — a function calling itself</h2>
+<p>A function can call itself. This is called <strong>recursion</strong>:</p>
+<pre><span class="kw">fn</span> <span class="fn">factorial</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">1</span> {
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> n <span class="op">*</span> <span class="fn">factorial</span>(n <span class="op">-</span> <span class="num">1</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">factorial</span>(<span class="num">5</span>))     <span class="cm">// 120 (5 × 4 × 3 × 2 × 1)</span>
+    <span class="fn">print</span>(<span class="fn">factorial</span>(<span class="num">10</span>))    <span class="cm">// 3628800</span>
+}</pre>
+<p>How it works:</p>
+<pre>factorial(5)
+= 5 * factorial(4)
+= 5 * 4 * factorial(3)
+= 5 * 4 * 3 * factorial(2)
+= 5 * 4 * 3 * 2 * factorial(1)
+= 5 * 4 * 3 * 2 * 1
+= 120</pre>
+<p>Every recursive function needs a <strong>base case</strong> — a condition where it stops calling itself. Without it, the function would call itself forever.</p>
+<h3>Classic example: Fibonacci</h3>
+<pre><span class="kw">fn</span> <span class="fn">fibonacci</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+    <span class="kw">if</span> n <span class="op">==</span> <span class="num">1</span> { <span class="kw">return</span> <span class="num">1</span> }
+    <span class="kw">return</span> <span class="fn">fibonacci</span>(n <span class="op">-</span> <span class="num">1</span>) <span class="op">+</span> <span class="fn">fibonacci</span>(n <span class="op">-</span> <span class="num">2</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">10</span> {
+        <span class="fn">print</span>(<span class="fn">fibonacci</span>(i))
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="cm">// 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55</span>
+}</pre>
+<h2>Functions as building blocks</h2>
+<p>Good programs are built from small, focused functions. Each function does one thing well:</p>
+<pre><span class="kw">fn</span> <span class="fn">celsius_to_fahrenheit</span>(c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">float</span> {
+    <span class="kw">return</span> c <span class="op">*</span> <span class="num">9.0</span> <span class="op">/</span> <span class="num">5.0</span> <span class="op">+</span> <span class="num">32.0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">is_freezing</span>(temp_c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">return</span> temp_c <span class="op">&lt;=</span> <span class="num">0.0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">describe_temperature</span>(c: <span class="ty">float</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> f: <span class="ty">float</span> <span class="op">=</span> <span class="fn">celsius_to_fahrenheit</span>(c)
+    <span class="kw">if</span> <span class="fn">is_freezing</span>(c) {
+        <span class="kw">return</span> <span class="str">&quot;Freezing!&quot;</span>
+    }
+    <span class="kw">if</span> c <span class="op">&gt;</span> <span class="num">35.0</span> {
+        <span class="kw">return</span> <span class="str">&quot;Very hot!&quot;</span>
+    }
+    <span class="kw">return</span> <span class="str">&quot;Comfortable&quot;</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">print</span>(<span class="fn">describe_temperature</span>(<span class="num">0.0</span>))     <span class="cm">// Freezing!</span>
+    <span class="fn">print</span>(<span class="fn">describe_temperature</span>(<span class="num">22.0</span>))    <span class="cm">// Comfortable</span>
+    <span class="fn">print</span>(<span class="fn">describe_temperature</span>(<span class="num">40.0</span>))    <span class="cm">// Very hot!</span>
+}</pre>
+<p>Notice how <code>describe_temperature</code> calls <code>celsius_to_fahrenheit</code> and <code>is_freezing</code>. Functions can call other functions — this is how you build complex programs from simple pieces.</p>
+<h2>Functions without return</h2>
+<p>If a function doesn't return anything, you can omit the <code>-></code> part:</p>
+<pre><span class="kw">fn</span> <span class="fn">say_hello</span>(name: <span class="ty">String</span>) {
+    <span class="fn">print</span>(<span class="str">&quot;Hello, &quot;</span> <span class="op">+</span> name)
+    <span class="cm">// no return statement needed</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">say_hello</span>(<span class="str">&quot;Alice&quot;</span>)
+}</pre>
+<h2>Exercises</h2>
+<ol>
+<li>Write a function <code>max(a: int, b: int) -> int</code> that returns the larger of two numbers.</li>
+</ol>
+<ol>
+<li>Write a function <code>is_even(n: int) -> bool</code> that returns <code>true</code> if a number is even.</li>
+</ol>
+<ol>
+<li>Write a function <code>power(base: int, exp: int) -> int</code> that calculates base raised to the power of exp using a while loop (not recursion).</li>
+</ol>
+<ol>
+<li>Write a function <code>count_digits(n: int) -> int</code> that returns how many digits a positive number has. Hint: keep dividing by 10 until you reach 0.</li>
+</ol>
+<ol>
+<li>Write a function <code>gcd(a: int, b: int) -> int</code> that computes the greatest common divisor using Euclid's algorithm: if <code>b</code> is 0, return <code>a</code>; otherwise, return <code>gcd(b, a % b)</code>.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li><code>fn name(params) -> ReturnType { ... }</code> defines a function.</li>
+<li>Parameters let you pass data in.</li>
+<li><code>return</code> sends data back.</li>
+<li>Recursion is when a function calls itself (needs a base case).</li>
+<li>Build programs from small, focused functions.</li>
+<li>Functions without a return value omit the <code>-></code> part.</li>
+</ul>
+<p>Next chapter: <a href="06-arrays.md">Arrays →</a></p>
+
+    <div class="book-nav">
+        <a href="04.html" class="book-nav-prev">&larr; Previous: Control flow</a>
+        <a href="06.html" class="book-nav-next">Next: Arrays &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

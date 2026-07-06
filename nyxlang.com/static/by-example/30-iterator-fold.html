@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: fold — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Iterator: fold</h1>
+
+    <p><code>fold</code> is the general-purpose iterator consumer that reduces a sequence to a single value. It takes an initial accumulator and a two-argument function, applies the function to each element and the running accumulator, and returns the final accumulated result.</p>
+
+    <h2>Code</h2>
+    <pre><code>// fold: reducir un iterator a un valor acumulando con una función
+
+fn add(acc: int, x: int) -> int {
+    return acc + x
+}
+
+fn multiply(acc: int, x: int) -> int {
+    return acc * x
+}
+
+fn max_val(acc: int, x: int) -> int {
+    if x &gt; acc {
+        return x
+    }
+    return acc
+}
+
+fn is_even(x: int) -> bool {
+    return x % 2 == 0
+}
+
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5]
+
+    // Suma con fold — equivale a un loop manual con acumulador
+    let suma: int = nums.iter().fold(0, add)
+    print("suma(1..5) = " + int_to_string(suma))         // 15
+
+    // Producto con fold
+    let producto: int = nums.iter().fold(1, multiply)
+    print("producto(1..5) = " + int_to_string(producto)) // 120
+
+    // Máximo con fold
+    let maximo: int = nums.iter().fold(0, max_val)
+    print("max(1..5) = " + int_to_string(maximo))        // 5
+
+    // Sumar solo los pares con filter + fold
+    let nums2: Array = [10, 3, 8, 7, 2, 6]
+    let suma_pares: int = nums2.iter().filter(is_even).fold(0, add)
+    print("suma pares = " + int_to_string(suma_pares))   // 26 (10+8+2+6)
+
+    // fold con valor inicial distinto de cero
+    let nums3: Array = [1, 2, 3]
+    let con_offset: int = nums3.iter().fold(100, add)
+    print("100 + sum(1,2,3) = " + int_to_string(con_offset)) // 106
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">suma(1..5) = 15
+producto(1..5) = 120
+max(1..5) = 5
+suma pares = 26
+100 + sum(1,2,3) = 106</pre>
+
+    <h2>Explanation</h2>
+    <p><code>fold(init, f)</code> is equivalent to manually writing a loop with an accumulator variable: it starts with <code>acc = init</code> and for each element <code>x</code> computes <code>acc = f(acc, x)</code>, returning the final <code>acc</code>. The choice of initial value is important: <code>0</code> is the identity for addition (adding zero changes nothing), while <code>1</code> is the identity for multiplication. Choosing the wrong initial value gives incorrect results.</p>
+    <p>The <code>max_val</code> accumulator function selects the larger of the current accumulator and the incoming element, so folding an array with <code>0</code> as the start finds the maximum. This works correctly here because all values are positive; for arrays that may contain negatives, the initial value should be set to the minimum possible integer.</p>
+    <p>Combining <code>filter</code> and <code>fold</code> in one pipeline — as in the even-sum example — is idiomatic Nyx: filter narrows the stream, then fold reduces it, with no intermediate array allocated. Many classic operations (<code>sum</code>, <code>product</code>, <code>count</code>, <code>any</code>, <code>all</code>) are special cases of fold and can be expressed this way.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/29-iterator-map-filter.html">← Previous</a>
+        <a href="/by-example/31-iterator-enumerate.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/30-iterator-fold.nx">examples/by-example/30-iterator-fold.nx</a></small></p>
+</main>
+
+</body>
+</html>

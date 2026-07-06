@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caso de estudio — Cómo se construyó nyx-kv — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Caso de estudio — Cómo se construyó nyx-kv</h1>
+
+<h2>¿Qué es nyx-kv?</h2>
+<p>nyx-kv es una <strong>base de datos clave-valor compatible con Redis</strong> escrita enteramente en Nyx. Habla el protocolo Redis (RESP), así que cualquier cliente Redis — <code>redis-cli</code>, <code>redis-py</code> de Python, <code>ioredis</code> de Node — puede conectarse sin modificación.</p>
+<p>Maneja 6.76 millones de operaciones SET por segundo y 21.57 millones de operaciones GET por segundo en benchmarks. Este capítulo recorre cómo fue diseñado y construido, decisión por decisión.</p>
+<h2>La arquitectura a vista general</h2>
+<pre>                      ┌─────────────┐
+  redis-cli ─────────►│  TCP Accept  │
+  python    ─────────►│    Loop      │
+  node.js   ─────────►│  (main)     │
+                      └──────┬──────┘
+                             │ channel_send(fd)
+                      ┌──────▼──────┐
+                      │   Channel   │
+                      │ (capacity:  │
+                      │   512)      │
+                      └──────┬──────┘
+                             │ channel_recv(fd)
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+        ┌──────────┐  ┌──────────┐  ┌──────────┐
+        │ Worker 1 │  │ Worker 2 │  │Worker 128│
+        │  (RESP   │  │  (RESP   │  │  (RESP   │
+        │  parser  │  │  parser  │  │  parser  │
+        │  + cmds) │  │  + cmds) │  │  + cmds) │
+        └────┬─────┘  └────┬─────┘  └────┬─────┘
+             │              │              │
+             └──────────────┼──────────────┘
+                            ▼
+                    ┌───────────────┐
+                    │  Global Store │
+                    │  (Map + TTL)  │
+                    └───────────────┘</pre>
+<p>Tres componentes:</p>
+<ol>
+<li><strong>Accept loop</strong> — el thread principal acepta conexiones TCP y distribuye file descriptors via un channel.</li>
+<li><strong>Worker pool</strong> — 128 threads leen comandos de los clientes y los ejecutan.</li>
+<li><strong>Global store</strong> — un Map para datos y un Map para TTL (time-to-live) de expiración.</li>
+</ol>
+<h2>Decisión 1: ¿Por qué una arquitectura basada en channels?</h2>
+<p>El modelo de servidor más simple es "un thread por conexión." Pero crear un thread para cada conexión es costoso. Redis mismo usa un event loop de un solo thread.</p>
+<p>nyx-kv toma un camino intermedio: un pool fijo de 128 workers conectados al accept loop via un channel. Esto da:</p>
+<ul>
+<li><strong>Uso acotado de recursos</strong> — como máximo 128 threads, sin importar la cantidad de conexiones.</li>
+<li><strong>Distribución simple de carga</strong> — el channel actúa como cola; los workers ociosos toman el siguiente cliente.</li>
+<li><strong>Sin overhead de creación de threads</strong> — los workers se crean al inicio.</li>
+</ul>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    g_ch <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">512</span>)
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, port)
+
+    <span class="cm">// Pre-crear todos los workers</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">128</span> {
+        <span class="fn">thread_spawn</span>(kv_worker)
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// Accept loop</span>
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+        <span class="kw">if</span> client <span class="op">&gt;=</span> <span class="num">0</span> {
+            <span class="fn">channel_send</span>(g_ch, client)
+        }
+    }
+}</pre>
+<h2>Decisión 2: El protocolo RESP</h2>
+<p>Redis usa un protocolo llamado <strong>RESP</strong> (REdis Serialization Protocol). Es basado en texto y simple:</p>
+<pre>*3\r\n          ← array de 3 elementos
+$3\r\n          ← bulk string de 3 bytes
+SET\r\n         ← el string &quot;SET&quot;
+$4\r\n          ← bulk string de 4 bytes
+name\r\n        ← el string &quot;name&quot;
+$5\r\n          ← bulk string de 5 bytes
+Alice\r\n       ← el string &quot;Alice&quot;</pre>
+<p>Respuestas:</p>
+<ul>
+<li><code>+OK\r\n</code> — string simple</li>
+<li><code>-ERR mensaje\r\n</code> — error</li>
+<li><code>:42\r\n</code> — entero</li>
+<li><code>$5\r\nAlice\r\n</code> — bulk string</li>
+<li><code>$-1\r\n</code> — null</li>
+</ul>
+<p>El parser (<code>resp.nx</code>) lee este formato del socket:</p>
+<pre><span class="kw">fn</span> <span class="fn">resp_read_command</span>(fd: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">Array</span> {
+    <span class="cm">// Leer *N para obtener la cantidad de argumentos</span>
+    <span class="cm">// Para cada argumento, leer $len y luego los datos</span>
+    <span class="cm">// Retornar array de strings: [&quot;SET&quot;, &quot;name&quot;, &quot;Alice&quot;]</span>
+}</pre>
+<p>La optimización clave: el parser también soporta <strong>comandos inline</strong> (separados por espacios), así que comandos de <code>redis-cli</code> como <code>SET name Alice</code> funcionan directamente.</p>
+<h2>Decisión 3: La capa de almacenamiento</h2>
+<p>El almacenamiento más simple posible: dos Maps globales.</p>
+<pre><span class="kw">var</span> g_store: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()     <span class="cm">// clave → valor</span>
+<span class="kw">var</span> g_ttl: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()       <span class="cm">// clave → expiración (microsegundos)</span></pre>
+<p>¿Por qué Maps y no una estructura de datos personalizada?</p>
+<ul>
+<li><strong>Los Maps de Nyx usan Robin Hood hashing</strong> — direccionamiento abierto con buen rendimiento en el peor caso.</li>
+<li><strong>Cero dependencias externas</strong> — sin necesidad de FFI a una tabla hash en C.</li>
+<li><strong>Rendimiento suficiente</strong> — 21M+ operaciones GET/seg lo demuestra.</li>
+</ul>
+<h3>Expiración lazy</h3>
+<p>nyx-kv no ejecuta un thread de fondo para expirar claves. En cambio, verifica la expiración de forma lazy — cada vez que se accede a una clave:</p>
+<pre><span class="kw">fn</span> <span class="fn">kv_check_expired</span>(key: <span class="ty">String</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+    <span class="kw">if</span> g_ttl.<span class="fn">contains</span>(key) {
+        <span class="kw">let</span> expires: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(g_ttl.<span class="fn">get</span>(key))
+        <span class="kw">if</span> expires <span class="op">&gt;</span> <span class="num">0</span> <span class="kw">and</span> <span class="fn">time_us</span>() <span class="op">&gt;=</span> expires {
+            g_store.<span class="fn">remove</span>(key)
+            g_ttl.<span class="fn">remove</span>(key)
+            <span class="kw">return</span> <span class="kw">true</span>
+        }
+    }
+    <span class="kw">return</span> <span class="kw">false</span>
+}</pre>
+<p>Esta es la misma estrategia que usa Redis. Evita el overhead de un escáner de fondo y mantiene la implementación simple.</p>
+<h2>Decisión 4: Optimización del dispatch de comandos</h2>
+<p>Los benchmarks mostraron que SET y GET representan ~95% del tráfico. Así que el dispatcher de comandos usa <strong>matching por primer carácter</strong> para el camino rápido:</p>
+<pre><span class="kw">fn</span> <span class="fn">dispatch_command</span>(cmd: <span class="ty">Array</span>, fd: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+    <span class="kw">let</span> first: <span class="ty">int</span> <span class="op">=</span> cmd_name.<span class="fn">charAt</span>(<span class="num">0</span>)
+
+    <span class="cm">// Camino rápido: SET (S=83, s=115)</span>
+    <span class="kw">if</span> first <span class="op">==</span> <span class="num">83</span> <span class="kw">or</span> first <span class="op">==</span> <span class="num">115</span> {
+        <span class="kw">if</span> cmd_name <span class="op">==</span> <span class="str">&quot;SET&quot;</span> <span class="kw">or</span> cmd_name <span class="op">==</span> <span class="str">&quot;set&quot;</span> {
+            <span class="fn">kv_set</span>(cmd[<span class="num">1</span>], cmd[<span class="num">2</span>])
+            <span class="kw">return</span> RESP_OK    <span class="cm">// &quot;+OK\r\n&quot; cacheado</span>
+        }
+    }
+
+    <span class="cm">// Camino rápido: GET (G=71, g=103)</span>
+    <span class="kw">if</span> first <span class="op">==</span> <span class="num">71</span> <span class="kw">or</span> first <span class="op">==</span> <span class="num">103</span> {
+        <span class="kw">if</span> cmd_name <span class="op">==</span> <span class="str">&quot;GET&quot;</span> <span class="kw">or</span> cmd_name <span class="op">==</span> <span class="str">&quot;get&quot;</span> {
+            <span class="cm">// Escribir directamente al socket — cero allocations</span>
+            <span class="fn">resp_write_bulk</span>(fd, <span class="fn">kv_get</span>(cmd[<span class="num">1</span>]))
+            <span class="kw">return</span> <span class="str">&quot;&quot;</span>    <span class="cm">// respuesta ya enviada</span>
+        }
+    }
+
+    <span class="cm">// Camino lento: normalizar y comparar otros comandos</span>
+    <span class="cm">// ...</span>
+}</pre>
+<p>Optimizaciones clave:</p>
+<ul>
+<li><strong>Constantes cacheadas</strong>: <code>RESP_OK = "+OK\r\n"</code> se alloca una vez, no por request.</li>
+<li><strong>GET sin allocations</strong>: en lugar de construir un string de respuesta, <code>resp_write_bulk</code> escribe directamente al socket.</li>
+<li><strong>Dispatch por primer carácter</strong>: evita comparación de strings para el caso común.</li>
+</ul>
+<h2>Decisión 5: Respuestas GET sin allocations</h2>
+<p>La mayor ganancia de rendimiento fue eliminar allocations de las respuestas GET. En lugar de:</p>
+<pre><span class="cm">// Alloca un nuevo string cada vez</span>
+<span class="kw">let</span> response: <span class="ty">String</span> <span class="op">=</span> <span class="fn">resp_bulk_string</span>(value)
+<span class="fn">tcp_write</span>(client, response)</pre>
+<p>nyx-kv escribe el framing RESP directamente al socket:</p>
+<pre><span class="kw">fn</span> <span class="fn">resp_write_bulk</span>(fd: <span class="ty">int</span>, value: <span class="ty">String</span>) {
+    <span class="cm">// Escribir &quot;$&lt;len&gt;\r\n&lt;value&gt;\r\n&quot; directamente al fd</span>
+    <span class="fn">tcp_write</span>(fd, <span class="str">&quot;$&quot;</span>)
+    <span class="fn">tcp_write</span>(fd, <span class="fn">int_to_string</span>(value.<span class="fn">length</span>()))
+    <span class="fn">tcp_write</span>(fd, <span class="str">&quot;\r\n&quot;</span>)
+    <span class="fn">tcp_write</span>(fd, value)
+    <span class="fn">tcp_write</span>(fd, <span class="str">&quot;\r\n&quot;</span>)
+}</pre>
+<p>Esto evita crear un string intermedio, reduciendo la presión sobre el GC en el camino caliente.</p>
+<h2>Comandos soportados</h2>
+<h2>AUTH y multi-tenancy</h2>
+<p>nyx-kv soporta <strong>aislamiento multi-tenant</strong> mediante tokens de autenticación. Cada conexión puede autenticarse con <code>AUTH &lt;token&gt;</code>, lo que asigna la conexión a un namespace de usuario.</p>
+<pre>$ redis-cli -p 6380
+127.0.0.1:6380&gt; AUTH abc123def456
+OK
+127.0.0.1:6380&gt; WHOAMI
+"alice:pro"
+127.0.0.1:6380&gt; SET name Alice     <span class="cm">← almacenado como alice::name internamente</span>
+OK</pre>
+<p>Los tokens se crean por un admin desde localhost:</p>
+<pre>127.0.0.1:6380&gt; TOKEN_CREATE alice pro
+"abc123def456..."</pre>
+<p>Tres planes controlan los límites de recursos:</p>
+<div class="table-wrapper"><table>
+<thead><tr><th>Plan</th><th>Rate</th><th>Max keys</th><th>Max valor</th><th>TTL forzado</th></tr></thead>
+<tbody>
+<tr><td>free</td><td>100 req/s</td><td>1,000</td><td>100 KB</td><td>72 horas</td></tr>
+<tr><td>pro</td><td>10,000 req/s</td><td>100,000</td><td>1 MB</td><td>Ninguno</td></tr>
+<tr><td>enterprise</td><td>ilimitado</td><td>ilimitado</td><td>ilimitado</td><td>Ninguno</td></tr>
+</tbody></table></div>
+<p>Las conexiones sin <code>AUTH</code> reciben el free tier automáticamente, identificadas por IP. El aislamiento de namespaces es transparente — todas las operaciones de claves pasan por <code>auth_prefix_key</code>, que antepone el ID del usuario.</p>
+
+<h2>Pub/Sub</h2>
+<p>nyx-kv soporta el patrón de mensajería <strong>publish/subscribe</strong>. Los suscriptores registran interés en canales, y los publicadores transmiten mensajes a todos los suscriptores de un canal.</p>
+<pre>$ redis-cli -p 6380
+127.0.0.1:6380&gt; SUBSCRIBE notifications
+Reading messages...
+1) "subscribe"
+2) "notifications"
+3) (integer) 1</pre>
+<p>Desde otra terminal:</p>
+<pre>$ redis-cli -p 6380
+127.0.0.1:6380&gt; PUBLISH notifications "user signed up"
+(integer) 1</pre>
+<p>El suscriptor recibe:</p>
+<pre>1) "message"
+2) "notifications"
+3) "user signed up"</pre>
+<p>Esto es <strong>fan-out delivery</strong> — cada suscriptor en un canal recibe cada mensaje. A diferencia de las colas de mensajes, no hay persistencia ni acknowledgment. Una vez que un suscriptor entra en modo <code>SUBSCRIBE</code>, solo se aceptan los comandos <code>SUBSCRIBE</code>, <code>UNSUBSCRIBE</code> y <code>PING</code>.</p>
+
+<h2>Persistencia (formato .ndb)</h2>
+<p>nyx-kv persiste datos a disco usando un formato binario <code>.ndb</code>. El formato comienza con un header mágico <code>NYXDB</code>, un byte de versión, luego las entradas clave-valor, seguido por un checksum CRC32 y un marcador de fin de archivo <code>0xFF</code>.</p>
+<p>La persistencia está siempre activa:</p>
+<ul>
+<li><strong>Background saver</strong> — un thread separado guarda un snapshot cada 60 segundos o después de 100 cambios, lo que ocurra primero.</li>
+<li><strong>Handler de SIGTERM</strong> — al apagar limpiamente (<code>kill</code> o <code>systemctl stop</code>), se dispara un guardado final antes de que el proceso termine.</li>
+<li><strong>Guardado manual</strong> — los comandos <code>SAVE</code> (bloqueante) y <code>BGSAVE</code> (en segundo plano) están disponibles para usuarios pro/enterprise. El free tier los bloquea para prevenir abuso.</li>
+</ul>
+<p>Al iniciar, <code>persist_load</code> lee el archivo <code>.ndb</code> y restaura todas las claves, listas, sets y hashes a memoria.</p>
+
+<h2>Comandos soportados</h2>
+<p>nyx-kv implementa 52+ comandos en strings, listas, sets, hashes, Pub/Sub y gestión del servidor:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Comando</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>PING</code></td>
+<td>Health check, retorna PONG</td>
+</tr>
+<tr>
+<td><code>SET key value</code></td>
+<td>Almacenar un valor</td>
+</tr>
+<tr>
+<td><code>GET key</code></td>
+<td>Recuperar un valor</td>
+</tr>
+<tr>
+<td><code>DEL key [key...]</code></td>
+<td>Eliminar claves</td>
+</tr>
+<tr>
+<td><code>EXISTS key</code></td>
+<td>Verificar si una clave existe</td>
+</tr>
+<tr>
+<td><code>KEYS</code></td>
+<td>Listar todas las claves</td>
+</tr>
+<tr>
+<td><code>EXPIRE key seconds</code></td>
+<td>Establecer tiempo de vida</td>
+</tr>
+<tr>
+<td><code>TTL key</code></td>
+<td>Obtener TTL restante</td>
+</tr>
+<tr>
+<td><code>INCR key</code></td>
+<td>Incremento atómico</td>
+</tr>
+<tr>
+<td><code>DECR key</code></td>
+<td>Decremento atómico</td>
+</tr>
+<tr>
+<td><code>MSET k1 v1 k2 v2...</code></td>
+<td>Set masivo</td>
+</tr>
+<tr>
+<td><code>MGET k1 k2...</code></td>
+<td>Get masivo</td>
+</tr>
+<tr>
+<td><code>DBSIZE</code></td>
+<td>Cantidad de claves</td>
+</tr>
+<tr>
+<td><code>FLUSHDB</code></td>
+<td>Limpiar todos los datos</td>
+</tr>
+<tr>
+<td><code>INFO</code></td>
+<td>Información del servidor</td>
+</tr>
+<tr>
+<td><code>CONFIG</code>/<code>COMMAND</code></td>
+<td>Stubs de compatibilidad Redis</td>
+</tr>
+</tbody></table></div>
+<h2>Resultados de rendimiento</h2>
+<p>Testeado con <code>redis-benchmark</code>:</p>
+<pre>SET: 6,760,000 ops/seg (pipelined)
+GET: 21,570,000 ops/seg (pipelined)
+SET: 161,000 ops/seg (sin pipeline)
+GET: 170,000 ops/seg (sin pipeline)</pre>
+<p>Para contexto, Redis mismo alcanza alrededor de 100,000 ops/seg sin pipeline y 1-2 millones pipelined en hardware similar.</p>
+<h2>Lecciones aprendidas</h2>
+<ol>
+<li><strong>Empezar simple, optimizar después.</strong> La primera versión usaba concatenación de strings para respuestas. El profiling mostró que ese era el cuello de botella. Solo entonces se agregó el GET sin allocations.</li>
+</ol>
+<ol>
+<li><strong>El patrón de channels escala.</strong> 128 workers + 1 accept loop maneja miles de conexiones concurrentes limpiamente.</li>
+</ol>
+<ol>
+<li><strong>Los Maps de Nyx son suficientemente rápidos.</strong> No hay necesidad de una tabla hash personalizada — Robin Hood hashing en el runtime maneja 21M+ ops/seg.</li>
+</ol>
+<ol>
+<li><strong>La expiración lazy funciona.</strong> Un timer de fondo agregaría complejidad. Verificar en el acceso es simple y correcto.</li>
+</ol>
+<ol>
+<li><strong>La compatibilidad de protocolo importa.</strong> Al implementar RESP, nyx-kv funciona con todos los clientes Redis en todos los lenguajes — gratis.</li>
+</ol>
+<h2>El módulo main completo</h2>
+<pre><span class="kw">import</span> <span class="str">&quot;products/kv/resp&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;products/kv/store&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;products/kv/commands&quot;</span>
+
+<span class="kw">var</span> g_ch: <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span>.<span class="fn">new</span>()
+
+<span class="kw">fn</span> <span class="fn">kv_worker</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span>(g_ch)
+        <span class="kw">if</span> client <span class="op">&lt;</span> <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+        g_connections <span class="op">=</span> g_connections <span class="op">+</span> <span class="num">1</span>
+
+        <span class="kw">var</span> connected: <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+        <span class="kw">while</span> connected {
+            <span class="kw">let</span> cmd: <span class="ty">Array</span> <span class="op">=</span> <span class="fn">resp_read_command_fast</span>(client)
+            <span class="kw">if</span> cmd.<span class="fn">length</span>() <span class="op">==</span> <span class="num">0</span> {
+                connected <span class="op">=</span> <span class="kw">false</span>
+            } <span class="kw">else</span> {
+                <span class="kw">let</span> response: <span class="ty">String</span> <span class="op">=</span> <span class="fn">dispatch_command</span>(cmd, client)
+                <span class="kw">if</span> response.<span class="fn">length</span>() <span class="op">&gt;</span> <span class="num">0</span> {
+                    <span class="fn">tcp_write</span>(client, response)
+                }
+            }
+        }
+        <span class="fn">tcp_close</span>(client)
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> port: <span class="ty">int</span> <span class="op">=</span> <span class="num">6380</span>
+    <span class="kw">let</span> num_workers: <span class="ty">int</span> <span class="op">=</span> <span class="num">128</span>
+
+    g_ch <span class="op">=</span> <span class="fn">channel_new</span>(<span class="num">512</span>)
+    <span class="kw">let</span> server: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span>(<span class="str">&quot;0.0.0.0&quot;</span>, port)
+
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> num_workers {
+        <span class="fn">thread_spawn</span>(kv_worker)
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    }
+
+    <span class="kw">while</span> <span class="num">1</span> <span class="op">&gt;</span> <span class="num">0</span> {
+        <span class="kw">let</span> client: <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span>(server)
+        <span class="kw">if</span> client <span class="op">&gt;=</span> <span class="num">0</span> {
+            <span class="fn">channel_send</span>(g_ch, client)
+        }
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}</pre>
+<p>72 líneas de código para el módulo principal. La base de datos completa son unas 400 líneas en 4 archivos.</p>
+<h2>Ejercicios</h2>
+<ol>
+<li>Extiende nyx-kv con un comando <code>APPEND key value</code> que concatene a un valor existente.</li>
+</ol>
+<ol>
+<li>Agrega un comando <code>SETNX key value</code> que solo establezca la clave si no existe ya.</li>
+</ol>
+<ol>
+<li>Implementa un comando <code>RANDOMKEY</code> que retorne una clave aleatoria del store.</li>
+</ol>
+<ol>
+<li>Agrega persistencia: guardar el store a un archivo en <code>FLUSHDB</code> y cargarlo al iniciar.</li>
+</ol>
+<ol>
+<li>Construye tu propia mini base de datos: elige un protocolo (HTTP, TCP raw, o personalizado), un modelo de datos, e impleméntalo usando los patrones de este capítulo.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li>nyx-kv es una base de datos compatible con Redis escrita en ~400 líneas de Nyx.</li>
+<li>Arquitectura: accept loop → channel → worker pool → global store.</li>
+<li>Protocolo RESP para compatibilidad con todos los clientes Redis.</li>
+<li>Expiración lazy: verificar TTL en el acceso, no con un thread de fondo.</li>
+<li>Optimización de camino rápido: dispatch por primer carácter, constantes cacheadas, GET sin allocations.</li>
+<li>128 workers pre-creados manejan miles de conexiones concurrentes.</li>
+<li>Rendimiento: 6.76M SET/s, 21.57M GET/s (pipelined).</li>
+</ul>
+<p><a href="00-indice.md">← Volver al Índice</a></p>
+
+    <div class="book-nav">
+        <a href="24.html" class="book-nav-prev">&larr; Anterior: Sistemas — Assembly inline, volatile, atomic</a>
+        <a href="26.html" class="book-nav-next">Siguiente: El gestor de paquetes &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

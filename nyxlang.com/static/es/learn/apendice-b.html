@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apéndice B: Módulos de la biblioteca estándar — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Apéndice B: Módulos de la biblioteca estándar</h1>
+
+<p>Nyx incluye 37 módulos en la biblioteca estándar. Importalos con <code>import "std/nombre_modulo"</code>.</p>
+<h2>Core</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/prelude</code></td>
+<td>Auto-cargado. Define <code>Option</code>, <code>Result</code>, traits de operadores (<code>Add</code>, <code>Sub</code>, <code>Mul</code>, <code>Eq</code>, <code>Ord</code>, <code>Display</code>), e implementaciones por defecto. Nunca necesitas importar esto — siempre está disponible.</td>
+</tr>
+<tr>
+<td><code>std/math</code></td>
+<td>Funciones matemáticas: <code>abs</code>, <code>min</code>, <code>max</code>, <code>pow</code>, <code>sqrt</code>, <code>floor</code>, <code>ceil</code>, <code>round</code>, <code>log</code>, <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>PI</code>, <code>E</code>.</td>
+</tr>
+<tr>
+<td><code>std/math_ext</code></td>
+<td>Matemáticas extendidas: <code>gcd</code>, <code>lcm</code>, <code>factorial</code>, <code>fibonacci</code>, <code>is_prime</code>, <code>clamp</code>, <code>lerp</code>, operaciones con matrices.</td>
+</tr>
+<tr>
+<td><code>std/array</code></td>
+<td>Utilidades de arrays: <code>map</code>, <code>filter</code>, <code>reduce</code>, <code>zip</code>, <code>enumerate</code>, <code>flatten</code>, <code>chunk</code>, <code>take</code>, <code>skip</code>, <code>find</code>, <code>any</code>, <code>all</code>, <code>sort_by</code>, <code>group_by</code>, <code>unique</code>.</td>
+</tr>
+<tr>
+<td><code>std/map</code></td>
+<td>Utilidades de maps: <code>map_from_arrays</code>, <code>map_merge</code>, <code>map_filter</code>, <code>map_map_values</code>, <code>map_invert</code>.</td>
+</tr>
+<tr>
+<td><code>std/io</code></td>
+<td>Utilidades de I/O: <code>read_line</code> (stdin), <code>print_err</code>, <code>format</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Estructuras de datos</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/collections</code></td>
+<td><code>Set</code> (respaldado por Map), <code>Deque</code> (cola de doble extremo), <code>PriorityQueue</code> (min-heap).</td>
+</tr>
+<tr>
+<td><code>std/btreemap</code></td>
+<td>Mapa de árbol binario balanceado. Claves ordenadas, operaciones O(log n).</td>
+</tr>
+<tr>
+<td><code>std/linkedlist</code></td>
+<td>Lista doblemente enlazada. Inserción/eliminación O(1) en cabeza/cola.</td>
+</tr>
+<tr>
+<td><code>std/graph</code></td>
+<td>Estructura de datos de grafo con BFS, DFS, camino más corto de Dijkstra, ordenamiento topológico.</td>
+</tr>
+<tr>
+<td><code>std/matrix</code></td>
+<td>Operaciones con matrices: crear, multiplicar, transponer, determinante, identidad.</td>
+</tr>
+</tbody></table></div>
+<h2>Formatos de datos</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/json</code></td>
+<td>Parser y serializador JSON. <code>json_parse(str) -> Map</code>, <code>json_stringify(map) -> String</code>. Maneja objetos anidados, arrays, strings, números, booleanos, null.</td>
+</tr>
+<tr>
+<td><code>std/toml</code></td>
+<td>Parser TOML. <code>toml_parse(str) -> Map</code>. Soporta tablas, arrays, strings, enteros, booleanos.</td>
+</tr>
+<tr>
+<td><code>std/csv</code></td>
+<td>Lector/escritor CSV. <code>csv_parse(str) -> Array</code>, <code>csv_stringify(rows) -> String</code>. Maneja campos entrecomillados y escape.</td>
+</tr>
+<tr>
+<td><code>std/msgpack</code></td>
+<td>Serialización binaria MessagePack. <code>msgpack_encode(value) -> String</code>, <code>msgpack_decode(bytes) -> value</code>. Formato binario compacto.</td>
+</tr>
+</tbody></table></div>
+<h2>Archivo e I/O</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/file</code></td>
+<td>Operaciones de archivo: <code>read_file(path) -> String</code>, <code>write_file(path, content)</code>, <code>file_exists(path) -> bool</code>, <code>file_size(path) -> int</code>, <code>list_dir(path) -> Array</code>, <code>delete_file(path)</code>, <code>rename_file(old, new)</code>.</td>
+</tr>
+<tr>
+<td><code>std/compress</code></td>
+<td>Compresión zlib: <code>deflate(data) -> String</code>, <code>inflate(data) -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Networking</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/http</code></td>
+<td>Servidor y cliente HTTP. Servidor: <code>http_serve(port, handler)</code>, <code>http_serve_mt(port, workers, handler)</code>. Cliente: <code>http_get(url)</code>, <code>http_post(url, body)</code>. Maneja requests como <code>[id, method, path, headers, body]</code>.</td>
+</tr>
+<tr>
+<td><code>std/web</code></td>
+<td>Framework web: structs <code>App</code>/<code>Request</code>/<code>Response</code>, routing (<code>app_get</code>, <code>app_post</code>, <code>app_put</code>, <code>app_delete</code>), cadena de middleware (<code>app_use</code>, <code>mw_logging</code>, <code>mw_cors</code>), APIs JSON (<code>req_json</code>, <code>response_json_map</code>), servicio de archivos estáticos, parsing de query/formularios.</td>
+</tr>
+<tr>
+<td><code>std/http2</code></td>
+<td>Servidor HTTP/2 (h2c cleartext). <code>h2_serve(port, workers, callback)</code> — el callback recibe <code>(method, path, headers, body)</code> y retorna <code>[status, headers, body]</code>. Framing binario, compresión de headers HPACK, multiplexación de streams. I/O de frames en C (<code>runtime/http2.c</code>).</td>
+</tr>
+<tr>
+<td><code>std/session</code></td>
+<td>Sesiones con cookies almacenadas en nyx-kv via RESP. <code>session_configure(host, port, ttl)</code>, <code>session_start(req, resp)</code>, <code>session_get(req, key)</code>, <code>session_set(req, key, value)</code>, <code>session_destroy(req, resp)</code>.</td>
+</tr>
+<tr>
+<td><code>std/url</code></td>
+<td>Codificación/decodificación URL: <code>url_encode(str) -> String</code>, <code>url_decode(str) -> String</code>, <code>url_parse(str) -> Map</code>.</td>
+</tr>
+<tr>
+<td><code>std/websocket</code></td>
+<td>WebSocket RFC 6455: handshake, codificación/decodificación de frames, <code>ws_send</code>, <code>ws_recv</code>.</td>
+</tr>
+<tr>
+<td><code>std/proxy</code></td>
+<td>Utilidades de proxy inverso: selección de backend, round-robin, health checking, forwarding de headers.</td>
+</tr>
+</tbody></table></div>
+<h2>Concurrencia</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/sync</code></td>
+<td>Primitivas de sincronización: <code>WaitGroup</code> (esperar N tareas), <code>Semaphore</code> (limitar concurrencia), <code>Once</code> (ejecutar exactamente una vez), <code>AtomicCounter</code> (contador thread-safe), <code>Barrier</code> (sincronizar N threads).</td>
+</tr>
+</tbody></table></div>
+<h2>Base de datos</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/sqlite</code></td>
+<td>Bindings SQLite3 (via dlopen): <code>db_open(path)</code>, <code>db_exec(db, sql)</code>, <code>db_query(db, sql) -> Array</code>, <code>db_close(db)</code>. Soporta transacciones, sentencias preparadas, migraciones.</td>
+</tr>
+<tr>
+<td><code>std/pool</code></td>
+<td>Pool de conexiones: <code>pool_new(factory, size)</code>, <code>pool_acquire(pool)</code>, <code>pool_release(pool, conn)</code>. Genérico — funciona con cualquier recurso.</td>
+</tr>
+</tbody></table></div>
+<h2>Seguridad</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/regex</code></td>
+<td>Expresiones regulares POSIX: <code>regex_match(pattern, text) -> bool</code>, <code>regex_find(pattern, text) -> Array</code>, <code>regex_replace(pattern, text, replacement) -> String</code>.</td>
+</tr>
+<tr>
+<td><code>std/random</code></td>
+<td>Generación de números aleatorios (xorshift64): <code>random_int(min, max)</code>, <code>random_float()</code>, <code>random_choice(array)</code>, <code>random_shuffle(array)</code>.</td>
+</tr>
+<tr>
+<td><code>std/uuid</code></td>
+<td>Generación de UUID: <code>uuid_v4() -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Texto y codificación</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/semver</code></td>
+<td>Versionado semántico: <code>semver_parse(str) -> Map</code>, <code>semver_compare(a, b) -> int</code>, <code>semver_satisfies(version, range) -> bool</code>.</td>
+</tr>
+<tr>
+<td><code>std/base64</code></td>
+<td>Codificación/decodificación Base64 y Base64URL: <code>base64_encode(str) -> String</code>, <code>base64_decode(str) -> String</code>, <code>base64url_encode(str) -> String</code>, <code>base64url_decode(str) -> String</code>.</td>
+</tr>
+</tbody></table></div>
+<h2>Patrones y arquitectura</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/events</code></td>
+<td>Event bus / patrón observable: <code>event_bus_new()</code>, <code>on(bus, event, handler)</code>, <code>emit(bus, event, data)</code>. Comunicación pub/sub desacoplada.</td>
+</tr>
+<tr>
+<td><code>std/statemachine</code></td>
+<td>Máquina de estados finita genérica: <code>fsm_new(states, transitions)</code>, <code>fsm_transition(fsm, event)</code>, <code>fsm_current(fsm)</code>.</td>
+</tr>
+<tr>
+<td><code>std/owned</code></td>
+<td>Wrappers de ownership: <code>Box<T></code> (propiedad única), <code>Rc<T></code> (conteo de referencias), <code>MoveOnly<T></code> (no copiable). Basado en convención, no enforced por el compilador.</td>
+</tr>
+<tr>
+<td><code>std/proptest</code></td>
+<td>Testing basado en propiedades (estilo QuickCheck): <code>prop_check(name, generator, property)</code>, generación de inputs aleatorios, shrinking en fallo.</td>
+</tr>
+</tbody></table></div>
+<h2>Sistema</h2>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Módulo</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>std/log</code></td>
+<td>Logging: <code>log_info(msg)</code>, <code>log_warn(msg)</code>, <code>log_error(msg)</code>, <code>log_debug(msg)</code>. Nivel de log y salida configurables.</td>
+</tr>
+<tr>
+<td><code>std/args</code></td>
+<td>Parsing de argumentos de línea de comandos: <code>args_parse(spec) -> Map</code>. Soporta flags, opciones con valores, argumentos posicionales, generación de ayuda.</td>
+</tr>
+</tbody></table></div>
+<h2>Builtins del runtime (agregados en v0.12.0)</h2>
+<p>Estas funciones están implementadas en el runtime C y disponibles sin imports:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Función</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>hmac_sha256(key, data)</code></td>
+<td>Código de autenticación HMAC-SHA256. Retorna string hexadecimal.</td>
+</tr>
+<tr>
+<td><code>getenv_default(name, default)</code></td>
+<td>Leer variable de entorno con valor por defecto.</td>
+</tr>
+<tr>
+<td><code>crc32_bytes(data, len)</code></td>
+<td>Checksum CRC32 para datos binarios.</td>
+</tr>
+<tr>
+<td><code>string_from_bytes(ptr, len)</code></td>
+<td>Crear un string Nyx desde un puntero raw de bytes y longitud.</td>
+</tr>
+<tr>
+<td><code>rename_file(old, new)</code></td>
+<td>Renombrar un archivo atómicamente.</td>
+</tr>
+<tr>
+<td><code>tcp_read_exact(fd, n)</code></td>
+<td>Leer exactamente <code>n</code> bytes de un socket TCP. Bloquea hasta que lleguen todos.</td>
+</tr>
+<tr>
+<td><code>setup_shutdown_handler(callback)</code></td>
+<td>Registrar un callback para señales SIGTERM/SIGINT.</td>
+</tr>
+</tbody></table></div>
+<h2>Builtins de Terminal I/O (agregados en v0.12.0)</h2>
+<p>Estas funciones proveen acceso raw al terminal para construir aplicaciones TUI interactivas:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Función</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>raw_mode_enter()</code></td>
+<td>Poner terminal en modo raw (sin eco, sin buffering de línea). Usar con <code>defer { raw_mode_exit() }</code> para limpieza segura.</td>
+</tr>
+<tr>
+<td><code>raw_mode_exit()</code></td>
+<td>Restaurar terminal a modo normal (cooked).</td>
+</tr>
+<tr>
+<td><code>read_byte()</code></td>
+<td>Leer un solo byte de stdin. Devuelve <code>int</code> (0-255), o <code>-1</code> en EOF.</td>
+</tr>
+<tr>
+<td><code>chr(code)</code></td>
+<td>Convertir un código ASCII (int) a un <code>String</code> de un carácter. Ejemplo: <code>chr(65)</code> devuelve <code>"A"</code>.</td>
+</tr>
+<tr>
+<td><code>term_cols()</code></td>
+<td>Devolver ancho del terminal en columnas (default 80 si no disponible).</td>
+</tr>
+<tr>
+<td><code>term_rows()</code></td>
+<td>Devolver alto del terminal en filas (default 24 si no disponible).</td>
+</tr>
+</tbody></table></div>
+<h2>Array insert/remove (agregados en v0.12.0)</h2>
+<p>Los arrays ahora soportan inserción y eliminación en posiciones arbitrarias:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Método</th>
+<th>Descripción</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>arr.insert(índice, valor)</code></td>
+<td>Insertar <code>valor</code> en <code>índice</code>, desplazando los elementos siguientes a la derecha. Tiempo O(n).</td>
+</tr>
+<tr>
+<td><code>arr.remove(índice)</code></td>
+<td>Quitar y devolver el elemento en <code>índice</code>, desplazando los elementos siguientes a la izquierda. Tiempo O(n).</td>
+</tr>
+</tbody></table></div>
+<h2>Builtins de control de procesos (agregados en v0.12.0)</h2>
+<p>Primitivas POSIX para construir shells, pipelines y gestores de procesos:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Funcion</th>
+<th>Descripcion</th>
+</tr></thead>
+<tbody>
+<tr><td><code>fork()</code></td><td>Fork del proceso. Retorna 0 en hijo, pid en padre, -1 en error.</td></tr>
+<tr><td><code>execvp(programa, args)</code></td><td>Reemplaza imagen del proceso con programa. <code>args</code> es un Array de Strings.</td></tr>
+<tr><td><code>waitpid(pid, opts)</code></td><td>Espera hijo. <code>opts</code>: 0=bloquear, 1=WNOHANG. Retorna exit status.</td></tr>
+<tr><td><code>dup2(old_fd, new_fd)</code></td><td>Redirige file descriptor <code>new_fd</code> para referir a <code>old_fd</code>.</td></tr>
+<tr><td><code>pipe_new()</code></td><td>Crea un pipe. Retorna <code>[read_fd, write_fd]</code>.</td></tr>
+<tr><td><code>close_fd(fd)</code></td><td>Cierra un file descriptor raw.</td></tr>
+<tr><td><code>open_fd(path, mode)</code></td><td>Abre archivo retornando fd raw. mode: 0=lectura, 1=escritura(trunc), 2=append.</td></tr>
+<tr><td><code>getcwd()</code></td><td>Retorna directorio actual como String.</td></tr>
+<tr><td><code>chdir(path)</code></td><td>Cambia directorio de trabajo. Retorna 0 en exito.</td></tr>
+<tr><td><code>stat(path)</code></td><td>Info de archivo: <code>[size, mode, mtime, is_dir, is_file]</code>.</td></tr>
+<tr><td><code>isatty(fd)</code></td><td>Retorna 1 si fd es terminal, 0 si no.</td></tr>
+<tr><td><code>getpid()</code></td><td>Retorna PID del proceso actual.</td></tr>
+<tr><td><code>kill_process(pid, sig)</code></td><td>Envia signal al proceso (ej. 15=SIGTERM, 9=SIGKILL).</td></tr>
+</tbody></table></div>
+<p><strong>Seguridad GC:</strong> Despues de <code>fork()</code>, el hijo debe llamar <code>execvp()</code> inmediatamente sin alocar memoria GC.</p>
+<h2>Ejemplo de uso</h2>
+<pre><span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/file&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="cm">// Leer y parsear un archivo de configuración</span>
+    <span class="kw">let</span> config_text: <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_file</span>(<span class="str">&quot;config.json&quot;</span>)
+    <span class="kw">let</span> config: <span class="ty">Map</span> <span class="op">=</span> <span class="fn">json_parse</span>(config_text)
+
+    <span class="kw">let</span> port: <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span>(config.<span class="fn">get</span>(<span class="str">&quot;port&quot;</span>))
+
+    <span class="cm">// Iniciar un servidor web</span>
+    <span class="fn">http_serve_mt</span>(port, <span class="num">4</span>, <span class="kw">fn</span>(req: <span class="ty">Array</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">&quot;¡Hola desde Nyx!&quot;</span>)
+    })
+}</pre>
+<p><a href="00-indice.md">← Volver al Índice</a></p>
+
+    <div class="book-nav">
+        <a href="apendice-a.html" class="book-nav-prev">&larr; Anterior: Apéndice A: Referencia rápida de sintaxis</a>
+        <a href="apendice-c.html" class="book-nav-next">Siguiente: Apéndice C: Mensajes de error comunes &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

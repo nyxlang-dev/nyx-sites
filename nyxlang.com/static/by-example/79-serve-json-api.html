@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-serve JSON API — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-serve JSON API</h1>
+    <p><code>response_json</code> takes a raw JSON string; <code>response_json_map</code> serializes a Map to JSON with proper escaping. Request bodies are accessible via <code>req.body</code>.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve JSON API -- request parsing and response_json_map</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">import</span> <span class="str">"std/json"</span>
+
+<span class="kw">fn</span> <span class="fn">echo_json</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// req.body contains the raw request body as a String</span>
+    <span class="cm">// Use std/json to parse structured input</span>
+    <span class="kw">let</span> data: <span class="ty">String</span> = req.body
+
+    <span class="cm">// response_json_map builds a JSON object from a Map</span>
+    <span class="kw">var</span> result: <span class="ty">Map</span> = <span class="ty">Map</span>.new()
+    result.insert(<span class="str">"received"</span>, data)
+    result.insert(<span class="str">"method"</span>, req.method)
+    result.insert(<span class="str">"path"</span>, req.path)
+    <span class="kw">return</span> response_json_map(<span class="num">200</span>, result)
+}
+
+<span class="kw">fn</span> <span class="fn">health_check</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// response_json takes a raw JSON string</span>
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"status\": \"ok\", \"service\": \"api\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">not_found</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">404</span>, <span class="str">"{\"error\": \"not found\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+
+    app_get(app, <span class="str">"/health"</span>, health_check)
+    app_post(app, <span class="str">"/echo"</span>, echo_json)
+
+    print(<span class="str">"JSON API configured"</span>)
+    print(<span class="str">"  GET  /health -&gt; {\"status\": \"ok\"}"</span>)
+    print(<span class="str">"  POST /echo   -&gt; echoes request body as JSON"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">JSON API configured
+  GET  /health -&gt; {"status": "ok"}
+  POST /echo   -&gt; echoes request body as JSON</pre>
+    <h2>Explanation</h2>
+    <p>Two helpers cover 95% of JSON response needs. <code>response_json(status, raw)</code> trusts you to produce valid JSON — fast, zero overhead, but one missing backslash and clients choke. Use it for constant replies like <code>{"status": "ok"}</code> where you control the entire string.</p>
+    <p><code>response_json_map(status, map)</code> walks a <code>Map</code> and emits properly escaped JSON: quotes are backslashed, control characters are <code>\u00XX</code>, and nested Maps/Arrays are recursed. Always use this when any piece of the output comes from user input. Pair it with <code>std/json::parse</code> to read the request body into a Map, mutate, and serialize back — a zero-ceremony request-response cycle.</p>
+    <p>Both helpers set <code>Content-Type: application/json; charset=utf-8</code> automatically. For custom headers, build a <code>Response</code> with <code>response_new</code> and <code>response_set_header</code>.</p>
+    <div class="book-nav">
+        <a href="/by-example/78-serve-routes.html">&larr; Previous</a>
+        <a href="/by-example/80-serve-static.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/79-serve-json-api.nx">examples/by-example/79-serve-json-api.nx</a></small></p>
+</main>
+</body>
+</html>

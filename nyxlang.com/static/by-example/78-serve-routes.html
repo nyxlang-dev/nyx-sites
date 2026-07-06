@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-serve routes — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-serve routes</h1>
+    <p>nyx-serve's App framework supports RESTful routing with path parameters like <code>/users/{id}</code>. Parameters are captured in <code>req.params</code> as a Map.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve routes -- GET, POST, PUT, DELETE handlers</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+
+<span class="kw">fn</span> <span class="fn">get_users</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"[{\"id\": 1, \"name\": \"Alice\"}]"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">get_user_by_id</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// {id} is captured automatically in req.params</span>
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"id\": "</span> + id + <span class="str">", \"name\": \"User\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">create_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// req.body contains the raw request body</span>
+    <span class="kw">return</span> response_json(<span class="num">201</span>, <span class="str">"{\"created\": true, \"body\": \""</span> + req.body + <span class="str">"\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">delete_user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.get(<span class="str">"id"</span>)
+    <span class="kw">return</span> response_new(<span class="num">204</span>, <span class="str">""</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+
+    <span class="cm">// RESTful routes with path parameters</span>
+    app_get(app, <span class="str">"/users"</span>, get_users)
+    app_get(app, <span class="str">"/users/{id}"</span>, get_user_by_id)
+    app_post(app, <span class="str">"/users"</span>, create_user)
+    app_delete(app, <span class="str">"/users/{id}"</span>, delete_user)
+
+    print(<span class="str">"REST API configured with 4 routes"</span>)
+    print(<span class="str">"  GET    /users"</span>)
+    print(<span class="str">"  GET    /users/{id}"</span>)
+    print(<span class="str">"  POST   /users"</span>)
+    print(<span class="str">"  DELETE /users/{id}"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">REST API configured with 4 routes
+  GET    /users
+  GET    /users/{id}
+  POST   /users
+  DELETE /users/{id}</pre>
+    <h2>Explanation</h2>
+    <p>An <code>App</code> is a routing table plus a handler registry. Each <code>app_get</code>, <code>app_post</code>, <code>app_put</code>, <code>app_delete</code> call binds an HTTP method + path pattern to a function of signature <code>fn (req: Request) -&gt; Response</code>. When a request arrives, nyx-serve matches method and path against the table and dispatches.</p>
+    <p>Path patterns support <code>{name}</code> placeholders. The matcher populates <code>req.params</code> — a Map from name to the captured string segment — so <code>GET /users/42</code> hitting <code>/users/{id}</code> exposes <code>req.params.get("id") == "42"</code>. Use <code>req.body</code> to read the raw request payload for POST/PUT, and <code>req.query</code> for parsed query-string parameters.</p>
+    <p>The helper constructors <code>response_new(status, body)</code>, <code>response_json</code>, and <code>response_html</code> wrap headers and status code so handlers stay small. Start the server with <code>http_serve_mt(app, port)</code> to reach 73K req/s on a single node.</p>
+    <div class="book-nav">
+        <a href="/by-example/77-kv-pipelined.html">&larr; Previous</a>
+        <a href="/by-example/79-serve-json-api.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/78-serve-routes.nx">examples/by-example/78-serve-routes.nx</a></small></p>
+</main>
+</body>
+</html>

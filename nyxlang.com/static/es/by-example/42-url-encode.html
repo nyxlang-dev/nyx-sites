@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Encode — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>URL Encode</h1>
+
+    <p><code>std/url</code> provee percent-encoding para URLs (RFC 3986), construcción de query strings y escapado de entidades HTML. Esto es fundamental para construir clientes y servidores web que manejen la entrada del usuario de forma segura.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// URL encoding, decoding, and query string building</span>
+
+<span class="kw">import</span> <span class="str">"std/url"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> raw: <span class="ty">String</span> = <span class="str">"hello world &amp; foo=bar"</span>
+    <span class="kw">let</span> encoded: <span class="ty">String</span> = url_encode(raw)
+    print(<span class="str">"encoded: "</span> + encoded)
+
+    <span class="kw">let</span> decoded: <span class="ty">String</span> = url_decode(encoded)
+    print(<span class="str">"decoded: "</span> + decoded)
+
+    <span class="kw">let</span> keys: <span class="ty">Array</span> = [<span class="str">"name"</span>, <span class="str">"lang"</span>, <span class="str">"version"</span>]
+    <span class="kw">let</span> vals: <span class="ty">Array</span> = [<span class="str">"Nyx Lang"</span>, <span class="str">"es"</span>, <span class="str">"0.12"</span>]
+    <span class="kw">let</span> qs: <span class="ty">String</span> = build_query_string(keys, vals)
+    print(<span class="str">"query:   "</span> + qs)
+
+    <span class="kw">let</span> html: <span class="ty">String</span> = html_escape(<span class="str">"&lt;script&gt;alert('xss')&lt;/script&gt;"</span>)
+    print(<span class="str">"escaped: "</span> + html)
+
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">encoded: hello%20world%20%26%20foo%3Dbar
+decoded: hello world & foo=bar
+query:   name=Nyx%20Lang&lang=es&version=0.12
+escaped: &amp;lt;script&amp;gt;alert(&#x27;xss&#x27;)&amp;lt;/script&amp;gt;</pre>
+
+    <h2>Explicación</h2>
+    <p><code>url_encode</code> codifica con percent-encoding todos los caracteres excepto los caracteres no reservados de RFC 3986 (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>-._~</code>). Los espacios se convierten en <code>%20</code>, los ampersands en <code>%26</code>, etc. <code>url_decode</code> revierte el proceso y también decodifica <code>+</code> como espacio.</p>
+    <p><code>build_query_string</code> toma arrays paralelos de claves y valores, codifica cada par y los une con <code>&amp;</code>. Este es el formato estándar para parámetros de query en URLs y envíos de formularios HTML.</p>
+    <p><code>html_escape</code> convierte los cinco caracteres sensibles de HTML (<code>&amp; &lt; &gt; " '</code>) en sus equivalentes de entidad. Siempre hay que escapar la entrada del usuario antes de insertarla en HTML para prevenir ataques XSS.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/41-base64.html">← Anterior</a>
+        <a href="/es/by-example/43-toml-config.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/42-url-encode.nx">examples/by-example/42-url-encode.nx</a></small></p>
+</main>
+
+</body>
+</html>

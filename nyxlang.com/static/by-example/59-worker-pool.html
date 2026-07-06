@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Pool — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Worker Pool</h1>
+    <p>A worker pool dispatches tasks to a fixed number of threads through a shared channel. Workers pull tasks, process them, and push results to a results channel. This pattern is how <code>http_serve_mt</code> implements its thread pool internally.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Worker pool — dispatching tasks to N threads via channels</span>
+<span class="cm">// Pool de workers — despachar tareas a N hilos via canales</span>
+
+<span class="kw">var</span> work_ch: <span class="ty">Map</span> = Map.new()
+<span class="kw">var</span> done_ch: <span class="ty">Map</span> = Map.new()
+
+<span class="kw">fn</span> <span class="fn">worker</span>() -> <span class="ty">int</span> {
+    <span class="kw">while</span> <span class="kw">true</span> {
+        <span class="kw">let</span> task: <span class="ty">int</span> = channel_recv(work_ch)
+        <span class="kw">if</span> task &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
+        <span class="cm">// Simulate work: compute square</span>
+        <span class="kw">let</span> result: <span class="ty">int</span> = task * task
+        channel_send(done_ch, result)
+    }
+    <span class="kw">return</span> <span class="num">0</span>
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    work_ch = channel_new(<span class="num">20</span>)
+    done_ch = channel_new(<span class="num">20</span>)
+
+    <span class="cm">// Spawn 4 workers</span>
+    <span class="kw">let</span> num_workers: <span class="ty">int</span> = <span class="num">4</span>
+    <span class="kw">var</span> handles: <span class="ty">Array</span> = []
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; num_workers {
+        <span class="kw">let</span> h: <span class="ty">int</span> = thread_spawn(worker)
+        handles.push(h)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="cm">// Send 8 tasks</span>
+    <span class="kw">let</span> num_tasks: <span class="ty">int</span> = <span class="num">8</span>
+    i = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; num_tasks {
+        channel_send(work_ch, i + <span class="num">1</span>)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="cm">// Collect results</span>
+    i = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; num_tasks {
+        <span class="kw">let</span> result: <span class="ty">int</span> = channel_recv(done_ch)
+        print(<span class="str">"result: "</span> + int_to_string(result))
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="cm">// Send stop signals</span>
+    i = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; num_workers {
+        channel_send(work_ch, <span class="num">-1</span>)
+        i = i + <span class="num">1</span>
+    }
+
+    print(<span class="str">"all tasks completed"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">result: 1
+result: 4
+result: 9
+result: 16
+result: 25
+result: 36
+result: 49
+result: 64
+all tasks completed</pre>
+    <h2>Explanation</h2>
+    <p>Two channels coordinate the pool: <code>work_ch</code> distributes tasks and <code>done_ch</code> collects results. Both are declared as <code>Map</code> -- the standard channel type in Nyx.</p>
+    <p>Four worker threads loop on <code>channel_recv(work_ch)</code>, computing the square of each received value and sending results to <code>done_ch</code>. A negative task value serves as a poison pill, causing the worker to exit.</p>
+    <p>The main thread sends 8 tasks (values 1-8), collects all 8 results, then sends 4 stop signals (one per worker). The order of results may vary between runs because workers execute concurrently, but all 8 squares will appear. This is the same pattern used internally by <code>http_serve_mt</code> to handle HTTP requests across a thread pool.</p>
+    <div class="book-nav">
+        <a href="/by-example/58-channel-patterns.html">&larr; Previous</a>
+        <a href="/by-example/60-producer-consumer.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/59-worker-pool.nx">examples/by-example/59-worker-pool.nx</a></small></p>
+</main>
+</body>
+</html>

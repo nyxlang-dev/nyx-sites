@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-kv basic client — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>nyx-kv basic client</h1>
+    <p>The nyx-kv server speaks RESP protocol on port 6380. This recipe shows how to build a basic client that connects, issues SET/GET/DEL commands, and reads the replies.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-kv client -- basic SET/GET/DEL operations</span>
+
+<span class="cm">// Build a RESP array command from string parts</span>
+<span class="kw">fn</span> <span class="fn">resp_cmd</span>(parts: <span class="ty">Array</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.new()
+    sb.append(<span class="str">"*"</span>)
+    sb.append(int_to_string(parts.length()))
+    sb.append(<span class="str">"\r\n"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; parts.length() {
+        <span class="kw">let</span> p: <span class="ty">String</span> = parts[i]
+        sb.append(<span class="str">"$"</span>)
+        sb.append(int_to_string(p.length()))
+        sb.append(<span class="str">"\r\n"</span>)
+        sb.append(p)
+        sb.append(<span class="str">"\r\n"</span>)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">return</span> sb.to_string()
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Connect to nyx-kv on default port 6380</span>
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed (is nyx-kv running?)"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="cm">// SET name "Nyx"</span>
+    tcp_write(fd, resp_cmd([<span class="str">"SET"</span>, <span class="str">"name"</span>, <span class="str">"Nyx"</span>]))
+    <span class="kw">let</span> set_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"SET -&gt; "</span> + set_reply.trim())
+
+    <span class="cm">// GET name</span>
+    tcp_write(fd, resp_cmd([<span class="str">"GET"</span>, <span class="str">"name"</span>]))
+    <span class="kw">let</span> hdr: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">let</span> val: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"GET name -&gt; "</span> + val.trim())
+
+    <span class="cm">// DEL name</span>
+    tcp_write(fd, resp_cmd([<span class="str">"DEL"</span>, <span class="str">"name"</span>]))
+    <span class="kw">let</span> del_reply: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"DEL -&gt; "</span> + del_reply.trim())
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">SET -&gt; +OK
+GET name -&gt; Nyx
+DEL -&gt; :1</pre>
+    <h2>Explanation</h2>
+    <p>RESP (REdis Serialization Protocol) encodes each command as an array of bulk strings: <code>*N\r\n</code> announces an N-element array, then each element is <code>$len\r\n&lt;data&gt;\r\n</code>. The helper <code>resp_cmd</code> builds this wire format with a <code>StringBuilder</code>, avoiding costly string concatenations.</p>
+    <p>Replies come in four flavors: simple strings (<code>+OK</code>), errors (<code>-ERR</code>), integers (<code>:1</code>), and bulk strings (<code>$3\r\nNyx\r\n</code>). For GET we read two lines: the length header and the value. For SET and DEL we just read one line. The server maintains state across a single TCP connection, so keep the socket open while issuing commands.</p>
+    <p>Because nyx-kv is Redis-compatible, you can also test it with <code>redis-cli -p 6380</code> — the same RESP bytes go over the wire.</p>
+    <div class="book-nav">
+        <a href="/by-example/70-shebang-script.html">&larr; Previous</a>
+        <a href="/by-example/72-kv-lists.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/71-kv-basic.nx">examples/by-example/71-kv-basic.nx</a></small></p>
+</main>
+</body>
+</html>

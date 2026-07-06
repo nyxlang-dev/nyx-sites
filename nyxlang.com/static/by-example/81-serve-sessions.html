@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serve Sessions — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
+    <h1>Serve Sessions</h1>
+    <p>std/session provides cookie-based sessions backed by nyx-kv. session_start reads/creates the session ID, session_set/get store data with TTL, session_destroy expires the cookie.</p>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// nyx-serve sessions — cookie-based sessions backed by nyx-kv</span>
+<span class="cm">// Sesiones nyx-serve — sesiones con cookies respaldadas por nyx-kv</span>
+
+<span class="kw">import</span> <span class="str">"std/http"</span>
+<span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">import</span> <span class="str">"std/session"</span>
+
+<span class="kw">fn</span> <span class="fn">login</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">var</span> resp: <span class="ty">Response</span> = response_json(<span class="num">200</span>, <span class="str">"{\"logged_in\": true}"</span>)
+
+    <span class="cm">// session_start reads the nyx_session cookie or creates a new ID</span>
+    <span class="cm">// and sets the Set-Cookie header on the response</span>
+    <span class="kw">let</span> sid: <span class="ty">String</span> = session_start(req, resp)
+
+    <span class="cm">// Store data in the session (persisted to nyx-kv with TTL)</span>
+    session_set(req, <span class="str">"user_id"</span>, <span class="str">"42"</span>)
+    session_set(req, <span class="str">"role"</span>, <span class="str">"admin"</span>)
+
+    <span class="kw">return</span> resp
+}
+
+<span class="kw">fn</span> <span class="fn">profile</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="cm">// Read session data from nyx-kv using the session cookie</span>
+    <span class="kw">let</span> user_id: <span class="ty">String</span> = session_get(req, <span class="str">"user_id"</span>)
+
+    <span class="kw">if</span> user_id.length() == <span class="num">0</span> {
+        <span class="kw">return</span> response_json(<span class="num">401</span>, <span class="str">"{\"error\": \"not logged in\"}"</span>)
+    }
+    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"user_id\": \""</span> + user_id + <span class="str">"\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">logout</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">var</span> resp: <span class="ty">Response</span> = response_json(<span class="num">200</span>, <span class="str">"{\"logged_out\": true}"</span>)
+    <span class="cm">// session_destroy expires the cookie (individual keys expire via TTL)</span>
+    session_destroy(req, resp)
+    <span class="kw">return</span> resp
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -&gt; <span class="ty">int</span> {
+    <span class="cm">// Configure session backend — where nyx-kv is running</span>
+    session_configure(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, <span class="num">3600</span>)  <span class="cm">// 1 hour TTL</span>
+
+    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+    app_post(app, <span class="str">"/login"</span>, login)
+    app_get(app, <span class="str">"/profile"</span>, profile)
+    app_post(app, <span class="str">"/logout"</span>, logout)
+
+    print(<span class="str">"session-based auth configured"</span>)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+    <h2>Output</h2>
+    <pre class="output">session-based auth configured</pre>
+    <h2>Explanation</h2>
+    <p>Sessions are the classic web pattern for tracking authenticated users across requests. std/session stores a signed session ID in a cookie (nyx_session) and keeps the actual data in nyx-kv so it survives restarts and scales horizontally. session_start is idempotent: it reads the existing cookie or mints a new ID and emits Set-Cookie. session_set and session_get operate on the key-value store behind that ID, each entry with its own TTL. session_destroy expires the cookie client-side while the keys expire server-side through TTL. This is the same pattern nyxlang.com uses for its playground — no sticky sessions needed, any worker can serve any request.</p>
+    <div class="book-nav">
+        <a href="/by-example/80-serve-static.html">&larr; Previous</a>
+        <a href="/by-example/82-serve-multithread.html">Next &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/81-serve-sessions.nx">examples/by-example/81-serve-sessions.nx</a></small></p>
+</main>
+</body>
+</html>

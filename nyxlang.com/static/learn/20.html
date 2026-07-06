@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLVM and performance — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/learn/">Table of Contents</a>
+    </div>
+
+    <h1>LLVM and performance</h1>
+
+<h2>What happens when you compile?</h2>
+<p>In Parts 1 and 2, you wrote Nyx code, compiled it, and ran it. But what actually happens between your <code>.nx</code> file and the running program? Understanding this pipeline helps you write faster code and debug performance issues.</p>
+<h2>The compilation pipeline</h2>
+<p>When you run <code>make run FILE=program.nx</code>, four things happen:</p>
+<pre>program.nx  →  Nyx Compiler  →  program.ll  →  Clang/LLVM  →  program (binary)
+   (Nyx)         (parser +         (LLVM IR)      (optimizer +      (native
+                  codegen)                          assembler)        machine code)</pre>
+<ol>
+<li><strong>Nyx Compiler</strong> reads your <code>.nx</code> file, parses it into an AST (Abstract Syntax Tree), checks types, and generates <strong>LLVM IR</strong> — an intermediate representation.</li>
+<li><strong>LLVM</strong> takes the IR, optimizes it aggressively, and generates native machine code for your CPU.</li>
+</ol>
+<p>The result is a standalone binary — no interpreter, no VM, no runtime overhead. Just machine instructions.</p>
+<h2>What is LLVM IR?</h2>
+<p>LLVM IR is a low-level language that sits between Nyx and machine code. It looks like assembly but is portable across CPU architectures. Here is what a simple function looks like:</p>
+<pre><span class="kw">fn</span> <span class="fn">add</span>(a: <span class="ty">int</span>, b: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">return</span> a <span class="op">+</span> b
+}</pre>
+<p>Becomes this LLVM IR:</p>
+<pre>define i64 @add(i64 %a, i64 %b) {
+entry:
+    %result = add i64 %a, %b
+    ret i64 %result
+}</pre>
+<p>You do not need to write IR — the Nyx compiler generates it. But seeing it helps you understand what your code becomes.</p>
+<h2>Viewing the IR</h2>
+<p>To see the IR for any Nyx program:</p>
+<pre>make compile FILE=program.nx
+cat program.ll</pre>
+<p>This is useful for understanding performance. If a function generates hundreds of IR instructions, it might be worth simplifying.</p>
+<h2>How LLVM optimizes your code</h2>
+<p>LLVM applies dozens of optimization passes. Here are the most impactful:</p>
+<h3>Dead code elimination</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> x: <span class="ty">int</span> <span class="op">=</span> <span class="num">42</span>    <span class="cm">// computed but never used</span>
+    <span class="kw">let</span> y: <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="fn">print</span>(y)            <span class="cm">// only y matters</span>
+}</pre>
+<p>LLVM removes <code>x</code> entirely. The compiled program never computes <code>42</code>.</p>
+<h3>Constant folding</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> result: <span class="ty">int</span> <span class="op">=</span> <span class="num">3</span> <span class="op">*</span> <span class="num">4</span> <span class="op">+</span> <span class="num">5</span>
+    <span class="fn">print</span>(result)    <span class="cm">// 17</span>
+}</pre>
+<p>LLVM computes <code>17</code> at compile time. The binary just loads the constant.</p>
+<h3>Loop optimization</h3>
+<pre><span class="kw">fn</span> <span class="fn">sum_to</span>(n: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> n {
+        total <span class="op">+=</span> i
+        i <span class="op">+=</span> <span class="num">1</span>
+    }
+    <span class="kw">return</span> total
+}</pre>
+<p>LLVM can unroll small loops, vectorize operations, and sometimes replace the entire loop with a closed-form formula.</p>
+<h3>Inlining</h3>
+<p>Small functions get inlined — their code is copied directly into the caller, eliminating function call overhead:</p>
+<pre><span class="kw">fn</span> <span class="fn">square</span>(x: <span class="ty">int</span>) <span class="op">-&gt;</span> <span class="ty">int</span> { <span class="kw">return</span> x <span class="op">*</span> x }
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> n: <span class="ty">int</span> <span class="op">=</span> <span class="fn">square</span>(<span class="num">5</span>)    <span class="cm">// becomes: let n: int = 5 * 5</span>
+}</pre>
+<h2>Nyx performance characteristics</h2>
+<p>Because Nyx compiles to native code via LLVM, it achieves performance comparable to C:</p>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Benchmark</th>
+<th>Nyx</th>
+<th>C</th>
+<th>Ratio</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>fibonacci(40)</td>
+<td>166ms</td>
+<td>190ms</td>
+<td>0.87x (Nyx wins)</td>
+</tr>
+<tr>
+<td>primes(100K)</td>
+<td>3.6ms</td>
+<td>3.6ms</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>loop(100M)</td>
+<td>0μs</td>
+<td>0μs</td>
+<td>both optimized away</td>
+</tr>
+<tr>
+<td>map(100K ops)</td>
+<td>24.6ms</td>
+<td>23ms</td>
+<td>1.07x</td>
+</tr>
+<tr>
+<td>HTTP requests/s</td>
+<td>73,863</td>
+<td>—</td>
+<td>competitive with Go</td>
+</tr>
+</tbody></table></div>
+<h2>Writing fast Nyx code</h2>
+<h3>Prefer integers over strings</h3>
+<p>Integer operations are single CPU instructions. String operations allocate memory and copy bytes:</p>
+<pre><span class="cm">// Fast — integer comparison</span>
+<span class="kw">if</span> status <span class="op">==</span> <span class="num">200</span> { ... }
+
+<span class="cm">// Slower — string comparison (compares byte by byte)</span>
+<span class="kw">if</span> status_text <span class="op">==</span> <span class="str">&quot;OK&quot;</span> { ... }</pre>
+<h3>Minimize allocations in hot loops</h3>
+<p>Every time you create a string, array, or struct, the garbage collector must track it. In a tight loop, this adds up:</p>
+<pre><span class="cm">// Slow — creates a new string every iteration</span>
+<span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> {
+    <span class="kw">let</span> s: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;hello&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(i)    <span class="cm">// allocation!</span>
+    i <span class="op">+=</span> <span class="num">1</span>
+}
+
+<span class="cm">// Fast — avoid unnecessary allocations</span>
+<span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="kw">var</span> total: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> {
+    total <span class="op">+=</span> i    <span class="cm">// no allocation</span>
+    i <span class="op">+=</span> <span class="num">1</span>
+}</pre>
+<h3>Use StringBuilder for string building</h3>
+<p>When building strings in a loop, use <code>StringBuilder</code> instead of concatenation:</p>
+<pre><span class="cm">// Slow — O(n²) because each + creates a new string</span>
+<span class="kw">var</span> result: <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+<span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10000</span> {
+    result <span class="op">=</span> result <span class="op">+</span> <span class="str">&quot;x&quot;</span>
+    i <span class="op">+=</span> <span class="num">1</span>
+}
+
+<span class="cm">// Fast — O(n) with StringBuilder</span>
+<span class="kw">var</span> sb: <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="fn">sb_new</span>()
+<span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+<span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10000</span> {
+    <span class="fn">sb_append</span>(sb, <span class="str">&quot;x&quot;</span>)
+    i <span class="op">+=</span> <span class="num">1</span>
+}
+<span class="kw">let</span> result: <span class="ty">String</span> <span class="op">=</span> <span class="fn">sb_to_string</span>(sb)</pre>
+<h3>Cache repeated computations</h3>
+<pre><span class="cm">// Slow — calls length() every iteration</span>
+<span class="kw">while</span> i <span class="op">&lt;</span> arr.<span class="fn">length</span>() {
+    <span class="cm">// ...</span>
+    i <span class="op">+=</span> <span class="num">1</span>
+}
+
+<span class="cm">// Fast — cache the length</span>
+<span class="kw">let</span> len: <span class="ty">int</span> <span class="op">=</span> arr.<span class="fn">length</span>()
+<span class="kw">while</span> i <span class="op">&lt;</span> len {
+    <span class="cm">// ...</span>
+    i <span class="op">+=</span> <span class="num">1</span>
+}</pre>
+<h2>The garbage collector</h2>
+<p>Nyx uses the <strong>Boehm GC</strong> — a conservative garbage collector. It automatically frees memory you no longer use. You never need to call <code>free()</code> (unless you opt into unsafe manual memory management).</p>
+<p>The GC runs periodically. It scans memory to find objects that are no longer referenced and reclaims them. This introduces small pauses, but Nyx tunes the GC for low latency:</p>
+<ul>
+<li>Incremental collection reduces pause times</li>
+<li>Collection frequency is reduced for server workloads</li>
+<li>Most allocations are short-lived and collected quickly</li>
+</ul>
+<p>For the vast majority of programs, the GC is invisible. For extreme performance needs (real-time systems, game engines), Nyx offers a no-GC mode:</p>
+<pre>make run-no-gc FILE=program.nx</pre>
+<p>In no-GC mode, you must manage memory manually with <code>alloc()</code> and <code>free()</code>.</p>
+<h2>Self-hosting: the ultimate benchmark</h2>
+<p>The Nyx compiler is written in Nyx and compiles itself. This is called <strong>self-hosting</strong> — and it is the ultimate performance test. If the compiler were slow, compiling itself would be painfully slow.</p>
+<p>The compilation pipeline achieves a <strong>fixed point</strong>: compiling the compiler twice produces identical output. This proves both correctness and consistency.</p>
+<h2>Exercises</h2>
+<ol>
+<li>Write a program that sums numbers 1 to 10,000,000. Compile it with <code>make compile</code> and look at the generated <code>.ll</code> file. Can you find the loop in the IR?</li>
+</ol>
+<ol>
+<li>Write two versions of string building: one with <code>+</code> concatenation in a loop, another with <code>StringBuilder</code>. Time both with a large iteration count.</li>
+</ol>
+<ol>
+<li>Write a function that computes fibonacci(40). Compare the time with the same algorithm in Python or another interpreted language.</li>
+</ol>
+<ol>
+<li>Look at the IR for a simple function with an <code>if</code> statement. Can you identify the branch instructions?</li>
+</ol>
+<ol>
+<li>Write a program that creates 1 million structs in a loop. Then write one that creates 1 million integers. Compare the performance difference.</li>
+</ol>
+<h2>Summary</h2>
+<ul>
+<li>Nyx compiles to LLVM IR, then LLVM generates optimized native machine code.</li>
+<li>Use <code>make compile</code> to see the generated IR.</li>
+<li>LLVM optimizes: dead code elimination, constant folding, inlining, loop optimization.</li>
+<li>Nyx achieves C-like performance on most benchmarks.</li>
+<li>Write fast code: prefer integers, minimize allocations, use StringBuilder, cache values.</li>
+<li>The Boehm GC handles memory automatically with low-latency pauses.</li>
+<li>No-GC mode is available for manual memory management.</li>
+<li>The Nyx compiler is self-hosting — it compiles itself.</li>
+</ul>
+<p>Next chapter: <a href="21-ffi.md">FFI — Calling C code →</a></p>
+
+    <div class="book-nav">
+        <a href="19.html" class="book-nav-prev">&larr; Previous: Your second project — A web server</a>
+        <a href="21.html" class="book-nav-next">Next: FFI — Calling C code &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Products</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/learn/">Learn</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

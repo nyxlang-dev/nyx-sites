@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cliente TCP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Cliente TCP</h1>
+
+    <p>Nyx provee primitivas TCP incorporadas: <code>tcp_connect</code>, <code>tcp_write</code>, <code>tcp_read</code>, <code>tcp_read_line</code>, y <code>tcp_close</code>. Este ejemplo se conecta a un servidor web y envía manualmente una solicitud HTTP/1.0 sobre un socket TCP crudo.</p>
+
+    <h2>Código</h2>
+    <pre><code><span class="cm">// TCP client — connect, send a request, read a response</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"example.com"</span>, <span class="num">80</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
+        print(<span class="str">"connection failed"</span>)
+        <span class="kw">return</span> <span class="num">1</span>
+    }
+
+    <span class="kw">let</span> req: <span class="ty">String</span> = <span class="str">"GET / HTTP/1.0\r\nHost: example.com\r\n\r\n"</span>
+    tcp_write(fd, req)
+
+    <span class="kw">let</span> status_line: <span class="ty">String</span> = tcp_read_line(fd)
+    print(<span class="str">"status: "</span> + status_line)
+
+    <span class="kw">var</span> line: <span class="ty">String</span> = tcp_read_line(fd)
+    <span class="kw">while</span> line.length() > <span class="num">0</span> <span class="kw">and</span> line != <span class="str">"\r"</span> {
+        line = tcp_read_line(fd)
+    }
+
+    <span class="kw">let</span> body: <span class="ty">String</span> = tcp_read(fd, <span class="num">256</span>)
+    print(<span class="str">"body (first 256 bytes): "</span> + body.substring(<span class="num">0</span>, <span class="num">100</span>))
+
+    tcp_close(fd)
+    <span class="kw">return</span> <span class="num">0</span>
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">status: HTTP/1.0 200 OK
+body (first 256 bytes): &lt;!doctype html&gt;...</pre>
+
+    <h2>Explicación</h2>
+    <p><code>tcp_connect(host, port)</code> resuelve el nombre de host y crea una conexión TCP, devolviendo un descriptor de archivo. <code>tcp_write</code> envía datos, <code>tcp_read_line</code> lee hasta encontrar <code>\n</code>, y <code>tcp_read(fd, n)</code> lee hasta <code>n</code> bytes. Siempre cierre las conexiones con <code>tcp_close</code>.</p>
+    <p>Este es el nivel más bajo de redes en Nyx. Para HTTP, use <code>std/http</code>, que envuelve estas primitivas con el parseo de solicitud/respuesta (ver receta 49).</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/45-dns-resolve.html">← Anterior</a>
+        <a href="/es/by-example/47-tcp-server.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/46-tcp-client.nx">examples/by-example/46-tcp-client.nx</a></small></p>
+</main>
+
+</body>
+</html>

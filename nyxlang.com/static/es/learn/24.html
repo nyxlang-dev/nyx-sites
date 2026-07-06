@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistemas — Assembly inline, volatile, atomic — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Sistemas — Assembly inline, volatile, atomic</h1>
+
+<h2>Nyx como lenguaje de sistemas</h2>
+<p>La mayoría de los libros de programación se detienen en "construir un servidor web." Pero Nyx está diseñado para ir más allá — puede reemplazar a C para programación de sistemas. Este capítulo cubre las herramientas de bajo nivel que lo hacen posible.</p>
+<h2>Inline assembly</h2>
+<p>Cuando necesitas ejecutar una instrucción específica de CPU, Nyx te permite escribir assembly directamente:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;nop&quot;</span>)    <span class="cm">// no-operation: no hace nada, toma un ciclo</span>
+    }
+}</pre>
+<p>El inline assembly usa sintaxis AT&T estilo GCC y se compila a inline assembly de LLVM.</p>
+<h3>Manipulación de registros</h3>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;mov $42, %rax&quot;</span>)     <span class="cm">// mover 42 al registro RAX</span>
+        <span class="fn">asm</span>(<span class="str">&quot;add $8, %rax&quot;</span>)      <span class="cm">// sumar 8 a RAX (ahora 50)</span>
+    }
+}</pre>
+<h3>Cuándo usar inline assembly</h3>
+<ul>
+<li><strong>Instrucciones específicas de CPU</strong>: CPUID, RDTSC (leer contador de timestamp), control de caché</li>
+<li><strong>Manejadores de interrupciones</strong>: <code>cli</code>/<code>sti</code> para deshabilitar/habilitar interrupciones</li>
+<li><strong>Programación bare-metal</strong>: bootloaders, kernels de SO</li>
+<li><strong>Secuencias críticas de rendimiento</strong>: cuando el optimizador de LLVM no genera código óptimo</li>
+</ul>
+<p>Para casi todo el código a nivel de aplicación, nunca necesitas inline assembly. Existe para los casos raros donde necesitas control exacto sobre lo que hace la CPU.</p>
+<h2>Atributos de funciones</h2>
+<p>Nyx soporta atributos de funciones para programación de sistemas:</p>
+<pre><span class="kw">#[naked]</span>
+<span class="kw">fn</span> <span class="fn">manejador_interrupcion</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;push %rax&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;push %rbx&quot;</span>)
+        <span class="cm">// ... manejar interrupción ...</span>
+        <span class="fn">asm</span>(<span class="str">&quot;pop %rbx&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;pop %rax&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;iretq&quot;</span>)
+    }
+}</pre>
+<ul>
+<li><code>#[naked]</code> — sin prólogo/epílogo de función (sin setup de stack frame)</li>
+<li><code>#[interrupt]</code> — marca como manejador de interrupción de hardware</li>
+<li><code>#[link_section(".text.boot")]</code> — coloca la función en una sección específica del binario</li>
+<li><code>#[export_name("_start")]</code> — controla el nombre del símbolo en el binario</li>
+</ul>
+<h2>Acceso volátil a memoria</h2>
+<p>El acceso normal a memoria puede ser reordenado o eliminado por el compilador. El acceso volátil no:</p>
+<pre><span class="kw">fn</span> <span class="fn">leer_registro_hardware</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> mmio_addr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="num">0x40000000</span> <span class="kw">as</span> <span class="op">*</span><span class="ty">int</span>
+        <span class="kw">return</span> <span class="fn">volatile_read</span>(mmio_addr)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">escribir_registro_hardware</span>(valor: <span class="ty">int</span>) {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> mmio_addr: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="num">0x40000000</span> <span class="kw">as</span> <span class="op">*</span><span class="ty">int</span>
+        <span class="fn">volatile_write</span>(mmio_addr, valor)
+    }
+}</pre>
+<h3>Por qué importa volatile</h3>
+<p>Sin volatile, el compilador podría:</p>
+<ul>
+<li>Leer un registro de hardware una vez y cachear el valor (perdiendo actualizaciones)</li>
+<li>Eliminar una escritura a un registro porque "nadie lo lee" (¡el hardware sí!)</li>
+<li>Reordenar lecturas y escrituras (el hardware depende del orden exacto)</li>
+</ul>
+<p>Volatile garantiza: cada lectura lee de memoria, cada escritura escribe a memoria, en exactamente el orden que especificaste.</p>
+<h2>Operaciones atómicas</h2>
+<p>Las operaciones atómicas son la base de la programación lock-free. Garantizan que un ciclo de lectura-modificación-escritura se complete sin interrupción:</p>
+<pre><span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">unsafe</span> {
+        <span class="kw">let</span> bandera: <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> <span class="fn">alloc</span>(<span class="num">8</span>)
+        <span class="fn">atomic_store</span>(bandera, <span class="num">0</span>)
+
+        <span class="cm">// En un thread:</span>
+        <span class="fn">atomic_store</span>(bandera, <span class="num">1</span>)    <span class="cm">// señal de &quot;listo&quot;</span>
+
+        <span class="cm">// En otro thread:</span>
+        <span class="kw">let</span> listo: <span class="ty">int</span> <span class="op">=</span> <span class="fn">atomic_load</span>(bandera)
+        <span class="kw">if</span> listo <span class="op">==</span> <span class="num">1</span> {
+            <span class="fn">print</span>(<span class="str">&quot;El otro thread señaló listo&quot;</span>)
+        }
+
+        <span class="fn">free</span>(bandera)
+    }
+}</pre>
+<h3>Atomic vs mutex</h3>
+<div class="table-wrapper"><table>
+<thead><tr>
+<th>Atomic</th>
+<th>Mutex</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Solo operaciones individuales</td>
+<td>Protege bloques de código</td>
+</tr>
+<tr>
+<td>Sin espera (lock-free)</td>
+<td>Puede bloquear (threads esperan)</td>
+</tr>
+<tr>
+<td>Muy rápido (~1 nanosegundo)</td>
+<td>Más lento (~50 nanosegundos)</td>
+</tr>
+<tr>
+<td>Difícil de usar correctamente</td>
+<td>Fácil de razonar</td>
+</tr>
+</tbody></table></div>
+<p>Usa atomics para flags simples, contadores y máquinas de estado. Usa mutexes para secciones críticas complejas.</p>
+<h2>Tipos con tamaño fijo para hardware</h2>
+<p>Cuando interactúas con hardware o protocolos binarios, necesitas tipos de tamaño exacto:</p>
+<pre><span class="kw">var</span> byte: <span class="ty">i8</span> <span class="op">=</span> <span class="num">0xFF</span>
+<span class="kw">var</span> word: <span class="ty">i16</span> <span class="op">=</span> <span class="num">0x1234</span>
+<span class="kw">var</span> dword: <span class="ty">i32</span> <span class="op">=</span> <span class="num">0xDEADBEEF</span>
+<span class="kw">var</span> qword: <span class="ty">i64</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">var</span> ubyte: <span class="ty">u8</span> <span class="op">=</span> <span class="num">255</span>
+<span class="kw">var</span> uword: <span class="ty">u16</span> <span class="op">=</span> <span class="num">65535</span>
+<span class="kw">var</span> udword: <span class="ty">u32</span> <span class="op">=</span> <span class="num">4294967295</span>
+<span class="kw">var</span> uqword: <span class="ty">u64</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="kw">var</span> single: <span class="ty">f32</span> <span class="op">=</span> <span class="num">3.14</span></pre>
+<p>Estos tipos se mapean directamente a anchos de registros de hardware y son esenciales para drivers de dispositivos y parsing de protocolos binarios.</p>
+<h2>Modo sin GC</h2>
+<p>Para programación de sistemas, a menudo no puedes tener un recolector de basura. Nyx soporta compilación sin el GC:</p>
+<pre>make run-no-gc FILE=programa.nx</pre>
+<p>En modo sin GC:</p>
+<ul>
+<li>No se enlaza Boehm GC</li>
+<li>Toda la gestión de memoria es manual (<code>alloc</code>/<code>free</code>)</li>
+<li>Binarios más pequeños</li>
+<li>Rendimiento determinístico (sin pausas de GC)</li>
+<li>Debes liberar todo — las fugas son tu responsabilidad</li>
+</ul>
+<h2>Compilación cruzada</h2>
+<p>Nyx puede compilar para diferentes arquitecturas:</p>
+<pre>make cross FILE=programa.nx TARGET=aarch64-linux-gnu</pre>
+<p>Esto genera un binario para ARM64 Linux desde una máquina x86. Combinado con modo sin GC, puedes apuntar a sistemas embebidos y microcontroladores.</p>
+<h2>Target WebAssembly</h2>
+<p>Nyx también puede compilar a WebAssembly para ejecutarse en navegadores:</p>
+<pre>make wasm FILE=programa.nx</pre>
+<p>Esto genera un archivo <code>.wasm</code> que puede ser cargado por una página web.</p>
+<h2>Ejemplo práctico: leer el timestamp de CPU</h2>
+<pre><span class="kw">fn</span> <span class="fn">rdtsc</span>() <span class="op">-&gt;</span> <span class="ty">int</span> {
+    <span class="kw">var</span> resultado: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">unsafe</span> {
+        <span class="fn">asm</span>(<span class="str">&quot;rdtsc&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;shl $32, %rdx&quot;</span>)
+        <span class="fn">asm</span>(<span class="str">&quot;or %rdx, %rax&quot;</span>)
+    }
+    <span class="kw">return</span> resultado
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> inicio: <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_us</span>()
+    <span class="cm">// ... hacer algún trabajo ...</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> { i <span class="op">+=</span> <span class="num">1</span> }
+    <span class="kw">let</span> fin: <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_us</span>()
+    <span class="fn">print</span>(<span class="str">&quot;Transcurrido: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(fin <span class="op">-</span> inicio) <span class="op">+</span> <span class="str">&quot; microsegundos&quot;</span>)
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Escribe un programa que use <code>volatile_write</code> y <code>volatile_read</code> para implementar un spin-lock simple (candado con espera activa).</li>
+</ol>
+<ol>
+<li>Usa <code>atomic_store</code> y <code>atomic_load</code> para implementar una bandera booleana thread-safe que un thread establece y otro thread consulta.</li>
+</ol>
+<ol>
+<li>Escribe un programa usando tipos con tamaño fijo (<code>i8</code>, <code>i16</code>, <code>i32</code>) que empaque tres valores en un solo <code>i64</code> usando desplazamiento de bits.</li>
+</ol>
+<ol>
+<li>Compila un programa simple "hola mundo" en modo sin GC y compara el tamaño del binario con la versión normal con GC habilitado.</li>
+</ol>
+<ol>
+<li>Escribe una función que use inline assembly para ejecutar un sled de nops (100 nops seguidos) y mide su tiempo de ejecución.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li><code>unsafe { asm("...") }</code> ejecuta inline assembly (sintaxis AT&T).</li>
+<li>Atributos de función: <code>#[naked]</code>, <code>#[interrupt]</code>, <code>#[link_section]</code>, <code>#[export_name]</code>.</li>
+<li><code>volatile_read</code>/<code>volatile_write</code> previenen reordenamiento del compilador en acceso a memoria.</li>
+<li><code>atomic_load</code>/<code>atomic_store</code> proporcionan sincronización lock-free entre threads.</li>
+<li>Tipos con tamaño fijo (<code>i8</code>, <code>i16</code>, <code>i32</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>f32</code>) coinciden con anchos de hardware.</li>
+<li>El modo sin GC habilita gestión de memoria manual y determinística.</li>
+<li>Compilación cruzada y targets WebAssembly extienden Nyx más allá de Linux de escritorio.</li>
+</ul>
+<p>Siguiente capítulo: <a href="25-caso-estudio-kv.md">Caso de estudio — Cómo se construyó nyx-kv →</a></p>
+
+    <div class="book-nav">
+        <a href="23.html" class="book-nav-prev">&larr; Anterior: Async y event loop</a>
+        <a href="25.html" class="book-nav-next">Siguiente: Caso de estudio — Cómo se construyó nyx-kv &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

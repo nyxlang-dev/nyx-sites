@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creación de Threads — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Creación de Threads</h1>
+
+    <p><code>thread_spawn(fn)</code> inicia un nuevo hilo del sistema operativo que ejecuta la función dada de forma concurrente. <code>thread_join(handle)</code> bloquea el hilo que llama hasta que el hilo creado termina, y retorna su resultado entero. Este es el primitivo fundamental de concurrencia en Nyx.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Threads: thread_spawn() para crear un hilo, thread_join() para esperar
+
+fn tarea_hilo() -> int {
+    print("from thread")
+    return 42
+}
+
+fn calcular_cuadrado() -> int {
+    let n: int = 7
+    return n * n
+}
+
+fn main() -> int {
+    print("from main (antes de spawn)")
+
+    // Crear un thread y esperar su resultado
+    let handle: int = thread_spawn(tarea_hilo)
+    let resultado: int = thread_join(handle)
+    print("thread retorno: " + int_to_string(resultado))
+
+    // Segundo thread con cálculo
+    let h2: int = thread_spawn(calcular_cuadrado)
+    let r2: int = thread_join(h2)
+    print("7^2 = " + int_to_string(r2))
+
+    print("from main (despues de join)")
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">from main (antes de spawn)
+from thread
+thread retorno: 42
+7^2 = 49
+from main (despues de join)</pre>
+
+    <h2>Explicación</h2>
+    <p><code>thread_spawn</code> acepta una referencia a función (no una closure con capturas) y retorna un handle entero opaco que representa el hilo en ejecución. La función creada debe tener la firma <code>() -> int</code>. La ejecución de <code>main</code> y del hilo creado procede en paralelo — en este ejemplo el hilo imprime antes de que <code>thread_join</code> retorne, pero el orden exacto de intercalado depende del sistema operativo.</p>
+    <p><code>thread_join(handle)</code> espera a que el hilo termine y recupera su valor de retorno como <code>int</code>. Este es el patrón estándar fork-join: crear trabajo, hacer otras cosas (o crear más hilos), y luego recolectar los resultados. El valor de retorno de <code>tarea_hilo</code> es <code>42</code>, y <code>calcular_cuadrado</code> retorna <code>7 * 7 = 49</code>.</p>
+    <p>Los threads en Nyx corren sobre el pool de threads del sistema operativo y están integrados con el recolector de basura Boehm (<code>GC_THREADS</code> está habilitado en el runtime). Para patrones de concurrencia de más alto nivel, ver los primitivos de goroutines <code>spawn</code>/<code>select</code> y el planificador work-stealing M:N en recetas posteriores.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/39-random-uuid.html">← Anterior</a>
+        <a href="/es/by-example/41-base64.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/40-thread-spawn.nx">examples/by-example/40-thread-spawn.nx</a></small></p>
+</main>
+
+</body>
+</html>

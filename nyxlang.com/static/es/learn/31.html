@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Construyendo una base de datos — nyx-db — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Construyendo una base de datos — nyx-db</h1>
+
+<h2>Que es nyx-db?</h2>
+<p>nyx-db es un <strong>motor de base de datos SQL embebido</strong> escrito completamente en Nyx. Acepta comandos SQL sobre el protocolo RESP (igual que nyx-kv), asi que puedes usar <code>redis-cli</code> como cliente. Piensa en el como un mini SQLite accesible por red.</p>
+
+<h2>Arquitectura</h2>
+<pre>SQL string ──► Lexer ──► Parser ──► AST ──► Executor ──► Storage
+                                                            │
+                                                         ┌──┴──┐
+                                                         │.db  │
+                                                         │file │
+                                                         └─────┘</pre>
+<p>El pipeline tiene cuatro etapas:</p>
+<ol>
+<li><strong>Lexer</strong> — tokeniza la cadena SQL en palabras clave, identificadores, literales y operadores.</li>
+<li><strong>Parser</strong> — parser de descenso recursivo que construye un AST (arbol de sintaxis abstracta).</li>
+<li><strong>Executor</strong> — recorre el AST y ejecuta la operacion solicitada.</li>
+<li><strong>Storage</strong> — las filas se almacenan en memoria en Maps, con persistencia en segundo plano a un archivo <code>.db</code>.</li>
+</ol>
+
+<h2>Conectar</h2>
+<p>nyx-db escucha en el puerto 6382 por defecto:</p>
+<pre>$ redis-cli -p 6382
+127.0.0.1:6382&gt; PING
+PONG</pre>
+
+<h2>Crear tablas</h2>
+<pre>127.0.0.1:6382&gt; SQL CREATE TABLE users (id INT PRIMARY KEY, name TEXT, age INT)
+OK</pre>
+<p>Tipos soportados: <code>INT</code>, <code>TEXT</code>, <code>REAL</code>. La restriccion <code>PRIMARY KEY</code> garantiza unicidad.</p>
+
+<h2>Insertar datos</h2>
+<pre>127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (1, 'Alice', 30)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (2, 'Bob', 25)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (3, 'Charlie', 35)
+OK</pre>
+
+<h2>Consultar datos</h2>
+<pre>127.0.0.1:6382&gt; SQL SELECT * FROM users
+1) "id=1, name=Alice, age=30"
+2) "id=2, name=Bob, age=25"
+3) "id=3, name=Charlie, age=35"</pre>
+<p>Selecciona columnas especificas con una clausula WHERE:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT name, age FROM users WHERE age > 28
+1) "name=Alice, age=30"
+2) "name=Charlie, age=35"</pre>
+<p>Ordenar y limitar resultados:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT * FROM users ORDER BY age DESC LIMIT 2
+1) "id=3, name=Charlie, age=35"
+2) "id=1, name=Alice, age=30"</pre>
+<p>Funciones de agregacion:</p>
+<pre>127.0.0.1:6382&gt; SQL SELECT COUNT(*) FROM users
+(integer) 3</pre>
+
+<h2>Actualizar y eliminar</h2>
+<pre>127.0.0.1:6382&gt; SQL UPDATE users SET age = 31 WHERE name = 'Alice'
+OK (1 row updated)
+
+127.0.0.1:6382&gt; SQL DELETE FROM users WHERE age &lt; 30
+OK (1 row deleted)</pre>
+
+<h2>Indices</h2>
+<p>Crea un indice para acelerar consultas en columnas buscadas frecuentemente:</p>
+<pre>127.0.0.1:6382&gt; SQL CREATE INDEX idx_age ON users (age)
+OK</pre>
+
+<h2>Transacciones</h2>
+<p>Agrupa multiples operaciones en una transaccion atomica:</p>
+<pre>127.0.0.1:6382&gt; SQL BEGIN
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (4, 'Diana', 28)
+OK
+127.0.0.1:6382&gt; SQL INSERT INTO users VALUES (5, 'Eve', 22)
+OK
+127.0.0.1:6382&gt; SQL COMMIT
+OK</pre>
+<p>Usa <code>ROLLBACK</code> para deshacer todos los cambios desde <code>BEGIN</code>.</p>
+
+<h2>Meta comandos</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Comando</th><th>Descripcion</th></tr></thead>
+<tbody>
+<tr><td><code>TABLES</code></td><td>Lista todas las tablas</td></tr>
+<tr><td><code>SCHEMA tablename</code></td><td>Muestra el esquema de la tabla (columnas y tipos)</td></tr>
+<tr><td><code>INFO</code></td><td>Estadisticas del servidor</td></tr>
+<tr><td><code>PING</code></td><td>Verificacion de salud</td></tr>
+</tbody></table></div>
+
+<h2>Persistencia</h2>
+<p>nyx-db persiste datos en un archivo <code>.db</code>. Un hilo de guardado en segundo plano escribe snapshots periodicamente, y un handler de cierre asegura un guardado final en <code>SIGTERM</code>. Al reiniciar, todas las tablas y filas se restauran desde disco.</p>
+<pre>$ ./nyx-db --data mydata.db --port 6383</pre>
+
+<h2>El parser SQL</h2>
+<p>El parser es un clasico <strong>parser de descenso recursivo</strong>. Lee tokens de uno en uno y construye nodos del AST. Por ejemplo, parsear <code>SELECT * FROM users WHERE age > 25</code> produce:</p>
+<pre>["SELECT",                    <span class="cm">&larr; tipo de nodo</span>
+  ["*"],                      <span class="cm">&larr; columnas</span>
+  "users",                    <span class="cm">&larr; nombre de tabla</span>
+  [">", "age", 25],           <span class="cm">&larr; expresion WHERE</span>
+  [],                         <span class="cm">&larr; ORDER BY (vacio)</span>
+  -1,                         <span class="cm">&larr; LIMIT (ninguno)</span>
+  0,                          <span class="cm">&larr; OFFSET</span>
+  []]                         <span class="cm">&larr; JOIN (vacio)</span></pre>
+<p>Las expresiones WHERE soportan <code>AND</code>, <code>OR</code> y operadores de comparacion (<code>=</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>) con la precedencia correcta.</p>
+
+<h2>Resumen</h2>
+<ul>
+<li>nyx-db es una base de datos SQL escrita en Nyx, accesible via <code>redis-cli</code>.</li>
+<li>Soporta <code>CREATE TABLE</code>, <code>INSERT</code>, <code>SELECT</code> (con WHERE, ORDER BY, LIMIT), <code>UPDATE</code>, <code>DELETE</code>.</li>
+<li>Tipos: <code>INT</code>, <code>TEXT</code>, <code>REAL</code>.</li>
+<li>Transacciones con <code>BEGIN</code> / <code>COMMIT</code> / <code>ROLLBACK</code>.</li>
+<li>Persistencia via snapshots en segundo plano y handler de SIGTERM.</li>
+<li>El parser SQL es un parser de descenso recursivo que construye un AST.</li>
+</ul>
+
+    <div class="book-nav">
+        <a href="30.html" class="book-nav-prev">&larr; Anterior: HTTP/2 — Protocolos binarios</a>
+        <a href="apendice-a.html" class="book-nav-next">Siguiente: Apéndice A: Referencia rápida de sintaxis &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

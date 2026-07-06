@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operador Try — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Operador Try</h1>
+
+    <p>El operador <code>?</code> es azúcar sintáctica para propagar errores. Agregar <code>?</code> a una expresión que retorna <code>Result</code> desempaqueta el valor <code>Ok</code> o retorna inmediatamente el <code>Err</code> al que llamó — sin necesidad de un match explícito.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Try operator (?): encadenar operaciones que pueden fallar, short-circuit en Err
+
+enum Result {
+    Ok(int),
+    Err(String)
+}
+
+fn parse_positive(s: String) -> Result {
+    let n: int = string_to_int(s)
+    if n &lt;= 0 {
+        return Result.Err("no es positivo: " + s)
+    }
+    return Result.Ok(n)
+}
+
+fn double_it(n: int) -> Result {
+    if n &gt; 1000 {
+        return Result.Err("numero demasiado grande")
+    }
+    return Result.Ok(n * 2)
+}
+
+// ? propaga el Err automáticamente sin match explícito
+fn pipeline(s: String) -> Result {
+    let n: int = parse_positive(s)?
+    let d: int = double_it(n)?
+    return Result.Ok(d + 1)
+}
+
+fn show(r: Result) {
+    match r {
+        Result.Ok(v)  =&gt; print("ok: " + int_to_string(v)),
+        Result.Err(e) =&gt; print("err: " + e)
+    }
+}
+
+fn main() -> int {
+    show(pipeline("42"))     // ok: 85  (42*2+1)
+    show(pipeline("-5"))     // err: no es positivo
+    show(pipeline("2000"))   // err: numero demasiado grande
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">ok: 85
+err: no es positivo: -5
+err: numero demasiado grande</pre>
+
+    <h2>Explicación</h2>
+    <p>Sin <code>?</code>, cada llamada que puede fallar requeriría una expresión <code>match</code> para revisar errores antes de continuar. El operador <code>?</code> automatiza esto: si el resultado es <code>Ok(v)</code>, desempaqueta <code>v</code> y continúa; si es <code>Err(e)</code>, retorna inmediatamente <code>Err(e)</code> desde la función contenedora. La firma de la función también debe retornar un <code>Result</code> para que esto funcione.</p>
+    <p>La función <code>pipeline</code> encadena dos pasos que pueden fallar: parsear un entero positivo y duplicarlo dentro de un límite. Ambas líneas usan <code>?</code>, así que el primer error encontrado corta el resto de la función. Cuando se pasa <code>"-5"</code>, <code>parse_positive</code> retorna <code>Err</code> de inmediato y <code>double_it</code> nunca se llama.</p>
+    <p>Este patrón mantiene la lógica del camino feliz limpia y legible — <code>pipeline</code> se lee casi como código imperativo secuencial — a la vez que preserva un manejo de errores completo y explícito. Es el estilo preferido para operaciones de múltiples pasos en Nyx frente a expresiones match anidadas profundamente.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/25-result-ok-err.html">← Anterior</a>
+        <a href="/es/by-example/27-if-let.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/26-try-operator.nx">examples/by-example/26-try-operator.nx</a></small></p>
+</main>
+
+</body>
+</html>

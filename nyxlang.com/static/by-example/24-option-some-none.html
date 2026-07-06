@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option: Some and None — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Option: Some and None</h1>
+
+    <p><code>Option&lt;T&gt;</code> is Nyx's way of expressing a value that may or may not be present. Instead of returning a sentinel value like <code>-1</code> or risking a null pointer, functions return <code>Option.Some(value)</code> on success or <code>Option.None</code> when there is nothing to return.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Option: función que retorna Some o None, match exhaustivo para manejar ambos
+
+fn find_positive(nums: Array, index: int) -> Option&lt;int&gt; {
+    let val: int = nums[index]
+    if val &gt; 0 {
+        return Option.Some(val)
+    }
+    return Option.None
+}
+
+fn describe(opt: Option&lt;int&gt;) -> String {
+    return match opt {
+        Option.Some(v) =&gt; "encontrado: " + int_to_string(v),
+        Option.None    =&gt; "no encontrado"
+    }
+}
+
+fn main() -> int {
+    let nums: Array = [10, -5, 3, -1, 7]
+
+    // Caso Some: index 0 es positivo
+    let a: Option&lt;int&gt; = find_positive(nums, 0)
+    print(describe(a))
+
+    // Caso None: index 1 es negativo
+    let b: Option&lt;int&gt; = find_positive(nums, 1)
+    print(describe(b))
+
+    // if let para extraer el valor directamente
+    let c: Option&lt;int&gt; = find_positive(nums, 4)
+    if let Option.Some(v) = c {
+        print("if let Some: valor es " + int_to_string(v))
+    } else {
+        print("if let: ningun valor")
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">encontrado: 10
+no encontrado
+if let Some: valor es 7</pre>
+
+    <h2>Explanation</h2>
+    <p><code>Option&lt;T&gt;</code> is a generic enum with two variants: <code>Option.Some(value)</code> wraps an existing value of type <code>T</code>, and <code>Option.None</code> signals absence. Because it is part of the prelude, you do not need to import it — it is always available. This pattern eliminates an entire class of null-related bugs by making optionality explicit in the type system.</p>
+    <p>The <code>describe</code> function shows exhaustive <code>match</code> on an <code>Option</code>. The compiler requires both arms to be handled — forgetting <code>Option.None</code> is a compile-time error. The <code>Some</code> arm uses pattern destructuring to bind the inner value directly to <code>v</code>, which is then available in the arm's expression.</p>
+    <p><code>if let Option.Some(v) = c</code> is a concise shorthand for when you only care about the <code>Some</code> case and want to fall through to an <code>else</code> branch for <code>None</code>. It binds <code>v</code> in the if-body without the ceremony of a full match expression.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/23-derive-clone.html">← Previous</a>
+        <a href="/by-example/25-result-ok-err.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/24-option-some-none.nx">examples/by-example/24-option-some-none.nx</a></small></p>
+</main>
+
+</body>
+</html>

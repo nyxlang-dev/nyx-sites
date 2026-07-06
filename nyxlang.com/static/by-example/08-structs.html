@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structs — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Structs</h1>
+
+    <p>Structs let you group related data under a named type. You attach behavior to a struct with an <code>impl</code> block, giving it methods that operate on its fields through a <code>self</code> parameter.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Structs: definición, campos, impl con métodos, instanciación
+
+struct Point {
+    x: int,
+    y: int
+}
+
+impl Point {
+    fn distance_from_origin(self) -> int {
+        // distancia Manhattan: |x| + |y|
+        var ax: int = self.x
+        if ax < 0 {
+            ax = ax * -1
+        }
+        var ay: int = self.y
+        if ay < 0 {
+            ay = ay * -1
+        }
+        return ax + ay
+    }
+
+    fn to_string(self) -> String {
+        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
+    }
+}
+
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+impl Rectangle {
+    fn area(self) -> int {
+        return self.width * self.height
+    }
+}
+
+fn main() -> int {
+    let p1: Point = Point { x: 3, y: 4 }
+    print("Punto: " + p1.to_string())
+    print("Distancia al origen: " + int_to_string(p1.distance_from_origin()))
+
+    let p2: Point = Point { x: -2, y: 5 }
+    print("Punto: " + p2.to_string())
+    print("Distancia al origen: " + int_to_string(p2.distance_from_origin()))
+
+    let rect: Rectangle = Rectangle { width: 6, height: 7 }
+    print("Area del rectangulo: " + int_to_string(rect.area()))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Punto: (3, 4)
+Distancia al origen: 7
+Punto: (-2, 5)
+Distancia al origen: 7
+Area del rectangulo: 42</pre>
+
+    <h2>Explanation</h2>
+    <p>A struct is defined with the <code>struct</code> keyword, a name, and a comma-separated list of typed fields inside curly braces. Struct names follow PascalCase by convention. Fields are accessed with dot notation: <code>instance.field</code>.</p>
+    <p>Methods are defined in an <code>impl</code> block for the struct. The first parameter <code>self</code> refers to the instance the method is called on — it is similar to <code>this</code> in other languages. Methods can access any field of the struct through <code>self.field_name</code>.</p>
+    <p>Struct instantiation uses the field-initialization syntax: <code>TypeName { field: value, ... }</code>. Every field must be provided; there are no default values unless you write a constructor method explicitly.</p>
+    <p>The Manhattan distance example shows how methods can contain arbitrary logic, local variables, and control flow — they are just functions scoped to a type. Multiple <code>impl</code> blocks can exist for the same struct, and each struct can have its own independent <code>impl</code>.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/07-strings.html">← Previous</a>
+        <a href="/by-example/09-enums.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/08-structs.nx">examples/by-example/08-structs.nx</a></small></p>
+</main>
+
+</body>
+</html>

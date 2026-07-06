@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strings — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/es/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
+
+    <h1>Strings</h1>
+
+    <p>Los strings de Nyx son valores UTF-8 con un amplio conjunto de métodos incorporados. Este ejemplo muestra las operaciones más usadas: recorte de espacios, extracción de subcadenas, conversión de mayúsculas/minúsculas, búsqueda de subcadenas, división e interpolación.</p>
+
+    <h2>Código</h2>
+    <pre><code>// Strings: length, substring, split, contains, trim, toUpper, interpolación
+
+fn main() -> int {
+    let texto: String = "  Hola Nyx  "
+
+    // trim elimina espacios al inicio y al final
+    let limpio: String = texto.trim()
+    print("trim: '" + limpio + "'")
+
+    // length
+    print("longitud: " + int_to_string(limpio.length()))
+
+    // substring(inicio, fin)  — fin es exclusivo
+    let sub: String = limpio.substring(0, 4)
+    print("substring(0,4): " + sub)
+
+    // toUpper / toLower
+    print("toUpper: " + limpio.toUpper())
+    print("toLower: " + limpio.toLower())
+
+    // contains
+    print("contains 'Nyx': " + int_to_string(limpio.contains("Nyx")))
+    print("contains 'Go': " + int_to_string(limpio.contains("Go")))
+
+    // split
+    let frase: String = "uno dos tres"
+    let partes: Array = frase.split(" ")
+    print("partes: " + int_to_string(partes.length()))
+    for p in partes {
+        print("  " + p)
+    }
+
+    // interpolación
+    let lang: String = "Nyx"
+    let v: int = 12
+    print("Lenguaje: ${lang} v0.${v}")
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">trim: 'Hola Nyx'
+longitud: 8
+substring(0,4): Hola
+toUpper: HOLA NYX
+toLower: hola nyx
+contains 'Nyx': 1
+contains 'Go': 0
+partes: 3
+  uno
+  dos
+  tres
+Lenguaje: Nyx v0.12</pre>
+
+    <h2>Explicación</h2>
+    <p><code>.trim()</code> devuelve un nuevo string con los espacios en blanco al inicio y al final eliminados. El string original no se modifica — los strings de Nyx son valores inmutables; todos los métodos devuelven strings nuevos.</p>
+    <p><code>.substring(start, end)</code> extrae una porción desde el índice <code>start</code> hasta, sin incluir, el índice <code>end</code>. Los índices son posiciones de byte. <code>.length()</code> devuelve la longitud en bytes del string, no la cantidad de puntos de código Unicode — para texto ASCII son lo mismo.</p>
+    <p><code>.contains(needle)</code> devuelve <code>1</code> si se encuentra la subcadena, <code>0</code> en caso contrario. <code>.split(separator)</code> divide el string en cada ocurrencia del separador y devuelve un <code>Array</code> con las partes resultantes.</p>
+    <p>La interpolación de strings con <code>${expr}</code> funciona dentro de cualquier string entre comillas dobles. La expresión puede ser una variable, una llamada a función o cualquier otra expresión — el resultado se convierte automáticamente a su representación de string y se incrusta en línea.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/06-maps.html">← Anterior</a>
+        <a href="/es/by-example/08-structs.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/07-strings.nx">examples/by-example/07-strings.nx</a></small></p>
+</main>
+
+</body>
+</html>

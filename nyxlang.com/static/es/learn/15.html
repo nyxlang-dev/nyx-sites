@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traits e impl blocks — The Nyx Book</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Productos</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/learn/">Índice</a>
+    </div>
+
+    <h1>Traits e impl blocks</h1>
+
+<h2>¿Qué es un trait?</h2>
+<p>En el capítulo anterior, viste cómo los enums permiten que un solo tipo tenga múltiples variantes. Los traits resuelven el problema opuesto: permitir que múltiples tipos compartan una interfaz común.</p>
+<p>Un <strong>trait</strong> es un contrato. Dice "cualquier tipo que implemente este trait debe proporcionar estas funciones." Piensa en él como una descripción de puesto — lista lo que el trabajo requiere, pero diferentes personas (tipos) cumplen esos requisitos de maneras diferentes.</p>
+<h2>Tu primer trait</h2>
+<pre><span class="kw">trait</span> Describible {
+    <span class="kw">fn</span> <span class="fn">describir</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}</pre>
+<p>Este trait dice: "cualquier tipo que sea <code>Describible</code> debe tener un método <code>describir</code> que tome a sí mismo y devuelva un String."</p>
+<p>El parámetro <code>self</code> es especial — se refiere al valor sobre el cual se llama el método.</p>
+<h2>Implementar un trait</h2>
+<p>Usa <code>impl NombreTrait for NombreTipo</code> para cumplir el contrato:</p>
+<pre><span class="kw">trait</span> Describible {
+    <span class="kw">fn</span> <span class="fn">describir</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Perro {
+    nombre: <span class="ty">String</span>,
+    raza: <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Auto {
+    marca: <span class="ty">String</span>,
+    anio: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Describible <span class="kw">for</span> Perro {
+    <span class="kw">fn</span> <span class="fn">describir</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.nombre <span class="op">+</span> <span class="str">&quot; el &quot;</span> <span class="op">+</span> <span class="kw">self</span>.raza
+    }
+}
+
+<span class="kw">impl</span> Describible <span class="kw">for</span> Auto {
+    <span class="kw">fn</span> <span class="fn">describir</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.anio) <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="kw">self</span>.marca
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> d: Perro <span class="op">=</span> Perro { nombre: <span class="str">&quot;Rex&quot;</span>, raza: <span class="str">&quot;Pastor Alemán&quot;</span> }
+    <span class="kw">let</span> c: Auto <span class="op">=</span> Auto { marca: <span class="str">&quot;Toyota&quot;</span>, anio: <span class="num">2024</span> }
+
+    <span class="fn">print</span>(d.<span class="fn">describir</span>())    <span class="cm">// Rex el Pastor Alemán</span>
+    <span class="fn">print</span>(c.<span class="fn">describir</span>())    <span class="cm">// 2024 Toyota</span>
+}</pre>
+<p>Tanto <code>Perro</code> como <code>Auto</code> implementan <code>Describible</code>, pero cada uno proporciona su propia versión de <code>describir</code>. El método se llama con sintaxis de punto: <code>d.describir()</code>.</p>
+<h2>Métodos sin traits: bloques impl</h2>
+<p>No siempre necesitas un trait para agregar métodos a un tipo. Un bloque <code>impl</code> simple agrega métodos directamente:</p>
+<pre><span class="kw">struct</span> Rectangulo {
+    ancho: <span class="ty">int</span>,
+    alto: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Rectangulo {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.ancho <span class="op">*</span> <span class="kw">self</span>.alto
+    }
+
+    <span class="kw">fn</span> <span class="fn">perimetro</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="num">2</span> <span class="op">*</span> (<span class="kw">self</span>.ancho <span class="op">+</span> <span class="kw">self</span>.alto)
+    }
+
+    <span class="kw">fn</span> <span class="fn">es_cuadrado</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.ancho <span class="op">==</span> <span class="kw">self</span>.alto
+    }
+
+    <span class="kw">fn</span> <span class="fn">escalar</span>(<span class="kw">self</span>, factor: <span class="ty">int</span>) <span class="op">-&gt;</span> Rectangulo {
+        <span class="kw">return</span> Rectangulo { ancho: <span class="kw">self</span>.ancho <span class="op">*</span> factor, alto: <span class="kw">self</span>.alto <span class="op">*</span> factor }
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> r: Rectangulo <span class="op">=</span> Rectangulo { ancho: <span class="num">10</span>, alto: <span class="num">5</span> }
+
+    <span class="fn">print</span>(r.<span class="fn">area</span>())          <span class="cm">// 50</span>
+    <span class="fn">print</span>(r.<span class="fn">perimetro</span>())     <span class="cm">// 30</span>
+    <span class="fn">print</span>(r.<span class="fn">es_cuadrado</span>())   <span class="cm">// false</span>
+
+    <span class="kw">let</span> grande: Rectangulo <span class="op">=</span> r.<span class="fn">escalar</span>(<span class="num">3</span>)
+    <span class="fn">print</span>(grande.<span class="fn">area</span>())     <span class="cm">// 450</span>
+}</pre>
+<p>Los métodos en bloques <code>impl</code> se llaman con sintaxis de punto, igual que los métodos de traits. El primer parámetro siempre es <code>self</code>.</p>
+<h2>Múltiples traits en un tipo</h2>
+<p>Un tipo puede implementar tantos traits como necesite:</p>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">trait</span> <span class="ty">Eq</span> {
+    <span class="kw">fn</span> <span class="fn">equals</span>(<span class="kw">self</span>, other: Self) <span class="op">-&gt;</span> <span class="ty">bool</span>
+}
+
+<span class="kw">struct</span> Punto {
+    x: <span class="ty">int</span>,
+    y: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Punto {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.x) <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.y) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ty">Eq</span> <span class="kw">for</span> Punto {
+    <span class="kw">fn</span> <span class="fn">equals</span>(<span class="kw">self</span>, other: Punto) <span class="op">-&gt;</span> <span class="ty">bool</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.x <span class="op">==</span> other.x <span class="kw">and</span> <span class="kw">self</span>.y <span class="op">==</span> other.y
+    }
+}
+
+<span class="kw">impl</span> Punto {
+    <span class="kw">fn</span> <span class="fn">distancia_cuadrada</span>(<span class="kw">self</span>, other: Punto) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">let</span> dx: <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span>.x <span class="op">-</span> other.x
+        <span class="kw">let</span> dy: <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span>.y <span class="op">-</span> other.y
+        <span class="kw">return</span> dx <span class="op">*</span> dx <span class="op">+</span> dy <span class="op">*</span> dy
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> a: Punto <span class="op">=</span> Punto { x: <span class="num">3</span>, y: <span class="num">4</span> }
+    <span class="kw">let</span> b: Punto <span class="op">=</span> Punto { x: <span class="num">3</span>, y: <span class="num">4</span> }
+    <span class="kw">let</span> c: Punto <span class="op">=</span> Punto { x: <span class="num">1</span>, y: <span class="num">1</span> }
+
+    <span class="fn">print</span>(a.<span class="fn">to_string</span>())              <span class="cm">// (3, 4)</span>
+    <span class="fn">print</span>(a.<span class="fn">equals</span>(b))                <span class="cm">// true</span>
+    <span class="fn">print</span>(a.<span class="fn">equals</span>(c))                <span class="cm">// false</span>
+    <span class="fn">print</span>(a.<span class="fn">distancia_cuadrada</span>(c))    <span class="cm">// 13</span>
+}</pre>
+<h2>Traits como parámetros de funciones</h2>
+<p>Puedes escribir funciones que acepten cualquier tipo que implemente un trait:</p>
+<pre><span class="kw">trait</span> <span class="ty">Display</span> {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Persona {
+    nombre: <span class="ty">String</span>,
+    edad: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Producto {
+    nombre: <span class="ty">String</span>,
+    precio: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Persona {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.nombre <span class="op">+</span> <span class="str">&quot; (edad &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.edad) <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> Producto {
+    <span class="kw">fn</span> <span class="fn">to_string</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.nombre <span class="op">+</span> <span class="str">&quot; - $&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(<span class="kw">self</span>.precio)
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">imprimir_item</span><span class="op">&lt;</span>T: <span class="ty">Display</span><span class="op">&gt;</span>(item: T) {
+    <span class="fn">print</span>(<span class="str">&quot;Item: &quot;</span> <span class="op">+</span> item.<span class="fn">to_string</span>())
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> p: Persona <span class="op">=</span> Persona { nombre: <span class="str">&quot;Alice&quot;</span>, edad: <span class="num">30</span> }
+    <span class="kw">let</span> prod: Producto <span class="op">=</span> Producto { nombre: <span class="str">&quot;Laptop&quot;</span>, precio: <span class="num">999</span> }
+
+    <span class="fn">imprimir_item</span>(p)       <span class="cm">// Item: Alice (edad 30)</span>
+    <span class="fn">imprimir_item</span>(prod)    <span class="cm">// Item: Laptop - $999</span>
+}</pre>
+<p>La sintaxis <code><T: Display></code> significa "T puede ser cualquier tipo, siempre que implemente <code>Display</code>." Esto se llama un <strong>trait bound</strong> (restricción de trait).</p>
+<h2>Ejemplo práctico: un sistema de formas</h2>
+<pre><span class="kw">trait</span> Forma {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+    <span class="kw">fn</span> <span class="fn">nombre</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Circulo {
+    radio: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Cuadrado {
+    lado: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Triangulo {
+    base: <span class="ty">int</span>,
+    altura: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Forma <span class="kw">for</span> Circulo {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="num">3</span> <span class="op">*</span> <span class="kw">self</span>.radio <span class="op">*</span> <span class="kw">self</span>.radio
+    }
+    <span class="kw">fn</span> <span class="fn">nombre</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Círculo&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> Forma <span class="kw">for</span> Cuadrado {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.lado <span class="op">*</span> <span class="kw">self</span>.lado
+    }
+    <span class="kw">fn</span> <span class="fn">nombre</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Cuadrado&quot;</span>
+    }
+}
+
+<span class="kw">impl</span> Forma <span class="kw">for</span> Triangulo {
+    <span class="kw">fn</span> <span class="fn">area</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.base <span class="op">*</span> <span class="kw">self</span>.altura <span class="op">/</span> <span class="num">2</span>
+    }
+    <span class="kw">fn</span> <span class="fn">nombre</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Triángulo&quot;</span>
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">imprimir_forma</span><span class="op">&lt;</span>T: Forma<span class="op">&gt;</span>(s: T) {
+    <span class="fn">print</span>(s.<span class="fn">nombre</span>() <span class="op">+</span> <span class="str">&quot; tiene área &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(s.<span class="fn">area</span>()))
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> c: Circulo <span class="op">=</span> Circulo { radio: <span class="num">10</span> }
+    <span class="kw">let</span> cu: Cuadrado <span class="op">=</span> Cuadrado { lado: <span class="num">7</span> }
+    <span class="kw">let</span> t: Triangulo <span class="op">=</span> Triangulo { base: <span class="num">6</span>, altura: <span class="num">8</span> }
+
+    <span class="fn">imprimir_forma</span>(c)     <span class="cm">// Círculo tiene área 300</span>
+    <span class="fn">imprimir_forma</span>(cu)    <span class="cm">// Cuadrado tiene área 49</span>
+    <span class="fn">imprimir_forma</span>(t)     <span class="cm">// Triángulo tiene área 24</span>
+}</pre>
+<h2>Ejemplo práctico: un sistema de puntuación</h2>
+<pre><span class="kw">trait</span> Puntuable {
+    <span class="kw">fn</span> <span class="fn">puntaje</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span>
+    <span class="kw">fn</span> <span class="fn">etiqueta</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span>
+}
+
+<span class="kw">struct</span> Estudiante {
+    nombre: <span class="ty">String</span>,
+    promedio: <span class="ty">int</span>
+}
+
+<span class="kw">struct</span> Equipo {
+    nombre: <span class="ty">String</span>,
+    victorias: <span class="ty">int</span>,
+    derrotas: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> Puntuable <span class="kw">for</span> Estudiante {
+    <span class="kw">fn</span> <span class="fn">puntaje</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.promedio
+    }
+    <span class="kw">fn</span> <span class="fn">etiqueta</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Estudiante &quot;</span> <span class="op">+</span> <span class="kw">self</span>.nombre
+    }
+}
+
+<span class="kw">impl</span> Puntuable <span class="kw">for</span> Equipo {
+    <span class="kw">fn</span> <span class="fn">puntaje</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">int</span> {
+        <span class="kw">return</span> <span class="kw">self</span>.victorias <span class="op">*</span> <span class="num">3</span>
+    }
+    <span class="kw">fn</span> <span class="fn">etiqueta</span>(<span class="kw">self</span>) <span class="op">-&gt;</span> <span class="ty">String</span> {
+        <span class="kw">return</span> <span class="str">&quot;Equipo &quot;</span> <span class="op">+</span> <span class="kw">self</span>.nombre
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">imprimir_ranking</span><span class="op">&lt;</span>T: Puntuable<span class="op">&gt;</span>(item: T) {
+    <span class="fn">print</span>(item.<span class="fn">etiqueta</span>() <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span>(item.<span class="fn">puntaje</span>()) <span class="op">+</span> <span class="str">&quot; puntos&quot;</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> s: Estudiante <span class="op">=</span> Estudiante { nombre: <span class="str">&quot;Alice&quot;</span>, promedio: <span class="num">95</span> }
+    <span class="kw">let</span> t: Equipo <span class="op">=</span> Equipo { nombre: <span class="str">&quot;Nyx FC&quot;</span>, victorias: <span class="num">8</span>, derrotas: <span class="num">2</span> }
+
+    <span class="fn">imprimir_ranking</span>(s)    <span class="cm">// Estudiante Alice: 95 puntos</span>
+    <span class="fn">imprimir_ranking</span>(t)    <span class="cm">// Equipo Nyx FC: 24 puntos</span>
+}</pre>
+<h2>Ejercicios</h2>
+<ol>
+<li>Define un trait <code>Area</code> con método <code>fn area(self) -> int</code>. Impleméntalo para <code>Circulo</code> (radio) y <code>Rectangulo</code> (ancho, alto). Escribe una función que imprima el área de cualquier implementador de <code>Area</code>.</li>
+</ol>
+<ol>
+<li>Define un trait <code>Imprimible</code> con <code>fn mostrar(self) -> String</code>. Impleméntalo para tres structs diferentes de tu elección.</li>
+</ol>
+<ol>
+<li>Crea un <code>struct Contador { valor: int }</code> con un bloque <code>impl</code> que tenga métodos: <code>incrementar(self) -> Contador</code>, <code>decrementar(self) -> Contador</code>, <code>es_cero(self) -> bool</code>.</li>
+</ol>
+<ol>
+<li>Define traits <code>Nombrado</code> (con <code>fn nombre(self) -> String</code>) y <code>ConEdad</code> (con <code>fn edad(self) -> int</code>). Implementa ambos para un struct <code>Persona</code>.</li>
+</ol>
+<ol>
+<li>Construye un mini reino animal: trait <code>Animal</code> con <code>fn hablar(self) -> String</code> y <code>fn patas(self) -> int</code>. Impleméntalo para <code>Perro</code>, <code>Gato</code> y <code>Arana</code>. Imprime un informe de cada uno.</li>
+</ol>
+<h2>Resumen</h2>
+<ul>
+<li>Un <code>trait</code> define un conjunto de métodos que un tipo debe implementar.</li>
+<li><code>impl Trait for Tipo</code> proporciona la implementación.</li>
+<li><code>impl Tipo</code> agrega métodos directamente sin un trait.</li>
+<li>Los métodos usan <code>self</code> como primer parámetro y se llaman con sintaxis de punto.</li>
+<li>Los trait bounds (<code><T: Display></code>) permiten que las funciones acepten cualquier tipo con ese trait.</li>
+<li>Un tipo puede implementar múltiples traits.</li>
+<li>Los traits separan el "qué" (interfaz) del "cómo" (implementación).</li>
+</ul>
+<p>Siguiente capítulo: <a href="16-generics.md">Generics →</a></p>
+
+    <div class="book-nav">
+        <a href="14.html" class="book-nav-prev">&larr; Anterior: Enums y pattern matching</a>
+        <a href="16.html" class="book-nav-next">Siguiente: Generics &rarr;</a>
+    </div>
+</main>
+
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="/#products">nyx-kv</a>
+            <a href="/#products">nyx-serve</a>
+            <a href="/#products">nyx-proxy</a>
+        </div>
+        <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="/es/learn/">Aprender</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/SPEC.md">Spec</a>
+        </div>
+        <div class="footer-col">
+            <h4>Language</h4>
+            <a href="/">English</a>
+            <a href="/es/">Español</a>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        Built with Nyx. Served by Nyx. Apache 2.0.<br>
+        &copy; 2026 Ottavio Cavallina
+    </div>
+</footer>
+
+<script src="/learn/book-sidebar.js"></script>
+</body>
+</html>

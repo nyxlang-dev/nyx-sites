@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strings — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/#products">Products</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
+</nav>
+
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
+
+    <h1>Strings</h1>
+
+    <p>Nyx strings are UTF-8 values with a rich set of built-in methods. This example demonstrates the most commonly used operations: trimming whitespace, slicing, case conversion, substring search, splitting, and interpolation.</p>
+
+    <h2>Code</h2>
+    <pre><code>// Strings: length, substring, split, contains, trim, toUpper, interpolación
+
+fn main() -> int {
+    let texto: String = "  Hola Nyx  "
+
+    // trim elimina espacios al inicio y al final
+    let limpio: String = texto.trim()
+    print("trim: '" + limpio + "'")
+
+    // length
+    print("longitud: " + int_to_string(limpio.length()))
+
+    // substring(inicio, fin)  — fin es exclusivo
+    let sub: String = limpio.substring(0, 4)
+    print("substring(0,4): " + sub)
+
+    // toUpper / toLower
+    print("toUpper: " + limpio.toUpper())
+    print("toLower: " + limpio.toLower())
+
+    // contains
+    print("contains 'Nyx': " + int_to_string(limpio.contains("Nyx")))
+    print("contains 'Go': " + int_to_string(limpio.contains("Go")))
+
+    // split
+    let frase: String = "uno dos tres"
+    let partes: Array = frase.split(" ")
+    print("partes: " + int_to_string(partes.length()))
+    for p in partes {
+        print("  " + p)
+    }
+
+    // interpolación
+    let lang: String = "Nyx"
+    let v: int = 12
+    print("Lenguaje: ${lang} v0.${v}")
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">trim: 'Hola Nyx'
+longitud: 8
+substring(0,4): Hola
+toUpper: HOLA NYX
+toLower: hola nyx
+contains 'Nyx': 1
+contains 'Go': 0
+partes: 3
+  uno
+  dos
+  tres
+Lenguaje: Nyx v0.12</pre>
+
+    <h2>Explanation</h2>
+    <p><code>.trim()</code> returns a new string with leading and trailing whitespace removed. The original string is not modified — Nyx strings are immutable values; all methods return new strings.</p>
+    <p><code>.substring(start, end)</code> extracts a slice from index <code>start</code> up to but not including index <code>end</code>. Indices are byte positions. <code>.length()</code> returns the byte length of the string, not the number of Unicode code points — for ASCII text they are the same.</p>
+    <p><code>.contains(needle)</code> returns <code>1</code> if the substring is found, <code>0</code> otherwise. <code>.split(separator)</code> splits the string on every occurrence of the separator and returns an <code>Array</code> of the resulting parts.</p>
+    <p>String interpolation with <code>${expr}</code> works inside any double-quoted string. The expression can be a variable, a function call, or any other expression — the result is automatically converted to its string representation and embedded inline.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/06-maps.html">← Previous</a>
+        <a href="/by-example/08-structs.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/07-strings.nx">examples/by-example/07-strings.nx</a></small></p>
+</main>
+
+</body>
+</html>
