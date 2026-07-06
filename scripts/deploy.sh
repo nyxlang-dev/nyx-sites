@@ -7,6 +7,12 @@
 #
 # Orden de restart: serve-web → proxy-web → landing-main (el default
 # upstream del gateway al final, con el procedimiento ya validado 2 veces).
+#
+# GOTCHA (visto en el cutover del split #6): tras un restart, el gateway
+# sirve 502 vía HTTPS durante algunos requests — su pool keep-alive tiene
+# sockets stale al proceso viejo y los drena de a uno (el default upstream
+# nyxlang.com necesitó ~15 requests). El curl directo :PORT no lo ve.
+# Retry-on-stale está en el roadmap v0.4 de nyx-proxy.
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
