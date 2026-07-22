@@ -83,12 +83,12 @@
         <p>El contrato del handler:</p>
         <ul>
             <li><strong>info</strong> es <code>[fd, path, headers_flat, params_flat]</code> — el socket crudo, el path, los headers del request, y los <code>{params}</code> que matchearon como array plano.</li>
-            <li><strong>Devolvé <code>1</code></strong> para adueñarte: hacés el handshake con <code>ws_handshake_response</code>, leés frames con <code>ws_parse</code>, escribís con <code>ws_frame</code>, y cerrás vos. El servidor no vuelve a tocar el fd.</li>
-            <li><strong>Devolvé <code>0</code></strong> para declinar y dejar pasar el request.</li>
+            <li><strong>Devuelve <code>1</code></strong> para adueñarte: haces el handshake con <code>ws_handshake_response</code>, lees frames con <code>ws_parse</code>, escribes con <code>ws_frame</code>, y cierras tú. El servidor no vuelve a tocar el fd.</li>
+            <li><strong>Devuelve <code>0</code></strong> para declinar y dejar pasar el request.</li>
         </ul>
 
-        <h2>Probalo</h2>
-        <p>Conectate con cualquier cliente WebSocket a <code>ws://localhost:3000/ws/chat/general</code> y mandá un mensaje — recibís de vuelta <code>[general] tu mensaje</code>. El parámetro <code>{room}</code> prueba que ruteó.</p>
+        <h2>Pruébalo</h2>
+        <p>Conéctate con cualquier cliente WebSocket a <code>ws://localhost:3000/ws/chat/general</code> y envía un mensaje — recibes de vuelta <code>[general] tu mensaje</code>. El parámetro <code>{room}</code> prueba que ruteó.</p>
 
         <div class="docs-note">
             Este handler sirve un mensaje y cierra — el ejemplo completo más
@@ -108,5 +108,41 @@
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

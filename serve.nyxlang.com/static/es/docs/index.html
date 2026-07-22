@@ -38,19 +38,19 @@
         <h1>De cero a una app full-stack desplegada</h1>
         <p>
             Este tutorial construye una sola cosa, paso a paso: una aplicación
-            de notas. Arranca como una API JSON que probás con <code>curl</code>,
+            de notas. Arranca como una API JSON que pruebas con <code>curl</code>,
             gana middleware, sesiones, páginas renderizadas en el servidor y
             WebSockets, y termina desplegada detrás de systemd con una base de
             datos real — nyx-kv. Cada bloque de código de estas páginas se
             compiló y corrió contra el release actual antes de publicarse.
         </p>
-        <p><strong>Qué necesitás</strong>: una máquina Linux o macOS con un toolchain de C (clang), y 15–40 minutos según hasta dónde llegues.</p>
+        <p><strong>Qué necesitas</strong>: una máquina Linux o macOS con un toolchain de C (clang), y 15–40 minutos según hasta dónde llegues.</p>
 
         <h2>El recorrido</h2>
         <ol>
-            <li><strong><a href="/es/docs/01-install.html">Instalar</a></strong> — un comando, verificá con <code>nyx --version</code>.</li>
+            <li><strong><a href="/es/docs/01-install.html">Instalar</a></strong> — un comando, verifica con <code>nyx --version</code>.</li>
             <li><strong><a href="/es/docs/02-new-project.html">Crear un proyecto</a></strong> — <code>nyx init</code>, declare the dependency, understand the layout.</li>
-            <li><strong><a href="/es/docs/03-first-api.html">Primera API</a></strong> — rutas, parámetros, input de forms, JSON de salida; probá con curl.</li>
+            <li><strong><a href="/es/docs/03-first-api.html">Primera API</a></strong> — rutas, parámetros, input de forms, JSON de salida; prueba con curl.</li>
             <li><strong><a href="/es/docs/04-middleware-sessions.html">Middleware y sesiones</a></strong> — the status-0 contract, CORS, login with cookie sessions.</li>
             <li><strong><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></strong> — escape-by-default rendering, cached static files.</li>
             <li><strong><a href="/es/docs/06-websockets.html">WebSockets</a></strong> — rutas <code>app_ws</code> con parámetros <code>{room}</code>.</li>
@@ -58,7 +58,7 @@
         </ol>
 
         <div class="docs-note">
-            <strong>¿Ya conocés lo básico?</strong> La referencia de la API vive en el
+            <strong>¿Ya conoces lo básico?</strong> La referencia de la API vive en el
             repo: <a href="https://github.com/nyxlang-dev/nyx-serve/blob/main/docs/API.md">docs/API.md</a> —
             cada función pública con su firma exacta.
         </div>
@@ -74,5 +74,41 @@
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

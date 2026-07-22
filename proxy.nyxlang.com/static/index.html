@@ -16,6 +16,7 @@
     <a href="/" class="nav-logo">nyx<span class="product">-proxy</span></a>
     <div class="nav-right">
         <a href="#features" class="hide-mobile">Features</a>
+        <a href="#install" class="hide-mobile">Install</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="hide-mobile">GitHub</a>
         <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
     </div>
@@ -73,6 +74,80 @@ name        = <span class="str">"api"</span>
 host        = <span class="str">"127.0.0.1"</span>
 port        = <span class="num">3001</span>
 hostname    = <span class="str">"api.example.com"</span></pre>
+</section>
+
+<!-- INSTALL TO PRODUCTION -->
+<section id="install">
+    <div class="section-label">From bare OS to production</div>
+    <h2 class="section-title">Install and go live</h2>
+    <p class="section-subtitle">
+        Six steps take a fresh Linux box to a TLS-terminating proxy running under
+        systemd on port 443. This is the exact shape that fronts every domain here.
+    </p>
+
+    <h3 style="margin-top:2rem">1 &middot; Install the toolchain and build</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">nyx-proxy is a Nyx library. Install the compiler, clone, build the single binary.</p>
+<pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh
+<span class="prompt">$</span> sudo apt install -y clang certbot        <span class="cm"># build + TLS deps</span>
+<span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-proxy
+<span class="prompt">$</span> cd nyx-proxy &amp;&amp; nyx build              <span class="cm"># produces ./nyx-proxy</span></pre>
+
+    <h3 style="margin-top:2rem">2 &middot; Point DNS at the box</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Create A records for each domain you'll serve, pointing at the server's public IP. Confirm they resolve before issuing certs.</p>
+<pre class="term"><span class="prompt">$</span> dig +short example.com        <span class="cm"># must return your server IP</span>
+<span class="prompt">$</span> dig +short api.example.com</pre>
+
+    <h3 style="margin-top:2rem">3 &middot; Issue TLS certificates</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Let's Encrypt via certbot's standalone mode (it binds :80 briefly &mdash; make sure nothing else holds it yet). One cert per domain, or one multi-domain cert.</p>
+<pre class="term"><span class="prompt">$</span> sudo certbot certonly --standalone \
+      -d example.com -d api.example.com
+<span class="out"># certs land in /etc/letsencrypt/live/example.com/</span></pre>
+
+    <h3 style="margin-top:2rem">4 &middot; Write proxy.toml</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Point <code>tls_cert</code> / <code>tls_key</code> at the issued cert, list your upstreams by hostname (see the config above), and turn on caching, metrics and rate limiting as needed.</p>
+<pre><span class="op">[</span><span class="kw">server</span><span class="op">]</span>
+listen   = <span class="num">443</span>
+workers  = <span class="num">64</span>
+tls_cert = <span class="str">"/etc/letsencrypt/live/example.com/fullchain.pem"</span>
+tls_key  = <span class="str">"/etc/letsencrypt/live/example.com/privkey.pem"</span>
+
+<span class="op">[</span><span class="kw">cache</span><span class="op">]</span>
+enabled  = <span class="num">1</span>
+
+<span class="op">[</span><span class="kw">metrics</span><span class="op">]</span>
+enabled  = <span class="num">1</span>
+port     = <span class="num">9090</span></pre>
+
+    <h3 style="margin-top:2rem">5 &middot; Run it under systemd</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">A unit keeps it alive across reboots and crashes. It needs to bind :443, so it runs as root (or with <code>CAP_NET_BIND_SERVICE</code>).</p>
+<pre><span class="cm"># /etc/systemd/system/nyx-proxy.service</span>
+[Unit]
+Description=nyx-proxy
+After=network-online.target
+
+[Service]
+ExecStart=/srv/nyx-proxy/nyx-proxy /srv/nyx-proxy/proxy.toml
+WorkingDirectory=/srv/nyx-proxy
+Restart=always
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target</pre>
+<pre class="term"><span class="prompt">$</span> sudo systemctl enable --now nyx-proxy
+<span class="prompt">$</span> systemctl status nyx-proxy      <span class="cm"># active (running)</span></pre>
+
+    <h3 style="margin-top:2rem">6 &middot; Verify and watch</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Hit each domain over HTTPS, confirm a cache HIT, and scrape metrics. Certbot's timer renews certs automatically &mdash; reload the proxy after a renewal.</p>
+<pre class="term"><span class="prompt">$</span> curl -sI https://example.com | head -1        <span class="cm"># HTTP/2 200</span>
+<span class="prompt">$</span> curl -sD - https://example.com -o /dev/null | grep X-Nyx-Cache
+<span class="out">X-Nyx-Cache: HIT</span>
+<span class="prompt">$</span> curl -s http://127.0.0.1:9090/metrics | head</pre>
+    <div class="eco-grid" style="grid-template-columns:1fr;margin-top:1.6rem">
+        <div class="eco">
+            <span class="e-name">Cert renewal</span>
+            <p>certbot installs a systemd timer that renews before expiry. Add a deploy hook &mdash; <code>--deploy-hook "systemctl reload nyx-proxy"</code> &mdash; so the proxy picks up the new cert without a manual restart.</p>
+        </div>
+    </div>
 </section>
 
 <!-- FEATURES -->
@@ -207,5 +282,41 @@ hostname    = <span class="str">"api.example.com"</span></pre>
     <div class="footer-bottom">nyx-proxy &mdash; built with <a href="https://nyxlang.com">Nyx</a></div>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copy"; btn.setAttribute("aria-label", "Copy code");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copied"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

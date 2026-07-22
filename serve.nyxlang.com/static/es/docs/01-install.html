@@ -37,7 +37,7 @@
         <h1>1 · Instalar el toolchain</h1>
         <p>
             nyx-serve es una librería para el <a href="https://nyxlang.com">lenguaje Nyx</a>,
-            así que lo único que instalás es el toolchain de Nyx — el compilador,
+            así que lo único que instalas es el toolchain de Nyx — el compilador,
             el gestor de paquetes y la librería estándar, en un directorio bajo tu home.
         </p>
 
@@ -55,9 +55,9 @@
 <span class="out">nyx 0.22.0</span></pre>
 
         <p>
-            Nyx compila a través de LLVM, así que también necesitás
+            Nyx compila a través de LLVM, así que también necesitas
             <strong>clang</strong> — la mayoría de las distros Linux y macOS ya lo
-            traen. Verificá con <code>clang --version</code>; en Debian/Ubuntu es
+            traen. Verifica con <code>clang --version</code>; en Debian/Ubuntu es
             <code>apt install clang</code>.
         </p>
 
@@ -78,5 +78,41 @@
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

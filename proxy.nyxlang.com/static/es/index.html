@@ -15,6 +15,7 @@
     <a href="/" class="nav-logo">nyx<span class="product">-proxy</span></a>
     <div class="nav-right">
         <a href="#features" class="hide-mobile">Características</a>
+        <a href="#install" class="hide-mobile">Instalar</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="hide-mobile">GitHub</a>
         <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
     </div>
@@ -39,7 +40,7 @@
 <section id="config">
     <div class="section-label">Config simple</div>
     <h2 class="section-title">Un archivo para todo</h2>
-    <p class="section-subtitle">Define upstreams, certificados TLS y limites en un solo TOML.</p>
+    <p class="section-subtitle">Define upstreams, certificados TLS y límites en un solo TOML.</p>
     <pre style="margin-top:1.5rem"><span class="cm"># proxy.toml</span>
 <span class="op">[</span><span class="kw">server</span><span class="op">]</span>
 listen      = <span class="num">443</span>
@@ -55,8 +56,84 @@ host        = <span class="str">"127.0.0.1"</span>
 port        = <span class="num">3000</span>
 hostname    = <span class="str">"ejemplo.com"</span></pre>
 </section>
+
+<!-- INSTALL TO PRODUCTION -->
+<section id="install">
+    <div class="section-label">Del SO en blanco a producción</div>
+    <h2 class="section-title">Instala y ponlo en producción</h2>
+    <p class="section-subtitle">
+        Seis pasos llevan una máquina Linux nueva a un proxy con terminación TLS
+        corriendo bajo systemd en el puerto 443. Es la forma exacta que está delante
+        de cada dominio de acá.
+    </p>
+
+    <h3 style="margin-top:2rem">1 &middot; Instala el toolchain y compila</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">nyx-proxy es una librería Nyx. Instala el compilador, clona, compila el único binario.</p>
+<pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh
+<span class="prompt">$</span> sudo apt install -y clang certbot        <span class="cm"># deps de build + TLS</span>
+<span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-proxy
+<span class="prompt">$</span> cd nyx-proxy &amp;&amp; nyx build              <span class="cm"># produce ./nyx-proxy</span></pre>
+
+    <h3 style="margin-top:2rem">2 &middot; Apunta el DNS a la máquina</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Crea registros A para cada dominio que vas a servir, apuntando a la IP pública del servidor. Confirma que resuelven antes de emitir certificados.</p>
+<pre class="term"><span class="prompt">$</span> dig +short ejemplo.com        <span class="cm"># debe devolver la IP de tu servidor</span>
+<span class="prompt">$</span> dig +short api.ejemplo.com</pre>
+
+    <h3 style="margin-top:2rem">3 &middot; Emite los certificados TLS</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Let's Encrypt vía el modo standalone de certbot (ocupa :80 un momento &mdash; asegúrate de que nada más lo tenga tomado). Un certificado por dominio, o uno multi-dominio.</p>
+<pre class="term"><span class="prompt">$</span> sudo certbot certonly --standalone \
+      -d ejemplo.com -d api.ejemplo.com
+<span class="out"># los certs quedan en /etc/letsencrypt/live/ejemplo.com/</span></pre>
+
+    <h3 style="margin-top:2rem">4 &middot; Escribe proxy.toml</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Apunta <code>tls_cert</code> / <code>tls_key</code> al certificado emitido, lista tus upstreams por hostname (mira la config de arriba), y activa cache, métricas y rate limiting según necesites.</p>
+<pre><span class="op">[</span><span class="kw">server</span><span class="op">]</span>
+listen   = <span class="num">443</span>
+workers  = <span class="num">64</span>
+tls_cert = <span class="str">"/etc/letsencrypt/live/ejemplo.com/fullchain.pem"</span>
+tls_key  = <span class="str">"/etc/letsencrypt/live/ejemplo.com/privkey.pem"</span>
+
+<span class="op">[</span><span class="kw">cache</span><span class="op">]</span>
+enabled  = <span class="num">1</span>
+
+<span class="op">[</span><span class="kw">metrics</span><span class="op">]</span>
+enabled  = <span class="num">1</span>
+port     = <span class="num">9090</span></pre>
+
+    <h3 style="margin-top:2rem">5 &middot; Córrelo bajo systemd</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Una unit lo mantiene vivo entre reinicios y crashes. Necesita ligarse a :443, así que corre como root (o con <code>CAP_NET_BIND_SERVICE</code>).</p>
+<pre><span class="cm"># /etc/systemd/system/nyx-proxy.service</span>
+[Unit]
+Description=nyx-proxy
+After=network-online.target
+
+[Service]
+ExecStart=/srv/nyx-proxy/nyx-proxy /srv/nyx-proxy/proxy.toml
+WorkingDirectory=/srv/nyx-proxy
+Restart=always
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target</pre>
+<pre class="term"><span class="prompt">$</span> sudo systemctl enable --now nyx-proxy
+<span class="prompt">$</span> systemctl status nyx-proxy      <span class="cm"># active (running)</span></pre>
+
+    <h3 style="margin-top:2rem">6 &middot; Verifica y observa</h3>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Pega cada dominio por HTTPS, confirma un HIT de cache, y recolecta las métricas. El timer de certbot renueva los certificados solo &mdash; recarga el proxy después de una renovación.</p>
+<pre class="term"><span class="prompt">$</span> curl -sI https://ejemplo.com | head -1        <span class="cm"># HTTP/2 200</span>
+<span class="prompt">$</span> curl -sD - https://ejemplo.com -o /dev/null | grep X-Nyx-Cache
+<span class="out">X-Nyx-Cache: HIT</span>
+<span class="prompt">$</span> curl -s http://127.0.0.1:9090/metrics | head</pre>
+    <div class="eco-grid" style="grid-template-columns:1fr;margin-top:1.6rem">
+        <div class="eco">
+            <span class="e-name">Renovación de certificados</span>
+            <p>certbot instala un timer de systemd que renueva antes del vencimiento. Agrega un deploy hook &mdash; <code>--deploy-hook "systemctl reload nyx-proxy"</code> &mdash; para que el proxy tome el certificado nuevo sin un restart manual.</p>
+        </div>
+    </div>
+</section>
+
 <section id="features">
-    <div class="section-label">Caracteristicas</div>
+    <div class="section-label">Características</div>
     <h2 class="section-title">Todo lo que necesitas</h2>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card"><div class="card-title">TLS multi-dominio con SNI</div><div class="card-desc">Sirve multiples dominios en una sola IP. Cada dominio con su propio certificado TLS. Actualmente sirviendo 4 dominios.</div></div>
@@ -65,7 +142,7 @@ hostname    = <span class="str">"ejemplo.com"</span></pre>
         <div class="card"><div class="card-title">Rate limiting</div><div class="card-desc">Contador de ventana deslizante por IP. Retorna HTTP 429 con header Retry-After. Configurable en proxy.toml.</div></div>
         <div class="card"><div class="card-title">Connection pooling</div><div class="card-desc">HTTP keep-alive entre el proxy y los backends. Reduce el overhead de conexiones.</div></div>
         <div class="card"><div class="card-title">Cache de respuestas (LRU + TTL)</div><div class="card-desc">Cachea respuestas GET 200 bajo HOST:PATH y honra el Cache-Control del upstream (no-store / no-cache / private bypassean; max-age override). Los hits van marcados <code>X-Nyx-Cache: HIT</code>.</div></div>
-        <div class="card"><div class="card-title">Prometheus /metrics</div><div class="card-desc">Conteos de requests, clases de status, latencia y salud de upstreams en un puerto admin aparte &mdash; scrapealo directo a Grafana.</div></div>
+        <div class="card"><div class="card-title">Prometheus /metrics</div><div class="card-desc">Conteos de requests, clases de status, latencia y salud de upstreams en un puerto admin aparte &mdash; recoléctalo directo a Grafana.</div></div>
         <div class="card"><div class="card-title">X-Forwarded-For</div><div class="card-desc">Inyecta la IP real del cliente para que tus backends puedan rate-limitear y loguear por origen, no por el proxy.</div></div>
         <div class="card"><div class="card-title">Redirect HTTP</div><div class="card-desc">Redirección automática HTTP a HTTPS en el puerto 80.</div></div>
     </div>
@@ -105,5 +182,41 @@ hostname    = <span class="str">"ejemplo.com"</span></pre>
     </div>
     <div class="footer-bottom">nyx-proxy &mdash; construido con <a href="https://nyxlang.com">Nyx</a></div>
 </footer>
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

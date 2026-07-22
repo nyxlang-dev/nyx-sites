@@ -46,7 +46,7 @@
 <span class="prompt">$</span> cd notes-app</pre>
 
         <h2>Declarar la dependencia</h2>
-        <p>Abrí <code>nyx.toml</code> y agregá nyx-serve bajo <code>[dependencies]</code>:</p>
+        <p>Abre <code>nyx.toml</code> y agrega nyx-serve bajo <code>[dependencies]</code>:</p>
 
 <pre><span class="cm"># nyx.toml</span>
 [package]
@@ -60,14 +60,14 @@ nyx-serve = <span class="str">"*"</span></pre>
         <p>
             <code>"*"</code> le dice al gestor de paquetes que traiga nyx-serve
             desde <code>github.com/nyxlang-dev/nyx-serve</code> a
-            <code>packages/</code> en el próximo build. También podés fijar una URL
+            <code>packages/</code> en el próximo build. También puedes fijar una URL
             completa — <code>nyx-serve = "https://github.com/nyxlang-dev/nyx-serve"</code>
             — o vendorizar la librería en <code>packages/</code> y commitearla, que
             es lo que hacen los sitios de producción para builds reproducibles.
         </p>
 
         <h2>Un servidor mínimo</h2>
-        <p>Reemplazá <code>src/main.nx</code> por:</p>
+        <p>Reemplaza <code>src/main.nx</code> por:</p>
 
 <pre><span class="kw">import</span> <span class="str">"std/web"</span>
 <span class="kw">import</span> <span class="str">"nyx-serve/src/server"</span>
@@ -86,7 +86,7 @@ nyx-serve = <span class="str">"*"</span></pre>
         <ul>
             <li><code>std/web</code> — el núcleo <code>App</code>, <code>Request</code>, <code>Response</code> y los constructores <code>response_*</code>.</li>
             <li><code>nyx-serve/src/server</code> — <code>serve_app</code> (el servidor keep-alive multi-hilo) y <code>app_ws</code>.</li>
-            <li>Otros módulos de nyx-serve que importás según necesites: <code>src/files</code>, <code>src/template</code>, <code>src/multipart</code>.</li>
+            <li>Otros módulos de nyx-serve que importas según necesites: <code>src/files</code>, <code>src/template</code>, <code>src/multipart</code>.</li>
         </ul>
 
         <h2>Compilar y correr</h2>
@@ -100,7 +100,7 @@ nyx-serve = <span class="str">"*"</span></pre>
         <div class="docs-note">
             <code>nyx run</code> compila y después corre. <code>nyx build</code> solo
             produce el binario (con el nombre de tu paquete) — ese único archivo es
-            lo que copiás a un servidor.
+            lo que copias a un servidor.
         </div>
 
         <div class="docs-nav">
@@ -114,5 +114,41 @@ nyx-serve = <span class="str">"*"</span></pre>
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

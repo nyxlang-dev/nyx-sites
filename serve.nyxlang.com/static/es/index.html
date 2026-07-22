@@ -85,7 +85,7 @@
                 Una ruta asocia un patrón a una función. Los parámetros de
                 ruta con <code>{id}</code>, el query string, las cookies y el
                 body ya parseado llegan separados en el <code>Request</code>:
-                leés campos, devolvés un <code>Response</code>. Nada se esconde
+                lees campos, devuelves un <code>Response</code>. Nada se esconde
                 detrás de decoradores o globales mágicos.
             </p>
             <ul>
@@ -97,7 +97,7 @@
         <div class="feature-code codewin">
             <div class="codewin-bar">
                 <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-                <span class="title">POST /notes — leé JSON, respondé JSON</span>
+                <span class="title">POST /notes — lee JSON, responde JSON</span>
             </div>
 <pre><span class="kw">fn</span> <span class="fn">create_note</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
     <span class="kw">let</span> body: <span class="ty">Map</span> = <span class="fn">req_json</span>(req)
@@ -140,7 +140,7 @@
             <p>
                 <code>app_ws(pattern, handler)</code> usa el mismo matcher
                 <code>{param}</code> que tus rutas HTTP. Cuando llega un Upgrade
-                que matchea, tu handler recibe el socket crudo y decide: devolvé
+                que matchea, tu handler recibe el socket crudo y decide: devuelve
                 <code>1</code> para adueñarte de él — handshake, frames y cierre
                 son tuyos vía <code>std/websocket</code> — o <code>0</code> para
                 dejarlo pasar. ¿Sin match? Un 404 bien formado, como cualquier
@@ -159,7 +159,7 @@
             <p>
                 <code>{{title}}</code> se escapa como HTML — siempre. La
                 salida cruda es la excepción explícita (<code>{{{html}}}</code>),
-                no el default que te olvidás de apagar. Condicionales, loops
+                no el default que te olvidas de apagar. Condicionales, loops
                 anidados y parciales cubren páginas reales sin un DSL que aprender.
             </p>
             <ul>
@@ -263,7 +263,7 @@
     <span class="eyebrow">Defaults de producción</span>
     <h2 class="section-title">Las protecciones ya están puestas</h2>
     <p class="section-lead">
-        Lo que normalmente atornillás antes de salir a producción acá son los
+        Lo que normalmente atornillas antes de salir a producción acá son los
         defaults — corriendo en los servidores que sirven nyxlang.com.
     </p>
     <div class="guard-grid">
@@ -296,7 +296,7 @@
         </a>
         <a class="eco" href="https://proxy.nyxlang.com">
             <span class="e-name">nyx<span class="product">-proxy</span></span>
-            <p>Proxy inverso con terminación TLS, ruteo por SNI, health checks y tunneling de WebSocket — ponelo delante de tus apps nyx-serve.</p>
+            <p>Proxy inverso con terminación TLS, ruteo por SNI, health checks y tunneling de WebSocket — ponlo delante de tus apps nyx-serve.</p>
         </a>
     </div>
 </section>
@@ -317,7 +317,7 @@
 <span class="out">my-api starting on port 3000 with 8 workers</span></pre>
         </div>
         <div class="hero-ctas" style="margin-top:1.8rem">
-            <a href="/docs/" class="btn btn-accent">Leé la documentación</a>
+            <a href="/docs/" class="btn btn-accent">Lee la documentación</a>
             <a href="https://github.com/nyxlang-dev/nyx-serve" class="btn btn-ghost">Código en GitHub</a>
         </div>
     </div>
@@ -329,5 +329,41 @@
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="/es/docs/">Docs</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

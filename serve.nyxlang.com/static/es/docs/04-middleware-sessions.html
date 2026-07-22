@@ -39,7 +39,7 @@
         <p>
             El middleware corre antes de tus handlers. En nyx-serve un middleware
             es solo una función <code>Request → Response</code> con una regla:
-            <strong>devolvé status <code>0</code> para continuar</strong> (y
+            <strong>devuelve status <code>0</code> para continuar</strong> (y
             cualquier header que pongas igual llega a la respuesta final), o
             cualquier otro status para frenar el request ahí mismo.
         </p>
@@ -60,7 +60,7 @@
 <span class="fn">app_use</span>(app, require_auth)   <span class="cm">// your gate</span></pre>
 
         <p>
-            Notá que pasás la función <em>por nombre</em>, no llamada:
+            Nota que pasas la función <em>por nombre</em>, no llamada:
             <code>app_use(app, mw_cors)</code>, no <code>mw_cors()</code>. Y el
             origen CORS se configura una vez con <code>cors_configure</code>, no
             como argumento.
@@ -104,7 +104,7 @@
     <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">8</span>)
 }</pre>
 
-        <p>Necesitás un nyx-kv corriendo para esto. La forma más rápida:</p>
+        <p>Necesitas un nyx-kv corriendo para esto. La forma más rápida:</p>
 <pre class="term"><span class="prompt">$</span> docker run -p 6380:6380 nyxlang/nyx-kv   <span class="cm"># or point session_configure at nyxkv.com</span></pre>
 
         <div class="docs-note">
@@ -124,5 +124,41 @@
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

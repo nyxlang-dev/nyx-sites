@@ -47,7 +47,7 @@
         <p>
             nyx-kv habla RESP, el protocolo de Redis. Para GET/SET alcanza un
             helper chico sobre un socket TCP plano; para TLS, pipelines y el set
-            completo de comandos usá <code>std/kvclient</code>.
+            completo de comandos usa <code>std/kvclient</code>.
         </p>
 
 <pre><span class="kw">fn</span> <span class="fn">kv_get</span>(key: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
@@ -111,7 +111,7 @@
         <h2>Publicalo</h2>
         <p>
             <code>nyx build</code> produce un binario. Copialo a tu servidor y
-            corrélo bajo systemd — sin runtime que instalar al lado.
+            ejecútalo bajo systemd — sin runtime que instalar al lado.
         </p>
 
 <pre><span class="cm"># /etc/systemd/system/notes-app.service</span>
@@ -131,8 +131,8 @@ WantedBy=multi-user.target</pre>
 <pre class="term"><span class="prompt">$</span> sudo systemctl enable --now notes-app</pre>
 
         <p>
-            Poné <a href="https://proxy.nyxlang.com">nyx-proxy</a> adelante para
-            terminación TLS y tenés la forma exacta que sirve este mismo sitio.
+            Pon <a href="https://proxy.nyxlang.com">nyx-proxy</a> adelante para
+            terminación TLS y tienes la forma exacta que sirve este mismo sitio.
         </p>
 
         <div class="docs-note">
@@ -159,5 +159,41 @@ WantedBy=multi-user.target</pre>
     <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyx — The language that hosts itself</title>
-    <meta name="description" content="One language. Eight products. Zero dependencies. A self-hosting compiled language with native performance and a complete web ecosystem.">
+    <title>Nyx — the compiled language built for AI agents</title>
+    <meta name="description" content="A self-hosting compiled language built for AI agents: machine-readable JSON diagnostics, auto-generated capability docs, on-device LLM inference, native performance via LLVM, and a complete web ecosystem.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,6 +15,7 @@
 <nav>
     <a href="/" class="nav-logo">Nyx</a>
     <div class="nav-right">
+        <a href="#ai-first" class="hide-mobile">AI-first</a>
         <a href="/learn/" class="hide-mobile">Learn</a>
         <a href="/by-example/" class="hide-mobile">Examples</a>
         <a href="/playground/" class="hide-mobile">Playground</a>
@@ -26,15 +27,55 @@
 
 <!-- HERO -->
 <section class="hero">
-    <h1>The language that hosts itself</h1>
+    <span class="hero-label">A COMPILED LANGUAGE BUILT FOR AI AGENTS</span>
+    <h1>The language <em>agents</em> can actually write</h1>
     <p class="subtitle">
-        One language. Eight products. Zero dependencies.<br>
-        A self-hosting compiled language with native performance
-        and a complete web ecosystem.
+        Machine-readable diagnostics, auto-generated capability docs, and on-device
+        LLM inference &mdash; in a self-hosting compiled language with native
+        performance. Designed so an AI agent writes, reads and fixes it without guessing.
     </p>
     <div class="hero-buttons">
-        <a href="#get-started" class="btn btn-accent">Get Started</a>
-        <a href="https://github.com/nyxlang-dev/nyx" class="btn btn-outline">GitHub</a>
+        <a href="#ai-first" class="btn btn-accent">Why AI-first</a>
+        <a href="#get-started" class="btn btn-outline">Get started</a>
+    </div>
+</section>
+
+<!-- AI-FIRST — the thesis -->
+<section id="ai-first">
+    <div class="section-label">AI-first, by design</div>
+    <h2 class="section-title">Built for the way AI writes code</h2>
+    <p class="section-subtitle">
+        Most languages were designed for humans and later poked at by tools. Nyx was
+        built the other way around: every error, every capability, every rough edge is
+        something a model can parse, act on, and report back &mdash; deterministically.
+    </p>
+
+    <div class="card-grid cols-2" style="margin-top:2rem">
+        <div class="card">
+            <div class="card-title">Errors a model can parse</div>
+            <div class="card-desc"><code>NYX_DIAG=json</code> emits every diagnostic as NDJSON with a stable code (NYX01xx&ndash;NYX12xx), <code>line:column</code>, and a fix hint &mdash; in both the parse <em>and</em> semantic phases, multi-error, bilingual. No scraping stderr, no guessing what failed.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Capabilities the agent can read</div>
+            <div class="card-desc"><code>nyx init</code> seeds <code>AGENTS.md</code> (a playbook) and <code>CAPABILITIES.md</code> (a by-task index of the stdlib), and <code>nyx build</code> keeps them current. An agent learns what exists without reading the source of every module.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">On-device LLM inference</div>
+            <div class="card-desc"><code>std/llm</code> binds llama.cpp: load a GGUF model, generate, stream tokens back into Nyx &mdash; deterministic drop frees the model exactly once. AI isn't only a service you call out to; it's a library you link.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">A compiler that never traps you</div>
+            <div class="card-desc">The parser never hangs (bounded error budget). "Did you mean" hints for methods, fields and variables. A friction channel (<code>nyx report</code>) turns dead-ends into structured feedback. Every rough edge is a signal, not a silent failure.</div>
+        </div>
+    </div>
+
+    <div class="terminal" style="margin-top:2rem">
+        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
+<pre><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx build</span>
+<span class="result">{"phase":"semantic","code":"NYX1005","line":12,"col":18,</span>
+<span class="result"> "message":"argument 2 of 'indexOf' must be int, got String",</span>
+<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span>
+<span class="comment"># one line, stable code, exact location, actionable hint — for the model, not the human</span></pre>
     </div>
 </section>
 
@@ -646,6 +687,42 @@ function copyInstall(btn) {
 function toggleExample(card) {
     card.classList.toggle('open');
 }
+</script>
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copy"; btn.setAttribute("aria-label", "Copy code");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copied"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
 </script>
 </body>
 </html>

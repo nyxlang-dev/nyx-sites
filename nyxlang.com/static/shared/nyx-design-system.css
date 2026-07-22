@@ -1,40 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════
-   NYX DESIGN SYSTEM v2.1 — Light
-   Shared CSS for nyxlang.com, nyxkv.com, serve.nyxlang.com, proxy.nyxlang.com
+   NYX DESIGN SYSTEM v3.0 — Night
+   Nyx is the Greek goddess of night. The language landing and its
+   docs (/learn, /by-example) live in that world: a deep blue-violet
+   sky, luminous iris accent, starlight syntax. Same token names and
+   selectors as v2.1 (light) — redefined for dark, so all pages that
+   link this file flip together.
    ═══════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* ─── Color Tokens ─── */
 :root {
-    /* Palette */
-    --nyx-violet:     #7c3aed;
-    --nyx-blue:       #2563eb;
-    --nyx-green:      #059669;
-    --nyx-amber:      #d97706;
-    --nyx-pink:       #db2777;
-    --nyx-gray:       #6b7280;
-    --nyx-gray-light: #9ca3af;
+    /* Palette (brightened for dark ground) */
+    --nyx-violet:     #b3a5ff;
+    --nyx-blue:       #7db4ff;
+    --nyx-green:      #7ee0a8;
+    --nyx-amber:      #f6c667;
+    --nyx-pink:       #f5a3d0;
+    --nyx-gray:       #6b7488;
+    --nyx-gray-light: #8b93a7;
 
-    /* Surfaces */
-    --bg-main:     #ffffff;
-    --bg-surface:  #f4f4f5;
-    --bg-code:     #f0f0f2;
-    --bg-nav:      rgba(255, 255, 255, 0.88);
-    --bg-terminal: #0a0a0a;
+    /* Surfaces — night sky */
+    --bg-main:     #0a0c16;
+    --bg-surface:  #12141f;
+    --bg-code:     #0e1019;
+    --bg-nav:      rgba(10, 12, 22, 0.82);
+    --bg-terminal: #060711;
 
     /* Text */
-    --text-primary:   #111111;
-    --text-secondary: #555555;
-    --text-dim:       #a3a3a3;
+    --text-primary:   #eceefb;
+    --text-secondary: #a3a9c2;
+    --text-dim:       #5f677e;
 
     /* Borders */
-    --border:       rgba(0, 0, 0, 0.08);
-    --border-hover: rgba(0, 0, 0, 0.16);
+    --border:       rgba(150, 160, 220, 0.12);
+    --border-hover: rgba(150, 160, 220, 0.28);
 
-    /* Accent — unified teal */
-    --accent:       #0891b2;
-    --accent-hover: #0e7490;
+    /* Accent — luminous iris (starlight) */
+    --accent:       #8b8cf7;
+    --accent-hover: #a5a3f9;
+    --accent-ink:   #0a0c16;
+    --accent-soft:  rgba(139, 140, 247, 0.14);
 
     /* Typography */
     --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -54,8 +60,20 @@ body {
     overflow-x: hidden;
 }
 
+/* faint aurora over the night sky */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(70% 50% at 50% -10%, rgba(139, 140, 247, 0.10), transparent 70%),
+        radial-gradient(50% 40% at 100% 0%, rgba(125, 180, 255, 0.06), transparent 70%);
+}
+
 a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; text-underline-offset: 3px; }
+a:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ─── Nav ─── */
 nav {
@@ -65,8 +83,8 @@ nav {
     z-index: 100;
     padding: 0.75rem 2rem;
     background: var(--bg-nav);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -81,7 +99,7 @@ nav {
     letter-spacing: -0.03em;
 }
 .nav-logo:hover { text-decoration: none; }
-.nav-logo .product { font-weight: 400; color: var(--text-secondary); }
+.nav-logo .product { font-weight: 400; color: var(--accent); }
 
 .nav-right { display: flex; gap: 0.25rem; align-items: center; }
 .nav-right a {
@@ -94,7 +112,7 @@ nav {
 }
 .nav-right a:hover {
     color: var(--text-primary);
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(150, 160, 220, 0.08);
     text-decoration: none;
 }
 
@@ -108,7 +126,7 @@ nav {
     padding: 10px 20px;
     border-radius: 6px;
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 150ms ease;
     border: none;
     cursor: pointer;
@@ -116,13 +134,13 @@ nav {
 
 .btn-accent {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-ink);
 }
-.btn-accent:hover { background: var(--accent-hover); text-decoration: none; color: #fff; }
+.btn-accent:hover { background: var(--accent-hover); text-decoration: none; color: var(--accent-ink); }
 
 .btn-outline {
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
+    border: 1px solid var(--border-hover);
+    color: var(--text-primary);
     background: transparent;
 }
 .btn-outline:hover {
@@ -154,12 +172,13 @@ section {
     font-weight: 700;
     letter-spacing: -0.02em;
     margin-bottom: 0.5rem;
+    text-wrap: balance;
 }
 
 .section-subtitle {
     color: var(--text-secondary);
     font-size: 1.05rem;
-    max-width: 560px;
+    max-width: 620px;
     line-height: 1.7;
 }
 
@@ -168,7 +187,7 @@ section {
     padding-top: 10rem;
     padding-bottom: 5rem;
     text-align: center;
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
 }
 
@@ -183,19 +202,21 @@ section {
 }
 
 .hero h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
+    font-size: 3.1rem;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
     margin-bottom: 1.2rem;
+    text-wrap: balance;
 }
+.hero h1 em { font-style: normal; color: var(--accent); }
 
 .hero .subtitle {
     color: var(--text-secondary);
-    font-size: 1.1rem;
+    font-size: 1.12rem;
     line-height: 1.7;
     margin-bottom: 2rem;
-    max-width: 540px;
+    max-width: 560px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -216,11 +237,11 @@ section {
 .card {
     background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 1.5rem;
     transition: border-color 150ms ease;
 }
-.card:hover { border-color: rgba(8, 145, 178, 0.25); }
+.card:hover { border-color: var(--border-hover); }
 .card a { text-decoration: none; }
 
 .card-title {
@@ -248,14 +269,14 @@ section {
 pre {
     background: var(--bg-code);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 1.5rem;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     font-family: var(--font-mono);
     font-size: 0.82rem;
     line-height: 1.7;
-    color: var(--text-primary);
+    color: var(--text-secondary);
     tab-size: 4;
     max-width: 100%;
 }
@@ -264,8 +285,15 @@ code {
     font-family: var(--font-mono);
     font-size: 0.85em;
 }
+:not(pre) > code {
+    background: var(--accent-soft);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.08em 0.38em;
+    color: var(--text-primary);
+}
 
-/* Syntax highlighting — Nyx official palette */
+/* Syntax highlighting — Nyx starlight palette */
 .kw  { color: var(--nyx-violet); }
 .fn  { color: var(--nyx-blue); }
 .str { color: var(--nyx-green); }
@@ -277,7 +305,8 @@ code {
 /* ─── Terminal ─── */
 .terminal {
     background: var(--bg-terminal);
-    border-radius: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
     overflow: hidden;
     margin-top: 1.5rem;
 }
@@ -287,30 +316,32 @@ code {
     align-items: center;
     gap: 0.4rem;
     padding: 0.6rem 1rem;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(150, 160, 220, 0.05);
+    border-bottom: 1px solid var(--border);
 }
 
 .terminal-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    background: #2a3145;
 }
-.terminal-dot.red    { background: #ff5f57; }
-.terminal-dot.yellow { background: #febc2e; }
-.terminal-dot.green  { background: #28c840; }
+.terminal-dot.red    { background: #3a4258; }
+.terminal-dot.yellow { background: #3a4258; }
+.terminal-dot.green  { background: var(--accent); }
 
 .terminal pre {
     background: transparent;
     border: none;
     border-radius: 0;
     padding: 1rem 1.4rem 1.4rem;
-    color: #e5e5e5;
+    color: #d7dbf0;
 }
 
 /* Terminal syntax */
-.prompt  { color: var(--nyx-violet); }
-.cmd     { color: #e5e5e5; }
-.result  { color: var(--nyx-green); }
+.prompt  { color: var(--accent); }
+.cmd     { color: #e6e9fb; }
+.result  { color: var(--nyx-blue); }
 .comment { color: var(--nyx-gray); }
 
 /* ─── Terminal Typing Animation ─── */
@@ -332,6 +363,9 @@ code {
 .t-line:nth-child(7) { animation-delay: 3.0s; }
 .t-line:nth-child(8) { animation-delay: 3.5s; }
 .t-line:nth-child(9) { animation-delay: 4.0s; }
+@media (prefers-reduced-motion: reduce) {
+    .t-line { opacity: 1; animation: none; }
+}
 
 /* ─── Tabs ─── */
 .tabs {
@@ -371,7 +405,7 @@ code {
 .price-card {
     background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 2rem 1.5rem;
     text-align: center;
 }
@@ -432,15 +466,16 @@ code {
     flex: 1;
     height: 24px;
     background: var(--bg-surface);
-    border-radius: 2px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
     overflow: hidden;
     position: relative;
 }
 
 .bench-bar {
     height: 100%;
-    background: var(--accent);
-    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--nyx-blue));
+    border-radius: 3px;
     transition: width 600ms ease;
 }
 
@@ -450,7 +485,7 @@ code {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--text-dim);
-    width: 60px;
+    width: 84px;
     text-align: right;
     flex-shrink: 0;
 }
@@ -486,7 +521,7 @@ footer {
     padding: 0.15rem 0;
     transition: color 150ms ease;
 }
-.footer-col a:hover { color: var(--text-secondary); text-decoration: none; }
+.footer-col a:hover { color: var(--accent); text-decoration: none; }
 
 .footer-bottom {
     text-align: center;
@@ -504,7 +539,7 @@ footer {
     gap: 0.75rem;
     background: var(--bg-code);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     padding: 0.875rem 1.25rem;
     margin-top: 1.5rem;
     font-family: var(--font-mono);
@@ -514,7 +549,7 @@ footer {
 
 .btn-copy {
     background: none;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-hover);
     border-radius: 4px;
     color: var(--text-dim);
     font-family: var(--font-mono);
@@ -559,12 +594,12 @@ footer {
 .example-card {
     background: var(--bg-surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
     transition: border-color 150ms ease;
     cursor: pointer;
 }
-.example-card:hover { border-color: rgba(8, 145, 178, 0.25); }
+.example-card:hover { border-color: var(--border-hover); }
 
 .example-header {
     display: flex;
@@ -597,7 +632,7 @@ footer {
     .nav-right a.hide-mobile { display: none; }
 
     .hero { padding-top: 7rem; padding-bottom: 3rem; }
-    .hero h1 { font-size: 2.2rem; }
+    .hero h1 { font-size: 2.3rem; }
     .hero .subtitle { font-size: 1rem; }
     .hero-buttons { flex-direction: column; align-items: stretch; }
     .hero-buttons .btn { width: 100%; text-align: center; }
@@ -620,7 +655,7 @@ footer {
 }
 
 @media (max-width: 375px) {
-    .hero h1 { font-size: 1.8rem; }
+    .hero h1 { font-size: 1.9rem; }
     .nav-logo { font-size: 1.1rem; }
     .footer-grid { grid-template-columns: 1fr; }
 }

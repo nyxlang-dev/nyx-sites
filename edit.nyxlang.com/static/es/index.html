@@ -85,7 +85,7 @@
         <div class="feat">
             <div class="k">SIGWINCH</div>
             <h3>Resize en vivo</h3>
-            <p>Arrastrá el borde de la terminal y el buffer se re-renderiza al instante — sin necesidad de apretar una tecla.</p>
+            <p>Arrastra el borde de la terminal y el buffer se re-renderiza al instante — sin necesidad de apretar una tecla.</p>
         </div>
         <div class="feat">
             <div class="k">?2026</div>
@@ -120,7 +120,7 @@
         <div class="feat">
             <div class="k">Ctrl+F / Ctrl+G</div>
             <h3>Búsqueda e ir-a-línea</h3>
-            <p>Búsqueda incremental con wrap-around, y salto directo a un número de línea. La navegación que buscás.</p>
+            <p>Búsqueda incremental con wrap-around, y salto directo a un número de línea. La navegación que buscas.</p>
         </div>
         <div class="feat">
             <div class="k">defer cleanup</div>
@@ -132,9 +132,9 @@
 
 <!-- INSTALL -->
 <section id="install">
-    <span class="eyebrow">Ponelo a andar</span>
-    <h2 class="section-title">Instalá y abrí un archivo</h2>
-    <p class="section-lead">nyx-edit es un programa Nyx — instalá el toolchain, compilá el único binario, corrélo. Sin paquete que gestionar.</p>
+    <span class="eyebrow">Ponlo a andar</span>
+    <h2 class="section-title">Instala y abre un archivo</h2>
+    <p class="section-lead">nyx-edit es un programa Nyx — instala el toolchain, compila el único binario, ejecútalo. Sin paquete que gestionar.</p>
 <pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh
 <span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-edit
 <span class="prompt">$</span> cd nyx-edit &amp;&amp; nyx build
@@ -194,7 +194,7 @@
 <!-- CTA -->
 <section class="cta">
     <div class="cta-inner">
-        <h2>Compilalo y abrí un archivo</h2>
+        <h2>Compilalo y abre un archivo</h2>
         <p>Un clone, un build, y ya estás editando — con resize, mouse y undo ya funcionando.</p>
 <pre class="term"><span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-edit
 <span class="prompt">$</span> cd nyx-edit &amp;&amp; nyx build
@@ -212,5 +212,41 @@
     <p>nyx-edit es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-edit">GitHub</a> · Apache 2.0</p>
 </footer>
 
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

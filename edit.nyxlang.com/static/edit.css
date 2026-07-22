@@ -28,12 +28,12 @@
     --gutter: #4a4361;
     --sel: rgba(167, 139, 250, 0.22);
     --statusbar: #1c1729;
-    --syn-kw: #c4b5fd;
-    --syn-fn: #7dd3fc;
-    --syn-str: #86efac;
-    --syn-num: #fbbf24;
-    --syn-ty: #f9a8d4;
-    --syn-cm: #675f7a;
+    --syn-kw: #b3a5ff;
+    --syn-fn: #7db4ff;
+    --syn-str: #7ee0a8;
+    --syn-num: #f6c667;
+    --syn-ty: #f5a3d0;
+    --syn-cm: #8b93a7;
 
     --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;

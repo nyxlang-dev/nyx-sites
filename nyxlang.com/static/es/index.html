@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyx — El lenguaje que se hospeda a si mismo</title>
-    <meta name="description" content="Un lenguaje. Ocho productos. Cero dependencias. Lenguaje compilado self-hosting con rendimiento nativo y un ecosistema web completo.">
+    <title>Nyx — el lenguaje compilado hecho para agentes de IA</title>
+    <meta name="description" content="Un lenguaje compilado hecho para agentes de IA: diagnósticos JSON machine-readable, documentación de capacidades autogenerada, inferencia LLM on-device, rendimiento nativo vía LLVM y un ecosistema web completo.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
 <nav>
     <a href="/" class="nav-logo">Nyx</a>
     <div class="nav-right">
+        <a href="#ai-first" class="hide-mobile">AI-first</a>
         <a href="/es/learn/" class="hide-mobile">Aprender</a>
         <a href="/es/by-example/" class="hide-mobile">Ejemplos</a>
         <a href="/playground/" class="hide-mobile">Playground</a>
@@ -23,11 +24,52 @@
     </div>
 </nav>
 <section class="hero">
-    <h1>El lenguaje que se hospeda a si mismo</h1>
-    <p class="subtitle">Un lenguaje. Ocho productos. Cero dependencias.<br>Lenguaje compilado self-hosting con rendimiento nativo y un ecosistema web completo.</p>
+    <span class="hero-label">UN LENGUAJE COMPILADO HECHO PARA AGENTES DE IA</span>
+    <h1>El lenguaje que los <em>agentes</em> pueden escribir de verdad</h1>
+    <p class="subtitle">Diagnósticos machine-readable, documentación de capacidades autogenerada e inferencia LLM on-device &mdash; en un lenguaje compilado self-hosting con rendimiento nativo. Diseñado para que un agente de IA lo escriba, lo lea y lo arregle sin adivinar.</p>
     <div class="hero-buttons">
-        <a href="#empezar" class="btn btn-accent">Empezar</a>
-        <a href="https://github.com/nyxlang-dev/nyx" class="btn btn-outline">GitHub</a>
+        <a href="#ai-first" class="btn btn-accent">Por qué AI-first</a>
+        <a href="#empezar" class="btn btn-outline">Empezar</a>
+    </div>
+</section>
+
+<!-- AI-FIRST — la tesis -->
+<section id="ai-first">
+    <div class="section-label">AI-first, por diseño</div>
+    <h2 class="section-title">Hecho para la forma en que la IA escribe código</h2>
+    <p class="section-subtitle">
+        La mayoría de los lenguajes se diseñaron para humanos y después se les
+        agregaron herramientas encima. Nyx se construyó al revés: cada error, cada
+        capacidad, cada aspereza es algo que un modelo puede parsear, accionar y
+        reportar de vuelta &mdash; de forma determinista.
+    </p>
+
+    <div class="card-grid cols-2" style="margin-top:2rem">
+        <div class="card">
+            <div class="card-title">Errores que un modelo parsea</div>
+            <div class="card-desc"><code>NYX_DIAG=json</code> emite cada diagnóstico como NDJSON con un código estable (NYX01xx&ndash;NYX12xx), <code>line:column</code> y una sugerencia de arreglo &mdash; en las fases de parse <em>y</em> semantic, multi-error, bilingüe. Sin scrapear stderr, sin adivinar qué falló.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Capacidades que el agente lee</div>
+            <div class="card-desc"><code>nyx init</code> siembra <code>AGENTS.md</code> (un playbook) y <code>CAPABILITIES.md</code> (un índice por-tarea de la stdlib), y <code>nyx build</code> los mantiene al día. Un agente aprende qué existe sin leer el código de cada módulo.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Inferencia LLM on-device</div>
+            <div class="card-desc"><code>std/llm</code> bindea llama.cpp: carga un modelo GGUF, genera, transmite tokens de vuelta a Nyx &mdash; el drop determinista libera el modelo exactamente una vez. La IA no es solo un servicio al que llamás afuera; es una librería que enlazas.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Un compilador que nunca te atrapa</div>
+            <div class="card-desc">El parser nunca se cuelga (presupuesto de errores acotado). Sugerencias "did you mean" para métodos, campos y variables. Un canal de fricción (<code>nyx report</code>) convierte los callejones sin salida en feedback estructurado. Cada aspereza es una señal, no una falla silenciosa.</div>
+        </div>
+    </div>
+
+    <div class="terminal" style="margin-top:2rem">
+        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
+<pre><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx build</span>
+<span class="result">{"phase":"semantic","code":"NYX1005","line":12,"col":18,</span>
+<span class="result"> "message":"argument 2 of 'indexOf' must be int, got String",</span>
+<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span>
+<span class="comment"># una línea, código estable, ubicación exacta, sugerencia accionable — para el modelo, no para el humano</span></pre>
     </div>
 </section>
 <section id="codigo">
@@ -103,7 +145,7 @@
         <div class="card"><div class="card-title">nyx-db</div><div class="card-desc">Base de datos SQL embebida con parser propio, B-tree, transacciones, persistencia.</div><div class="card-stat">motor SQL</div></div>
         <div class="card"><div class="card-title">nyx-edit</div><div class="card-desc">Editor de texto para terminal con selección, undo, búsqueda, clipboard y raw mode.</div><div class="card-stat">~1090 líneas</div></div>
         <div class="card"><div class="card-title">nyx-shell</div><div class="card-desc">Shell POSIX interactivo con pipes, redirects, expansion de variables, historial.</div><div class="card-stat">fork+exec</div></div>
-        <a href="/playground/" class="card"><div class="card-title">Playground</div><div class="card-desc">Proba Nyx en tu navegador. Edita, compila y ejecuta sin instalar nada.</div><div class="card-stat">probalo ahora</div></a>
+        <a href="/playground/" class="card"><div class="card-title">Playground</div><div class="card-desc">Proba Nyx en tu navegador. Edita, compila y ejecuta sin instalar nada.</div><div class="card-stat">pruébalo ahora</div></a>
     </div>
 </section>
 <section id="rendimiento">
@@ -518,6 +560,42 @@ function copyInstall(btn) {
 function toggleExample(card) {
     card.classList.toggle('open');
 }
+</script>
+<script>
+/* Copy button on every code block — self-contained, theme-agnostic. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
+    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
+    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
 </script>
 </body>
 </html>
