@@ -15,8 +15,8 @@ fn handle_health(req: Request) -> Response {
     return response_json(200, "{\"status\":\"ok\"}")
 }
 
-fn handle_proxy_css(req: Request) -> Response {
-    var r: Response = response_new(200, read_file("static/proxy.css"))
+fn handle_edit_css(req: Request) -> Response {
+    var r: Response = response_new(200, read_file("static/edit.css"))
     r.headers_flat.push("Content-Type")
     r.headers_flat.push("text/css; charset=utf-8")
     r.headers_flat.push("Cache-Control")
@@ -26,14 +26,13 @@ fn handle_proxy_css(req: Request) -> Response {
 
 fn main() {
     let port_str: String = getenv("PORT")
-    var port: int = 3005
+    var port: int = 3009
     if port_str != "" { port = string_to_int(port_str) }
 
     let app: App = app_new()
     app_get(app, "/", handle_index)
     app_get(app, "/es/", handle_index_es)
-    app_get(app, "/proxy.css", handle_proxy_css)
+    app_get(app, "/edit.css", handle_edit_css)
     app_get(app, "/api/health", handle_health)
-    app_static_cached(app, "/shared/", "static/shared/", 3600)
     serve_app(app, port, 16)
 }

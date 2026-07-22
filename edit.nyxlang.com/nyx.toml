@@ -1,0 +1,8 @@
+[package]
+name = "edit-nyxlang-com"
+version = "0.1.0"
+main = "src/main.nx"
+description = "edit.nyxlang.com landing page"
+
+[dependencies]
+nyx-serve = "*"

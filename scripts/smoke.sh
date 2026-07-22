@@ -7,6 +7,7 @@ declare -A BINS=(
     ["nyxlang.com/nyxlang-com"]=13101
     ["serve.nyxlang.com/serve-nyxlang-com"]=13103
     ["proxy.nyxlang.com/proxy-nyxlang-com"]=13105
+    ["edit.nyxlang.com/edit-nyxlang-com"]=13109
 )
 fail=0
 for rel in "${!BINS[@]}"; do
@@ -29,4 +30,4 @@ for rel in "${!BINS[@]}"; do
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
 done
-if [ "$fail" = "0" ]; then echo "smoke: 3/3 PASS"; else echo "smoke: HAY FALLOS"; exit 1; fi
+if [ "$fail" = "0" ]; then echo "smoke: 4/4 PASS"; else echo "smoke: HAY FALLOS"; exit 1; fi

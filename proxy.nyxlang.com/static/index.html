@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nyx-proxy — HTTPS reverse proxy in 170KB</title>
-    <meta name="description" content="HTTPS reverse proxy with TLS 1.2+, SNI multi-domain, health checks, access logs, and rate limiting. Zero dependencies.">
+    <title>nyx-proxy — an HTTPS reverse proxy in one small binary</title>
+    <meta name="description" content="HTTPS reverse proxy: TLS termination, SNI multi-domain routing, health checks, LRU response cache, per-IP rate limiting and a Prometheus /metrics endpoint. One small binary, zero dependencies.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/proxy.css">
 </head>
 <body>
 
 <nav>
     <a href="/" class="nav-logo">nyx<span class="product">-proxy</span></a>
     <div class="nav-right">
-        <a href="#features" class="hide-mobile">Docs</a>
+        <a href="#features" class="hide-mobile">Features</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="hide-mobile">GitHub</a>
         <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
     </div>
@@ -23,16 +23,27 @@
 
 <!-- HERO -->
 <section class="hero">
-    <span class="hero-label">TLS 1.2+ &middot; HEALTH CHECKS &middot; WEBSOCKETS</span>
-    <h1>HTTPS reverse proxy in 170KB</h1>
+    <span class="hero-label">TLS 1.2+ &middot; SNI ROUTING &middot; ~330KB BINARY</span>
+    <h1>An HTTPS reverse proxy.<br>One small binary.</h1>
     <p class="subtitle">
-        TLS termination with SNI, virtual hosts, health checks, access logs,
-        bidirectional WebSocket tunneling, and per-IP rate limiting.
-        Replaces Nginx for simple deployments.
+        TLS termination with SNI multi-domain routing, active health checks,
+        an LRU response cache, per-IP rate limiting, WebSocket tunnelling and a
+        Prometheus <code>/metrics</code> endpoint &mdash; from one TOML file. This
+        is the proxy in front of every domain here.
     </p>
     <div class="hero-buttons">
-        <a href="#config" class="btn btn-accent">Get Started</a>
+        <a href="#config" class="btn btn-accent">Get started</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="btn btn-outline">GitHub</a>
+    </div>
+</section>
+
+<!-- STATS -->
+<section style="padding-top:0.5rem">
+    <div class="stats-inner">
+        <div class="stat"><div class="n"><em>~330</em>KB</div><div class="l">static binary</div></div>
+        <div class="stat"><div class="n"><em>6</em></div><div class="l">domains on one IP</div></div>
+        <div class="stat"><div class="n"><em>1</em></div><div class="l">TOML config file</div></div>
+        <div class="stat"><div class="n"><em>0</em></div><div class="l">dependencies</div></div>
     </div>
 </section>
 
@@ -72,7 +83,7 @@ hostname    = <span class="str">"api.example.com"</span></pre>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card">
             <div class="card-title">Multi-domain TLS with SNI</div>
-            <div class="card-desc">Serve multiple domains on a single IP. Each domain gets its own TLS certificate via SNI negotiation. Currently serving 4 domains on one server.</div>
+            <div class="card-desc">Serve multiple domains on a single IP. Each domain presents its own TLS certificate via SNI. This server routes 6 domains through one nyx-proxy.</div>
         </div>
         <div class="card">
             <div class="card-title">Health checks</div>
@@ -89,6 +100,18 @@ hostname    = <span class="str">"api.example.com"</span></pre>
         <div class="card">
             <div class="card-title">Connection pooling</div>
             <div class="card-desc">HTTP keep-alive between proxy and backends. Reduces connection overhead for high-throughput scenarios.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Response cache (LRU + TTL)</div>
+            <div class="card-desc">Caches GET 200 responses under HOST:PATH and honours upstream Cache-Control (no-store / no-cache / private bypass; max-age overrides). Hits are marked <code>X-Nyx-Cache: HIT</code>.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Prometheus /metrics</div>
+            <div class="card-desc">Request counts, status classes, latency and upstream health exposed on a separate admin port &mdash; scrape it straight into Grafana.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">X-Forwarded-For</div>
+            <div class="card-desc">Injects the real client IP so your backends can rate-limit and log by origin, not by the proxy.</div>
         </div>
         <div class="card">
             <div class="card-title">HTTP redirect</div>
@@ -129,7 +152,7 @@ hostname    = <span class="str">"api.example.com"</span></pre>
         </div>
         <div class="card" style="border-color:var(--accent)">
             <div class="card-title">nyx-proxy</div>
-            <div class="card-desc">~170KB binary. Simple TOML config. TLS, health checks, rate limiting, access logs built-in. Zero dependencies.</div>
+            <div class="card-desc">~330KB binary. Simple TOML config. TLS, health checks, rate limiting, LRU cache, /metrics and access logs built-in. Zero dependencies.</div>
         </div>
     </div>
 </section>
@@ -142,12 +165,12 @@ hostname    = <span class="str">"api.example.com"</span></pre>
     <div class="card-grid cols-3" style="margin-top:1.5rem">
         <a href="https://nyxkv.com" class="card">
             <div class="card-title">NyxKV</div>
-            <div class="card-desc">Redis-compatible KV store with Pub/Sub.</div>
-            <div class="card-stat">82K ops/s</div>
+            <div class="card-desc">Redis-compatible KV store — 64 commands, Pub/Sub.</div>
+            <div class="card-stat">redis-compatible</div>
         </a>
         <a href="https://serve.nyxlang.com" class="card">
             <div class="card-title">nyx-serve</div>
-            <div class="card-desc">HTTP framework with middleware and sessions.</div>
+            <div class="card-desc">The web framework — WebSockets, templates, sessions.</div>
             <div class="card-stat">9,971 req/s</div>
         </a>
         <a href="https://nyxlang.com" class="card">

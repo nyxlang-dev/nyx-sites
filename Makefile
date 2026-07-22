@@ -4,7 +4,7 @@
 NYX_HOME ?= /home/admin/NyxLang
 export NYX_HOME
 
-SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com
+SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
 .PHONY: vendor build-all smoke deploy status clean
 
@@ -31,4 +31,4 @@ status:
 
 clean:
 	rm -f nyxlang.com/nyxlang-com serve.nyxlang.com/serve-nyxlang-com \
-	      proxy.nyxlang.com/proxy-nyxlang-com */script.nx */script.ll
+	      proxy.nyxlang.com/proxy-nyxlang-com edit.nyxlang.com/edit-nyxlang-com */script.nx */script.ll

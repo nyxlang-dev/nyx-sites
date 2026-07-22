@@ -3,29 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nyx-proxy — Proxy HTTPS en 170KB</title>
-    <meta name="description" content="Proxy inverso HTTPS con TLS 1.2+, SNI multi-dominio, health checks, access logs y rate limiting. Cero dependencias.">
+    <title>nyx-proxy — un proxy inverso HTTPS en un binario chico</title>
+    <meta name="description" content="Proxy inverso HTTPS: terminación TLS, routing SNI multi-dominio, health checks, cache LRU de respuestas, rate limiting por IP y endpoint Prometheus /metrics. Un binario chico, cero dependencias.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/proxy.css">
 </head>
 <body>
 <nav>
     <a href="/" class="nav-logo">nyx<span class="product">-proxy</span></a>
     <div class="nav-right">
-        <a href="#features" class="hide-mobile">Docs</a>
+        <a href="#features" class="hide-mobile">Características</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="hide-mobile">GitHub</a>
         <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
     </div>
 </nav>
 <section class="hero">
-    <span class="hero-label">TLS 1.2+ &middot; HEALTH CHECKS &middot; WEBSOCKETS</span>
-    <h1>Proxy HTTPS en 170KB</h1>
-    <p class="subtitle">Terminacion TLS con SNI, virtual hosts, health checks, access logs, tunneling bidireccional de WebSockets y rate limiting por IP. Reemplaza Nginx para deploys simples.</p>
+    <span class="hero-label">TLS 1.2+ &middot; ROUTING SNI &middot; BINARIO ~330KB</span>
+    <h1>Un proxy inverso HTTPS.<br>Un binario chico.</h1>
+    <p class="subtitle">Terminación TLS con routing SNI multi-dominio, health checks activos, cache LRU de respuestas, rate limiting por IP, tunneling de WebSockets y un endpoint Prometheus <code>/metrics</code> &mdash; desde un solo archivo TOML. Este es el proxy delante de cada dominio de acá.</p>
     <div class="hero-buttons">
         <a href="#config" class="btn btn-accent">Empezar</a>
         <a href="https://github.com/nyxlang-dev/nyx-proxy" class="btn btn-outline">GitHub</a>
+    </div>
+</section>
+<section style="padding-top:0.5rem">
+    <div class="stats-inner">
+        <div class="stat"><div class="n"><em>~330</em>KB</div><div class="l">binario estático</div></div>
+        <div class="stat"><div class="n"><em>6</em></div><div class="l">dominios en una IP</div></div>
+        <div class="stat"><div class="n"><em>1</em></div><div class="l">archivo TOML</div></div>
+        <div class="stat"><div class="n"><em>0</em></div><div class="l">dependencias</div></div>
     </div>
 </section>
 <section id="config">
@@ -52,11 +60,14 @@ hostname    = <span class="str">"ejemplo.com"</span></pre>
     <h2 class="section-title">Todo lo que necesitas</h2>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card"><div class="card-title">TLS multi-dominio con SNI</div><div class="card-desc">Sirve multiples dominios en una sola IP. Cada dominio con su propio certificado TLS. Actualmente sirviendo 4 dominios.</div></div>
-        <div class="card"><div class="card-title">Health checks</div><div class="card-desc">Verificaciones TCP activas cada N segundos. Backends caidos se remueven automaticamente y se restauran al recuperarse.</div></div>
-        <div class="card"><div class="card-title">Access logs</div><div class="card-desc">Formato estructurado: timestamp, method, path, status, latencia. Grep-friendly, escrituras protegidas con mutex.</div></div>
+        <div class="card"><div class="card-title">Health checks</div><div class="card-desc">Verificaciones TCP activas cada N segundos. Los backends caídos se remueven automáticamente y se restauran al recuperarse.</div></div>
+        <div class="card"><div class="card-title">Access logs</div><div class="card-desc">Formato estructurado: timestamp, método, path, status, latencia. Grep-friendly, escrituras protegidas con mutex.</div></div>
         <div class="card"><div class="card-title">Rate limiting</div><div class="card-desc">Contador de ventana deslizante por IP. Retorna HTTP 429 con header Retry-After. Configurable en proxy.toml.</div></div>
-        <div class="card"><div class="card-title">Connection pooling</div><div class="card-desc">HTTP keep-alive entre proxy y backends. Reduce overhead de conexiones.</div></div>
-        <div class="card"><div class="card-title">Redirect HTTP</div><div class="card-desc">Redireccion automatica HTTP a HTTPS en puerto 80.</div></div>
+        <div class="card"><div class="card-title">Connection pooling</div><div class="card-desc">HTTP keep-alive entre el proxy y los backends. Reduce el overhead de conexiones.</div></div>
+        <div class="card"><div class="card-title">Cache de respuestas (LRU + TTL)</div><div class="card-desc">Cachea respuestas GET 200 bajo HOST:PATH y honra el Cache-Control del upstream (no-store / no-cache / private bypassean; max-age override). Los hits van marcados <code>X-Nyx-Cache: HIT</code>.</div></div>
+        <div class="card"><div class="card-title">Prometheus /metrics</div><div class="card-desc">Conteos de requests, clases de status, latencia y salud de upstreams en un puerto admin aparte &mdash; scrapealo directo a Grafana.</div></div>
+        <div class="card"><div class="card-title">X-Forwarded-For</div><div class="card-desc">Inyecta la IP real del cliente para que tus backends puedan rate-limitear y loguear por origen, no por el proxy.</div></div>
+        <div class="card"><div class="card-title">Redirect HTTP</div><div class="card-desc">Redirección automática HTTP a HTTPS en el puerto 80.</div></div>
     </div>
 </section>
 <section>
@@ -70,24 +81,24 @@ hostname    = <span class="str">"ejemplo.com"</span></pre>
 <section>
     <div class="section-label">Comparacion</div>
     <h2 class="section-title">Reemplaza Nginx</h2>
-    <p class="section-subtitle">Para setups simples de proxy inverso, nyx-proxy hace lo mismo en una fraccion del tamano.</p>
+    <p class="section-subtitle">Para setups simples de proxy inverso, nyx-proxy hace lo mismo en una fracción del tamaño.</p>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
-        <div class="card"><div class="card-title">Nginx</div><div class="card-desc">~1.5MB binario. Configuracion compleja. Sistema de modulos. Docenas de dependencias.</div></div>
-        <div class="card" style="border-color:var(--accent)"><div class="card-title">nyx-proxy</div><div class="card-desc">~170KB binario. Config TOML simple. TLS, health checks, rate limiting, access logs integrados. Cero dependencias.</div></div>
+        <div class="card"><div class="card-title">Nginx</div><div class="card-desc">~1.5MB binario. Configuración compleja. Sistema de módulos. Docenas de dependencias.</div></div>
+        <div class="card" style="border-color:var(--accent)"><div class="card-title">nyx-proxy</div><div class="card-desc">~330KB binario. Config TOML simple. TLS, health checks, rate limiting, cache LRU, /metrics y access logs integrados. Cero dependencias.</div></div>
     </div>
 </section>
 <section>
     <div class="section-label">Ecosistema</div>
     <h2 class="section-title">Parte del ecosistema Nyx</h2>
     <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <a href="https://nyxkv.com" class="card"><div class="card-title">NyxKV</div><div class="card-desc">KV store compatible con Redis con Pub/Sub.</div><div class="card-stat">82K ops/s</div></a>
-        <a href="https://serve.nyxlang.com" class="card"><div class="card-title">nyx-serve</div><div class="card-desc">Framework HTTP con middleware y sesiones.</div><div class="card-stat">9,971 req/s</div></a>
-        <a href="https://nyxlang.com" class="card"><div class="card-title">nyx-queue</div><div class="card-desc">Cola de mensajes persistente.</div><div class="card-stat">3,252 msg/s</div></a>
+        <a href="https://nyxkv.com" class="card"><div class="card-title">NyxKV</div><div class="card-desc">Almacén clave-valor compatible con Redis — 64 comandos, Pub/Sub.</div><div class="card-stat">redis-compatible</div></a>
+        <a href="https://serve.nyxlang.com" class="card"><div class="card-title">nyx-serve</div><div class="card-desc">El framework web — WebSockets, plantillas, sesiones.</div><div class="card-stat">9,971 req/s</div></a>
+        <a href="https://nyxlang.com" class="card"><div class="card-title">nyx-queue</div><div class="card-desc">Cola de mensajes persistente con ACK.</div><div class="card-stat">3,252 msg/s</div></a>
     </div>
 </section>
 <footer>
     <div class="footer-grid">
-        <div class="footer-col"><h4>Producto</h4><a href="#features">Documentacion</a><a href="https://github.com/nyxlang-dev/nyx-proxy">GitHub</a></div>
+        <div class="footer-col"><h4>Producto</h4><a href="#features">Características</a><a href="https://github.com/nyxlang-dev/nyx-proxy">GitHub</a></div>
         <div class="footer-col"><h4>Ecosistema</h4><a href="https://nyxlang.com">Nyx</a><a href="https://nyxkv.com">NyxKV</a><a href="https://serve.nyxlang.com">nyx-serve</a></div>
         <div class="footer-col"><h4>Recursos</h4><a href="https://nyxlang.com/es/learn/">El Libro de Nyx</a><a href="https://nyxlang.com/playground/">Playground</a></div>
         <div class="footer-col"><h4>Contacto</h4><a href="https://github.com/nyxlang-dev">GitHub Org</a></div>

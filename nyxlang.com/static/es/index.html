@@ -95,13 +95,13 @@
     <h2 class="section-title">Ocho productos, un lenguaje</h2>
     <p class="section-subtitle">Todo lo que sirve este sitio web esta escrito en Nyx.</p>
     <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <a href="https://nyxkv.com" class="card"><div class="card-title">NyxKV</div><div class="card-desc">KV store compatible con Redis. 52 comandos, Pub/Sub, auth multi-tenant, persistencia binaria.</div><div class="card-stat">82K ops/s</div></a>
+        <a href="https://nyxkv.com" class="card"><div class="card-title">NyxKV</div><div class="card-desc">Almacén clave-valor compatible con Redis. 64 comandos, Pub/Sub, SCAN estable ante resize, auth multi-tenant, TLS.</div><div class="card-stat">compatible con Redis</div></a>
         <a href="https://serve.nyxlang.com" class="card"><div class="card-title">nyx-serve</div><div class="card-desc">Framework HTTP con middleware composable, APIs JSON y sesiones con cookies.</div><div class="card-stat">9,971 req/s</div></a>
         <a href="https://proxy.nyxlang.com" class="card"><div class="card-title">nyx-proxy</div><div class="card-desc">Proxy HTTPS con TLS, SNI, health checks, rate limiting, access logs.</div><div class="card-stat">4,282 req/s</div></a>
         <div class="card"><div class="card-title">nyx-queue</div><div class="card-desc">Cola de mensajes persistente con ACK, redelivery automatico y distribucion round-robin.</div><div class="card-stat">3,252 msg/s</div></div>
         <div class="card"><div class="card-title">nyx-http2</div><div class="card-desc">Servidor HTTP/2 con compresion HPACK, framing binario y multiplexing de streams.</div><div class="card-stat">h2c mode</div></div>
         <div class="card"><div class="card-title">nyx-db</div><div class="card-desc">Base de datos SQL embebida con parser propio, B-tree, transacciones, persistencia.</div><div class="card-stat">motor SQL</div></div>
-        <div class="card"><div class="card-title">nyx-edit</div><div class="card-desc">Editor de texto terminal con seleccion, undo, busqueda, clipboard y raw mode.</div><div class="card-stat">1091 lineas</div></div>
+        <div class="card"><div class="card-title">nyx-edit</div><div class="card-desc">Editor de texto para terminal con selección, undo, búsqueda, clipboard y raw mode.</div><div class="card-stat">~1090 líneas</div></div>
         <div class="card"><div class="card-title">nyx-shell</div><div class="card-desc">Shell POSIX interactivo con pipes, redirects, expansion de variables, historial.</div><div class="card-stat">fork+exec</div></div>
         <a href="/playground/" class="card"><div class="card-title">Playground</div><div class="card-desc">Proba Nyx en tu navegador. Edita, compila y ejecuta sin instalar nada.</div><div class="card-stat">probalo ahora</div></a>
     </div>
@@ -120,30 +120,30 @@
 </section>
 <!-- NOVEDADES -->
 <section id="novedades">
-    <div class="section-label">Pr&oacute;ximamente &middot; v0.17</div>
-    <h2 class="section-title">En el roadmap</h2>
-    <p class="section-subtitle">En desarrollo para el pr&oacute;ximo release: WebAssembly en el navegador, diagn&oacute;sticos AI-first, parser blindado y mutaci&oacute;n in-place. <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog completo &rarr;</a></p>
+    <div class="section-label">Entregado &middot; v0.22</div>
+    <h2 class="section-title">Lo que el lenguaje hace hoy</h2>
+    <p class="section-subtitle">No es un roadmap &mdash; esto está entregado y corriendo en producción. <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog completo &rarr;</a></p>
 
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card">
-            <div class="card-title">WebAssembly &mdash; Nyx en el navegador</div>
-            <div class="card-desc"><code>make wasm</code> compila a wasm32-wasi. Llam&aacute; JS con <code>extern "js" fn</code>, manej&aacute; el DOM con <code>std/dom</code>, y los eventos re-entran a funciones Nyx exportadas.</div>
-            <div class="card-stat">wasm32 &middot; DOM + eventos</div>
+            <div class="card-title">Auto-hospedado, con fixed point verificado</div>
+            <div class="card-desc">El compilador está escrito en Nyx y se compila a sí mismo &mdash; recompilar produce IR byte-idéntico. Cada release pasa ese chequeo de fixed point más 300+ tests de regresión.</div>
+            <div class="card-stat">compilador en Nyx &middot; nativo vía LLVM</div>
         </div>
         <div class="card">
-            <div class="card-title">Diagn&oacute;sticos AI-first</div>
-            <div class="card-desc">Errores machine-readable: <code>NYX_DIAG=json</code> con c&oacute;digos estables, line:column, multi-error en parse <em>y</em> semantic. El parser nunca se cuelga.</div>
-            <div class="card-stat">NYX01xx&ndash;NYX10xx &middot; JSON</div>
+            <div class="card-title">Un borrow checker en serio</div>
+            <div class="card-desc">Move-checking real, detección de use-after-free / double-free sobre memoria manual, drop determinista para tipos <code>#[affine]</code>, y análisis de escape de referencias colgantes &mdash; opt-in con <code>NYX_BORROW=error</code>.</div>
+            <div class="card-stat">NYX12xx &middot; gates sound</div>
         </div>
         <div class="card">
-            <div class="card-title">Gen&eacute;ricos impl&iacute;citos + mutaci&oacute;n in-place</div>
-            <div class="card-desc">Calls gen&eacute;ricos sin turbofish &mdash; <code>id(42)</code> simplemente funciona. M&eacute;todos <code>&amp;mut self</code> mutan por puntero; <code>p.campo</code> auto-derefiere sobre <code>*Struct</code>.</div>
-            <div class="card-stat">monomorfizaci&oacute;n &middot; &amp;mut self</div>
+            <div class="card-title">Async real, WebAssembly, inferencia LLM</div>
+            <div class="card-desc">Goroutines stackful sobre un scheduler M:N con event loop epoll; <code>make wasm</code> corre Nyx en el navegador con DOM + eventos; <code>std/llm</code> bindea llama.cpp para inferencia on-device.</div>
+            <div class="card-stat">spawn/await &middot; wasm32 &middot; ggml</div>
         </div>
         <div class="card">
-            <div class="card-title">Chequeador sem&aacute;ntico de tipos</div>
-            <div class="card-desc">Los mismatches se atrapan antes del runtime. Resoluci&oacute;n cross-module de structs, campos y trait-impls con <em>did you mean</em>. Mensajes biling&uuml;es v&iacute;a <code>NYX_LANG</code>.</div>
-            <div class="card-stat">M-08 &middot; EN + ES</div>
+            <div class="card-title">Diagnósticos AI-first</div>
+            <div class="card-desc">Errores machine-readable: <code>NYX_DIAG=json</code> con códigos estables, line:column, multi-error en parse <em>y</em> semantic. Bilingüe vía <code>NYX_LANG</code>. El parser nunca se cuelga.</div>
+            <div class="card-stat">NYX01xx&ndash;NYX12xx &middot; JSON &middot; EN + ES</div>
         </div>
     </div>
 </section>
@@ -160,7 +160,7 @@
             <button class="btn-copy" onclick="copyInstall(this)">Copiar</button>
         </div>
         <p class="gs-note">Linux (x86_64, ARM64) &middot; Requiere Clang &middot; ~10 segundos</p>
-        <p class="gs-note">Verificar: $ nyx --version &rarr; Nyx v0.18.1</p>
+        <p class="gs-note">Verificar: $ nyx --version &rarr; nyx 0.22.0</p>
     </div>
 
     <!-- 2. Inicio Rápido -->
@@ -319,7 +319,7 @@
 Rebuilding compiler...
 Rebuilding package manager...
 Nyx updated successfully.
-nyx 0.13.1</span></pre></div>
+nyx 0.22.0</span></pre></div>
                 <p class="gs-note">Descarga el c&oacute;digo m&aacute;s reciente y recompila. Ejecuta esto en cualquier momento para obtener nuevas funcionalidades y correcciones.</p>
             </div>
             <div class="gs-step">

@@ -26,12 +26,12 @@ bash scripts/smoke.sh
 
 echo "[3/4] Units systemd..."
 sudo cp deploy/nyx-landing-main.service deploy/nyx-serve-web.service \
-        deploy/nyx-proxy-web.service /etc/systemd/system/
+        deploy/nyx-proxy-web.service deploy/nyx-edit-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
 
 echo "[4/4] Restart secuencial verificado..."
-declare -A PORTS=([nyx-serve-web]=3003 [nyx-proxy-web]=3005 [nyx-landing-main]=3001)
-for unit in nyx-serve-web nyx-proxy-web nyx-landing-main; do
+declare -A PORTS=([nyx-serve-web]=3003 [nyx-proxy-web]=3005 [nyx-edit-web]=3009 [nyx-landing-main]=3001)
+for unit in nyx-serve-web nyx-proxy-web nyx-edit-web nyx-landing-main; do
     port="${PORTS[$unit]}"
     sudo systemctl restart "$unit"
     ok=0

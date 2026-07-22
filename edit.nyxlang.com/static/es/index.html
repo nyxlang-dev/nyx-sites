@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-edit — un editor de terminal escrito en un solo archivo Nyx</title>
+    <meta name="description" content="Un editor de texto para terminal en ~1090 líneas de Nyx, un archivo, cero dependencias. Resize en vivo, UTF-8, mouse, bracketed paste, render sin parpadeo y undo de 1000 niveles.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/edit.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-edit</span></a>
+    <div class="nav-right">
+        <a href="#features" class="hide-mobile">Características</a>
+        <a href="#install" class="hide-mobile">Instalar</a>
+        <a href="https://github.com/nyxlang-dev/nyx-edit" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+    </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero">
+    <span class="eyebrow">Editor de terminal · escrito en Nyx</span>
+    <h1>Un editor de terminal de verdad. <em>Un archivo Nyx.</em></h1>
+    <p class="lede">
+        Unas 1090 líneas de Nyx, un único archivo fuente, cero dependencias externas —
+        modo raw, UTF-8, resize en vivo, mouse, bracketed paste, render sin parpadeo y
+        undo de 1000 niveles. La prueba de que Nyx construye apps de terminal interactivas,
+        no solo servidores.
+    </p>
+    <div class="hero-ctas">
+        <a href="#install" class="btn btn-accent">Instalar y correr</a>
+        <a href="https://github.com/nyxlang-dev/nyx-edit" class="btn btn-ghost">GitHub</a>
+    </div>
+
+    <!-- the thesis: the editor itself -->
+    <div class="editor">
+        <div class="editor-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="name">nyx-edit — server.nx</span>
+        </div>
+        <div class="editor-body">
+            <div class="row"><span class="gutter">1</span><span class="code"><span class="kw">import</span> <span class="str">"std/web"</span></span></div>
+            <div class="row"><span class="gutter">2</span><span class="code"></span></div>
+            <div class="row"><span class="gutter">3</span><span class="code"><span class="kw">fn</span> <span class="fn">greet</span>(name: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {</span></div>
+            <div class="row cur"><span class="gutter">4</span><span class="code">    <span class="kw">return</span> <span class="str">"hello, "</span> + <span class="sel">name</span><span class="caret"></span></span></div>
+            <div class="row"><span class="gutter">5</span><span class="code">}</span></div>
+            <div class="row"><span class="gutter">6</span><span class="code"></span></div>
+            <div class="row"><span class="gutter">7</span><span class="code"><span class="cm">// resaltado heurístico, en vivo en el buffer</span></span></div>
+            <div class="row"><span class="gutter">8</span><span class="code"><span class="kw">let</span> port: <span class="ty">int</span> = <span class="num">3000</span></span></div>
+        </div>
+        <div class="editor-status">
+            <span><span class="mode">NORMAL</span> &nbsp; server.nx &nbsp; UTF-8</span>
+            <span>Ln 4, Col 20 &nbsp; · &nbsp; 1 sel</span>
+        </div>
+    </div>
+    <p class="hero-install">$ <code>curl -sSf https://nyxlang.com/install.sh | sh</code></p>
+</div>
+
+<!-- STATS -->
+<section style="padding-top:0.5rem">
+    <div class="stats-inner">
+        <div class="stat"><div class="n"><em>~1090</em></div><div class="l">líneas de Nyx</div></div>
+        <div class="stat"><div class="n"><em>1</em></div><div class="l">archivo fuente</div></div>
+        <div class="stat"><div class="n"><em>0</em></div><div class="l">dependencias externas</div></div>
+        <div class="stat"><div class="n"><em>1000</em></div><div class="l">niveles de undo</div></div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+    <span class="eyebrow">Qué hace</span>
+    <h2 class="section-title">Los fundamentos, bien hechos</h2>
+    <p class="section-lead">
+        Todo lo que un editor de terminal necesita para sentirse sólido — los detalles
+        que separan un juguete de algo en lo que realmente escribirías.
+    </p>
+    <div class="feat-grid">
+        <div class="feat">
+            <div class="k">SIGWINCH</div>
+            <h3>Resize en vivo</h3>
+            <p>Arrastrá el borde de la terminal y el buffer se re-renderiza al instante — sin necesidad de apretar una tecla.</p>
+        </div>
+        <div class="feat">
+            <div class="k">?2026</div>
+            <h3>Render sin parpadeo</h3>
+            <p>Una escritura bufferizada por frame dentro de una región de output sincronizado. Sin tearing, sin flash — incluso sobre un SSH lento.</p>
+        </div>
+        <div class="feat">
+            <div class="k">UTF-8</div>
+            <h3>Consciente de codepoints</h3>
+            <p>El movimiento del cursor, la edición y el render trabajan en codepoints, no bytes — los caracteres de 2 a 4 bytes simplemente funcionan.</p>
+        </div>
+        <div class="feat">
+            <div class="k">SGR mouse</div>
+            <h3>Click, arrastre, scroll</h3>
+            <p>Click para posicionar el cursor, arrastre para seleccionar, rueda para scrollear. Se apaga limpio en cada salida.</p>
+        </div>
+        <div class="feat">
+            <div class="k">Ctrl+Z / Ctrl+Y</div>
+            <h3>Undo/redo incremental</h3>
+            <p>Deltas por operación con coalescing de tipeo, hasta 1000 niveles — una ráfaga de tipeo colapsa en un solo undo.</p>
+        </div>
+        <div class="feat">
+            <div class="k">bracketed paste</div>
+            <h3>El paste queda literal</h3>
+            <p>Los pastes multilínea se insertan tal cual como un solo grupo de undo — sin auto-indent arruinando tu código.</p>
+        </div>
+        <div class="feat">
+            <div class="k">?1049</div>
+            <h3>Pantalla alternativa</h3>
+            <p>Tu scrollback queda intacto al salir, como vim o less. El editor vive en su propia pantalla.</p>
+        </div>
+        <div class="feat">
+            <div class="k">Ctrl+F / Ctrl+G</div>
+            <h3>Búsqueda e ir-a-línea</h3>
+            <p>Búsqueda incremental con wrap-around, y salto directo a un número de línea. La navegación que buscás.</p>
+        </div>
+        <div class="feat">
+            <div class="k">defer cleanup</div>
+            <h3>Siempre restaura la terminal</h3>
+            <p>Termios, la pantalla alternativa y los modos de mouse se deshacen vía <code>defer</code> en cada salida — sin shell arruinado tras un crash.</p>
+        </div>
+    </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+    <span class="eyebrow">Ponelo a andar</span>
+    <h2 class="section-title">Instalá y abrí un archivo</h2>
+    <p class="section-lead">nyx-edit es un programa Nyx — instalá el toolchain, compilá el único binario, corrélo. Sin paquete que gestionar.</p>
+<pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh
+<span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-edit
+<span class="prompt">$</span> cd nyx-edit &amp;&amp; nyx build
+<span class="prompt">$</span> ./nyx-edit README.md
+<span class="out"># abre README.md — flechas para moverte, Ctrl+S para guardar, Ctrl+Q para salir</span></pre>
+</section>
+
+<!-- KEYBINDINGS -->
+<section id="keys">
+    <span class="eyebrow">Memoria muscular</span>
+    <h2 class="section-title">Atajos de teclado</h2>
+    <table class="keys">
+        <thead><tr><th>Tecla</th><th>Acción</th></tr></thead>
+        <tbody>
+            <tr><td><kbd>Arrows</kbd></td><td>Mover el cursor</td></tr>
+            <tr><td><kbd>Shift</kbd> + <kbd>Arrows</kbd></td><td>Extender la selección</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>Guardar archivo</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>Q</kbd></td><td>Salir</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd></td><td>Deshacer / rehacer</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>F</kbd></td><td>Buscar (con wrap-around)</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>G</kbd></td><td>Ir a número de línea</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>Copiar / cortar / pegar</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>K</kbd></td><td>Borrar la línea actual</td></tr>
+            <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>Inicio / fin de línea</td></tr>
+            <tr><td><kbd>PgUp</kbd> / <kbd>PgDn</kbd></td><td>Página arriba / abajo</td></tr>
+            <tr><td>Mouse</td><td>Click para posicionar · arrastre para seleccionar · rueda para scroll</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- WHY / ECOSYSTEM -->
+<section>
+    <span class="eyebrow">Por qué existe</span>
+    <h2 class="section-title">Una prueba de estrés para el lenguaje</h2>
+    <p class="section-lead">
+        Un editor de terminal no perdona: input de bytes crudos, secuencias de escape,
+        manejo de señales, loops de render ajustados. nyx-edit es un archivo de Nyx que
+        hace todo eso — el mismo lenguaje que escribe el compilador, el KV store y el
+        framework web.
+    </p>
+    <div class="eco-grid">
+        <a class="eco" href="https://nyxlang.com">
+            <span class="e-name">Nyx</span>
+            <p>El lenguaje auto-hospedado en el que está escrito nyx-edit. Compila a binarios nativos chicos sin runtime.</p>
+        </a>
+        <a class="eco" href="https://serve.nyxlang.com">
+            <span class="e-name">nyx<span class="product">-serve</span></span>
+            <p>El framework web — WebSockets, plantillas, sesiones. El lado servidor del mismo toolchain.</p>
+        </a>
+        <a class="eco" href="https://nyxkv.com">
+            <span class="e-name">nyx<span class="product">-kv</span></span>
+            <p>Almacén clave-valor compatible con Redis. El lado de los datos del ecosistema.</p>
+        </a>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <div class="cta-inner">
+        <h2>Compilalo y abrí un archivo</h2>
+        <p>Un clone, un build, y ya estás editando — con resize, mouse y undo ya funcionando.</p>
+<pre class="term"><span class="prompt">$</span> git clone https://github.com/nyxlang-dev/nyx-edit
+<span class="prompt">$</span> cd nyx-edit &amp;&amp; nyx build
+<span class="prompt">$</span> ./nyx-edit</pre>
+        <div class="hero-ctas">
+            <a href="https://github.com/nyxlang-dev/nyx-edit" class="btn btn-accent">Código en GitHub</a>
+            <a href="https://nyxlang.com" class="btn btn-ghost">El lenguaje Nyx</a>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <p>nyx-edit es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-edit">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

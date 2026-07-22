@@ -14,7 +14,7 @@ if [ ! -f "$SERVE_STACK/src/server.nx" ]; then
     exit 1
 fi
 
-for site in nyxlang.com serve.nyxlang.com proxy.nyxlang.com; do
+for site in nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com; do
     dest="$SITES_ROOT/$site/packages/nyx-serve"
     mkdir -p "$dest/src"
     cp "$SERVE_STACK"/src/*.nx "$dest/src/"

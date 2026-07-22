@@ -1,0 +1,16 @@
+[Unit]
+Description=edit.nyxlang.com — nyx-edit landing
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/admin/nyx-sites/edit.nyxlang.com
+ExecStart=/home/admin/nyx-sites/edit.nyxlang.com/edit-nyxlang-com
+Environment=PORT=3009
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

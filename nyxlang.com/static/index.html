@@ -110,17 +110,17 @@
     <div class="card-grid cols-3" style="margin-top:1.5rem">
         <a href="https://nyxkv.com" class="card">
             <div class="card-title">NyxKV</div>
-            <div class="card-desc">Redis-compatible KV store. 52 commands, Pub/Sub, multi-tenant auth, binary persistence.</div>
+            <div class="card-desc">Redis-compatible KV store. 64 commands, Pub/Sub, resize-stable SCAN, multi-tenant auth, TLS.</div>
             <div class="card-stat">82K ops/s</div>
         </a>
         <a href="https://serve.nyxlang.com" class="card">
             <div class="card-title">nyx-serve</div>
-            <div class="card-desc">HTTP framework with middleware composition, JSON APIs, and cookie sessions.</div>
+            <div class="card-desc">Web framework with WebSockets, templates, multipart uploads, middleware and sessions.</div>
             <div class="card-stat">9,971 req/s</div>
         </a>
         <a href="https://proxy.nyxlang.com" class="card">
             <div class="card-title">nyx-proxy</div>
-            <div class="card-desc">HTTPS reverse proxy with TLS, SNI, health checks, rate limiting, access logs.</div>
+            <div class="card-desc">HTTPS reverse proxy with TLS, SNI, health checks, LRU cache, /metrics, rate limiting.</div>
             <div class="card-stat">4,282 req/s</div>
         </a>
         <div class="card">
@@ -141,7 +141,7 @@
         <div class="card">
             <div class="card-title">nyx-edit</div>
             <div class="card-desc">Terminal text editor with selection, undo, search, clipboard, and raw mode I/O.</div>
-            <div class="card-stat">1091 lines</div>
+            <div class="card-stat">~1090 lines</div>
         </div>
         <div class="card">
             <div class="card-title">nyx-shell</div>
@@ -160,18 +160,18 @@
 <section id="performance">
     <div class="section-label">Performance</div>
     <h2 class="section-title">Native speed</h2>
-    <p class="section-subtitle">Compiled to machine code via LLVM. Competes with C.</p>
+    <p class="section-subtitle">Compiled to machine code via LLVM. At or above C on compute; the gap is allocation-heavy work (GC). Ratios are the portable metric.</p>
 
     <div style="margin-top:2rem">
         <div class="bench-row">
             <div class="bench-name">fibonacci(40)</div>
-            <div class="bench-bar-wrap"><div class="bench-bar" style="width:87%"></div></div>
-            <div class="bench-value">0.87x C</div>
+            <div class="bench-bar-wrap"><div class="bench-bar" style="width:98%"></div></div>
+            <div class="bench-value">~1.02x C</div>
         </div>
         <div class="bench-row">
             <div class="bench-name">primes(100K)</div>
-            <div class="bench-bar-wrap"><div class="bench-bar" style="width:99%"></div></div>
-            <div class="bench-value">0.99x C</div>
+            <div class="bench-bar-wrap"><div class="bench-bar" style="width:100%"></div></div>
+            <div class="bench-value">0.80x C &mdash; faster</div>
         </div>
         <div class="bench-row">
             <div class="bench-name">loop(100M)</div>
@@ -180,8 +180,8 @@
         </div>
         <div class="bench-row">
             <div class="bench-name">map(100K)</div>
-            <div class="bench-bar-wrap"><div class="bench-bar" style="width:93%"></div></div>
-            <div class="bench-value">1.07x C</div>
+            <div class="bench-bar-wrap"><div class="bench-bar" style="width:99%"></div></div>
+            <div class="bench-value">~0.97x C</div>
         </div>
         <div class="bench-row">
             <div class="bench-name">HTTP hello</div>
@@ -193,30 +193,30 @@
 
 <!-- WHAT'S NEW -->
 <section id="whats-new">
-    <div class="section-label">Coming next &middot; v0.17</div>
-    <h2 class="section-title">On the roadmap</h2>
-    <p class="section-subtitle">In development for the next release: WebAssembly in the browser, AI-first diagnostics, a hardened parser, and in-place mutation. <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Full changelog &rarr;</a></p>
+    <div class="section-label">Shipped &middot; v0.22</div>
+    <h2 class="section-title">What the language does now</h2>
+    <p class="section-subtitle">Not a roadmap &mdash; these are shipped and running in production. <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Full changelog &rarr;</a></p>
 
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card">
-            <div class="card-title">WebAssembly &mdash; Nyx in the browser</div>
-            <div class="card-desc"><code>make wasm</code> compiles to wasm32-wasi. Call JS with <code>extern "js" fn</code>, drive the DOM with <code>std/dom</code>, and let events re-enter exported Nyx functions.</div>
-            <div class="card-stat">wasm32 &middot; DOM + events</div>
+            <div class="card-title">Self-hosting, fixed-point verified</div>
+            <div class="card-desc">The compiler is written in Nyx and compiles itself &mdash; recompiling produces byte-identical IR. Every release passes that fixed-point check plus 300+ regression tests.</div>
+            <div class="card-stat">compiler in Nyx &middot; native via LLVM</div>
+        </div>
+        <div class="card">
+            <div class="card-title">A borrow checker that means it</div>
+            <div class="card-desc">Real move-checking, use-after-free / double-free detection over manual memory, deterministic drop for <code>#[affine]</code> types, and dangling-reference escape analysis &mdash; opt-in with <code>NYX_BORROW=error</code>.</div>
+            <div class="card-stat">NYX12xx &middot; sound gates</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Real async, WebAssembly, LLM inference</div>
+            <div class="card-desc">Stackful goroutines on an M:N scheduler with an epoll event loop; <code>make wasm</code> runs Nyx in the browser with DOM + events; <code>std/llm</code> binds llama.cpp for on-device inference.</div>
+            <div class="card-stat">spawn/await &middot; wasm32 &middot; ggml</div>
         </div>
         <div class="card">
             <div class="card-title">AI-first diagnostics</div>
-            <div class="card-desc">Machine-readable errors: <code>NYX_DIAG=json</code> with stable codes, line:column, multi-error in parse <em>and</em> semantic phases. The parser never hangs.</div>
-            <div class="card-stat">NYX01xx&ndash;NYX10xx &middot; JSON</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Implicit generics + in-place mutation</div>
-            <div class="card-desc">Generic calls without turbofish &mdash; <code>id(42)</code> just works. <code>&amp;mut self</code> methods mutate through a pointer; <code>p.field</code> auto-derefs on <code>*Struct</code>.</div>
-            <div class="card-stat">monomorphization &middot; &amp;mut self</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Semantic type checker</div>
-            <div class="card-desc">Mismatches caught before runtime. Cross-module struct, field, and trait-impl resolution with <em>did you mean</em> hints. Bilingual messages via <code>NYX_LANG</code>.</div>
-            <div class="card-stat">M-08 &middot; EN + ES</div>
+            <div class="card-desc">Machine-readable errors: <code>NYX_DIAG=json</code> with stable codes, line:column, multi-error in parse <em>and</em> semantic phases. Bilingual via <code>NYX_LANG</code>. The parser never hangs.</div>
+            <div class="card-stat">NYX01xx&ndash;NYX12xx &middot; JSON &middot; EN + ES</div>
         </div>
     </div>
 </section>
@@ -234,7 +234,7 @@
             <button class="btn-copy" onclick="copyInstall(this)">Copy</button>
         </div>
         <p class="gs-note">Linux (x86_64, ARM64) &middot; Requires Clang &middot; ~10 seconds</p>
-        <p class="gs-note">Verify: $ nyx --version &rarr; Nyx v0.18.1</p>
+        <p class="gs-note">Verify: $ nyx --version &rarr; nyx 0.22.0</p>
     </div>
 
     <!-- 2. Quick Start -->
@@ -394,7 +394,7 @@
 Rebuilding compiler...
 Rebuilding package manager...
 Nyx updated successfully.
-nyx 0.13.1</span></pre></div>
+nyx 0.22.0</span></pre></div>
                 <p class="gs-note">Pulls the latest source and recompiles. Run this anytime to get new features and fixes.</p>
             </div>
             <div class="gs-step">
