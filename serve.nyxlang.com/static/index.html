@@ -3,181 +3,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nyx-serve — A web framework in 170KB</title>
-    <meta name="description" content="HTTP framework with middleware, JSON API helpers, and cookie sessions. 9,971 req/s. Zero dependencies.">
+    <title>nyx-serve — the web framework that ships as one 170KB binary</title>
+    <meta name="description" content="Routes, JSON, WebSockets, templates, file uploads, sessions and production guardrails — one static binary, zero dependencies. The framework powering nyxlang.com.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
 </head>
 <body>
 
 <nav>
     <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
     <div class="nav-right">
-        <a href="#features" class="hide-mobile">Docs</a>
+        <a href="/docs/" class="hide-mobile">Docs</a>
         <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
         <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
     </div>
 </nav>
 
+<main>
+
 <!-- HERO -->
-<section class="hero">
-    <span class="hero-label">MIDDLEWARE &middot; JSON API &middot; SESSIONS</span>
-    <h1>A web framework in 170KB</h1>
-    <p class="subtitle">
-        Production-ready HTTP framework with middleware composition, JSON APIs,
-        and cookie sessions backed by NyxKV. The framework powering nyxlang.com.
-    </p>
-    <div class="hero-buttons">
-        <a href="#example" class="btn btn-accent">Get Started</a>
-        <a href="https://github.com/nyxlang-dev/nyx-serve" class="btn btn-outline">GitHub</a>
+<div class="hero">
+    <div>
+        <h1>The whole web framework. <em>One 170KB binary.</em></h1>
+        <p class="lede">
+            Routes, JSON, WebSockets, templates, uploads, sessions and production
+            guardrails — compiled to a single static binary with zero dependencies.
+            No node_modules. No runtime to install on the server. This is the
+            framework powering nyxlang.com.
+        </p>
+        <div class="hero-ctas">
+            <a href="/docs/" class="btn btn-accent">Start the tutorial</a>
+            <a href="https://github.com/nyxlang-dev/nyx-serve" class="btn btn-ghost">GitHub</a>
+        </div>
+        <p class="hero-install">$ <code>curl -sSf https://nyxlang.com/install.sh | sh</code></p>
     </div>
-</section>
+    <div class="codewin">
+        <div class="codewin-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="title">src/main.nx — a complete JSON API</span>
+        </div>
+<pre><span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">import</span> <span class="str">"nyx-serve/src/server"</span>
 
-<!-- EXAMPLE -->
-<section id="example">
-    <div class="section-label">10 lines</div>
-    <h2 class="section-title">A complete API</h2>
-    <p class="section-subtitle">Routes, middleware, JSON responses. Everything composes.</p>
+<span class="kw">fn</span> <span class="fn">hello</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"msg\":\"hello\"}"</span>)
+}
 
-    <pre style="margin-top:1.5rem"><span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">fn</span> <span class="fn">user</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.<span class="fn">get</span>(<span class="str">"id"</span>)
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"user\":\""</span> + id + <span class="str">"\"}"</span>)
+}
 
 <span class="kw">fn</span> <span class="fn">main</span>() {
     <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
-    <span class="fn">app_use</span>(app, <span class="fn">mw_logging</span>())
-    <span class="fn">app_use</span>(app, <span class="fn">mw_cors</span>())
-    <span class="fn">app_get</span>(app, <span class="str">"/"</span>, handle_home)
-    <span class="fn">app_get</span>(app, <span class="str">"/api/users"</span>, handle_users)
-    <span class="fn">app_listen</span>(app, <span class="num">3000</span>)
+    <span class="fn">app_get</span>(app, <span class="str">"/"</span>, hello)
+    <span class="fn">app_get</span>(app, <span class="str">"/users/{id}"</span>, user)
+    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">8</span>)
 }</pre>
-</section>
+    </div>
+</div>
 
-<!-- MIDDLEWARE -->
-<section id="features">
-    <div class="section-label">Composable</div>
-    <h2 class="section-title">Middleware that composes</h2>
-    <p class="section-subtitle">Logging, CORS, auth &mdash; stack them in order.</p>
+<!-- STATS -->
+<div class="stats">
+    <div class="stats-inner">
+        <div class="stat"><div class="n"><em>170</em>KB</div><div class="l">one static binary</div></div>
+        <div class="stat"><div class="n"><em>0</em></div><div class="l">runtime dependencies</div></div>
+        <div class="stat"><div class="n"><em>9,971</em> req/s</div><div class="l">keep-alive, multi-threaded</div></div>
+        <div class="stat"><div class="n"><em>3</em> commands</div><div class="l">from zero to running API</div></div>
+    </div>
+</div>
 
-    <pre style="margin-top:1.5rem"><span class="cm">// Built-in middleware</span>
-<span class="fn">app_use</span>(app, <span class="fn">mw_logging</span>())    <span class="cm">// logs method, path, status, latency</span>
-<span class="fn">app_use</span>(app, <span class="fn">mw_cors</span>())       <span class="cm">// Access-Control-Allow-Origin: *</span>
-
-<span class="cm">// Configure CORS</span>
-<span class="fn">cors_configure</span>(<span class="str">"https://myapp.com"</span>, <span class="str">"GET,POST"</span>, <span class="str">"Content-Type"</span>)
-
-<span class="cm">// Custom middleware</span>
-<span class="kw">fn</span> <span class="fn">auth_check</span>(req: <span class="ty">Request</span>, resp: <span class="ty">Response</span>) -> <span class="ty">int</span> {
-    <span class="kw">if</span> req.headers.get(<span class="str">"Authorization"</span>) == <span class="str">""</span> {
-        <span class="fn">response_status</span>(resp, <span class="num">401</span>)
-        <span class="kw">return</span> <span class="num">0</span>  <span class="cm">// stop chain</span>
-    }
-    <span class="kw">return</span> <span class="num">1</span>      <span class="cm">// continue</span>
-}</pre>
-</section>
-
-<!-- JSON -->
+<!-- ROUTES + JSON -->
 <section>
-    <div class="section-label">APIs</div>
-    <h2 class="section-title">JSON APIs in seconds</h2>
-    <p class="section-subtitle">Parse request bodies, return JSON with proper headers.</p>
-
-    <pre style="margin-top:1.5rem"><span class="kw">fn</span> <span class="fn">handle_users</span>(req: <span class="ty">Request</span>, resp: <span class="ty">Response</span>) {
-    <span class="cm">// Parse JSON body</span>
+    <div class="feature">
+        <div class="feature-copy">
+            <span class="eyebrow">Routing &amp; JSON</span>
+            <h3>Handlers are plain functions</h3>
+            <p>
+                A route maps a pattern to a function. Path params with
+                <code>{id}</code>, query strings, cookies and the parsed body
+                arrive already split on the <code>Request</code> — you read
+                fields, you return a <code>Response</code>. Nothing hides
+                behind decorators or magic globals.
+            </p>
+            <ul>
+                <li><strong>Path params</strong> — <code>req.params.get("id")</code></li>
+                <li><strong>JSON body in</strong> — <code>req_json(req)</code> gives you a Map</li>
+                <li><strong>JSON out</strong> — <code>response_json_map(201, data)</code></li>
+            </ul>
+        </div>
+        <div class="feature-code codewin">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">POST /notes — read JSON, answer JSON</span>
+            </div>
+<pre><span class="kw">fn</span> <span class="fn">create_note</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
     <span class="kw">let</span> body: <span class="ty">Map</span> = <span class="fn">req_json</span>(req)
+    <span class="kw">let</span> title: <span class="ty">String</span> = body.<span class="fn">get</span>(<span class="str">"title"</span>)
 
-    <span class="cm">// Return JSON response</span>
-    <span class="kw">let</span> data: <span class="ty">Map</span> = <span class="fn">Map</span>.new()
-    data.insert(<span class="str">"name"</span>, <span class="str">"Alice"</span>)
-    data.insert(<span class="str">"role"</span>, <span class="str">"admin"</span>)
-    <span class="fn">response_json_map</span>(resp, data)
-    <span class="cm">// → {"name":"Alice","role":"admin"}</span>
-    <span class="cm">// Content-Type: application/json set automatically</span>
+    <span class="kw">var</span> out: <span class="ty">Map</span> = <span class="fn">map_new</span>()
+    out.<span class="fn">insert</span>(<span class="str">"created"</span>, title)
+    <span class="kw">return</span> <span class="fn">response_json_map</span>(<span class="num">201</span>, out)
 }</pre>
+        </div>
+    </div>
 </section>
 
-<!-- SESSIONS -->
+<!-- WEBSOCKETS -->
 <section>
-    <div class="section-label">State</div>
-    <h2 class="section-title">Sessions out of the box</h2>
-    <p class="section-subtitle">Cookie-based sessions backed by NyxKV via RESP over TCP.</p>
+    <div class="feature flip">
+        <div class="feature-code codewin">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">app_ws — WebSocket routes with {params}</span>
+            </div>
+<pre><span class="kw">fn</span> <span class="fn">chat_handler</span>(info: <span class="ty">Array</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = info[<span class="num">0</span>]
+    <span class="kw">let</span> headers: <span class="ty">Array</span> = info[<span class="num">2</span>]
+    <span class="kw">let</span> key: <span class="ty">String</span> = <span class="fn">http_find_header</span>(headers, <span class="str">"Sec-WebSocket-Key"</span>)
 
-    <pre style="margin-top:1.5rem"><span class="kw">import</span> <span class="str">"std/session"</span>
-
-<span class="fn">session_configure</span>(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, <span class="num">3600</span>)
-
-<span class="kw">fn</span> <span class="fn">handle_login</span>(req: <span class="ty">Request</span>, resp: <span class="ty">Response</span>) {
-    <span class="kw">let</span> sid: <span class="ty">String</span> = <span class="fn">session_start</span>(req, resp)
-    <span class="fn">session_set</span>(req, <span class="str">"user"</span>, <span class="str">"alice"</span>)
-    <span class="fn">response_json</span>(resp, <span class="str">"{\"ok\":true}"</span>)
+    <span class="fn">tcp_write</span>(fd, <span class="fn">ws_handshake_response</span>(key))
+    <span class="kw">let</span> frame: <span class="ty">String</span> = <span class="fn">tcp_read_partial</span>(fd, <span class="num">4096</span>)
+    <span class="fn">tcp_write</span>(fd, <span class="fn">ws_frame</span>(<span class="str">"echo: "</span> + <span class="fn">ws_parse</span>(frame)))
+    <span class="fn">tcp_close</span>(fd)
+    <span class="kw">return</span> <span class="num">1</span>  <span class="cm">// we own the socket now</span>
 }
 
-<span class="kw">fn</span> <span class="fn">handle_profile</span>(req: <span class="ty">Request</span>, resp: <span class="ty">Response</span>) {
-    <span class="kw">let</span> user: <span class="ty">String</span> = <span class="fn">session_get</span>(req, <span class="str">"user"</span>)
-    <span class="fn">response_json</span>(resp, <span class="str">"{\"user\":\""</span> + user + <span class="str">"\"}"</span>)
-}</pre>
+<span class="cm">// in main():</span>
+<span class="fn">app_ws</span>(<span class="str">"/ws/chat/{room}"</span>, chat_handler)</pre>
+        </div>
+        <div class="feature-copy">
+            <span class="eyebrow">New in v0.3</span>
+            <h3>WebSockets are first-class routes</h3>
+            <p>
+                <code>app_ws(pattern, handler)</code> uses the same
+                <code>{param}</code> matcher as your HTTP routes. When an
+                Upgrade request matches, your handler gets the raw socket and
+                decides: return <code>1</code> to own it — handshake, frames
+                and teardown are yours via <code>std/websocket</code> — or
+                <code>0</code> to fall through. No match? A well-formed 404,
+                like any other route.
+            </p>
+        </div>
+    </div>
 </section>
 
-<!-- ROUTING -->
+<!-- TEMPLATES -->
 <section>
-    <div class="section-label">Flexible</div>
-    <h2 class="section-title">Route anything</h2>
-    <p class="section-subtitle">Path parameters, static files, GET/POST/PUT/DELETE.</p>
+    <div class="feature">
+        <div class="feature-copy">
+            <span class="eyebrow">New in v0.3</span>
+            <h3>Templates that escape by default</h3>
+            <p>
+                <code>{{title}}</code> is HTML-escaped — always. Raw output is
+                the explicit exception (<code>{{{html}}}</code>), not the
+                default you forget to turn off. Conditionals, nested loops and
+                partials cover real pages without a DSL to learn.
+            </p>
+            <ul>
+                <li><strong>Escape by default</strong> — XSS-safe interpolation</li>
+                <li><strong>Logic</strong> — <code>{{#if}}</code>/<code>{{else}}</code>, nested <code>{{#each}}</code></li>
+                <li><strong>Partials</strong> — <code>{{&gt; header}}</code> with a recursion guard</li>
+            </ul>
+        </div>
+        <div class="feature-code codewin">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">tpl_render — if / each / escape</span>
+            </div>
+<pre><span class="kw">fn</span> <span class="fn">render_page</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">var</span> ctx: <span class="ty">Map</span> = <span class="fn">map_new</span>()
+    ctx.<span class="fn">insert</span>(<span class="str">"title"</span>, <span class="str">"Deploys"</span>)
+    ctx.<span class="fn">insert</span>(<span class="str">"items"</span>, deploys)
 
-    <pre style="margin-top:1.5rem"><span class="fn">app_get</span>(app, <span class="str">"/"</span>, handle_home)
-<span class="fn">app_get</span>(app, <span class="str">"/users/:id"</span>, handle_user)
-<span class="fn">app_post</span>(app, <span class="str">"/api/data"</span>, handle_create)
-<span class="fn">app_static</span>(app, <span class="str">"/assets"</span>, <span class="str">"./static"</span>)</pre>
+    <span class="kw">let</span> tmpl: <span class="ty">String</span> = <span class="str">"&lt;h1&gt;{{title}}&lt;/h1&gt;{{#each items}}&lt;li&gt;{{name}}&lt;/li&gt;{{/each}}"</span>
+    <span class="kw">return</span> <span class="fn">response_html</span>(<span class="num">200</span>, <span class="fn">tpl_render</span>(tmpl, ctx))
+}</pre>
+        </div>
+    </div>
+</section>
+
+<!-- FORMS / MULTIPART -->
+<section>
+    <div class="feature flip">
+        <div class="feature-code codewin">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">multipart_parse — binary-safe uploads</span>
+            </div>
+<pre><span class="kw">fn</span> <span class="fn">upload</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> ctype: <span class="ty">String</span> = <span class="fn">http_find_header</span>(req.headers_flat, <span class="str">"Content-Type"</span>)
+    <span class="kw">let</span> parts: <span class="ty">Array</span> = <span class="fn">multipart_parse</span>(req.body, ctype)
+
+    <span class="kw">let</span> p: <span class="ty">Array</span> = parts[<span class="num">0</span>]
+    <span class="kw">let</span> filename: <span class="ty">String</span> = <span class="fn">part_filename</span>(p)
+    <span class="kw">let</span> data: <span class="ty">String</span> = <span class="fn">part_value</span>(p)   <span class="cm">// bytes, NUL-safe</span>
+
+    <span class="kw">return</span> <span class="fn">response_text</span>(<span class="num">200</span>, filename + <span class="str">": "</span> +
+        <span class="fn">int_to_string</span>(data.<span class="fn">length</span>()) + <span class="str">" bytes"</span>)
+}</pre>
+        </div>
+        <div class="feature-copy">
+            <span class="eyebrow">New in v0.3</span>
+            <h3>File uploads without a plugin</h3>
+            <p>
+                <code>multipart/form-data</code> parsing is built in and
+                binary-safe — a PNG with NUL bytes comes through intact.
+                Classic urlencoded forms land pre-parsed on
+                <code>req.form</code>. No body-parser middleware to configure,
+                no surprise defaults.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- MIDDLEWARE + SESSIONS -->
+<section>
+    <div class="feature">
+        <div class="feature-copy">
+            <span class="eyebrow">Composition</span>
+            <h3>Middleware with one honest contract</h3>
+            <p>
+                A middleware is a function. Status <code>0</code> means
+                continue — and any headers it set still make it into the final
+                response. Any other status short-circuits the request right
+                there. Auth, CORS, rate limits: same three lines of shape.
+            </p>
+            <ul>
+                <li><strong>Built-in</strong> — <code>mw_cors</code> + <code>cors_configure</code></li>
+                <li><strong>Hooks</strong> — <code>app_before</code> / <code>app_after</code> for request IDs and logging</li>
+                <li><strong>Sessions</strong> — cookie sessions backed by NyxKV, surviving redirects (Set-Cookie works on 3xx)</li>
+            </ul>
+        </div>
+        <div class="feature-code codewin">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">auth in nine lines</span>
+            </div>
+<pre><span class="kw">fn</span> <span class="fn">require_auth</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> token: <span class="ty">String</span> = <span class="fn">http_find_header</span>(req.headers_flat, <span class="str">"Authorization"</span>)
+    <span class="kw">if</span> token.<span class="fn">length</span>() == <span class="num">0</span> {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">401</span>, <span class="str">"{\"error\":\"unauthorized\"}"</span>)
+    }
+    <span class="kw">return</span> <span class="ty">Response</span> { status: <span class="num">0</span>, headers_flat: [], body: <span class="str">""</span> }
+}
+
+<span class="cm">// in main():</span>
+<span class="fn">cors_configure</span>(<span class="str">"*"</span>, <span class="str">"GET, POST, OPTIONS"</span>, <span class="str">"Content-Type, Authorization"</span>)
+<span class="fn">app_use</span>(app, mw_cors)
+<span class="fn">app_use</span>(app, require_auth)</pre>
+        </div>
+    </div>
+</section>
+
+<!-- PRODUCTION -->
+<section>
+    <span class="eyebrow">Production defaults</span>
+    <h2 class="section-title">The guardrails are already on</h2>
+    <p class="section-lead">
+        The things you usually bolt on before going live are the defaults here —
+        running on the servers that serve nyxlang.com itself.
+    </p>
+    <div class="guard-grid">
+        <div class="guard">
+            <span class="g-code">413 Payload Too Large</span>
+            <h4>Oversized bodies never reach you</h4>
+            <p>Requests over the body cap (1&nbsp;MiB default, configurable) get an automatic 413 and the connection closes — without reading the body. Draining an attacker-sized upload is a DoS vector; nyx-serve doesn't.</p>
+        </div>
+        <div class="guard">
+            <span class="g-code">ETag / 304</span>
+            <h4>Conditional requests built in</h4>
+            <p><code>app_static_cached</code> adds Cache-Control and Last-Modified; <code>apply_etag</code> gives any response a weak ETag and collapses a matching If-None-Match into a 304.</p>
+        </div>
+        <div class="guard">
+            <span class="g-code">keep-alive × N workers</span>
+            <h4>Multi-threaded by default</h4>
+            <p><code>serve_app(app, port, workers)</code> runs a keep-alive worker pool — 9,971 req/s measured. One argument, not an ops project.</p>
+        </div>
+    </div>
 </section>
 
 <!-- ECOSYSTEM -->
 <section>
-    <div class="section-label">Ecosystem</div>
-    <h2 class="section-title">Part of the Nyx ecosystem</h2>
-
-    <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <a href="https://nyxkv.com" class="card">
-            <div class="card-title">NyxKV</div>
-            <div class="card-desc">Redis-compatible KV store. 52 commands, Pub/Sub, multi-tenant.</div>
-            <div class="card-stat">82K ops/s</div>
+    <span class="eyebrow">Ecosystem</span>
+    <h2 class="section-title">Pairs with the rest of the stack</h2>
+    <div class="eco-grid">
+        <a class="eco" href="https://nyxkv.com">
+            <span class="e-name">nyx<span class="product">-kv</span></span>
+            <p>Redis-compatible key-value store — the session backend and the database of the full-stack tutorial. Works with redis-cli and redis-py.</p>
         </a>
-        <a href="https://proxy.nyxlang.com" class="card">
-            <div class="card-title">nyx-proxy</div>
-            <div class="card-desc">HTTPS reverse proxy with health checks, rate limiting.</div>
-            <div class="card-stat">4,282 req/s</div>
-        </a>
-        <a href="https://nyxlang.com" class="card">
-            <div class="card-title">nyx-queue</div>
-            <div class="card-desc">Persistent message queue with ACK and redelivery.</div>
-            <div class="card-stat">3,252 msg/s</div>
+        <a class="eco" href="https://proxy.nyxlang.com">
+            <span class="e-name">nyx<span class="product">-proxy</span></span>
+            <p>Reverse proxy with TLS termination, SNI routing, health checks and WebSocket tunnelling — put it in front of your nyx-serve apps.</p>
         </a>
     </div>
 </section>
 
-<footer>
-    <div class="footer-grid">
-        <div class="footer-col">
-            <h4>Product</h4>
-            <a href="#features">Documentation</a>
-            <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a>
+<!-- CTA -->
+<section class="cta">
+    <div class="cta-inner">
+        <h2>Zero to a running API in three commands</h2>
+        <p>The tutorial takes you from install to a deployed full-stack app — API, templates, sessions and a database.</p>
+        <div class="codewin" style="margin-top:1.8rem">
+            <div class="codewin-bar">
+                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                <span class="title">terminal</span>
+            </div>
+<pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh
+<span class="prompt">$</span> nyx init my-api &amp;&amp; cd my-api
+<span class="prompt">$</span> nyx run
+<span class="out">my-api starting on port 3000 with 8 workers</span></pre>
         </div>
-        <div class="footer-col">
-            <h4>Ecosystem</h4>
-            <a href="https://nyxlang.com">Nyx Language</a>
-            <a href="https://nyxkv.com">NyxKV</a>
-            <a href="https://proxy.nyxlang.com">nyx-proxy</a>
-        </div>
-        <div class="footer-col">
-            <h4>Resources</h4>
-            <a href="https://nyxlang.com/learn/">The Nyx Book</a>
-            <a href="https://nyxlang.com/playground/">Playground</a>
-        </div>
-        <div class="footer-col">
-            <h4>Connect</h4>
-            <a href="https://github.com/nyxlang-dev">GitHub Org</a>
+        <div class="hero-ctas" style="margin-top:1.8rem">
+            <a href="/docs/" class="btn btn-accent">Read the docs</a>
+            <a href="https://github.com/nyxlang-dev/nyx-serve" class="btn btn-ghost">Source on GitHub</a>
         </div>
     </div>
-    <div class="footer-bottom">nyx-serve &mdash; built with <a href="https://nyxlang.com">Nyx</a></div>
+</section>
+
+</main>
+
+<footer>
+    <p>nyx-serve is part of the <a href="https://nyxlang.com">Nyx language</a> ecosystem · <a href="/docs/">Docs</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
 </footer>
 
 </body>

@@ -15,6 +15,15 @@ fn handle_health(req: Request) -> Response {
     return response_json(200, "{\"status\":\"ok\"}")
 }
 
+fn handle_serve_css(req: Request) -> Response {
+    var r: Response = response_new(200, read_file("static/serve.css"))
+    r.headers_flat.push("Content-Type")
+    r.headers_flat.push("text/css; charset=utf-8")
+    r.headers_flat.push("Cache-Control")
+    r.headers_flat.push("public, max-age=3600")
+    return r
+}
+
 fn main() {
     let port_str: String = getenv("PORT")
     var port: int = 3003
@@ -23,7 +32,12 @@ fn main() {
     let app: App = app_new()
     app_get(app, "/", handle_index)
     app_get(app, "/es/", handle_index_es)
+    app_get(app, "/serve.css", handle_serve_css)
     app_get(app, "/api/health", handle_health)
+    // Tutorial pages (static HTML, prefix-cached). index.html of each dir
+    // is served for the bare /docs/ and /es/docs/ paths.
+    app_static_cached(app, "/docs/", "static/docs/", 300)
+    app_static_cached(app, "/es/docs/", "static/es/docs/", 300)
     app_static_cached(app, "/shared/", "static/shared/", 3600)
     serve_app(app, port, 16)
 }

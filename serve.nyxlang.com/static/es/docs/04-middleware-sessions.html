@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Middleware & sessions — nyx-serve docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/es/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/es/docs/04-middleware-sessions.html">EN</a> / <a href="/es/docs/04-middleware-sessions.html" class="active">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/es/docs/01-install.html">Instalar el toolchain</a></li>
+            <li><a href="/es/docs/02-new-project.html">Crear un proyecto</a></li>
+            <li><a href="/es/docs/03-first-api.html">Tu primera API JSON</a></li>
+            <li><a href="/es/docs/04-middleware-sessions.html" class="here">Middleware y sesiones</a></li>
+            <li><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></li>
+            <li><a href="/es/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/es/docs/07-fullstack.html">Publicar una app full-stack</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>4 · Middleware & sessions</h1>
+
+        <p>
+            El middleware corre antes de tus handlers. En nyx-serve un middleware
+            es solo una función <code>Request → Response</code> con una regla:
+            <strong>devolvé status <code>0</code> para continuar</strong> (y
+            cualquier header que pongas igual llega a la respuesta final), o
+            cualquier otro status para frenar el request ahí mismo.
+        </p>
+
+        <h2>Una barrera de auth</h2>
+<pre><span class="kw">fn</span> <span class="fn">require_auth</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> token: <span class="ty">String</span> = <span class="fn">http_find_header</span>(req.headers_flat, <span class="str">"Authorization"</span>)
+    <span class="kw">if</span> token.<span class="fn">length</span>() == <span class="num">0</span> {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">401</span>, <span class="str">"{\"error\":\"unauthorized\"}"</span>)
+    }
+    <span class="kw">return</span> <span class="ty">Response</span> { status: <span class="num">0</span>, headers_flat: [], body: <span class="str">""</span> }  <span class="cm">// continue</span>
+}</pre>
+
+        <p>Registralo con <code>app_use</code>. El orden importa — el middleware corre de arriba a abajo:</p>
+
+<pre><span class="fn">cors_configure</span>(<span class="str">"*"</span>, <span class="str">"GET, POST, OPTIONS"</span>, <span class="str">"Content-Type, Authorization"</span>)
+<span class="fn">app_use</span>(app, mw_cors)        <span class="cm">// built-in CORS</span>
+<span class="fn">app_use</span>(app, require_auth)   <span class="cm">// your gate</span></pre>
+
+        <p>
+            Notá que pasás la función <em>por nombre</em>, no llamada:
+            <code>app_use(app, mw_cors)</code>, no <code>mw_cors()</code>. Y el
+            origen CORS se configura una vez con <code>cors_configure</code>, no
+            como argumento.
+        </p>
+
+        <h2>Sesiones</h2>
+        <p>
+            Las sesiones por cookie viven en <code>std/session</code>,
+            respaldadas por nyx-kv sobre RESP. Apuntalo a tu instancia de KV una
+            vez, y después <code>session_start</code> emite la cookie y
+            <code>session_set</code> / <code>session_get</code> guardan valores
+            por usuario.
+        </p>
+
+<pre><span class="kw">import</span> <span class="str">"std/session"</span>
+
+<span class="kw">fn</span> <span class="fn">login</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">if</span> <span class="kw">not</span> req.form.<span class="fn">contains</span>(<span class="str">"name"</span>) {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">400</span>, <span class="str">"{\"error\":\"name is required\"}"</span>)
+    }
+    <span class="kw">let</span> name: <span class="ty">String</span> = req.form.<span class="fn">get</span>(<span class="str">"name"</span>)
+    <span class="kw">var</span> resp: <span class="ty">Response</span> = <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"ok\":true}"</span>)
+    <span class="kw">let</span> sid: <span class="ty">String</span> = <span class="fn">session_start</span>(req, resp)   <span class="cm">// sets the cookie</span>
+    <span class="fn">session_set</span>(req, <span class="str">"user"</span>, name)
+    <span class="kw">return</span> resp
+}
+
+<span class="kw">fn</span> <span class="fn">profile</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> user: <span class="ty">String</span> = <span class="fn">session_get</span>(req, <span class="str">"user"</span>)
+    <span class="kw">if</span> user.<span class="fn">length</span>() == <span class="num">0</span> {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">401</span>, <span class="str">"{\"error\":\"log in first\"}"</span>)
+    }
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"user\":\""</span> + user + <span class="str">"\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="fn">session_configure</span>(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>, <span class="num">3600</span>)  <span class="cm">// kv host, port, ttl</span>
+    <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
+    <span class="fn">app_post</span>(app, <span class="str">"/login"</span>, login)
+    <span class="fn">app_get</span>(app, <span class="str">"/profile"</span>, profile)
+    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">8</span>)
+}</pre>
+
+        <p>Necesitás un nyx-kv corriendo para esto. La forma más rápida:</p>
+<pre class="term"><span class="prompt">$</span> docker run -p 6380:6380 nyxlang/nyx-kv   <span class="cm"># or point session_configure at nyxkv.com</span></pre>
+
+        <div class="docs-note">
+            Las sesiones sobreviven a los redirects — el header Set-Cookie se preserva
+            en respuestas 3xx, así que un login que redirige al home igual deja al
+            usuario logueado.
+        </div>
+
+        <div class="docs-nav">
+            <a href="/es/docs/03-first-api.html">← Tu primera API JSON</a>
+            <a href="/es/docs/05-templates-static-forms.html">Templates, static & forms →</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

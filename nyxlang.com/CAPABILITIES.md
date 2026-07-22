@@ -1,6 +1,6 @@
 # CAPABILITIES — índice de la stdlib de Nyx
 
-<!-- nyx-version: 0.18.2 -->
+<!-- nyx-version: 0.22.0 -->
 > Auto-generado por `nyx capabilities` desde la stdlib instalada — siempre en sync con tu versión.
 > Es el índice de QUÉ EXISTE: antes de escribir una función, buscá acá si un módulo ya lo hace,
 > `import`alo y usalo. NO leas el fuente de `std/`. Ver `AGENTS.md` para cómo escribir Nyx.
@@ -76,7 +76,7 @@
 
 ### `std/kvclient`
 
-`import "std/kvclient"` — 15 funciones:
+`import "std/kvclient"` — 19 funciones:
 
 - `pub fn kv_connect_auth(host: String, port: int, token: String) -> int`
 - `pub fn kv_close(h: int)`
@@ -93,6 +93,10 @@
 - `pub fn kv_smembers(h: int, key: String) -> Array`
 - `pub fn kv_whoami(h: int) -> String`
 - `pub fn kv_token_create(h: int, user_id: String, plan: String, ttl: int) -> String`
+- `pub fn kv_exists(h: int, key: String) -> bool`
+- `pub fn kv_srem(h: int, key: String, member: String) -> int`
+- `pub fn kv_token_list(h: int) -> Array`
+- `pub fn kv_token_revoke(h: int, token: String) -> bool`
 
 ### `std/sqlite`
 
@@ -127,7 +131,7 @@
 
 ### `std/json`
 
-`import "std/json"` — 14 funciones:
+`import "std/json"` — 16 funciones:
 
 - `pub fn json_null() -> Array`
 - `pub fn json_bool(val: bool) -> Array`
@@ -141,6 +145,8 @@
 - `pub fn json_as_string(val: Array) -> String`
 - `pub fn json_as_int(val: Array) -> int`
 - `pub fn json_as_float(val: Array) -> float`
+- `pub fn json_array_get(arr: Array, i: int) -> Array`
+- `pub fn json_array_len(arr: Array) -> int`
 - `pub fn json_stringify(val: Array) -> String`
 - `pub fn json_parse(input: String) -> Array`
 
@@ -436,6 +442,15 @@
 
 ## Otros
 
+### `std/llm`
+
+`import "std/llm"` — 4 funciones:
+
+- `pub fn llm_load_ctx(path: String, n_ctx: int) -> LLM` — Carga un modelo GGUF con n_ctx explícito. Aborta con mensaje claro si falla.
+- `pub fn llm_load(path: String) -> LLM` — Carga un modelo GGUF (n_ctx = 2048 por defecto).
+- `pub fn llm_generate(l: &LLM, prompt: String, max_tokens: int) -> String` — Genera texto (greedy). Presta el handle — no lo consume.
+- `pub fn llm_generate_stream(l: &LLM, prompt: String, max_tokens: int, cb: *i8) -> String` — Genera con STREAMING: cb = c_fn_ptr(mi_cb) donde `fn mi_cb(piece: *i8)` recibe cada token generado (convertir con string_from_cstr adentro). Devuelve además el texto completo.
+
 ### `std/pool`
 
 `import "std/pool"` — 18 funciones:
@@ -459,9 +474,21 @@
 - `pub fn stream_pending(s: Array) -> int`
 - `pub fn stream_collect(s: Array) -> Array`
 
+### `std/vdom`
+
+`import "std/vdom"` — 7 funciones:
+
+- `pub fn text(s: String) -> VNode`
+- `pub fn h(tag: String, attrs: Array, children: Array) -> VNode`
+- `pub fn h_keyed(tag: String, key: String, attrs: Array, children: Array) -> VNode`
+- `pub fn on(vnode: VNode, evento: String, handler: Fn) -> VNode`
+- `pub fn patch_kind(p: Patch) -> String`
+- `pub fn patch_path(p: Patch) -> Array`
+- `pub fn vdiff(old: VNode, new: VNode) -> Array`
+
 ### `std/browser`
 
-`import "std/browser"` — 9 funciones:
+`import "std/browser"` — 11 funciones:
 
 - `export fn browser_fetch(url: String, method: String, body: String, handler: String)`
 - `export fn browser_interval(ms: int, handler: String) -> int`
@@ -472,6 +499,8 @@
 - `export fn ls_set(key: String, value: String)`
 - `export fn tz_offset() -> int`
 - `export fn match_media(query: String) -> int`
+- `export fn browser_get_hash() -> String`
+- `export fn browser_on_hashchange(f: Fn)`
 
 ### `std/array`
 
@@ -511,6 +540,13 @@
 - `pub fn observable_history(obs: Array) -> Array`
 - `pub fn observable_computed(source: Array, transform: Fn(int) -> int) -> int`
 
+### `std/resp`
+
+`import "std/resp"` — 2 funciones:
+
+- `pub fn resp_parse_len(s: String) -> int`
+- `pub fn resp_read_framed(handle: int, is_tls: bool) -> Array`
+
 ### `std/statemachine`
 
 `import "std/statemachine"` — 16 funciones:
@@ -531,6 +567,15 @@
 - `pub fn fsm_traced_log(traced: Array) -> Array`
 - `pub fn fsm_traced_is(traced: Array, state: String) -> bool`
 - `pub fn traffic_light_fsm() -> Array`
+
+### `std/webpush`
+
+`import "std/webpush"` — 4 funciones:
+
+- `pub fn vapid_jwt(priv: String, audience: String, subject: String, exp: int) -> String`
+- `pub fn webpush_encrypt_with_keys(payload: String, client_p256dh: String, auth: String,`
+- `pub fn webpush_encrypt(payload: String, client_p256dh: String, auth: String) -> String`
+- `pub fn webpush_send(endpoint: String, jwt: String, vapid_pub: String, encrypted: String, ttl: int = 86400) -> Array`
 
 ### `std/session`
 
@@ -594,34 +639,46 @@
 - `pub fn clamp_float(x: float, lo: float, hi: float) -> float`
 - `pub fn lerp(a: float, b: float, t: float) -> float`
 
+### `std/component`
+
+`import "std/component"` — 3 funciones:
+
+- `pub fn component_new(state: Array, render: Fn(Array) -> VNode) -> Array`
+- `pub fn mount(comp: Array, sel: String)`
+- `pub fn update(comp: Array)`
+
 ### `std/owned`
 
-`import "std/owned"` — 24 funciones:
+`import "std/owned"` — 14 funciones:
 
-- `pub fn box_new(val: int) -> Array`
-- `pub fn box_new_str(val: String) -> Array`
-- `pub fn box_get(b: Array) -> int`
-- `pub fn box_get_str(b: Array) -> String`
-- `pub fn box_drop(b: Array)`
-- `pub fn box_is_dropped(b: Array) -> bool`
-- `pub fn rc_new(val: int) -> Array`
-- `pub fn rc_new_str(val: String) -> Array`
-- `pub fn rc_clone(rc: Array) -> Array`
-- `pub fn rc_get(rc: Array) -> int`
-- `pub fn rc_get_str(rc: Array) -> String`
-- `pub fn rc_count(rc: Array) -> int`
-- `pub fn rc_drop(rc: Array) -> int`
-- `pub fn rc_is_unique(rc: Array) -> bool`
-- `pub fn move_new(val: int) -> Array`
-- `pub fn move_new_str(val: String) -> Array`
-- `pub fn move_consume(m: Array) -> int`
-- `pub fn move_consume_str(m: Array) -> String`
-- `pub fn move_is_consumed(m: Array) -> bool`
+- `pub fn box_new<T>(v: T) -> Box<T>`
+- `pub fn box_get<T>(b: &Box<T>) -> T`
+- `pub fn box_into<T>(b: Box<T>) -> T`
+- `pub fn rc_new<T>(v: T) -> Rc<T>`
+- `pub fn rc_clone<T>(r: &Rc<T>) -> Rc<T>`
+- `pub fn rc_get<T>(r: &Rc<T>) -> T`
+- `pub fn rc_count<T>(r: &Rc<T>) -> int`
+- `pub fn move_new<T>(v: T) -> MoveOnly<T>`
+- `pub fn move_consume<T>(m: MoveOnly<T>) -> T`
 - `pub fn file_guard_open(path: String, mode: String) -> Array`
 - `pub fn file_guard_write(g: Array, content: String)`
 - `pub fn file_guard_read_line(g: Array) -> String`
 - `pub fn file_guard_close(g: Array)`
 - `pub fn file_guard_is_open(g: Array) -> bool`
+
+### `std/webpushcrypto`
+
+`import "std/webpushcrypto"` — 9 funciones:
+
+- `pub fn csprng_bytes(n: int) -> String`
+- `pub fn u8(n: int) -> String`
+- `pub fn sha256_bytes(s: String) -> String`
+- `pub fn ec_p256_keypair() -> String`
+- `pub fn ecdh_p256(priv: String, peer_pub: String) -> String`
+- `pub fn ecdsa_p256_sign(priv: String, hash: String) -> String`
+- `pub fn ecdsa_p256_verify(pubkey: String, hash: String, sig: String) -> int`
+- `pub fn hkdf_sha256(salt: String, ikm: String, info: String, len: int) -> String`
+- `pub fn aes128gcm_encrypt(key: String, iv: String, pt: String, aad: String) -> String`
 
 ### `std/prelude`
 
@@ -656,9 +713,16 @@
 - `pub fn map_has(m: Map, k: String) -> bool`
 - `pub fn map_size(m: Map) -> int`
 
+### `std/routematch`
+
+`import "std/routematch"` — 2 funciones:
+
+- `pub fn route_match(pattern: String, hash: String) -> Array`
+- `pub fn route_resolve(routes_patterns: Array, hash: String, default_idx: int) -> Array`
+
 ### `std/dom`
 
-`import "std/dom"` — 22 funciones:
+`import "std/dom"` — 35 funciones:
 
 - `export fn dom_set_text(sel: String, text: String)`
 - `export fn dom_set_html(sel: String, html: String)`
@@ -682,4 +746,24 @@
 - `export fn ev_client_y() -> int`
 - `export fn ev_prevent_default()`
 - `export fn dom_on_fn(sel: String, event: String, handler: Fn)`
+- `export fn dom_create(tag: String) -> int`
+- `export fn dom_create_text(s: String) -> int`
+- `export fn dom_append(parent: int, child: int)`
+- `export fn dom_remove_at(parent: int, idx: int)`
+- `export fn dom_replace(parent: int, new_h: int, old_h: int)`
+- `export fn dom_insert_before(parent: int, new_h: int, ref_h: int)`
+- `export fn dom_child_at(parent: int, idx: int) -> int`
+- `export fn dom_set_text_h(h: int, s: String)`
+- `export fn dom_set_attr_h(h: int, k: String, v: String)`
+- `export fn dom_remove_attr_h(h: int, k: String)`
+- `export fn dom_query_handle(sel: String) -> int`
+- `export fn dom_on_h(h: int, evento: String, handler: Fn)`
+- `export fn dom_child_count(h: int) -> int`
+
+### `std/router`
+
+`import "std/router"` — 2 funciones:
+
+- `pub fn router_new(patterns: Array, makes: Array, default_idx: int) -> Array`
+- `pub fn router_start(r: Array, sel: String)`
 

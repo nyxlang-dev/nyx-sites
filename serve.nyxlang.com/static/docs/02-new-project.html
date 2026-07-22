@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create a project — nyx-serve docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/docs/02-new-project.html" class="active">EN</a> / <a href="/es/docs/02-new-project.html">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/docs/01-install.html">Install the toolchain</a></li>
+            <li><a href="/docs/02-new-project.html" class="here">Create a project</a></li>
+            <li><a href="/docs/03-first-api.html">Your first JSON API</a></li>
+            <li><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></li>
+            <li><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></li>
+            <li><a href="/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/docs/07-fullstack.html">Ship a full-stack app</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>2 · Create a project</h1>
+
+        <p>
+            <code>nyx init</code> scaffolds a project: a <code>nyx.toml</code>
+            manifest and a <code>src/main.nx</code> entry point. We add one
+            line to declare the framework as a dependency.
+        </p>
+
+<pre class="term"><span class="prompt">$</span> nyx init notes-app
+<span class="prompt">$</span> cd notes-app</pre>
+
+        <h2>Declare the dependency</h2>
+        <p>Open <code>nyx.toml</code> and add nyx-serve under <code>[dependencies]</code>:</p>
+
+<pre><span class="cm"># nyx.toml</span>
+[package]
+name = <span class="str">"notes-app"</span>
+version = <span class="str">"0.1.0"</span>
+main = <span class="str">"src/main.nx"</span>
+
+[dependencies]
+nyx-serve = <span class="str">"*"</span></pre>
+
+        <p>
+            <code>"*"</code> tells the package manager to fetch nyx-serve from
+            <code>github.com/nyxlang-dev/nyx-serve</code> into
+            <code>packages/</code> on the next build. You can also pin a full
+            URL — <code>nyx-serve = "https://github.com/nyxlang-dev/nyx-serve"</code>
+            — or vendor the library into <code>packages/</code> and commit it,
+            which is what production sites do for reproducible builds.
+        </p>
+
+        <h2>A minimal server</h2>
+        <p>Replace <code>src/main.nx</code> with:</p>
+
+<pre><span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">import</span> <span class="str">"nyx-serve/src/server"</span>
+
+<span class="kw">fn</span> <span class="fn">home</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">return</span> <span class="fn">response_html</span>(<span class="num">200</span>, <span class="str">"&lt;h1&gt;notes-app&lt;/h1&gt;"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
+    <span class="fn">app_get</span>(app, <span class="str">"/"</span>, home)
+    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">8</span>)
+}</pre>
+
+        <p>The three moving parts, from the imports:</p>
+        <ul>
+            <li><code>std/web</code> — the <code>App</code>, <code>Request</code>, <code>Response</code> core and the <code>response_*</code> constructors.</li>
+            <li><code>nyx-serve/src/server</code> — <code>serve_app</code> (the multi-threaded keep-alive server) and <code>app_ws</code>.</li>
+            <li>Other nyx-serve modules you import as needed: <code>src/files</code>, <code>src/template</code>, <code>src/multipart</code>.</li>
+        </ul>
+
+        <h2>Build and run</h2>
+<pre class="term"><span class="prompt">$</span> nyx run
+<span class="out">notes-app starting on port 3000 with 8 workers</span></pre>
+
+        <p>In another terminal:</p>
+<pre class="term"><span class="prompt">$</span> curl http://localhost:3000/
+<span class="out">&lt;h1&gt;notes-app&lt;/h1&gt;</span></pre>
+
+        <div class="docs-note">
+            <code>nyx run</code> builds then runs. <code>nyx build</code> just
+            produces the binary (named after your package) — that single file is
+            what you copy to a server.
+        </div>
+
+        <div class="docs-nav">
+            <a href="/docs/01-install.html">← Install the toolchain</a>
+            <a href="/docs/03-first-api.html">Your first JSON API →</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve is part of the <a href="https://nyxlang.com">Nyx language</a> ecosystem · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

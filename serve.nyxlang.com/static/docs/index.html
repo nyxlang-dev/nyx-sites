@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nyx-serve docs — from install to full-stack</title>
+    <meta name="description" content="The nyx-serve tutorial: install, create a project, build a JSON API, add middleware and sessions, templates and uploads, WebSockets, and ship a full-stack app.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/docs/" class="active">EN</a> / <a href="/es/docs/">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/docs/01-install.html">Install the toolchain</a></li>
+            <li><a href="/docs/02-new-project.html">Create a project</a></li>
+            <li><a href="/docs/03-first-api.html">Your first JSON API</a></li>
+            <li><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></li>
+            <li><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></li>
+            <li><a href="/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/docs/07-fullstack.html">Ship a full-stack app</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>From zero to a deployed full-stack app</h1>
+        <p>
+            This tutorial builds one thing, step by step: a notes application.
+            It starts as a JSON API you test with <code>curl</code>, grows
+            middleware, sessions, server-rendered pages and WebSockets, and
+            ends deployed behind systemd with a real database — nyx-kv. Every
+            code block on these pages was compiled and run against the current
+            release before publishing.
+        </p>
+        <p><strong>What you need</strong>: a Linux or macOS machine with a C toolchain (clang), and 15–40 minutes depending on how far you go.</p>
+
+        <h2>The route</h2>
+        <ol>
+            <li><strong><a href="/docs/01-install.html">Install</a></strong> — one command, verify with <code>nyx --version</code>.</li>
+            <li><strong><a href="/docs/02-new-project.html">Create a project</a></strong> — <code>nyx init</code>, declare the dependency, understand the layout.</li>
+            <li><strong><a href="/docs/03-first-api.html">First API</a></strong> — routes, path params, form input, JSON out; test with curl.</li>
+            <li><strong><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></strong> — the status-0 contract, CORS, login with cookie sessions.</li>
+            <li><strong><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></strong> — escape-by-default rendering, cached static files.</li>
+            <li><strong><a href="/docs/06-websockets.html">WebSockets</a></strong> — <code>app_ws</code> routes with <code>{room}</code> params.</li>
+            <li><strong><a href="/docs/07-fullstack.html">Full-stack</a></strong> — sessions + templates + nyx-kv storage, deployed with systemd.</li>
+        </ol>
+
+        <div class="docs-note">
+            <strong>Already know the basics?</strong> The API reference lives in the
+            repo: <a href="https://github.com/nyxlang-dev/nyx-serve/blob/main/docs/API.md">docs/API.md</a> —
+            every public function with its exact signature.
+        </div>
+
+        <div class="docs-nav">
+            <span></span>
+            <a href="/docs/01-install.html">1. Install the toolchain →</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve is part of the <a href="https://nyxlang.com">Nyx language</a> ecosystem · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

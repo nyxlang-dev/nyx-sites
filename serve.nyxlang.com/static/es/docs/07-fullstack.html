@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicar una app full-stack — docs de nyx-serve</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/es/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/es/docs/07-fullstack.html">EN</a> / <a href="/es/docs/07-fullstack.html" class="active">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/es/docs/01-install.html">Instalar el toolchain</a></li>
+            <li><a href="/es/docs/02-new-project.html">Crear un proyecto</a></li>
+            <li><a href="/es/docs/03-first-api.html">Tu primera API JSON</a></li>
+            <li><a href="/es/docs/04-middleware-sessions.html">Middleware y sesiones</a></li>
+            <li><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></li>
+            <li><a href="/es/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/es/docs/07-fullstack.html" class="here">Publicar una app full-stack</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>7 · Publicar una app full-stack</h1>
+
+        <p>
+            Hora de juntarlo todo: una app de notas con login, páginas
+            renderizadas en el servidor, y notas que persisten en nyx-kv en vez de
+            un Map global. Las mismas formas de handler que ya escribiste — lo
+            único nuevo son unas líneas de RESP para hablar con la base de datos.
+        </p>
+
+        <h2>Hablar con nyx-kv</h2>
+        <p>
+            nyx-kv habla RESP, el protocolo de Redis. Para GET/SET alcanza un
+            helper chico sobre un socket TCP plano; para TLS, pipelines y el set
+            completo de comandos usá <code>std/kvclient</code>.
+        </p>
+
+<pre><span class="kw">fn</span> <span class="fn">kv_get</span>(key: <span class="ty">String</span>) -&gt; <span class="ty">String</span> {
+    <span class="kw">let</span> fd: <span class="ty">int</span> = <span class="fn">tcp_connect</span>(<span class="str">"127.0.0.1"</span>, <span class="num">6380</span>)
+    <span class="kw">if</span> fd &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="str">""</span> }
+    <span class="fn">tcp_write</span>(fd, <span class="str">"*2\r\n$3\r\nGET\r\n$"</span> +
+        <span class="fn">int_to_string</span>(key.<span class="fn">length</span>()) + <span class="str">"\r\n"</span> + key + <span class="str">"\r\n"</span>)
+    <span class="kw">let</span> header: <span class="ty">String</span> = <span class="fn">tcp_read_line</span>(fd)
+    <span class="kw">let</span> n: <span class="ty">int</span> = <span class="fn">string_to_int</span>(header.<span class="fn">substring</span>(<span class="num">1</span>, header.<span class="fn">length</span>()))
+    <span class="kw">var</span> value: <span class="ty">String</span> = <span class="str">""</span>
+    <span class="kw">if</span> n &gt; <span class="num">0</span> { value = <span class="fn">tcp_read</span>(fd, n) }
+    <span class="fn">tcp_close</span>(fd)
+    <span class="kw">return</span> value
+}</pre>
+
+        <p>
+            Las notas de un usuario se guardan como un único string unido por
+            barras bajo <code>notes:&lt;user&gt;</code> — chico y suficiente para el
+            tutorial. Cargar hace split por <code>|</code>; guardar concatena y
+            reescribe.
+        </p>
+
+        <h2>Los handlers</h2>
+        <p>
+            <code>page_home</code> muestra un form de login cuando no hay sesión,
+            y las notas del usuario cuando la hay. <code>do_login</code> arranca una
+            sesión y redirige al home; <code>do_create</code> guarda una nota y
+            redirige al home. Cada página es una plantilla, con escape seguro por
+            defecto.
+        </p>
+
+<pre><span class="kw">fn</span> <span class="fn">page_home</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> user: <span class="ty">String</span> = <span class="fn">session_get</span>(req, <span class="str">"user"</span>)
+    <span class="kw">if</span> user.<span class="fn">length</span>() == <span class="num">0</span> {
+        <span class="kw">return</span> <span class="fn">response_html</span>(<span class="num">200</span>, <span class="fn">tpl_render</span>(<span class="str">"{{&gt; login_form}}"</span>, <span class="fn">map_new</span>()))
+    }
+    <span class="kw">let</span> titles: <span class="ty">Array</span> = <span class="fn">load_notes</span>(user)
+    <span class="kw">var</span> items: <span class="ty">Array</span> = []
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; titles.<span class="fn">length</span>() {
+        <span class="kw">let</span> t: <span class="ty">String</span> = titles[i]
+        <span class="kw">var</span> m: <span class="ty">Map</span> = <span class="fn">map_new</span>()
+        m.<span class="fn">insert</span>(<span class="str">"title"</span>, t)
+        items.<span class="fn">push</span>(m)
+        i = i + <span class="num">1</span>
+    }
+    <span class="kw">var</span> ctx: <span class="ty">Map</span> = <span class="fn">map_new</span>()
+    ctx.<span class="fn">insert</span>(<span class="str">"user"</span>, user)
+    ctx.<span class="fn">insert</span>(<span class="str">"items"</span>, items)
+    <span class="kw">let</span> tmpl: <span class="ty">String</span> = <span class="str">"&lt;h1&gt;{{user}}'s notes&lt;/h1&gt;
+        &lt;ul&gt;{{#each items}}&lt;li&gt;{{title}}&lt;/li&gt;{{/each}}&lt;/ul&gt;{{&gt; note_form}}"</span>
+    <span class="kw">return</span> <span class="fn">response_html</span>(<span class="num">200</span>, <span class="fn">tpl_render</span>(tmpl, ctx))
+}</pre>
+
+        <p>
+            El código completo — helpers, los dos forms como parciales, y el
+            cableado en <code>main()</code> — está en el
+            <a href="https://github.com/nyxlang-dev/nyx-serve/blob/main/examples">directorio de ejemplos</a>.
+        </p>
+
+        <h2>Publicalo</h2>
+        <p>
+            <code>nyx build</code> produce un binario. Copialo a tu servidor y
+            corrélo bajo systemd — sin runtime que instalar al lado.
+        </p>
+
+<pre><span class="cm"># /etc/systemd/system/notes-app.service</span>
+[Unit]
+Description=notes-app
+After=network-online.target
+
+[Service]
+ExecStart=/srv/notes-app/notes-app
+Environment=PORT=3000
+WorkingDirectory=/srv/notes-app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target</pre>
+
+<pre class="term"><span class="prompt">$</span> sudo systemctl enable --now notes-app</pre>
+
+        <p>
+            Poné <a href="https://proxy.nyxlang.com">nyx-proxy</a> adelante para
+            terminación TLS y tenés la forma exacta que sirve este mismo sitio.
+        </p>
+
+        <div class="docs-note">
+            <strong>Las protecciones ya están puestas.</strong> Los bodies de
+            request gigantes reciben un 413 automático sin ser leídos; las
+            respuestas estáticas llevan ETags para requests condicionales; el
+            servidor es multi-hilo por defecto. No configuraste nada de eso.
+        </div>
+
+        <p style="margin-top:2rem">
+            Eso es todo el framework — desde <code>curl … | sh</code> hasta una
+            app full-stack desplegada. La <a href="https://github.com/nyxlang-dev/nyx-serve/blob/main/docs/API.md">referencia de la API</a>
+            tiene cada función con su firma exacta cuando necesites los detalles.
+        </p>
+
+        <div class="docs-nav">
+            <a href="/es/docs/06-websockets.html">← WebSockets</a>
+            <span></span>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

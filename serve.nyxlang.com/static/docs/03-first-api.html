@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your first JSON API — nyx-serve docs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/docs/03-first-api.html" class="active">EN</a> / <a href="/es/docs/03-first-api.html">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/docs/01-install.html">Install the toolchain</a></li>
+            <li><a href="/docs/02-new-project.html">Create a project</a></li>
+            <li><a href="/docs/03-first-api.html" class="here">Your first JSON API</a></li>
+            <li><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></li>
+            <li><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></li>
+            <li><a href="/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/docs/07-fullstack.html">Ship a full-stack app</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>3 · Your first JSON API</h1>
+
+        <p>
+            Let's turn the server into a JSON API for notes: list them, create
+            one, fetch one by id. A handler is a function from
+            <code>Request</code> to <code>Response</code> — you read fields off
+            the request, you return a response.
+        </p>
+
+        <h2>The whole thing</h2>
+        <p>Replace <code>src/main.nx</code>:</p>
+
+<pre><span class="kw">import</span> <span class="str">"std/web"</span>
+<span class="kw">import</span> <span class="str">"nyx-serve/src/server"</span>
+
+<span class="kw">var</span> g_notes: <span class="ty">Map</span> = <span class="ty">Map</span>.<span class="fn">new</span>()
+<span class="kw">var</span> g_next_id: <span class="ty">int</span> = <span class="num">1</span>
+
+<span class="kw">fn</span> <span class="fn">list_notes</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">var</span> sb: <span class="ty">StringBuilder</span> = <span class="ty">StringBuilder</span>.<span class="fn">new</span>()
+    sb.<span class="fn">append</span>(<span class="str">"["</span>)
+    <span class="kw">let</span> keys: <span class="ty">Array</span> = g_notes.<span class="fn">keys</span>()
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; keys.<span class="fn">length</span>() {
+        <span class="kw">let</span> k: <span class="ty">String</span> = keys[i]
+        <span class="kw">let</span> title: <span class="ty">String</span> = g_notes.<span class="fn">get</span>(k)
+        <span class="kw">if</span> i &gt; <span class="num">0</span> { sb.<span class="fn">append</span>(<span class="str">","</span>) }
+        sb.<span class="fn">append</span>(<span class="str">"{\"id\":"</span> + k + <span class="str">",\"title\":\""</span> + title + <span class="str">"\"}"</span>)
+        i = i + <span class="num">1</span>
+    }
+    sb.<span class="fn">append</span>(<span class="str">"]"</span>)
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, sb.<span class="fn">to_string</span>())
+}
+
+<span class="kw">fn</span> <span class="fn">create_note</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">if</span> <span class="kw">not</span> req.form.<span class="fn">contains</span>(<span class="str">"title"</span>) {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">400</span>, <span class="str">"{\"error\":\"title is required\"}"</span>)
+    }
+    <span class="kw">let</span> title: <span class="ty">String</span> = req.form.<span class="fn">get</span>(<span class="str">"title"</span>)
+    <span class="kw">let</span> id: <span class="ty">String</span> = <span class="fn">int_to_string</span>(g_next_id)
+    g_notes.<span class="fn">insert</span>(id, title)
+    g_next_id = g_next_id + <span class="num">1</span>
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">201</span>, <span class="str">"{\"id\":"</span> + id + <span class="str">"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">get_note</span>(req: <span class="ty">Request</span>) -&gt; <span class="ty">Response</span> {
+    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.<span class="fn">get</span>(<span class="str">"id"</span>)
+    <span class="kw">if</span> <span class="kw">not</span> g_notes.<span class="fn">contains</span>(id) {
+        <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">404</span>, <span class="str">"{\"error\":\"not found\"}"</span>)
+    }
+    <span class="kw">let</span> title: <span class="ty">String</span> = g_notes.<span class="fn">get</span>(id)
+    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"id\":"</span> + id + <span class="str">",\"title\":\""</span> + title + <span class="str">"\"}"</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    g_notes = <span class="ty">Map</span>.<span class="fn">new</span>()
+    <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
+    <span class="fn">app_get</span>(app, <span class="str">"/notes"</span>, list_notes)
+    <span class="fn">app_post</span>(app, <span class="str">"/notes"</span>, create_note)
+    <span class="fn">app_get</span>(app, <span class="str">"/notes/{id}"</span>, get_note)
+    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">8</span>)
+}</pre>
+
+        <p>Three things worth naming:</p>
+        <ul>
+            <li><strong>Path params</strong> — the <code>{id}</code> in the route pattern lands on <code>req.params</code>. Read it with <code>req.params.get("id")</code>.</li>
+            <li><strong>Form input</strong> — <code>req.form</code> holds parsed <code>application/x-www-form-urlencoded</code> fields. <code>Map.get</code> on a missing key aborts, so guard with <code>contains</code> first — that's the <code>400</code> path.</li>
+            <li><strong>JSON out</strong> — <code>response_json</code> sets <code>Content-Type: application/json</code> for you.</li>
+        </ul>
+
+        <h2>Try it</h2>
+<pre class="term"><span class="prompt">$</span> nyx run
+<span class="out">notes-app starting on port 3000 with 8 workers</span></pre>
+
+<pre class="term"><span class="prompt">$</span> curl -X POST -d <span class="str">"title=buy coffee"</span> localhost:3000/notes
+<span class="out">{"id":1}</span>
+<span class="prompt">$</span> curl -X POST -d <span class="str">"title=write docs"</span> localhost:3000/notes
+<span class="out">{"id":2}</span>
+<span class="prompt">$</span> curl localhost:3000/notes
+<span class="out">[{"id":2,"title":"write docs"},{"id":1,"title":"buy coffee"}]</span>
+<span class="prompt">$</span> curl localhost:3000/notes/1
+<span class="out">{"id":1,"title":"buy coffee"}</span>
+<span class="prompt">$</span> curl localhost:3000/notes/99
+<span class="out">{"error":"not found"}</span></pre>
+
+        <div class="docs-note">
+            The store is a global <code>Map</code>, so notes vanish on restart.
+            Step 7 swaps it for nyx-kv — a real database — without changing the
+            handler shape.
+        </div>
+
+        <div class="docs-nav">
+            <a href="/docs/02-new-project.html">← Create a project</a>
+            <a href="/docs/04-middleware-sessions.html">Middleware & sessions →</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve is part of the <a href="https://nyxlang.com">Nyx language</a> ecosystem · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalar el toolchain — docs de nyx-serve</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/serve.css">
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo">nyx<span class="product">-serve</span></a>
+    <div class="nav-right">
+        <a href="/es/docs/" class="hide-mobile">Docs</a>
+        <a href="https://github.com/nyxlang-dev/nyx-serve" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/es/docs/01-install.html">EN</a> / <a href="/es/docs/01-install.html" class="active">ES</a></span>
+    </div>
+</nav>
+
+<div class="docs-layout">
+    <aside class="docs-side">
+        <div class="ds-title">Tutorial</div>
+        <ol>
+            <li><a href="/es/docs/01-install.html" class="here">Instalar el toolchain</a></li>
+            <li><a href="/es/docs/02-new-project.html">Crear un proyecto</a></li>
+            <li><a href="/es/docs/03-first-api.html">Tu primera API JSON</a></li>
+            <li><a href="/es/docs/04-middleware-sessions.html">Middleware y sesiones</a></li>
+            <li><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></li>
+            <li><a href="/es/docs/06-websockets.html">WebSockets</a></li>
+            <li><a href="/es/docs/07-fullstack.html">Publicar una app full-stack</a></li>
+        </ol>
+    </aside>
+    <div class="docs-body">
+        <h1>1 · Instalar el toolchain</h1>
+        <p>
+            nyx-serve es una librería para el <a href="https://nyxlang.com">lenguaje Nyx</a>,
+            así que lo único que instalás es el toolchain de Nyx — el compilador,
+            el gestor de paquetes y la librería estándar, en un directorio bajo tu home.
+        </p>
+
+<pre class="term"><span class="prompt">$</span> curl -sSf https://nyxlang.com/install.sh | sh</pre>
+
+        <p>
+            El instalador pone todo en <code>~/.nyx</code> y enlaza el comando
+            <code>nyx</code> en <code>~/.local/bin</code>. Si ese directorio no
+            está en tu <code>PATH</code>, el instalador te dice la línea exacta
+            para agregar a tu perfil de shell.
+        </p>
+
+        <h2>Verificar</h2>
+<pre class="term"><span class="prompt">$</span> nyx --version
+<span class="out">nyx 0.22.0</span></pre>
+
+        <p>
+            Nyx compila a través de LLVM, así que también necesitás
+            <strong>clang</strong> — la mayoría de las distros Linux y macOS ya lo
+            traen. Verificá con <code>clang --version</code>; en Debian/Ubuntu es
+            <code>apt install clang</code>.
+        </p>
+
+        <div class="docs-note">
+            <strong>Nada más.</strong> No hay runtime que instalar en tus servidores — el
+            compilador produce un binario estático que se lleva todo el framework
+            adentro.
+        </div>
+
+        <div class="docs-nav">
+            <a href="/es/docs/">← Resumen</a>
+            <a href="/es/docs/02-new-project.html">2. Crear un proyecto →</a>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>nyx-serve es parte del ecosistema del <a href="https://nyxlang.com">lenguaje Nyx</a> · <a href="https://github.com/nyxlang-dev/nyx-serve">GitHub</a> · Apache 2.0</p>
+</footer>
+
+</body>
+</html>
