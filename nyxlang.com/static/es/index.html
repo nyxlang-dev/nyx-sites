@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyx — el lenguaje compilado hecho para agentes de IA</title>
-    <meta name="description" content="Un lenguaje compilado hecho para agentes de IA: diagnósticos JSON machine-readable, documentación de capacidades autogenerada, inferencia LLM on-device, rendimiento nativo vía LLVM y un ecosistema web completo.">
+    <title>Nyx — un lenguaje nativo, self-hosting y legible para la IA</title>
+    <meta name="description" content="Nyx es un lenguaje compilado con rendimiento nativo vía LLVM, un compilador self-hosting y diagnósticos machine-readable hechos para agentes de IA. Todo lo que sirve este sitio está escrito en Nyx.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/shared/nyx-design-system.css">
 </head>
 <body>
+
 <nav>
-    <a href="/" class="nav-logo">Nyx</a>
+    <a href="/" class="nav-logo">Nyx<span class="greek">Νύξ</span></a>
     <div class="nav-right">
-        <a href="#ai-first" class="hide-mobile">AI-first</a>
+        <a href="#code" class="hide-mobile">Código</a>
         <a href="/es/learn/" class="hide-mobile">Aprender</a>
         <a href="/es/by-example/" class="hide-mobile">Ejemplos</a>
         <a href="/playground/" class="hide-mobile">Playground</a>
@@ -23,557 +24,221 @@
         <a href="#empezar" class="btn btn-accent">Empezar</a>
     </div>
 </nav>
+
+<!-- HERO -->
 <section class="hero">
-    <span class="hero-label">UN LENGUAJE COMPILADO HECHO PARA AGENTES DE IA</span>
-    <h1>El lenguaje que los <em>agentes</em> pueden escribir de verdad</h1>
-    <p class="subtitle">Diagnósticos machine-readable, documentación de capacidades autogenerada e inferencia LLM on-device &mdash; en un lenguaje compilado self-hosting con rendimiento nativo. Diseñado para que un agente de IA lo escriba, lo lea y lo arregle sin adivinar.</p>
+    <span class="hero-label"><span class="glyph">✦</span> NATIVO · SELF-HOSTING · LEGIBLE PARA LA IA</span>
+    <h1>Un lenguaje para software <em>robusto</em> y nativo.</h1>
+    <p class="subtitle">
+        Nyx compila a código nativo a través de LLVM, hospeda su propio compilador y habla
+        un dialecto machine-readable que los agentes de IA pueden escribir, leer y arreglar.
+        Confiable por diseño &mdash; no por convención.
+    </p>
     <div class="hero-buttons">
-        <a href="#ai-first" class="btn btn-accent">Por qué AI-first</a>
-        <a href="#empezar" class="btn btn-outline">Empezar</a>
+        <a href="#empezar" class="btn btn-accent">Empezar</a>
+        <span class="inline-cmd">curl -sSf nyxlang.com/install.sh <span class="op">|</span> sh</span>
+    </div>
+    <div class="ephemeris" aria-hidden="true">
+        <div class="rule"></div>
+        <div class="ticks"></div>
+        <div class="star"><span class="dot"></span><span class="label">v0.22.0</span></div>
     </div>
 </section>
 
-<!-- AI-FIRST — la tesis -->
-<section id="ai-first">
-    <div class="section-label">AI-first, por diseño</div>
-    <h2 class="section-title">Hecho para la forma en que la IA escribe código</h2>
-    <p class="section-subtitle">
-        La mayoría de los lenguajes se diseñaron para humanos y después se les
-        agregaron herramientas encima. Nyx se construyó al revés: cada error, cada
-        capacidad, cada aspereza es algo que un modelo puede parsear, accionar y
-        reportar de vuelta &mdash; de forma determinista.
-    </p>
+<!-- CÓDIGO CENTRAL — la tesis -->
+<section id="code" style="padding-top:1rem">
+    <div class="codewrap">
+        <div class="cap">src/main.nx</div>
+<pre><span class="cm">// Una muestra de Nyx — enums con datos, pattern matching exhaustivo,</span>
+<span class="cm">// compilado a un binario nativo vía LLVM.</span>
 
-    <div class="card-grid cols-2" style="margin-top:2rem">
-        <div class="card">
-            <div class="card-title">Errores que un modelo parsea</div>
-            <div class="card-desc"><code>NYX_DIAG=json</code> emite cada diagnóstico como NDJSON con un código estable (NYX01xx&ndash;NYX12xx), <code>line:column</code> y una sugerencia de arreglo &mdash; en las fases de parse <em>y</em> semantic, multi-error, bilingüe. Sin scrapear stderr, sin adivinar qué falló.</div>
+<span class="kw">enum</span> <span class="ty">Shape</span> {
+    <span class="ty">Rect</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="ty">Circle</span>(<span class="ty">int</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">area</span>(s: <span class="ty">Shape</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="kw">match</span> s {
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(w, h) =&gt; w * h,
+        <span class="ty">Shape</span>.<span class="ty">Circle</span>(r)  =&gt; <span class="num">3</span> * r * r
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> shapes: <span class="ty">Array</span>&lt;<span class="ty">Shape</span>&gt; = [
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(<span class="num">3</span>, <span class="num">4</span>),
+        <span class="ty">Shape</span>.<span class="ty">Circle</span>(<span class="num">5</span>),
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(<span class="num">6</span>, <span class="num">2</span>)
+    ]
+
+    <span class="kw">var</span> total: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; shapes.<span class="fn">length</span>() {
+        total = total + <span class="fn">area</span>(shapes[i])
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">"figuras:    "</span> + <span class="fn">int_to_string</span>(shapes.<span class="fn">length</span>()))
+    <span class="fn">print</span>(<span class="str">"área total: "</span> + <span class="fn">int_to_string</span>(total))
+}</pre>
+    </div>
+    <div class="terminal">
+        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
+<pre><span class="prompt">$</span> <span class="cmd">nyx run</span>
+<span class="comment">-&gt; building hero v0.1.0</span>
+<span class="comment">   compiling src/main.nx</span>
+<span class="result">figuras:    3</span>
+<span class="result">área total: 99</span></pre>
+    </div>
+</section>
+
+<!-- TRES PILARES -->
+<section id="why">
+    <div class="section-label">Por qué Nyx</div>
+    <h2 class="section-title">Tres cosas que hace bien</h2>
+    <div class="pillars">
+        <div class="pillar">
+            <div class="k">✦ nativo</div>
+            <h3>Self-hosting y rápido</h3>
+            <p>El compilador está escrito en Nyx y se compila a sí mismo &mdash; recompilar produce IR byte-idéntico, verificado en cada release. La salida es código nativo vía LLVM, a la par o mejor que C en cómputo.</p>
         </div>
-        <div class="card">
-            <div class="card-title">Capacidades que el agente lee</div>
-            <div class="card-desc"><code>nyx init</code> siembra <code>AGENTS.md</code> (un playbook) y <code>CAPABILITIES.md</code> (un índice por-tarea de la stdlib), y <code>nyx build</code> los mantiene al día. Un agente aprende qué existe sin leer el código de cada módulo.</div>
+        <div class="pillar">
+            <div class="k">✦ ai-first</div>
+            <h3>Legible para agentes</h3>
+            <p>Diagnósticos machine-readable (<code>NYX_DIAG=json</code>, códigos estables, line:column, sugerencias de arreglo), <code>AGENTS.md</code> / <code>CAPABILITIES.md</code> autogenerados, e inferencia LLM on-device vía <code>std/llm</code>.</p>
         </div>
-        <div class="card">
-            <div class="card-title">Inferencia LLM on-device</div>
-            <div class="card-desc"><code>std/llm</code> bindea llama.cpp: carga un modelo GGUF, genera, transmite tokens de vuelta a Nyx &mdash; el drop determinista libera el modelo exactamente una vez. La IA no es solo un servicio al que llamás afuera; es una librería que enlazas.</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Un compilador que nunca te atrapa</div>
-            <div class="card-desc">El parser nunca se cuelga (presupuesto de errores acotado). Sugerencias "did you mean" para métodos, campos y variables. Un canal de fricción (<code>nyx report</code>) convierte los callejones sin salida en feedback estructurado. Cada aspereza es una señal, no una falla silenciosa.</div>
+        <div class="pillar">
+            <div class="k">✦ completo</div>
+            <h3>Un ecosistema entero</h3>
+            <p>Un framework web, un almacén compatible con Redis, un reverse proxy, un editor de terminal &mdash; todos escritos en Nyx. Todo lo que sirve este sitio es uno de ellos.</p>
         </div>
     </div>
+</section>
 
-    <div class="terminal" style="margin-top:2rem">
+<!-- AI-FIRST DETALLE (evidencia compacta) -->
+<section id="ai-first" style="padding-top:1rem">
+    <div class="section-label">AI-first, en concreto</div>
+    <h2 class="section-title">Errores sobre los que un modelo puede actuar</h2>
+    <p class="section-subtitle">Cada diagnóstico es una línea de JSON con un código estable, ubicación exacta y una sugerencia de arreglo &mdash; en las fases de parse <em>y</em> semantic, bilingüe. Sin scrapear stderr, sin adivinar.</p>
+    <div class="terminal">
         <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
 <pre><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx build</span>
 <span class="result">{"phase":"semantic","code":"NYX1005","line":12,"col":18,</span>
 <span class="result"> "message":"argument 2 of 'indexOf' must be int, got String",</span>
-<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span>
-<span class="comment"># una línea, código estable, ubicación exacta, sugerencia accionable — para el modelo, no para el humano</span></pre>
+<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span></pre>
     </div>
 </section>
-<section id="codigo">
-    <div class="section-label">Sintaxis</div>
-    <h2 class="section-title">Como se ve Nyx</h2>
-    <p class="section-subtitle">Sintaxis limpia y familiar. Compila a codigo nativo via LLVM.</p>
-    <div style="margin-top:1.5rem">
-        <div class="tabs">
-            <button class="tab active" onclick="showTab(event,'es-code-server')">Servidor</button>
-            <button class="tab" onclick="showTab(event,'es-code-db')">Base de datos</button>
-            <button class="tab" onclick="showTab(event,'es-code-queue')">Cola</button>
-            <button class="tab" onclick="showTab(event,'es-code-http2')">HTTP/2</button>
-        </div>
-        <div class="tab-content active" id="es-code-server">
-<pre><span class="kw">fn</span> <span class="fn">handle_usuario</span>(req: <span class="ty">Request</span>) -> <span class="ty">Response</span> {
-    <span class="kw">let</span> id: <span class="ty">String</span> = req.params.<span class="fn">get</span>(<span class="str">"id"</span>)
-    <span class="kw">return</span> <span class="fn">response_json</span>(<span class="num">200</span>, <span class="str">"{\"id\": \""</span> + id + <span class="str">"\"}"</span>)
-}
 
-<span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
-    <span class="fn">app_use</span>(app, mw_cors)
-    <span class="fn">app_get</span>(app, <span class="str">"/usuarios/{id}"</span>, handle_usuario)
-    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">64</span>)
-}</pre>
-        </div>
-        <div class="tab-content" id="es-code-db">
-<pre><span class="prompt">$</span> <span class="cmd">redis-cli -p 6382</span>
-
-<span class="prompt">&gt;</span> <span class="cmd">CREATE TABLE eventos (id INTEGER PRIMARY KEY, nombre TEXT)</span>
-<span class="result">OK</span>
-<span class="prompt">&gt;</span> <span class="cmd">INSERT INTO eventos VALUES (1, 'deploy')</span>
-<span class="result">OK</span>
-<span class="prompt">&gt;</span> <span class="cmd">SELECT nombre FROM eventos WHERE id = 1</span>
-<span class="result">1) "deploy"</span></pre>
-        </div>
-        <div class="tab-content" id="es-code-queue">
-<pre><span class="prompt">$</span> <span class="cmd">redis-cli -p 6381</span>
-
-<span class="prompt">&gt;</span> <span class="cmd">ENQUEUE tareas '{"tarea": "enviar_email", "a": "alice@ejemplo.com"}'</span>
-<span class="result">"msg_0001"</span>
-<span class="prompt">&gt;</span> <span class="cmd">DEQUEUE tareas</span>
-<span class="result">1) "msg_0001"</span>
-<span class="result">2) "{\"tarea\": \"enviar_email\"}"</span>
-<span class="prompt">&gt;</span> <span class="cmd">ACK tareas msg_0001</span>
-<span class="result">OK</span></pre>
-        </div>
-        <div class="tab-content" id="es-code-http2">
-<pre><span class="kw">fn</span> <span class="fn">handle_request</span>(method: <span class="ty">String</span>, path: <span class="ty">String</span>,
-                  headers: <span class="ty">Array</span>, body: <span class="ty">String</span>) -> <span class="ty">Array</span> {
-    <span class="kw">let</span> hdrs: <span class="ty">Array</span> = [<span class="str">"content-type"</span>, <span class="str">"application/json"</span>,
-                       <span class="str">"server"</span>, <span class="str">"nyx-http2"</span>]
-    <span class="kw">return</span> [<span class="num">200</span>, hdrs, <span class="str">"{\"ok\": true, \"protocolo\": \"h2c\"}"</span>]
-}
-
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="fn">h2_serve</span>(<span class="num">3004</span>, <span class="num">4</span>, handle_request)
-    <span class="kw">return</span> <span class="num">0</span>
-}</pre>
-        </div>
-    </div>
-</section>
-<section id="ecosistema">
-    <div class="section-label">Ecosistema</div>
-    <h2 class="section-title">Ocho productos, un lenguaje</h2>
-    <p class="section-subtitle">Todo lo que sirve este sitio web esta escrito en Nyx.</p>
-    <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <a href="https://nyxkv.com" class="card"><div class="card-title">NyxKV</div><div class="card-desc">Almacén clave-valor compatible con Redis. 64 comandos, Pub/Sub, SCAN estable ante resize, auth multi-tenant, TLS.</div><div class="card-stat">compatible con Redis</div></a>
-        <a href="https://serve.nyxlang.com" class="card"><div class="card-title">nyx-serve</div><div class="card-desc">Framework HTTP con middleware composable, APIs JSON y sesiones con cookies.</div><div class="card-stat">9,971 req/s</div></a>
-        <a href="https://proxy.nyxlang.com" class="card"><div class="card-title">nyx-proxy</div><div class="card-desc">Proxy HTTPS con TLS, SNI, health checks, rate limiting, access logs.</div><div class="card-stat">4,282 req/s</div></a>
-        <div class="card"><div class="card-title">nyx-queue</div><div class="card-desc">Cola de mensajes persistente con ACK, redelivery automatico y distribucion round-robin.</div><div class="card-stat">3,252 msg/s</div></div>
-        <div class="card"><div class="card-title">nyx-http2</div><div class="card-desc">Servidor HTTP/2 con compresion HPACK, framing binario y multiplexing de streams.</div><div class="card-stat">h2c mode</div></div>
-        <div class="card"><div class="card-title">nyx-db</div><div class="card-desc">Base de datos SQL embebida con parser propio, B-tree, transacciones, persistencia.</div><div class="card-stat">motor SQL</div></div>
-        <div class="card"><div class="card-title">nyx-edit</div><div class="card-desc">Editor de texto para terminal con selección, undo, búsqueda, clipboard y raw mode.</div><div class="card-stat">~1090 líneas</div></div>
-        <div class="card"><div class="card-title">nyx-shell</div><div class="card-desc">Shell POSIX interactivo con pipes, redirects, expansion de variables, historial.</div><div class="card-stat">fork+exec</div></div>
-        <a href="/playground/" class="card"><div class="card-title">Playground</div><div class="card-desc">Proba Nyx en tu navegador. Edita, compila y ejecuta sin instalar nada.</div><div class="card-stat">pruébalo ahora</div></a>
-    </div>
-</section>
-<section id="rendimiento">
-    <div class="section-label">Rendimiento</div>
-    <h2 class="section-title">Velocidad nativa</h2>
-    <p class="section-subtitle">Compilado a codigo maquina via LLVM. Compite con C.</p>
-    <div style="margin-top:2rem">
-        <div class="bench-row"><div class="bench-name">fibonacci(40)</div><div class="bench-bar-wrap"><div class="bench-bar" style="width:87%"></div></div><div class="bench-value">0.87x C</div></div>
-        <div class="bench-row"><div class="bench-name">primes(100K)</div><div class="bench-bar-wrap"><div class="bench-bar" style="width:99%"></div></div><div class="bench-value">0.99x C</div></div>
-        <div class="bench-row"><div class="bench-name">loop(100M)</div><div class="bench-bar-wrap"><div class="bench-bar" style="width:100%"></div></div><div class="bench-value">= C</div></div>
-        <div class="bench-row"><div class="bench-name">map(100K)</div><div class="bench-bar-wrap"><div class="bench-bar" style="width:93%"></div></div><div class="bench-value">1.07x C</div></div>
-        <div class="bench-row"><div class="bench-name">HTTP hello</div><div class="bench-bar-wrap"><div class="bench-bar" style="width:100%"></div></div><div class="bench-value">73K req/s</div></div>
-    </div>
-</section>
-<!-- NOVEDADES -->
-<section id="novedades">
-    <div class="section-label">Entregado &middot; v0.22</div>
-    <h2 class="section-title">Lo que el lenguaje hace hoy</h2>
-    <p class="section-subtitle">No es un roadmap &mdash; esto está entregado y corriendo en producción. <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog completo &rarr;</a></p>
-
+<!-- CONSTRUILO EN NYX -->
+<section id="ecosystem">
+    <div class="section-label">Constrúyelo en Nyx</div>
+    <h2 class="section-title">Un lenguaje, un stack completo</h2>
+    <p class="section-subtitle">Cada uno de estos es un producto separado, escrito enteramente en Nyx, corriendo en producción detrás de este dominio.</p>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
-        <div class="card">
-            <div class="card-title">Auto-hospedado, con fixed point verificado</div>
-            <div class="card-desc">El compilador está escrito en Nyx y se compila a sí mismo &mdash; recompilar produce IR byte-idéntico. Cada release pasa ese chequeo de fixed point más 300+ tests de regresión.</div>
-            <div class="card-stat">compilador en Nyx &middot; nativo vía LLVM</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Un borrow checker en serio</div>
-            <div class="card-desc">Move-checking real, detección de use-after-free / double-free sobre memoria manual, drop determinista para tipos <code>#[affine]</code>, y análisis de escape de referencias colgantes &mdash; opt-in con <code>NYX_BORROW=error</code>.</div>
-            <div class="card-stat">NYX12xx &middot; gates sound</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Async real, WebAssembly, inferencia LLM</div>
-            <div class="card-desc">Goroutines stackful sobre un scheduler M:N con event loop epoll; <code>make wasm</code> corre Nyx en el navegador con DOM + eventos; <code>std/llm</code> bindea llama.cpp para inferencia on-device.</div>
-            <div class="card-stat">spawn/await &middot; wasm32 &middot; ggml</div>
-        </div>
-        <div class="card">
-            <div class="card-title">Diagnósticos AI-first</div>
-            <div class="card-desc">Errores machine-readable: <code>NYX_DIAG=json</code> con códigos estables, line:column, multi-error en parse <em>y</em> semantic. Bilingüe vía <code>NYX_LANG</code>. El parser nunca se cuelga.</div>
-            <div class="card-stat">NYX01xx&ndash;NYX12xx &middot; JSON &middot; EN + ES</div>
-        </div>
+        <a href="https://serve.nyxlang.com" class="card">
+            <div class="card-title">nyx-serve</div>
+            <div class="card-desc">Framework web — rutas, JSON, WebSockets, plantillas, multipart, sesiones. Un binario estático.</div>
+        </a>
+        <a href="https://nyxkv.com" class="card">
+            <div class="card-title">nyx-kv</div>
+            <div class="card-desc">Almacén clave-valor compatible con Redis — 64 comandos, Pub/Sub, SCAN estable ante resize, TLS, multi-tenant.</div>
+        </a>
+        <a href="https://proxy.nyxlang.com" class="card">
+            <div class="card-title">nyx-proxy</div>
+            <div class="card-desc">Reverse proxy HTTPS — TLS con SNI, health checks, cache LRU, Prometheus /metrics, rate limiting.</div>
+        </a>
+        <a href="https://edit.nyxlang.com" class="card">
+            <div class="card-title">nyx-edit</div>
+            <div class="card-desc">Editor de texto para terminal en un archivo Nyx — resize en vivo, UTF-8, mouse, undo de 1000 niveles, sin parpadeo.</div>
+        </a>
     </div>
+    <p style="margin-top:1.25rem"><a href="/playground/">Prueba Nyx en el playground del navegador &rarr;</a></p>
 </section>
+
 <!-- EMPEZAR -->
 <section id="empezar">
     <div class="section-label">Empezar</div>
     <h2 class="section-title">De cero a ejecutar en 30 segundos</h2>
+    <p class="section-subtitle">Instala el toolchain, crea un proyecto, ejecútalo. Sin runtime que instalar en tus servidores &mdash; el compilador produce un binario estático.</p>
 
-    <!-- 1. Instalar -->
-    <div style="margin-top:2.5rem">
-        <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-secondary);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">1 &mdash; Instalar</h3>
-        <div class="gs-install">
-            <code>$ curl -sSf https://nyxlang.com/install.sh | sh</code>
-            <button class="btn-copy" onclick="copyInstall(this)">Copiar</button>
-        </div>
-        <p class="gs-note">Linux (x86_64, ARM64) &middot; Requiere Clang &middot; ~10 segundos</p>
-        <p class="gs-note">Verificar: $ nyx --version &rarr; nyx 0.22.0</p>
+    <div class="gs-install">
+        <code>$ curl -sSf https://nyxlang.com/install.sh | sh</code>
+        <button class="btn-copy" onclick="copyInstall(this)">Copiar</button>
     </div>
+    <p class="gs-note">Linux (x86_64, ARM64) &middot; requiere Clang &middot; verificar: nyx --version &rarr; nyx 0.22.0</p>
 
-    <!-- 2. Inicio Rápido -->
-    <div style="margin-top:2.5rem">
-        <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-secondary);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">2 &mdash; Inicio R&aacute;pido</h3>
-        <div class="gs-steps">
-            <div class="gs-step">
-                <div class="gs-step-label">Hola Mundo</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">echo 'fn main() { print("Hola!") }' > hola.nx</span>
-<span class="prompt">$</span> <span class="cmd">nyx run hola.nx</span>
-<span class="result">Hola!</span></pre></div>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Crear un proyecto</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx init miapp</span>
-<span class="prompt">$</span> <span class="cmd">cd miapp && nyx run</span>
-<span class="result">Hola desde miapp!</span></pre></div>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Servidor web en 8 l&iacute;neas</div>
-<pre><span class="kw">import</span> <span class="str">"std/http"</span>
+<pre class="term" style="margin-top:1.5rem"><span class="prompt">$</span> nyx init mi-app
+<span class="prompt">$</span> cd mi-app &amp;&amp; nyx run
+<span class="comment">mi-app arrancando…</span></pre>
 
-<span class="kw">fn</span> <span class="fn">serve_req</span>(request: <span class="ty">Array</span>) -> <span class="ty">String</span> {
-    <span class="kw">return</span> <span class="fn">http_response</span>(<span class="num">200</span>, <span class="str">"Hola desde Nyx!"</span>)
-}
-
-<span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="fn">http_serve_mt</span>(<span class="num">8080</span>, <span class="num">4</span>, serve_req)
-}</pre>
-                <div class="terminal" style="margin-top:0.5rem"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx run servidor.nx</span>
-<span class="comment"># Abrir http://localhost:8080</span></pre></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. Ejemplos -->
-    <div style="margin-top:2.5rem">
-        <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;color:var(--text-secondary);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">3 &mdash; Ejemplos</h3>
-        <div class="card-grid cols-2" style="margin-top:0.75rem">
-
-            <div class="example-card" onclick="toggleExample(this)">
-                <div class="example-header">
-                    <div><div class="example-title">API JSON</div><div class="example-desc">Endpoint REST con rutas y respuesta JSON</div></div>
-                    <span class="example-chevron">&#9660;</span>
-                </div>
-                <div class="example-code">
-<pre><span class="kw">import</span> <span class="str">"std/web"</span>
-
-<span class="kw">fn</span> <span class="fn">get_users</span>(req: <span class="ty">Request</span>, resp: <span class="ty">Response</span>) {
-    <span class="fn">response_json</span>(resp, <span class="str">"[{\"name\": \"Alice\"}]"</span>)
-}
-
-<span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="kw">let</span> app: <span class="ty">App</span> = <span class="fn">app_new</span>()
-    <span class="fn">app_get</span>(app, <span class="str">"/api/users"</span>, get_users)
-    <span class="fn">serve_app</span>(app, <span class="num">3000</span>, <span class="num">16</span>)
-}</pre>
-                </div>
-            </div>
-
-            <div class="example-card" onclick="toggleExample(this)">
-                <div class="example-header">
-                    <div><div class="example-title">Almac&eacute;n Clave-Valor</div><div class="example-desc">Conectar a nyx-kv con el protocolo RESP</div></div>
-                    <span class="example-chevron">&#9660;</span>
-                </div>
-                <div class="example-code">
-<pre><span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="kw">let</span> conn: <span class="ty">int</span> = <span class="fn">tcp_connect</span>(<span class="str">"localhost"</span>, <span class="num">6380</span>)
-    <span class="fn">tcp_write</span>(conn, <span class="str">"SET nombre Alice\r\n"</span>)
-    <span class="kw">let</span> resp: <span class="ty">String</span> = <span class="fn">tcp_read</span>(conn)
-    <span class="fn">print</span>(resp)  <span class="cm">// +OK</span>
-    <span class="fn">tcp_close</span>(conn)
-}</pre>
-                </div>
-            </div>
-
-            <div class="example-card" onclick="toggleExample(this)">
-                <div class="example-header">
-                    <div><div class="example-title">Procesar Archivos</div><div class="example-desc">Leer, parsear y filtrar contenido de archivos</div></div>
-                    <span class="example-chevron">&#9660;</span>
-                </div>
-                <div class="example-code">
-<pre><span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="kw">let</span> content: <span class="ty">String</span> = <span class="fn">read_file</span>(<span class="str">"datos.csv"</span>)
-    <span class="kw">let</span> lines: <span class="ty">Array</span> = content.<span class="fn">split</span>(<span class="str">"\n"</span>)
-    <span class="kw">var</span> count: <span class="ty">int</span> = <span class="num">0</span>
-    <span class="kw">for</span> line <span class="kw">in</span> lines {
-        <span class="kw">if</span> line.<span class="fn">contains</span>(<span class="str">"error"</span>) {
-            <span class="fn">print</span>(<span class="str">"Encontrado: "</span> + line)
-            count = count + <span class="num">1</span>
-        }
-    }
-    <span class="fn">print</span>(<span class="str">"Total: "</span> + <span class="fn">int_to_string</span>(count))
-}</pre>
-                </div>
-            </div>
-
-            <div class="example-card" onclick="toggleExample(this)">
-                <div class="example-header">
-                    <div><div class="example-title">Tareas Concurrentes</div><div class="example-desc">Concurrencia estilo goroutine con canales</div></div>
-                    <span class="example-chevron">&#9660;</span>
-                </div>
-                <div class="example-code">
-<pre><span class="kw">fn</span> <span class="fn">work</span>(id: <span class="ty">int</span>, ch: <span class="ty">Map</span>) -> <span class="ty">int</span> {
-    <span class="fn">print</span>(<span class="str">"Worker "</span> + <span class="fn">int_to_string</span>(id))
-    <span class="fn">channel_send</span>(ch, id * <span class="num">10</span>)
-    <span class="kw">return</span> <span class="num">0</span>
-}
-
-<span class="kw">fn</span> <span class="fn">main</span>() {
-    <span class="kw">let</span> ch: <span class="ty">Map</span> = <span class="fn">channel_new</span>(<span class="num">2</span>)
-    <span class="fn">thread_spawn</span>(<span class="kw">fn</span>() -> <span class="ty">int</span> { <span class="kw">return</span> <span class="fn">work</span>(<span class="num">1</span>, ch) })
-    <span class="fn">thread_spawn</span>(<span class="kw">fn</span>() -> <span class="ty">int</span> { <span class="kw">return</span> <span class="fn">work</span>(<span class="num">2</span>, ch) })
-    <span class="kw">let</span> r1: <span class="ty">int</span> = <span class="fn">channel_recv</span>(ch)
-    <span class="kw">let</span> r2: <span class="ty">int</span> = <span class="fn">channel_recv</span>(ch)
-    <span class="fn">print</span>(<span class="fn">int_to_string</span>(r1) + <span class="str">", "</span> + <span class="fn">int_to_string</span>(r2))
-}</pre>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- 4. Aprender más -->
     <div class="gs-learn">
-        <a href="/es/learn/" class="btn btn-accent">Leer el Libro</a>
-        <a href="/playground/" class="btn btn-outline">Probar en Playground</a>
+        <a href="/es/learn/" class="btn btn-outline">Lee el Libro de Nyx</a>
+        <a href="/es/by-example/" class="btn btn-outline">Nyx con Ejemplos</a>
     </div>
-    <p class="gs-learn-note">31 cap&iacute;tulos &middot; Biling&uuml;e EN/ES &middot; De lo b&aacute;sico a construir bases de datos</p>
+    <p class="gs-learn-note">El Libro cubre el lenguaje de punta a punta; Por Ejemplo tiene 100 recetas ejecutables. El gestor de paquetes, las dependencias y la referencia completa de comandos viven ahí.</p>
 </section>
-<!-- PACKAGE MANAGER -->
-<section id="package-manager">
-    <div class="section-label">Package Manager</div>
-    <h2 class="section-title">Gestiona tus proyectos Nyx</h2>
-    <p class="section-subtitle">Todo lo que necesitas para crear, compilar, ejecutar y compartir proyectos Nyx.</p>
 
-    <!-- Instalar y Actualizar -->
-    <div class="gs-subsection">
-        <div class="gs-subsection-label">Instalar y actualizar</div>
-        <div class="gs-steps">
-            <div class="gs-step">
-                <div class="gs-step-label">Instalar desde cero</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">curl -sSf https://nyxlang.com/install.sh | sh</span>
-<span class="result">  Nyx installed successfully!</span></pre></div>
-                <p class="gs-note">Se instala en ~/.nyx/ y enlaza nyx a ~/.local/bin/nyx. Agrega el PATH a tu perfil de shell autom&aacute;ticamente.</p>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Actualizar a la &uacute;ltima versi&oacute;n</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx update</span>
-<span class="result">Updating Nyx...
-Rebuilding compiler...
-Rebuilding package manager...
-Nyx updated successfully.
-nyx 0.22.0</span></pre></div>
-                <p class="gs-note">Descarga el c&oacute;digo m&aacute;s reciente y recompila. Ejecuta esto en cualquier momento para obtener nuevas funcionalidades y correcciones.</p>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Desinstalar</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx uninstall</span>
-<span class="result">Nyx has been uninstalled.
-  Removed: ~/.nyx/
-  Removed: ~/.local/bin/nyx</span></pre></div>
-                <p class="gs-note">Elimina Nyx completamente de tu sistema. Limpio y reversible.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Crear un proyecto -->
-    <div class="gs-subsection">
-        <div class="gs-subsection-label">Crear un proyecto</div>
-        <div class="gs-steps">
-            <div class="gs-step">
-                <div class="gs-step-label">Inicializar</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">mkdir miapp && cd miapp</span>
-<span class="prompt">$</span> <span class="cmd">nyx init</span>
-<span class="result">Initialized project: miapp
-  Created: nyx.toml, src/main.nx
-  Build:   nyx build
-  Run:     nyx run</span></pre></div>
-                <p class="gs-note"><code>nyx init</code> crea dos archivos: <code>nyx.toml</code> (configuraci&oacute;n del proyecto) y <code>src/main.nx</code> (punto de entrada).</p>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Estructura del proyecto</div>
-<pre><span class="cm">miapp/
-  nyx.toml          # Configuraci&oacute;n del proyecto
-  src/
-    main.nx         # Punto de entrada (fn main)
-  packages/     # Dependencias (se crea autom&aacute;ticamente)
-  nyx.lock          # Archivo lock (generado autom&aacute;ticamente)</span></pre>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">nyx.toml explicado</div>
-<pre><span class="cm"># Todo proyecto Nyx tiene un nyx.toml en su ra&iacute;z</span>
-<span class="str">[package]</span>
-<span class="fn">name</span> = <span class="str">"miapp"</span>          <span class="cm"># Nombre del proyecto (nombre del binario)</span>
-<span class="fn">version</span> = <span class="str">"0.1.0"</span>      <span class="cm"># Versi&oacute;n sem&aacute;ntica</span>
-<span class="fn">main</span> = <span class="str">"src/main.nx"</span>   <span class="cm"># Archivo de entrada</span>
-<span class="fn">description</span> = <span class="str">"..."</span>    <span class="cm"># Descripci&oacute;n (opcional)</span>
-<span class="fn">no_gc</span> = <span class="kw">false</span>           <span class="cm"># Opcional: modo sistemas (sin GC)</span>
-
-<span class="str">[dependencies]</span>
-<span class="fn">nyx-kv</span> = <span class="str">"*"</span>            <span class="cm"># Desde el registro (github.com/nyxlang-dev/)</span>
-<span class="fn">mylib</span> = <span class="str">"https://..."</span>  <span class="cm"># Desde URL personalizada</span></pre>
-            </div>
-        </div>
-    </div>
-
-    <!-- Compilar y Ejecutar -->
-    <div class="gs-subsection">
-        <div class="gs-subsection-label">Compilar y ejecutar</div>
-        <div class="gs-steps">
-            <div class="gs-step">
-                <div class="gs-step-label">Compilar un proyecto</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx build</span>              <span class="comment"># Compilar (debug)</span>
-<span class="result">Building: miapp v0.1.0
-  Compiling: src/main.nx
-✓ Built: miapp</span>
-
-<span class="prompt">$</span> <span class="cmd">nyx build --release</span>    <span class="comment"># Compilar con optimizaciones (-O2)</span>
-<span class="prompt">$</span> <span class="cmd">./miapp</span>                <span class="comment"># Ejecutar el binario compilado</span></pre></div>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Compilar y ejecutar en un paso</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx run</span>                <span class="comment"># Compilar + ejecutar (dentro de un proyecto)</span>
-<span class="result">Hola desde miapp!</span></pre></div>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Ejecutar un archivo suelto (sin proyecto)</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx run hola.nx</span>        <span class="comment"># Compilar y ejecutar un archivo suelto</span>
-<span class="result">Hola!</span>
-
-<span class="prompt">$</span> <span class="cmd">nyx hola.nx</span>            <span class="comment"># Forma corta — mismo resultado</span>
-<span class="result">Hola!</span></pre></div>
-                <p class="gs-note">No necesita <code>nyx.toml</code>. Perfecto para scripts y experimentos r&aacute;pidos.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Dependencias -->
-    <div class="gs-subsection">
-        <div class="gs-subsection-label">Dependencias</div>
-        <div class="gs-steps">
-            <div class="gs-step">
-                <div class="gs-step-label">Agregar un paquete del registro</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx add nyx-kv</span>
-<span class="result">Adding package: nyx-kv
-  Fetching: https://github.com/nyxlang-dev/nyx-kv
-  Updated nyx.toml
-Package 'nyx-kv' added.</span></pre></div>
-                <p class="gs-note">Los paquetes se descargan de <code>github.com/nyxlang-dev/&lt;nombre&gt;</code> por defecto y se guardan en <code>packages/</code>.</p>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Agregar desde una URL personalizada</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx add mylib --from https://github.com/user/mylib</span>
-<span class="result">Package 'mylib' added.</span></pre></div>
-                <p class="gs-note">Usa <code>--from</code> para descargar desde cualquier repositorio Git.</p>
-            </div>
-            <div class="gs-step">
-                <div class="gs-step-label">Resoluci&oacute;n autom&aacute;tica</div>
-                <div class="terminal"><div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">rm -rf packages/</span>  <span class="comment"># Borrar paquetes locales</span>
-<span class="prompt">$</span> <span class="cmd">nyx build</span>             <span class="comment"># Se descargan autom&aacute;ticamente</span>
-<span class="result">  Resolving: nyx-kv
-  Fetched: nyx-kv
-✓ Built: miapp</span></pre></div>
-                <p class="gs-note">Las dependencias en <code>nyx.toml</code> se resuelven autom&aacute;ticamente al compilar. El archivo <code>nyx.lock</code> registra las versiones exactas.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Referencia de comandos -->
-    <div class="gs-subsection">
-        <div class="gs-subsection-label">Referencia de comandos</div>
-        <table style="width:100%;border-collapse:collapse;margin-top:0.75rem;font-family:var(--font-mono);font-size:0.85rem">
-            <thead>
-                <tr style="text-align:left;border-bottom:2px solid var(--border)">
-                    <th style="padding:0.5rem 1rem">Comando</th>
-                    <th style="padding:0.5rem 1rem">Descripci&oacute;n</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx init</code></td><td style="padding:0.5rem 1rem">Crear un nuevo proyecto (nyx.toml + src/main.nx)</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx build</code></td><td style="padding:0.5rem 1rem">Compilar el proyecto</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx build --release</code></td><td style="padding:0.5rem 1rem">Compilar con optimizaciones</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx run</code></td><td style="padding:0.5rem 1rem">Compilar y ejecutar el proyecto</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx run archivo.nx</code></td><td style="padding:0.5rem 1rem">Compilar y ejecutar un archivo suelto</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx add &lt;pkg&gt;</code></td><td style="padding:0.5rem 1rem">Agregar una dependencia del registro</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx add &lt;pkg&gt; --from &lt;url&gt;</code></td><td style="padding:0.5rem 1rem">Agregar una dependencia desde una URL</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx info</code></td><td style="padding:0.5rem 1rem">Mostrar detalles del proyecto</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx update</code></td><td style="padding:0.5rem 1rem">Actualizar Nyx a la &uacute;ltima versi&oacute;n</td></tr>
-                <tr style="border-bottom:1px solid var(--border)"><td style="padding:0.5rem 1rem"><code>nyx uninstall</code></td><td style="padding:0.5rem 1rem">Eliminar Nyx del sistema</td></tr>
-                <tr><td style="padding:0.5rem 1rem"><code>nyx --version</code></td><td style="padding:0.5rem 1rem">Mostrar versi&oacute;n instalada</td></tr>
-            </tbody>
-        </table>
+<!-- OPEN SOURCE -->
+<section id="open-source">
+    <div class="section-label">Open source</div>
+    <h2 class="section-title">Construido en abierto</h2>
+    <p class="section-subtitle">Nyx es Apache 2.0. El compilador, el runtime, la librería estándar y cada producto de arriba están en GitHub &mdash; lee el código, abre un issue, envía un patch.</p>
+    <div class="hero-buttons" style="justify-content:flex-start;margin-top:1.5rem">
+        <a href="https://github.com/nyxlang-dev/nyx" class="btn btn-accent">Código en GitHub</a>
+        <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md" class="btn btn-outline">Changelog</a>
     </div>
 </section>
 
-<section>
-    <div class="section-label">Aprender</div>
-    <h2 class="section-title">El Libro de Nyx</h2>
-    <p class="section-subtitle">31 capitulos cubriendo desde lo basico hasta sistemas en produccion. Bilingue EN/ES.</p>
-    <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <div class="card"><div class="card-title">Basico</div><div class="card-desc">Variables, funciones, control de flujo, structs, enums, pattern matching.</div></div>
-        <div class="card"><div class="card-title">Avanzado</div><div class="card-desc">Generics, traits, closures, iteradores, concurrencia, FFI.</div></div>
-        <div class="card"><div class="card-title">Sistemas</div><div class="card-desc">Punteros raw, assembly inline, modo sin GC, networking, TLS.</div></div>
-    </div>
-    <div style="margin-top:1.5rem"><a href="/es/learn/" class="btn btn-accent">Leer el Libro</a></div>
-</section>
-<section>
-    <div class="section-label">Codigo abierto</div>
-    <h2 class="section-title">Construido abiertamente</h2>
-    <p class="section-subtitle">Licencia Apache 2.0. Contribuciones bienvenidas.</p>
-    <div class="card-grid cols-3" style="margin-top:1.5rem">
-        <a href="https://github.com/nyxlang-dev/nyx" class="card"><div class="card-title">nyx</div><div class="card-desc">Compilador, runtime, stdlib, 350+ tests automatizados.</div></a>
-        <a href="https://github.com/nyxlang-dev/nyx-kv" class="card"><div class="card-title">nyx-kv</div><div class="card-desc">KV store compatible con Redis.</div></a>
-        <a href="https://github.com/nyxlang-dev/nyx-serve" class="card"><div class="card-title">nyx-serve</div><div class="card-desc">Framework HTTP.</div></a>
-        <a href="https://github.com/nyxlang-dev/nyx-proxy" class="card"><div class="card-title">nyx-proxy</div><div class="card-desc">Proxy HTTPS.</div></a>
-        <a href="https://github.com/nyxlang-dev/nyxlang.com" class="card"><div class="card-title">nyxlang.com</div><div class="card-desc">Sitio web y landing pages.</div></a>
-    </div>
-</section>
+<!-- FOOTER -->
 <footer>
     <div class="footer-grid">
-        <div class="footer-col"><h4>Productos</h4><a href="https://nyxkv.com">NyxKV</a><a href="https://serve.nyxlang.com">nyx-serve</a><a href="https://proxy.nyxlang.com">nyx-proxy</a></div>
-        <div class="footer-col"><h4>Recursos</h4><a href="/es/learn/">El Libro de Nyx</a><a href="/playground/">Playground</a><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></div>
-        <div class="footer-col"><h4>Comunidad</h4><a href="https://github.com/nyxlang-dev">GitHub Org</a></div>
-        <div class="footer-col"><h4>Legal</h4><a href="https://github.com/nyxlang-dev/nyx/blob/main/LICENSE">Apache 2.0</a></div>
+        <div class="footer-col">
+            <h4>Lenguaje</h4>
+            <a href="/es/learn/">El Libro de Nyx</a>
+            <a href="/es/by-example/">Por Ejemplo</a>
+            <a href="/playground/">Playground</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        </div>
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="https://serve.nyxlang.com">nyx-serve</a>
+            <a href="https://nyxkv.com">nyx-kv</a>
+            <a href="https://proxy.nyxlang.com">nyx-proxy</a>
+            <a href="https://edit.nyxlang.com">nyx-edit</a>
+        </div>
+        <div class="footer-col">
+            <h4>Referencia</h4>
+            <a href="#ai-first">Diagnósticos AI-first</a>
+            <a href="#code">Sintaxis</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
+        <div class="footer-col">
+            <h4>Comunidad</h4>
+            <a href="https://github.com/nyxlang-dev">GitHub Org</a>
+            <a href="https://github.com/nyxlang-dev/nyx/issues">Issues</a>
+        </div>
     </div>
-    <div class="footer-bottom">Nyx &mdash; el lenguaje que se hospeda a si mismo</div>
+    <div class="footer-bottom">Nyx &mdash; un lenguaje self-hosting · Apache 2.0 · construido con Nyx</div>
 </footer>
-<script>
-function showTab(event, id) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-    document.getElementById(id).classList.add('active');
-}
 
+<script>
 function copyInstall(btn) {
     navigator.clipboard.writeText('curl -sSf https://nyxlang.com/install.sh | sh');
-    btn.textContent = 'Copiado!';
+    btn.textContent = '¡Copiado!';
     setTimeout(function() { btn.textContent = 'Copiar'; }, 2000);
 }
-function toggleExample(card) {
-    card.classList.toggle('open');
-}
-</script>
-<script>
-/* Copy button on every code block — self-contained, theme-agnostic. */
+/* Botón copiar en cada bloque de código — auto-contenido. */
 (function () {
   var css = document.createElement("style");
   css.textContent =
     ".nyx-pre{position:relative}" +
     ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
-    "letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2,#9aa4b2);background:rgba(127,127,140,.12);" +
-    "border:1px solid var(--border,rgba(150,160,220,.18));border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:#9aa4b2;background:rgba(127,127,140,.16);" +
+    "border:1px solid rgba(150,160,220,.28);border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
     "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
     ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
-    ".nyx-copy:hover{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}" +
-    ".nyx-copy.ok{color:var(--accent,#8b8cf7);border-color:var(--accent,#8b8cf7)}";
+    ".nyx-copy:hover{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}" +
+    ".nyx-copy.ok{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}";
   document.head.appendChild(css);
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("pre").forEach(function (pre) {
