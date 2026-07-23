@@ -1,56 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nyx — a native, self-hosting language legible to AI</title>
-    <meta name="description" content="Nyx is a compiled language with native performance via LLVM, a self-hosting compiler, and machine-readable diagnostics built for AI agents. Everything serving this site is written in Nyx.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nyx — a native, self-hosting language legible to AI</title>
+<meta name="description" content="Nyx is a compiled systems language: native performance via LLVM, a self-hosting compiler, and machine-readable diagnostics built for AI agents. Everything serving this site is written in Nyx.">
+<style>
+:root{
+  --bg:#0a0c11; --bg-panel:#0e1017; --bg-inset:#070810;
+  --phos:#e7ebf2;          /* primary phosphor green */
+  --phos-bright:#ffffff;   /* headings / glow          */
+  --phos-dim:#9aa3b4;      /* secondary                */
+  --phos-faint:#4b5568;    /* borders / rules          */
+  --amber:#ffb43f;         /* accent: cursor, hot keys */
+  --amber-dim:#c58628;
+  --grid:#12210f;
+  --font:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+  --maxw:960px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--phos);
+  font-family:var(--font); font-size:15px; line-height:1.65;
+  font-variant-ligatures:none; letter-spacing:.01em;
+  text-shadow:0 0 1px rgba(205,214,236,.25);
+  overflow-x:hidden;
+}
+/* ---- CRT overlays: scanlines + vignette (behind content, non-interactive) ---- */
+body::before{
+  content:""; position:fixed; inset:0; z-index:9998; pointer-events:none;
+  background:repeating-linear-gradient(0deg,
+     rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+     rgba(0,0,0,.16) 3px, rgba(0,0,0,.16) 3px);
+  mix-blend-mode:multiply; opacity:.55;
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
+  background:radial-gradient(120% 120% at 50% 42%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+}
+a{color:var(--phos-bright); text-decoration:none; border-bottom:1px solid var(--phos-faint)}
+a:hover{color:var(--amber); border-bottom-color:var(--amber-dim)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+code{color:var(--amber); font-family:var(--font)}
+::selection{background:var(--phos); color:var(--bg)}
+
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 20px}
+
+/* ---------------- top menu bar (TUI) ---------------- */
+.menubar{
+  position:sticky; top:0; z-index:50; background:rgba(8,11,8,.92);
+  backdrop-filter:blur(3px); border-bottom:1px solid var(--phos-faint);
+}
+.menubar .wrap{display:flex; align-items:center; gap:1.1rem; height:46px}
+.menubar .brand{color:var(--phos-bright); font-weight:700; letter-spacing:.14em; border:0}
+.menubar .brand b{color:var(--amber)}
+.menubar nav{display:flex; gap:1.05rem; margin-left:auto; align-items:center; font-size:.86rem}
+.menubar nav a{border:0; color:var(--phos-dim); letter-spacing:.04em}
+.menubar nav a:hover{color:var(--amber)}
+.menubar .lang{color:var(--phos-faint); letter-spacing:.02em}
+.menubar .lang a{border:0; color:var(--phos-dim)} .menubar .lang a.on{color:var(--phos-bright)}
+.menubar .cta{border:1px solid var(--phos-faint); color:var(--phos-bright); padding:.2rem .6rem; letter-spacing:.04em}
+.menubar .cta:hover{border-color:var(--amber); color:var(--amber); background:rgba(255,180,63,.06)}
+@media(max-width:720px){.menubar nav a.hide,.menubar .lang{display:none}}
+
+/* ---------------- hero ---------------- */
+.hero{padding:3.2rem 0 2.2rem}
+.banner{
+  color:var(--phos-bright); line-height:1.02; font-size:clamp(7px,2.05vw,15px);
+  white-space:pre; margin:0 0 .2rem; text-shadow:0 0 8px rgba(205,214,236,.35),0 0 2px rgba(255,255,255,.6);
+  overflow-x:auto;
+}
+.banner .grk{color:var(--amber); text-shadow:0 0 8px rgba(255,180,63,.4)}
+.boot{margin:.4rem 0 0; white-space:pre-wrap}
+.boot .ln{display:block; min-height:1.65em}
+.boot .ok{color:var(--amber)} .boot .dim{color:var(--phos-dim)}
+.boot .hl{color:var(--phos-bright)}
+.tagline{
+  color:var(--phos-bright); font-size:clamp(1.35rem,3.6vw,2.15rem); line-height:1.28;
+  font-weight:600; letter-spacing:.005em; margin:1.4rem 0 .2rem; text-wrap:balance;
+  text-shadow:0 0 10px rgba(205,214,236,.28);
+}
+.tagline b{color:var(--amber)}
+.lead{color:var(--phos); max-width:66ch; margin:.7rem 0 1.5rem}
+.lead .q{color:var(--phos-dim)}
+.cursor{display:inline-block; width:.62em; height:1.05em; background:var(--amber); vertical-align:-.16em;
+  margin-left:.08em; box-shadow:0 0 8px rgba(255,180,63,.6); animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hero-cta{display:flex; gap:1rem; flex-wrap:wrap; align-items:center}
+.btn{display:inline-block; border:1px solid var(--phos-faint); color:var(--phos-bright);
+  padding:.55rem 1.05rem; letter-spacing:.05em; text-transform:uppercase; font-size:.82rem; border-radius:2px}
+.btn:hover{border-color:var(--amber); color:var(--amber); background:rgba(255,180,63,.06)}
+.btn.solid{background:var(--phos); color:var(--bg); border-color:var(--phos); text-shadow:none; font-weight:700}
+.btn.solid:hover{background:var(--phos-bright); color:var(--bg)}
+.inlinecmd{color:var(--phos-dim); font-size:.9rem}
+.inlinecmd .p{color:var(--amber)}
+
+/* ---------------- ascii panels ---------------- */
+.panel{margin:2.7rem 0; border:1px solid var(--phos-faint); border-radius:2px; background:linear-gradient(180deg,var(--bg-panel),var(--bg))}
+.panel > .hd{
+  display:flex; align-items:center; gap:.6rem; padding:.5rem .9rem;
+  border-bottom:1px solid var(--phos-faint); color:var(--phos-dim);
+  font-size:.8rem; letter-spacing:.06em;
+}
+.panel > .hd .tag{color:var(--amber)} .panel > .hd .who{margin-left:auto; color:var(--phos-faint)}
+.panel > .bd{padding:1.4rem}
+.cmd-h{color:var(--phos-dim); font-size:.86rem; margin:2.6rem 0 .5rem; letter-spacing:.04em}
+.cmd-h .p{color:var(--amber)} .cmd-h b{color:var(--phos-bright); font-weight:600}
+h2{font-size:1.35rem; color:var(--phos-bright); letter-spacing:.02em; margin:.1rem 0 .5rem; font-weight:600;
+  text-shadow:0 0 8px rgba(205,214,236,.22)}
+.sub{color:var(--phos-dim); max-width:70ch; margin:.2rem 0 0}
+
+/* code + terminal blocks */
+pre{margin:0; padding:1.15rem 1.25rem; background:var(--bg-inset); border:1px solid var(--phos-faint);
+  border-radius:2px; overflow-x:auto; font-size:.86rem; line-height:1.6; color:var(--phos)}
+pre.plain{border:0; background:transparent; padding:0}
+.split{display:grid; grid-template-columns:1.35fr 1fr; gap:1rem}
+@media(max-width:780px){.split{grid-template-columns:1fr}}
+.filetab{color:var(--phos-dim); font-size:.78rem; letter-spacing:.05em; margin:0 0 .45rem}
+.filetab::before{content:"┌─ "; color:var(--phos-faint)}
+.filetab::after{content:" "; }
+/* phosphor-duotone syntax (in-world: green primary, amber accent) */
+.kw{color:#b3a5ff; font-weight:600}
+.ty{color:#f5a3d0}
+.fn{color:#7db4ff}
+.str{color:#7ee0a8}
+.num{color:#f6c667}
+.cm{color:#6b7386; font-style:italic}
+/* terminal run output */
+.term .p{color:var(--amber)} .term .c{color:var(--phos-bright)}
+.term .o{color:var(--phos-dim)} .term .r{color:var(--phos)}
+.term .j{color:var(--phos)}
+
+/* pillars */
+.pillars{display:grid; grid-template-columns:repeat(3,1fr); gap:1rem}
+@media(max-width:780px){.pillars{grid-template-columns:1fr}}
+.pil{border:1px solid var(--phos-faint); border-radius:2px; padding:1.1rem; background:var(--bg-panel)}
+.pil .id{color:var(--amber); font-size:.78rem; letter-spacing:.08em; margin-bottom:.5rem}
+.pil h3{color:var(--phos-bright); font-size:1rem; margin:.1rem 0 .5rem; font-weight:600}
+.pil p{color:var(--phos-dim); font-size:.9rem; margin:0}
+.pil p code{font-size:.85em}
+
+/* ls-style ecosystem */
+.ls{font-size:.9rem; line-height:1.9}
+.ls .row{display:grid; grid-template-columns:11ch 15ch 1fr; gap:.6rem; align-items:baseline; border:0; padding:.15rem 0}
+.ls a.row:hover{background:rgba(255,180,63,.05)}
+.ls .perm{color:var(--phos-faint)} .ls .nm{color:var(--phos-bright)} .ls .ds{color:var(--phos-dim)}
+.ls a.row .nm{border-bottom:1px solid transparent}
+.ls a.row:hover .nm{color:var(--amber)}
+@media(max-width:640px){.ls .row{grid-template-columns:1fr} .ls .perm{display:none}}
+
+/* get started */
+.install{display:flex; align-items:stretch; gap:0; border:1px solid var(--phos-faint); border-radius:2px; overflow:hidden; max-width:640px; margin-top:.6rem}
+.install code{flex:1; padding:.8rem 1rem; background:var(--bg-inset); color:var(--phos-bright); font-size:.9rem; white-space:nowrap; overflow-x:auto}
+.install code .p{color:var(--amber)}
+.install button{border:0; border-left:1px solid var(--phos-faint); background:var(--bg-panel); color:var(--phos-dim);
+  font-family:var(--font); font-size:.74rem; letter-spacing:.06em; text-transform:uppercase; padding:0 1rem; cursor:pointer}
+.install button:hover{color:var(--amber); background:rgba(255,180,63,.06)}
+.note{color:var(--phos-faint); font-size:.82rem; margin:.55rem 0 0}
+.learnrow{display:flex; gap:1rem; flex-wrap:wrap; margin-top:1.4rem}
+
+/* footer */
+footer{border-top:1px solid var(--phos-faint); margin-top:3.5rem; padding:2rem 0 2.6rem}
+.fgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:1.4rem}
+@media(max-width:640px){.fgrid{grid-template-columns:repeat(2,1fr)}}
+.fcol h4{color:var(--amber); font-size:.76rem; letter-spacing:.1em; text-transform:uppercase; margin:0 0 .6rem}
+.fcol a{display:block; border:0; color:var(--phos-dim); font-size:.88rem; line-height:1.9}
+.fcol a:hover{color:var(--amber)}
+.eof{color:var(--phos-faint); font-size:.82rem; margin-top:1.8rem; letter-spacing:.04em}
+
+@media (prefers-reduced-motion:reduce){
+  .cursor{animation:none}
+  .boot .ln{opacity:1 !important}
+}
+</style>
 </head>
 <body>
 
-<nav>
-    <a href="/" class="nav-logo">Nyx<span class="greek">Νύξ</span></a>
-    <div class="nav-right">
-        <a href="#code" class="hide-mobile">Code</a>
-        <a href="/learn/" class="hide-mobile">Learn</a>
-        <a href="/by-example/" class="hide-mobile">Examples</a>
-        <a href="/playground/" class="hide-mobile">Playground</a>
-        <a href="https://github.com/nyxlang-dev/nyx" class="hide-mobile">GitHub</a>
-        <span class="nav-lang"><a href="/" class="active">EN</a> / <a href="/es/">ES</a></span>
-        <a href="#get-started" class="btn btn-accent">Get Started</a>
-    </div>
-</nav>
+<div class="menubar"><div class="wrap">
+  <a href="/" class="brand">[ nyx <b>Νύξ</b> ]</a>
+  <nav>
+    <a href="#code" class="hide">code</a>
+    <a href="/learn/" class="hide">learn</a>
+    <a href="/by-example/" class="hide">examples</a>
+    <a href="/playground/" class="hide">playground</a>
+    <a href="https://github.com/nyxlang-dev/nyx" class="hide">github</a>
+    <span class="lang"><a href="/" class="on">EN</a>/<a href="/es/">ES</a></span>
+    <a href="#get-started" class="cta">▸ get-started</a>
+  </nav>
+</div></div>
 
-<!-- HERO -->
+<main class="wrap">
+
+<!-- ===================== HERO ===================== -->
 <section class="hero">
-    <span class="hero-label"><span class="glyph">✦</span> NATIVE · SELF-HOSTING · LEGIBLE TO AI</span>
-    <h1>A language for <em>robust</em>, native software.</h1>
-    <p class="subtitle">
-        Nyx compiles to native code through LLVM, hosts its own compiler, and speaks
-        a machine-readable dialect that AI agents can write, read and fix. Reliable
-        by design — not by convention.
-    </p>
-    <div class="hero-buttons">
-        <a href="#get-started" class="btn btn-accent">Get started</a>
-        <span class="inline-cmd">curl -sSf nyxlang.com/install.sh <span class="op">|</span> sh</span>
-    </div>
-    <div class="ephemeris" aria-hidden="true">
-        <div class="rule"></div>
-        <div class="ticks"></div>
-        <div class="star"><span class="dot"></span><span class="label">v0.22.0</span></div>
-    </div>
+<pre class="banner" aria-label="NYX">  ███╗   ██╗██╗   ██╗██╗  ██╗   <span class="grk">Νύξ</span>
+  ████╗  ██║╚██╗ ██╔╝╚██╗██╔╝
+  ██╔██╗ ██║ ╚████╔╝  ╚███╔╝    a systems language
+  ██║╚██╗██║  ╚██╔╝   ██╔██╗    that compiles to
+  ██║ ╚████║   ██║   ██╔╝ ██╗   native code — LLVM.
+  ╚═╝  ╚═══╝   ╚═╝   ╚═╝  ╚═╝</pre>
+
+<div class="boot" id="boot" aria-hidden="true"><span class="ln"><span class="ok">$</span> nyx --version</span><span class="ln"><span class="hl">nyx 0.22.0</span> <span class="dim">· self-hosting · aarch64 / x86_64 · Apache-2.0</span></span><span class="ln"><span class="ok">$</span> nyx boot</span><span class="ln"><span class="dim">[ ok ]</span> compiler written in Nyx — recompiles to byte-identical IR</span><span class="ln"><span class="dim">[ ok ]</span> diagnostics: machine-readable, stable codes, bilingual</span><span class="ln"><span class="dim">[ ok ]</span> ecosystem online — everything serving this site is Nyx</span></div>
+
+<h1 class="tagline">A language for <b>robust</b>, native software.<span class="cursor" aria-hidden="true"></span></h1>
+<p class="lead">Nyx compiles to native code through LLVM, hosts its own compiler, and speaks a
+machine-readable dialect that AI agents can write, read and fix. <span class="q">Reliable by design — not by convention.</span></p>
+
+<div class="hero-cta">
+  <a href="#get-started" class="btn solid">get started</a>
+  <span class="inlinecmd"><span class="p">$</span> curl -sSf nyxlang.com/install.sh | sh</span>
+</div>
 </section>
 
-<!-- CENTRAL CODE — the thesis -->
-<section id="code" style="padding-top:1rem">
-    <div class="codewrap">
-        <div class="cap">src/main.nx</div>
-<pre><span class="cm">// A taste of Nyx — enums with data, exhaustive pattern matching,</span>
-<span class="cm">// compiled to a native binary via LLVM.</span>
+<!-- ===================== CODE ===================== -->
+<div class="cmd-h" id="code"><span class="p">$</span> nyx run <b>src/main.nx</b></div>
+<div class="split">
+  <div>
+    <div class="filetab">src/main.nx ─────────────────────────────┐</div>
+<pre><span class="cm">// enums with data · exhaustive pattern matching</span>
+<span class="cm">// compiled to one native binary via LLVM.</span>
 
 <span class="kw">enum</span> <span class="ty">Shape</span> {
     <span class="ty">Rect</span>(<span class="ty">int</span>, <span class="ty">int</span>),
@@ -70,192 +239,168 @@
         <span class="ty">Shape</span>.<span class="ty">Circle</span>(<span class="num">5</span>),
         <span class="ty">Shape</span>.<span class="ty">Rect</span>(<span class="num">6</span>, <span class="num">2</span>)
     ]
-
     <span class="kw">var</span> total: <span class="ty">int</span> = <span class="num">0</span>
     <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
     <span class="kw">while</span> i &lt; shapes.<span class="fn">length</span>() {
         total = total + <span class="fn">area</span>(shapes[i])
         i = i + <span class="num">1</span>
     }
-
     <span class="fn">print</span>(<span class="str">"shapes:     "</span> + <span class="fn">int_to_string</span>(shapes.<span class="fn">length</span>()))
     <span class="fn">print</span>(<span class="str">"total area: "</span> + <span class="fn">int_to_string</span>(total))
 }</pre>
-    </div>
-    <div class="terminal">
-        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">nyx run</span>
-<span class="comment">-&gt; building hero v0.1.0</span>
-<span class="comment">   compiling src/main.nx</span>
-<span class="result">shapes:     3</span>
-<span class="result">total area: 99</span></pre>
-    </div>
-</section>
+  </div>
+  <div>
+    <div class="filetab">output ──────────────────┐</div>
+<pre class="term"><span class="p">$</span> <span class="c">nyx run</span>
+<span class="o">-&gt; building hero v0.1.0</span>
+<span class="o">   compiling src/main.nx</span>
+<span class="o">   linking (llvm) → ./hero</span>
 
-<!-- THREE PILLARS -->
-<section id="why">
-    <div class="section-label">Why Nyx</div>
-    <h2 class="section-title">Three things it does well</h2>
+<span class="r">shapes:     3</span>
+<span class="r">total area: 99</span>
+
+<span class="o">[ done ] 1 binary · 0 warnings</span></pre>
+  </div>
+</div>
+
+<!-- ===================== WHY ===================== -->
+<div class="cmd-h"><span class="p">$</span> nyx <b>--why</b></div>
+<div class="panel">
+  <div class="hd">┌─[ <span class="tag">why nyx</span> ]<span class="who">three things it does well</span></div>
+  <div class="bd">
     <div class="pillars">
-        <div class="pillar">
-            <div class="k">✦ native</div>
-            <h3>Self-hosting &amp; fast</h3>
-            <p>The compiler is written in Nyx and compiles itself &mdash; recompiling yields byte-identical IR, verified every release. Output is native code via LLVM, at or above C on compute.</p>
-        </div>
-        <div class="pillar">
-            <div class="k">✦ ai-first</div>
-            <h3>Legible to agents</h3>
-            <p>Machine-readable diagnostics (<code>NYX_DIAG=json</code>, stable codes, line:column, fix hints), auto-generated <code>AGENTS.md</code> / <code>CAPABILITIES.md</code>, and on-device LLM inference via <code>std/llm</code>.</p>
-        </div>
-        <div class="pillar">
-            <div class="k">✦ complete</div>
-            <h3>A whole ecosystem</h3>
-            <p>A web framework, a Redis-compatible store, a reverse proxy, a terminal editor &mdash; all written in Nyx. Everything serving this site is one of them.</p>
-        </div>
+      <div class="pil">
+        <div class="id">[core] ✦ native</div>
+        <h3>Self-hosting &amp; fast</h3>
+        <p>The compiler is written in Nyx and compiles itself — recompiling yields byte-identical IR, verified every release. Output is native code via LLVM, at or above C on compute.</p>
+      </div>
+      <div class="pil">
+        <div class="id">[ai] ✦ ai-first</div>
+        <h3>Legible to agents</h3>
+        <p>Machine-readable diagnostics (<code>NYX_DIAG=json</code>, stable codes, line:column, fix hints), auto-generated <code>AGENTS.md</code> / <code>CAPABILITIES.md</code>, and on-device inference via <code>std/llm</code>.</p>
+      </div>
+      <div class="pil">
+        <div class="id">[eco] ✦ complete</div>
+        <h3>A whole ecosystem</h3>
+        <p>A web framework, a Redis-compatible store, a reverse proxy, a terminal editor — all written in Nyx. Everything serving this site is one of them.</p>
+      </div>
     </div>
-</section>
+  </div>
+</div>
 
-<!-- AI-FIRST DETAIL (compact evidence) -->
-<section id="ai-first" style="padding-top:1rem">
-    <div class="section-label">AI-first, concretely</div>
-    <h2 class="section-title">Errors a model can act on</h2>
-    <p class="section-subtitle">Every diagnostic is one line of JSON with a stable code, exact location, and a fix hint &mdash; in the parse <em>and</em> semantic phases, bilingual. No scraping stderr, no guessing.</p>
-    <div class="terminal">
-        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
-<pre><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx build</span>
-<span class="result">{"phase":"semantic","code":"NYX1005","line":12,"col":18,</span>
-<span class="result"> "message":"argument 2 of 'indexOf' must be int, got String",</span>
-<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span></pre>
-    </div>
-</section>
+<!-- ===================== AI-FIRST ===================== -->
+<div class="cmd-h" id="ai-first"><span class="p">$</span> NYX_DIAG=json nyx build <span style="color:var(--phos-faint)">— errors a model can act on</span></div>
+<p class="sub" style="margin-bottom:.7rem">Every diagnostic is one line of JSON with a stable code, exact location and a fix hint — in the parse <em>and</em> semantic phases, bilingual. No scraping stderr, no guessing.</p>
+<div class="panel">
+  <div class="hd">┌─[ <span class="tag">stderr</span> ]<span class="who">application/json</span></div>
+  <div class="bd">
+<pre class="term plain"><span class="p">$</span> <span class="c">NYX_DIAG=json nyx build</span>
+<span class="j">{<span class="ty">"phase"</span>:<span class="str">"semantic"</span>, <span class="ty">"code"</span>:<span class="str">"NYX1005"</span>, <span class="ty">"line"</span>:<span class="num">12</span>, <span class="ty">"col"</span>:<span class="num">18</span>,</span>
+<span class="j"> <span class="ty">"message"</span>:<span class="str">"argument 2 of 'indexOf' must be int, got String"</span>,</span>
+<span class="j"> <span class="ty">"hint"</span>:<span class="str">"pass a byte offset, e.g. s.indexOf(needle, 0)"</span>}</span></pre>
+  </div>
+</div>
 
-<!-- BUILD IT IN NYX -->
-<section id="ecosystem">
-    <div class="section-label">Build it in Nyx</div>
-    <h2 class="section-title">One language, a full stack</h2>
-    <p class="section-subtitle">Each of these is a separate product, written entirely in Nyx, running in production behind this domain.</p>
-    <div class="card-grid cols-2" style="margin-top:1.5rem">
-        <a href="https://serve.nyxlang.com" class="card">
-            <div class="card-title">nyx-serve</div>
-            <div class="card-desc">Web framework — routes, JSON, WebSockets, templates, multipart, sessions. One static binary.</div>
-        </a>
-        <a href="https://nyxkv.com" class="card">
-            <div class="card-title">nyx-kv</div>
-            <div class="card-desc">Redis-compatible key-value store — 64 commands, Pub/Sub, resize-stable SCAN, TLS, multi-tenant.</div>
-        </a>
-        <a href="https://proxy.nyxlang.com" class="card">
-            <div class="card-title">nyx-proxy</div>
-            <div class="card-desc">HTTPS reverse proxy — TLS with SNI, health checks, LRU cache, Prometheus /metrics, rate limiting.</div>
-        </a>
-        <a href="https://edit.nyxlang.com" class="card">
-            <div class="card-title">nyx-edit</div>
-            <div class="card-desc">Terminal text editor in one Nyx file — live resize, UTF-8, mouse, 1000-level undo, flicker-free.</div>
-        </a>
-    </div>
-    <p style="margin-top:1.25rem"><a href="/playground/">Try Nyx in the browser playground &rarr;</a></p>
-</section>
+<!-- ===================== ECOSYSTEM ===================== -->
+<div class="cmd-h"><span class="p">$</span> nyx ls <b>products/</b></div>
+<p class="sub" style="margin-bottom:.7rem">Each is a separate product, written entirely in Nyx, running in production behind this domain.</p>
+<div class="panel">
+  <div class="hd">┌─[ <span class="tag">products</span> ]<span class="who">4 running · 1 language</span></div>
+  <div class="bd ls">
+    <a class="row" href="https://serve.nyxlang.com"><span class="perm">drwxr-xr-x</span><span class="nm">nyx-serve</span><span class="ds">Web framework — routes, JSON, WebSockets, templates, multipart, sessions. One static binary.</span></a>
+    <a class="row" href="https://nyxkv.com"><span class="perm">drwxr-xr-x</span><span class="nm">nyx-kv</span><span class="ds">Redis-compatible store — 64 commands, Pub/Sub, resize-stable SCAN, TLS, multi-tenant.</span></a>
+    <a class="row" href="https://proxy.nyxlang.com"><span class="perm">drwxr-xr-x</span><span class="nm">nyx-proxy</span><span class="ds">HTTPS reverse proxy — TLS/SNI, health checks, LRU cache, Prometheus /metrics, rate limiting.</span></a>
+    <a class="row" href="https://edit.nyxlang.com"><span class="perm">drwxr-xr-x</span><span class="nm">nyx-edit</span><span class="ds">Terminal editor in one Nyx file — live resize, UTF-8, mouse, 1000-level undo, flicker-free.</span></a>
+    <a class="row" href="/playground/"><span class="perm">-rwxr-xr-x</span><span class="nm">playground</span><span class="ds">Run Nyx in the browser — compiled to WebAssembly. →</span></a>
+  </div>
+</div>
 
-<!-- GET STARTED -->
-<section id="get-started">
-    <div class="section-label">Get started</div>
-    <h2 class="section-title">Zero to running in 30 seconds</h2>
-    <p class="section-subtitle">Install the toolchain, create a project, run it. No runtime to install on your servers &mdash; the compiler produces one static binary.</p>
+<!-- ===================== GET STARTED ===================== -->
+<div class="cmd-h" id="get-started"><span class="p">$</span> nyx init <b>my-app</b> <span style="color:var(--phos-faint)">— zero to running in 30s</span></div>
+<p class="sub">Install the toolchain, create a project, run it. No runtime to install on your servers — the compiler produces one static binary.</p>
 
-    <div class="gs-install">
-        <code>$ curl -sSf https://nyxlang.com/install.sh | sh</code>
-        <button class="btn-copy" onclick="copyInstall(this)">Copy</button>
-    </div>
-    <p class="gs-note">Linux (x86_64, ARM64) &middot; requires Clang &middot; verify: nyx --version &rarr; nyx 0.22.0</p>
+<div class="install">
+  <code><span class="p">$</span> curl -sSf https://nyxlang.com/install.sh | sh</code>
+  <button type="button" onclick="copyInstall(this)" aria-label="Copy install command">copy</button>
+</div>
+<p class="note">Linux (x86_64, ARM64) · requires Clang · verify: <code>nyx --version</code> → nyx 0.22.0</p>
 
-<pre class="term" style="margin-top:1.5rem"><span class="prompt">$</span> nyx init my-app
-<span class="prompt">$</span> cd my-app &amp;&amp; nyx run
-<span class="comment">my-app starting…</span></pre>
+<pre class="term" style="margin-top:1.3rem"><span class="p">$</span> nyx init my-app
+<span class="o">   created my-app/ · nyx.toml · src/main.nx · AGENTS.md</span>
+<span class="p">$</span> cd my-app &amp;&amp; nyx run
+<span class="r">my-app starting…</span></pre>
 
-    <div class="gs-learn">
-        <a href="/learn/" class="btn btn-outline">Read the Nyx Book</a>
-        <a href="/by-example/" class="btn btn-outline">Nyx by Example</a>
-    </div>
-    <p class="gs-learn-note">The Book covers the language end to end; By Example has 100 runnable recipes. The package manager, dependencies and full command reference live there.</p>
-</section>
+<div class="learnrow">
+  <a href="/learn/" class="btn">read the nyx book</a>
+  <a href="/by-example/" class="btn">nyx by example</a>
+  <a href="https://github.com/nyxlang-dev/nyx" class="btn">source on github</a>
+</div>
+<p class="note">The Book covers the language end to end; By Example has 100 runnable recipes. The package manager, dependencies and full command reference live there.</p>
 
-<!-- OPEN SOURCE -->
-<section id="open-source">
-    <div class="section-label">Open source</div>
-    <h2 class="section-title">Built in the open</h2>
-    <p class="section-subtitle">Nyx is Apache 2.0. The compiler, runtime, standard library and every product above are on GitHub &mdash; read the code, file an issue, send a patch.</p>
-    <div class="hero-buttons" style="justify-content:flex-start;margin-top:1.5rem">
-        <a href="https://github.com/nyxlang-dev/nyx" class="btn btn-accent">Source on GitHub</a>
-        <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md" class="btn btn-outline">Changelog</a>
-    </div>
-</section>
+</main>
 
-<!-- FOOTER -->
-<footer>
-    <div class="footer-grid">
-        <div class="footer-col">
-            <h4>Language</h4>
-            <a href="/learn/">The Nyx Book</a>
-            <a href="/by-example/">By Example</a>
-            <a href="/playground/">Playground</a>
-            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-        </div>
-        <div class="footer-col">
-            <h4>Products</h4>
-            <a href="https://serve.nyxlang.com">nyx-serve</a>
-            <a href="https://nyxkv.com">nyx-kv</a>
-            <a href="https://proxy.nyxlang.com">nyx-proxy</a>
-            <a href="https://edit.nyxlang.com">nyx-edit</a>
-        </div>
-        <div class="footer-col">
-            <h4>Reference</h4>
-            <a href="#ai-first">AI-first diagnostics</a>
-            <a href="#code">Syntax</a>
-            <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a>
-        </div>
-        <div class="footer-col">
-            <h4>Community</h4>
-            <a href="https://github.com/nyxlang-dev">GitHub Org</a>
-            <a href="https://github.com/nyxlang-dev/nyx/issues">Issues</a>
-        </div>
-    </div>
-    <div class="footer-bottom">Nyx &mdash; a self-hosting language · Apache 2.0 · built with Nyx</div>
-</footer>
+<!-- ===================== FOOTER ===================== -->
+<footer><div class="wrap">
+  <div class="fgrid">
+    <div class="fcol"><h4>Language</h4>
+      <a href="/learn/">The Nyx Book</a><a href="/by-example/">By Example</a>
+      <a href="/playground/">Playground</a><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></div>
+    <div class="fcol"><h4>Products</h4>
+      <a href="https://serve.nyxlang.com">nyx-serve</a><a href="https://nyxkv.com">nyx-kv</a>
+      <a href="https://proxy.nyxlang.com">nyx-proxy</a><a href="https://edit.nyxlang.com">nyx-edit</a></div>
+    <div class="fcol"><h4>Reference</h4>
+      <a href="#ai-first">AI-first diagnostics</a><a href="#code">Syntax</a>
+      <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></div>
+    <div class="fcol"><h4>Community</h4>
+      <a href="https://github.com/nyxlang-dev">GitHub Org</a>
+      <a href="https://github.com/nyxlang-dev/nyx/issues">Issues</a></div>
+  </div>
+  <div class="eof">─── EOF · Nyx is a self-hosting language · Apache 2.0 · this page is served by nyx-serve ───</div>
+</div></footer>
 
 <script>
-function copyInstall(btn) {
-    navigator.clipboard.writeText('curl -sSf https://nyxlang.com/install.sh | sh');
-    btn.textContent = 'Copied!';
-    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+function copyInstall(btn){
+  navigator.clipboard.writeText('curl -sSf https://nyxlang.com/install.sh | sh');
+  var t=btn.textContent; btn.textContent='copied'; setTimeout(function(){btn.textContent=t;},1800);
 }
-/* Copy button on every code block — self-contained, theme-agnostic. */
-(function () {
-  var css = document.createElement("style");
-  css.textContent =
-    ".nyx-pre{position:relative}" +
-    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
-    "letter-spacing:.06em;text-transform:uppercase;color:#9aa4b2;background:rgba(127,127,140,.16);" +
-    "border:1px solid rgba(150,160,220,.28);border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
-    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
-    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
-    ".nyx-copy:hover{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}" +
-    ".nyx-copy.ok{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}";
+/* Boot sequence: reveal lines sequentially (skipped under reduced-motion). */
+(function(){
+  var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var lines = document.querySelectorAll('#boot .ln');
+  if(rm){ return; }
+  lines.forEach(function(l){ l.style.opacity='0'; });
+  var i=0;
+  (function step(){
+    if(i>=lines.length) return;
+    lines[i].style.transition='opacity .18s ease';
+    lines[i].style.opacity='1';
+    i++; setTimeout(step, 190);
+  })();
+})();
+/* Copy button on every <pre> — phosphor-styled, self-contained. */
+(function(){
+  var css=document.createElement('style');
+  css.textContent=
+    ".cbwrap{position:relative}"+
+    ".cbbtn{position:absolute;top:.5rem;right:.5rem;z-index:2;font:.66rem/1 var(--font);"+
+    "letter-spacing:.08em;text-transform:uppercase;color:var(--phos-faint);background:rgba(11,17,12,.85);"+
+    "border:1px solid var(--phos-faint);border-radius:2px;padding:.3rem .5rem;cursor:pointer;"+
+    "opacity:0;transition:opacity .15s}"+
+    ".cbwrap:hover .cbbtn,.cbbtn:focus{opacity:1}"+
+    ".cbbtn:hover{color:var(--amber);border-color:var(--amber-dim)}"+
+    ".cbbtn.ok{color:var(--amber);border-color:var(--amber-dim)}";
   document.head.appendChild(css);
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll("pre").forEach(function (pre) {
-      if (pre.closest(".nyx-pre")) return;
-      var wrap = document.createElement("div");
-      wrap.className = "nyx-pre";
-      pre.parentNode.insertBefore(wrap, pre);
-      wrap.appendChild(pre);
-      var btn = document.createElement("button");
-      btn.className = "nyx-copy"; btn.type = "button";
-      btn.textContent = "Copy"; btn.setAttribute("aria-label", "Copy code");
-      wrap.appendChild(btn);
-      btn.addEventListener("click", function () {
-        var text = pre.innerText.replace(/\n$/, "");
-        navigator.clipboard.writeText(text).then(function () {
-          btn.textContent = "Copied"; btn.classList.add("ok");
-          setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1600);
+  document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('pre').forEach(function(pre){
+      if(pre.classList.contains('banner')||pre.closest('.cbwrap'))return;
+      var wrap=document.createElement('div'); wrap.className='cbwrap';
+      pre.parentNode.insertBefore(wrap,pre); wrap.appendChild(pre);
+      var b=document.createElement('button'); b.className='cbbtn'; b.type='button';
+      b.textContent='copy'; b.setAttribute('aria-label','Copy code'); wrap.appendChild(b);
+      b.addEventListener('click',function(){
+        navigator.clipboard.writeText(pre.innerText.replace(/\n$/,'')).then(function(){
+          b.textContent='copied'; b.classList.add('ok');
+          setTimeout(function(){b.textContent='copy'; b.classList.remove('ok');},1600);
         });
       });
     });
