@@ -1,7 +1,7 @@
 # Makefile — nyx-sites (3 landings de producción)
 # El toolchain Nyx vive fuera de este repo; se apunta vía NYX_HOME.
 
-NYX_HOME ?= /home/admin/NyxLang
+NYX_HOME ?= /home/admin/nyx/lang
 export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com

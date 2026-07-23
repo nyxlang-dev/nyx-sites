@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=admin
-WorkingDirectory=/home/admin/nyx-sites/serve.nyxlang.com
-ExecStart=/home/admin/nyx-sites/serve.nyxlang.com/serve-nyxlang-com
+WorkingDirectory=/home/admin/nyx/web/sites/serve.nyxlang.com
+ExecStart=/home/admin/nyx/web/sites/serve.nyxlang.com/serve-nyxlang-com
 Environment=PORT=3003
 Restart=always
 RestartSec=3

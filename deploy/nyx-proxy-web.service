@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 User=admin
-WorkingDirectory=/home/admin/nyx-sites/proxy.nyxlang.com
-ExecStart=/home/admin/nyx-sites/proxy.nyxlang.com/proxy-nyxlang-com
+WorkingDirectory=/home/admin/nyx/web/sites/proxy.nyxlang.com
+ExecStart=/home/admin/nyx/web/sites/proxy.nyxlang.com/proxy-nyxlang-com
 Environment=PORT=3005
 Restart=always
 RestartSec=3

@@ -7,7 +7,7 @@
 # pin explícito. Actualizar la lib = correr este script + commit del diff.
 set -e
 SITES_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SERVE_STACK="${NYX_SERVE_STACK:-$HOME/nyx-serve-stack}"
+SERVE_STACK="${NYX_SERVE_STACK:-$HOME/nyx/products/serve}"
 
 if [ ! -f "$SERVE_STACK/src/server.nx" ]; then
     echo "ERROR: no encuentro nyx-serve en $SERVE_STACK (clonar nyxlang-dev/nyx-serve-stack o exportar NYX_SERVE_STACK)"
