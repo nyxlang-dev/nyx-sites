@@ -3,6 +3,9 @@ Description=nyxlang.com main landing page
 After=network.target
 
 [Service]
+# Techo del heap del GC Boehm (decisión Ottavio 2026-07-25, opción 3 por-servicio).
+# Al superarlo: abort ordenado (oom_fn, v0.22.3) + restart de systemd — nunca OOM-killer.
+Environment=GC_MAXIMUM_HEAP_SIZE=134217728
 Type=simple
 User=admin
 WorkingDirectory=/home/admin/nyx/web/sites/nyxlang.com
