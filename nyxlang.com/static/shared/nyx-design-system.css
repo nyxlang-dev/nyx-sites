@@ -16,37 +16,37 @@
 /* ─── Color Tokens ─── */
 :root {
     /* Syntax palette (starlight — lives on the night code panels) */
-    --nyx-violet:     #b3a5ff;
-    --nyx-blue:       #7db4ff;
-    --nyx-green:      #7ee0a8;
-    --nyx-amber:      #f6c667;
-    --nyx-pink:       #f5a3d0;
-    --nyx-gray:       #6b7488;
-    --nyx-gray-light: #8b93a7;
+    --nyx-violet:     #c2c2c2;
+    --nyx-blue:       #a8a8a8;
+    --nyx-green:      #d6d6d6;
+    --nyx-amber:      #ededed;
+    --nyx-pink:       #b8b8b8;
+    --nyx-gray:       #757575;
+    --nyx-gray-light: #929292;
 
     /* Surfaces — predawn */
-    --bg-main:     #f4f3f9;   /* violet-white paper, not cream */
-    --bg-surface:  #ecebf5;
-    --bg-code:     #0c0a1a;   /* night */
-    --bg-nav:      rgba(244, 243, 249, 0.86);
-    --bg-terminal: #0a0817;
+    --bg-main:     #f6f6f6;   /* papel gris neutro (prueba B/N 2026-08-01) */
+    --bg-surface:  #ededed;
+    --bg-code:     #0d0d0d;   /* night */
+    --bg-nav:      rgba(246, 246, 246, 0.86);
+    --bg-terminal: #0a0a0a;
 
     /* Text — deep indigo ink */
-    --text-primary:   #171530;
-    --text-secondary: #494663;
-    --text-dim:       #86839f;
+    --text-primary:   #111111;
+    --text-secondary: #454545;
+    --text-dim:       #878787;
 
     /* Borders — hairlines */
-    --border:       rgba(23, 21, 48, 0.11);
-    --border-hover: rgba(23, 21, 48, 0.24);
+    --border:       rgba(0, 0, 0, 0.11);
+    --border-hover: rgba(0, 0, 0, 0.24);
 
     /* Accent — luminous iris */
-    --accent:       #5733df;
-    --accent-hover: #4425c2;
+    --accent:       #000000;
+    --accent-hover: #3d3d3d;
 
     /* Venus — the morning star. Used with extreme restraint. */
-    --venus:        #9a7411;   /* text-safe gold on paper */
-    --venus-bright: #d4a53a;   /* graphic dot */
+    --venus:        #5c5c5c;   /* text-safe gold on paper */
+    --venus-bright: #9e9e9e;   /* graphic dot */
 
     /* Typography */
     --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
@@ -130,7 +130,7 @@ nav {
 }
 .nav-right a:hover {
     color: var(--text-primary);
-    background: rgba(23, 21, 48, 0.05);
+    background: rgba(0, 0, 0, 0.05);
     text-decoration: none;
 }
 
@@ -155,6 +155,11 @@ nav {
     background: var(--accent);
     color: #fff;
 }
+/* .nav-right a (0,1,1) le gana a .btn-accent (0,1,0) y pintaba el texto del
+   botón con --text-secondary — ilegible sobre el fondo del botón (bug
+   preexistente que el morado disimulaba; cazado en la prueba B/N). */
+.nav-right a.btn-accent { color: #fff; }
+.nav-right a.btn-accent:hover { color: #fff; }
 .btn-accent:hover { background: var(--accent-hover); text-decoration: none; color: #fff; }
 
 .btn-outline {
@@ -326,7 +331,7 @@ section {
     padding: 1.5rem;
     transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
-.card:hover { border-color: var(--border-hover); box-shadow: 0 8px 30px -20px rgba(23, 21, 48, 0.4); transform: translateY(-2px); }
+.card:hover { border-color: var(--border-hover); box-shadow: 0 8px 30px -20px rgba(0, 0, 0, 0.4); transform: translateY(-2px); }
 .card a { text-decoration: none; }
 
 .card-title {
@@ -361,7 +366,7 @@ pre {
     font-family: var(--font-mono);
     font-size: 0.82rem;
     line-height: 1.75;
-    color: #c4cae0;
+    color: #cccccc;
     tab-size: 4;
     max-width: 100%;
     box-shadow: 0 24px 60px -34px rgba(12, 10, 26, 0.55);
@@ -379,14 +384,17 @@ code {
     color: var(--accent);
 }
 
-/* Syntax highlighting — Nyx starlight palette */
-.kw  { color: var(--nyx-violet); }
-.fn  { color: var(--nyx-blue); }
-.str { color: var(--nyx-green); }
-.num { color: var(--nyx-amber); }
-.ty  { color: var(--nyx-pink); }
-.cm  { color: var(--nyx-gray-light); }
-.op  { color: var(--nyx-gray); }
+/* Syntax highlighting — esquema monocromo (prueba B/N 2026-08-01).
+   Sin matiz, la paleta es luminancia + peso + estilo: keywords blanco bold
+   (anclas de lectura), strings/comentarios en itálica, escala tonal amplia
+   entre medio. Base del código: ~#dcdcdc. */
+.kw  { color: #ffffff; font-weight: 700; }
+.fn  { color: #ececec; }
+.str { color: #c4c4c4; font-style: italic; }
+.num { color: #dedede; }
+.ty  { color: #f2f2f2; }
+.cm  { color: #6e6e6e; font-style: italic; }
+.op  { color: #949494; }
 
 /* ─── Terminal ─── */
 .terminal {
@@ -411,10 +419,10 @@ code {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #2a3145;
+    background: #333333;
 }
-.terminal-dot.red    { background: #3a4258; }
-.terminal-dot.yellow { background: #3a4258; }
+.terminal-dot.red    { background: #404040; }
+.terminal-dot.yellow { background: #404040; }
 .terminal-dot.green  { background: var(--venus-bright); }
 
 .terminal pre {
@@ -423,14 +431,14 @@ code {
     border-radius: 0;
     box-shadow: none;
     padding: 1rem 1.4rem 1.4rem;
-    color: #d7dbf0;
+    color: #dcdcdc;
 }
 
 /* Terminal syntax */
-.prompt  { color: var(--venus-bright); }
-.cmd     { color: #e6e9fb; }
-.result  { color: var(--nyx-blue); }
-.comment { color: var(--nyx-gray); }
+.prompt  { color: #ffffff; font-weight: 700; }
+.cmd     { color: #ffffff; }
+.result  { color: #dedede; }
+.comment { color: #6e6e6e; font-style: italic; }
 
 /* ─── Terminal Typing Animation ─── */
 @keyframes nyx-fadein {
@@ -483,13 +491,13 @@ code {
 .price-period { color: var(--text-dim); font-size: 0.8rem; margin-bottom: 1.5rem; }
 .price-features { list-style: none; text-align: left; font-size: 0.85rem; color: var(--text-secondary); }
 .price-features li { padding: 0.3rem 0; }
-.price-features li::before { content: "\2713"; color: #0f9d58; margin-right: 0.5rem; font-weight: 700; }
+.price-features li::before { content: "\2713"; color: #111111; margin-right: 0.5rem; font-weight: 700; }
 
 /* ─── Bench Bars ─── */
 .bench-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; }
 .bench-name { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); width: 120px; flex-shrink: 0; }
 .bench-bar-wrap { flex: 1; height: 22px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; position: relative; }
-.bench-bar { height: 100%; background: linear-gradient(90deg, var(--accent), #7b5cff); border-radius: 3px; transition: width 600ms ease; }
+.bench-bar { height: 100%; background: var(--text-primary); border-radius: 3px; transition: width 600ms ease; }
 .bench-bar.c-bar { background: var(--nyx-gray); }
 .bench-value { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); width: 84px; text-align: right; flex-shrink: 0; }
 
@@ -503,8 +511,8 @@ footer { border-top: 1px solid var(--border); padding: 3rem 2rem 2rem; max-width
 
 /* ─── Get Started Components ─── */
 .gs-install { display: flex; align-items: center; gap: 0.75rem; background: var(--bg-code); border: 1px solid rgba(150, 160, 220, 0.14); border-radius: 10px; padding: 0.875rem 1.25rem; margin-top: 1.5rem; font-family: var(--font-mono); font-size: 0.875rem; box-shadow: 0 24px 60px -34px rgba(12, 10, 26, 0.55); }
-.gs-install code { flex: 1; color: #d7dbf0; }
-.btn-copy { background: none; border: 1px solid rgba(150, 160, 220, 0.3); border-radius: 4px; color: #9aa4b2; font-family: var(--font-mono); font-size: 0.75rem; padding: 0.25rem 0.6rem; cursor: pointer; transition: border-color 150ms ease, color 150ms ease; flex-shrink: 0; }
+.gs-install code { flex: 1; color: #dcdcdc; }
+.btn-copy { background: none; border: 1px solid rgba(180, 180, 180, 0.3); border-radius: 4px; color: #a3a3a3; font-family: var(--font-mono); font-size: 0.75rem; padding: 0.25rem 0.6rem; cursor: pointer; transition: border-color 150ms ease, color 150ms ease; flex-shrink: 0; }
 .btn-copy:hover { border-color: var(--venus-bright); color: var(--venus-bright); }
 .gs-note { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.5rem; font-family: var(--font-mono); }
 .gs-subsection { margin-top: 2.5rem; }

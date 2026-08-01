@@ -233,12 +233,12 @@ function copyInstall(btn) {
   css.textContent =
     ".nyx-pre{position:relative}" +
     ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
-    "letter-spacing:.06em;text-transform:uppercase;color:#9aa4b2;background:rgba(127,127,140,.16);" +
+    "letter-spacing:.06em;text-transform:uppercase;color:#a3a3a3;background:rgba(128,128,128,.16);" +
     "border:1px solid rgba(150,160,220,.28);border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
     "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
     ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
-    ".nyx-copy:hover{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}" +
-    ".nyx-copy.ok{color:var(--nyx-violet,#b3a5ff);border-color:var(--accent,#6d4aff)}";
+    ".nyx-copy:hover{color:var(--nyx-violet,#c2c2c2);border-color:#ffffff}" +
+    ".nyx-copy.ok{color:var(--nyx-violet,#c2c2c2);border-color:#ffffff}";
   document.head.appendChild(css);
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("pre").forEach(function (pre) {
