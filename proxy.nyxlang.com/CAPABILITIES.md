@@ -1,6 +1,6 @@
 # CAPABILITIES — índice de la stdlib de Nyx
 
-<!-- nyx-version: 0.22.0 -->
+<!-- nyx-version: 0.24.19 -->
 > Auto-generado por `nyx capabilities` desde la stdlib instalada — siempre en sync con tu versión.
 > Es el índice de QUÉ EXISTE: antes de escribir una función, buscá acá si un módulo ya lo hace,
 > `import`alo y usalo. NO leas el fuente de `std/`. Ver `AGENTS.md` para cómo escribir Nyx.
@@ -23,7 +23,7 @@
 
 ### `std/web`
 
-`import "std/web"` — 24 funciones:
+`import "std/web"` — 28 funciones:
 
 - `pub fn url_decode(s: String) -> String`
 - `pub fn parse_query_string(path: String) -> Map`
@@ -46,13 +46,17 @@
 - `pub fn app_before(app: App, hook: Fn)`
 - `pub fn app_after(app: App, hook: Fn)`
 - `pub fn app_use(app: App, mw: Fn)`
+- `pub fn default_not_found(req: Request) -> Response`
+- `pub fn default_error(req: Request, err: String) -> Response`
+- `pub fn app_not_found(app: &mut App, handler: Fn)`
+- `pub fn app_error(app: &mut App, handler: Fn)`
 - `pub fn mw_logging(req: Request) -> Response`
 - `pub fn cors_configure(origin: String, methods: String, headers: String)`
 - `pub fn mw_cors(req: Request) -> Response`
 
 ### `std/http`
 
-`import "std/http"` — 17 funciones:
+`import "std/http"` — 18 funciones:
 
 - `pub fn http_status_text(code: int) -> String`
 - `pub fn http_response(status: int, body: String) -> String`
@@ -66,6 +70,7 @@
 - `pub fn http_body(resp: Array) -> String`
 - `pub fn http_headers(resp: Array) -> Array`
 - `pub fn http_find_header(headers: Array, name: String) -> String`
+- `pub fn http_find_headers(headers: Array, name: String) -> Array`
 - `pub fn http_parse_request(client_fd: int) -> Array`
 - `pub fn http_cors_headers(origin: String) -> Array`
 - `pub fn http_cors_response(origin: String) -> String`
@@ -131,7 +136,7 @@
 
 ### `std/json`
 
-`import "std/json"` — 16 funciones:
+`import "std/json"` — 17 funciones:
 
 - `pub fn json_null() -> Array`
 - `pub fn json_bool(val: bool) -> Array`
@@ -147,6 +152,7 @@
 - `pub fn json_as_float(val: Array) -> float`
 - `pub fn json_array_get(arr: Array, i: int) -> Array`
 - `pub fn json_array_len(arr: Array) -> int`
+- `pub fn json_escape(s: String) -> String`
 - `pub fn json_stringify(val: Array) -> String`
 - `pub fn json_parse(input: String) -> Array`
 
@@ -209,15 +215,33 @@
 
 ### `std/compress`
 
-`import "std/compress"` — 7 funciones:
+`import "std/compress"` — 10 funciones:
 
 - `pub fn compress(data: String) -> String`
 - `pub fn decompress(data: String, original_size: int) -> String`
 - `pub fn compress_size(data: String) -> int`
+- `pub fn inflate(data: String) -> String`
+- `pub fn gunzip(data: String) -> String`
+- `pub fn inflate_raw(data: String) -> String`
 - `pub fn compression_ratio(original: String, compressed_size: int) -> int`
 - `pub fn base64_encode(data: String) -> String`
 - `pub fn base64_decode(encoded: String) -> String`
 - `pub fn hex_to_b64(hex: String) -> String`
+
+## Archivos & I/O
+
+### `std/io`
+
+`import "std/io"` — 1 funciones:
+
+- `pub fn println(s: String)`
+
+### `std/file`
+
+`import "std/file"` — 2 funciones:
+
+- `pub fn read_text(path: String) -> String`
+- `pub fn write_text(path: String, content: String)`
 
 ## Red
 
@@ -291,6 +315,45 @@
 - `pub fn uuid_v4() -> String`
 - `pub fn uuid_is_valid(s: String) -> bool`
 - `pub fn uuid_version(s: String) -> int`
+
+### `std/tls`
+
+`import "std/tls"` — 23 funciones:
+
+- `pub fn tls_version(h: int) -> String`
+- `pub fn tls_cipher(h: int) -> String`
+- `pub fn tls_cipher_bits(h: int) -> int`
+- `pub fn tls_verify_result(h: int) -> int`
+- `pub fn tls_verify_error(code: int) -> String`
+- `pub fn tls_peer_cert(h: int) -> Array`
+- `pub fn tls_peer_chain(h: int) -> Array`
+- `pub fn tls_peer_cert_pem(h: int) -> String`
+- `pub fn cert_subject(cert: Array) -> String`
+- `pub fn cert_issuer(cert: Array) -> String`
+- `pub fn cert_not_before(cert: Array) -> int`
+- `pub fn cert_not_after(cert: Array) -> int`
+- `pub fn cert_serial(cert: Array) -> String`
+- `pub fn cert_sig_alg(cert: Array) -> String`
+- `pub fn cert_fingerprint_sha256(cert: Array) -> String`
+- `pub fn cert_sans(cert: Array) -> String`
+- `pub fn tls_set_ca_file(path: String) -> bool`
+- `pub fn tls_connect_checked(host: String, port: int) -> int`
+- `pub fn tls_connect_verified(host: String, port: int) -> int`
+- `pub fn cert_is_expired(cert: Array) -> bool`
+- `pub fn cert_days_to_expiry(cert: Array) -> int`
+- `pub fn cert_is_self_signed(cert: Array) -> bool`
+- `pub fn tls_is_weak(h: int) -> bool`
+
+## Strings & texto
+
+### `std/regex`
+
+`import "std/regex"` — 4 funciones:
+
+- `pub fn regex_match(text: String, pattern: String) -> String` — Return the first match of `pattern` in `text`, or "" if none.
+- `pub fn regex_is_match(text: String, pattern: String) -> bool` — Whether `pattern` matches anywhere in `text`.
+- `pub fn regex_replace(text: String, pattern: String, replacement: String) -> String` — Replace the first match of `pattern` in `text` with `replacement`.
+- `pub fn regex_replace_all(text: String, pattern: String, replacement: String) -> String` — Replace all matches of `pattern` in `text` with `replacement`.
 
 ## Colecciones & estructuras
 
@@ -573,7 +636,7 @@
 `import "std/webpush"` — 4 funciones:
 
 - `pub fn vapid_jwt(priv: String, audience: String, subject: String, exp: int) -> String`
-- `pub fn webpush_encrypt_with_keys(payload: String, client_p256dh: String, auth: String,`
+- `pub fn webpush_encrypt_with_keys(payload: String, client_p256dh: String, auth: String, salt: String, as_priv: String, as_pub: String) -> String`
 - `pub fn webpush_encrypt(payload: String, client_p256dh: String, auth: String) -> String`
 - `pub fn webpush_send(endpoint: String, jwt: String, vapid_pub: String, encrypted: String, ttl: int = 86400) -> Array`
 
@@ -587,6 +650,16 @@
 - `pub fn session_set(req: Request, key: String, value: String)`
 - `pub fn session_destroy(req: Request, resp: Response)`
 
+### `std/unicode`
+
+`import "std/unicode"` — 5 funciones:
+
+- `pub fn utf8_encode(codepoint: int) -> String`
+- `pub fn wcwidth(codepoint: int) -> int`
+- `pub fn display_width(s: String) -> int`
+- `pub fn latin1_to_utf8(s: String) -> String`
+- `pub fn windows1252_to_utf8(s: String) -> String`
+
 ### `std/proptest`
 
 `import "std/proptest"` — 10 funciones:
@@ -596,11 +669,35 @@
 - `pub fn gen_string(max_len: int) -> String`
 - `pub fn gen_int_array(size: int, min: int, max: int) -> Array`
 - `pub fn gen_float() -> float`
-- `pub fn prop_int(`
-- `pub fn prop_int2(`
+- `pub fn prop_int(property: Fn(int) -> bool, min: int, max: int, num_runs: int ) -> Array`
+- `pub fn prop_int2(property: Fn(int, int) -> bool, min: int, max: int, num_runs: int ) -> Array`
 - `pub fn prop_report(name: String, result: Array)`
 - `pub fn prop_assert(name: String, result: Array) -> bool`
 - `pub fn char_from_code(code: int) -> String`
+
+### `std/math`
+
+`import "std/math"` — 10 funciones:
+
+- `pub fn abs(n: int) -> int`
+- `pub fn min(a: int, b: int) -> int`
+- `pub fn max(a: int, b: int) -> int`
+- `pub fn clamp(n: int, lo: int, hi: int) -> int`
+- `pub fn pow_int(base: int, exp: int) -> int`
+- `pub fn gcd(a: int, b: int) -> int`
+- `pub fn lcm(a: int, b: int) -> int`
+- `pub fn is_even(n: int) -> bool`
+- `pub fn is_odd(n: int) -> bool`
+- `pub fn sqrt_int(n: int) -> int`
+
+### `std/map`
+
+`import "std/map"` — 4 funciones:
+
+- `pub fn map_new() -> Map`
+- `pub fn map_put(m: Map, k: String, v: int)`
+- `pub fn map_get_int(m: Map, k: String) -> int`
+- `pub fn map_has(m: Map, k: String) -> bool`
 
 ### `std/collections`
 
@@ -619,7 +716,7 @@
 
 ### `std/math_ext`
 
-`import "std/math_ext"` — 17 funciones:
+`import "std/math_ext"` — 18 funciones:
 
 - `pub fn is_prime(n: int) -> bool`
 - `pub fn primes_up_to(n: int) -> Array`
@@ -638,6 +735,7 @@
 - `pub fn dist_2d(x1: float, y1: float, x2: float, y2: float) -> float`
 - `pub fn clamp_float(x: float, lo: float, hi: float) -> float`
 - `pub fn lerp(a: float, b: float, t: float) -> float`
+- `pub fn float_to_fixed(x: float, decimals: int) -> String`
 
 ### `std/component`
 
@@ -682,7 +780,7 @@
 
 ### `std/prelude`
 
-`import "std/prelude"` — 28 funciones:
+`import "std/prelude"` — 27 funciones:
 
 - `pub fn println(s: String)`
 - `pub fn abs(n: int) -> int`
@@ -711,7 +809,6 @@
 - `pub fn map_put(m: Map, k: String, v: int)`
 - `pub fn map_get_int(m: Map, k: String) -> int`
 - `pub fn map_has(m: Map, k: String) -> bool`
-- `pub fn map_size(m: Map) -> int`
 
 ### `std/routematch`
 
