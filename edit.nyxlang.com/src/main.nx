@@ -1,7 +1,6 @@
 import "std/web"
 import "std/http"
-import "nyx-serve/src/server"
-import "nyx-serve/src/files"
+import "std/serve"
 
 fn handle_index(req: Request) -> Response {
     return response_html(200, read_file("static/index.html"))

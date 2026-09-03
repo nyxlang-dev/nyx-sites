@@ -1,16 +1,14 @@
-# Makefile — nyx-sites (3 landings de producción)
+# Makefile — nyx-sites (4 landings de producción)
 # El toolchain Nyx vive fuera de este repo; se apunta vía NYX_HOME.
+# El framework web es `std/serve` del core (absorción 2026-08-31): ya no hay
+# lib vendorizada — el build resuelve `import "std/serve"` en $NYX_HOME/std.
 
 NYX_HOME ?= /home/admin/nyx/lang
 export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
-.PHONY: vendor build-all smoke deploy status clean
-
-# Re-vendoriza nyx-serve desde ~/nyx-serve-stack (commitear el diff)
-vendor:
-	bash scripts/vendor_nyx_serve.sh
+.PHONY: build-all smoke deploy status clean
 
 build-all:
 	@for s in $(SITES); do \

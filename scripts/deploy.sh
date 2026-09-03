@@ -17,8 +17,7 @@ set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "[1/4] Vendor + build..."
-bash scripts/vendor_nyx_serve.sh
+echo "[1/4] Build (std/serve del core, sin vendoring)..."
 make build-all
 
 echo "[2/4] Smoke efímero..."

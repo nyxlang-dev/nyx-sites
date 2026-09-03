@@ -11,5 +11,5 @@ __pycache__/
 *.o
 .DS_Store
 
-# OJO: */packages/nyx-serve SÍ se commitea (vendoring pineado — decisión
-# 2026-07-06, ver PROJECT_STATE.md). No agregar packages/ acá.
+# El vendoring de nyx-serve murió con la absorción al core (2026-08-31):
+# los sites importan `std/serve` de la toolchain y no tienen packages/.
