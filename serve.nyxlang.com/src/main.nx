@@ -1,6 +1,7 @@
 import "std/web"
 import "std/http"
 import "std/serve"
+import "std/template"
 
 fn handle_index(req: Request) -> Response {
     return response_html(200, read_file("static/index.html"))
@@ -23,6 +24,97 @@ fn handle_serve_css(req: Request) -> Response {
     return r
 }
 
+// ── Índice del tutorial: renderizado con std/template ───────────────────────
+// Dogfooding del arco «absorción de serve al core» (2026-09-03): la única
+// fuente de verdad de las 7 páginas es esta lista; el template
+// (templates/docs-index.<lang>.html) la recorre con {{#each pages}} en las
+// dos listas que antes estaban escritas a mano dos veces por idioma.
+// `href`/`title`/`short` se interpolan escapados ({{title}} → "&amp;");
+// `blurb` va raw ({{{blurb}}}) porque lleva <code> y es literal de este
+// fuente, nunca input de usuario.
+// Los templates viven FUERA de static/ para que el prefijo cacheado /docs/
+// no sirva el archivo crudo; los tags {{#each}}/{{/each}} van pegados al
+// texto vecino porque el motor no tiene control de whitespace y así el
+// render queda byte-idéntico al HTML estático que reemplaza.
+
+fn docs_page(href: String, title: String, short: String, blurb: String) -> Map {
+    var m: Map = map_new()
+    m.insert("href", href)
+    m.insert("title", title)
+    m.insert("short", short)
+    m.insert("blurb", blurb)
+    return m
+}
+
+fn docs_pages(lang: String) -> Array {
+    var pages: Array = []
+    if lang == "es" {
+        let p1: Map = docs_page("/es/docs/01-install.html", "Instalar el toolchain", "Instalar",
+            "un comando, verifica con <code>nyx --version</code>.")
+        let p2: Map = docs_page("/es/docs/02-new-project.html", "Crear un proyecto", "Crear un proyecto",
+            "<code>nyx init</code>, declarar la dependencia, entender la estructura.")
+        let p3: Map = docs_page("/es/docs/03-first-api.html", "Tu primera API JSON", "Primera API",
+            "rutas, parámetros, input de forms, JSON de salida; prueba con curl.")
+        let p4: Map = docs_page("/es/docs/04-middleware-sessions.html", "Middleware y sesiones", "Middleware y sesiones",
+            "el contrato status-0, CORS, login con sesiones por cookie.")
+        let p5: Map = docs_page("/es/docs/05-templates-static-forms.html", "Plantillas, estáticos y forms", "Plantillas, estáticos y forms",
+            "render con escape por defecto, archivos estáticos cacheados.")
+        let p6: Map = docs_page("/es/docs/06-websockets.html", "WebSockets", "WebSockets",
+            "rutas <code>app_ws</code> con parámetros <code>{room}</code>.")
+        let p7: Map = docs_page("/es/docs/07-fullstack.html", "Publicar una app full-stack", "Full-stack",
+            "sesiones + plantillas + almacenamiento en nyx-kv, desplegado con systemd.")
+        pages.push(p1)
+        pages.push(p2)
+        pages.push(p3)
+        pages.push(p4)
+        pages.push(p5)
+        pages.push(p6)
+        pages.push(p7)
+        return pages
+    }
+    let e1: Map = docs_page("/docs/01-install.html", "Install the toolchain", "Install",
+        "one command, verify with <code>nyx --version</code>.")
+    let e2: Map = docs_page("/docs/02-new-project.html", "Create a project", "Create a project",
+        "<code>nyx init</code>, declare the dependency, understand the layout.")
+    let e3: Map = docs_page("/docs/03-first-api.html", "Your first JSON API", "First API",
+        "routes, path params, form input, JSON out; test with curl.")
+    let e4: Map = docs_page("/docs/04-middleware-sessions.html", "Middleware & sessions", "Middleware & sessions",
+        "the status-0 contract, CORS, login with cookie sessions.")
+    let e5: Map = docs_page("/docs/05-templates-static-forms.html", "Templates, static & forms", "Templates, static & forms",
+        "escape-by-default rendering, cached static files.")
+    let e6: Map = docs_page("/docs/06-websockets.html", "WebSockets", "WebSockets",
+        "<code>app_ws</code> routes with <code>{room}</code> params.")
+    let e7: Map = docs_page("/docs/07-fullstack.html", "Ship a full-stack app", "Full-stack",
+        "sessions + templates + nyx-kv storage, deployed with systemd.")
+    pages.push(e1)
+    pages.push(e2)
+    pages.push(e3)
+    pages.push(e4)
+    pages.push(e5)
+    pages.push(e6)
+    pages.push(e7)
+    return pages
+}
+
+// ETag débil + 304 con apply_etag (std/serve): conserva la revalidación que
+// el prefijo static cacheado le daba a esta página antes de ser dinámica.
+fn docs_index_response(req: Request, tmpl_path: String, lang: String) -> Response {
+    var ctx: Map = map_new()
+    let pages: Array = docs_pages(lang)
+    ctx.insert("pages", pages)
+    let html: String = tpl_render(read_file(tmpl_path), ctx)
+    let inm: String = http_find_header(req.headers_flat, "If-None-Match")
+    return apply_etag(response_html(200, html), inm)
+}
+
+fn handle_docs_index(req: Request) -> Response {
+    return docs_index_response(req, "templates/docs-index.en.html", "en")
+}
+
+fn handle_docs_index_es(req: Request) -> Response {
+    return docs_index_response(req, "templates/docs-index.es.html", "es")
+}
+
 fn main() {
     let port_str: String = getenv("PORT")
     var port: int = 3003
@@ -33,8 +125,13 @@ fn main() {
     app_get(app, "/es/", handle_index_es)
     app_get(app, "/serve.css", handle_serve_css)
     app_get(app, "/api/health", handle_health)
-    // Tutorial pages (static HTML, prefix-cached). index.html of each dir
-    // is served for the bare /docs/ and /es/docs/ paths.
+    // Índice del tutorial: ruta dinámica (std/template). Las rutas se
+    // despachan ANTES que los prefijos static, así que gana sobre /docs/.
+    app_get(app, "/docs/", handle_docs_index)
+    app_get(app, "/docs/index.html", handle_docs_index)
+    app_get(app, "/es/docs/", handle_docs_index_es)
+    app_get(app, "/es/docs/index.html", handle_docs_index_es)
+    // Tutorial pages (static HTML, prefix-cached).
     app_static_cached(app, "/docs/", "static/docs/", 300)
     app_static_cached(app, "/es/docs/", "static/es/docs/", 300)
     app_static_cached(app, "/shared/", "static/shared/", 3600)

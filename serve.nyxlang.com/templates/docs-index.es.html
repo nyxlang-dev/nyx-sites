@@ -25,14 +25,8 @@
     <aside class="docs-side">
         <div class="ds-title">Tutorial</div>
         <ol>
-            <li><a href="/es/docs/01-install.html">Instalar el toolchain</a></li>
-            <li><a href="/es/docs/02-new-project.html">Crear un proyecto</a></li>
-            <li><a href="/es/docs/03-first-api.html">Tu primera API JSON</a></li>
-            <li><a href="/es/docs/04-middleware-sessions.html">Middleware y sesiones</a></li>
-            <li><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></li>
-            <li><a href="/es/docs/06-websockets.html">WebSockets</a></li>
-            <li><a href="/es/docs/07-fullstack.html">Publicar una app full-stack</a></li>
-        </ol>
+{{#each pages}}            <li><a href="{{href}}">{{title}}</a></li>
+{{/each}}        </ol>
     </aside>
     <div class="docs-body">
         <h1>De cero a una app full-stack desplegada</h1>
@@ -48,14 +42,8 @@
 
         <h2>El recorrido</h2>
         <ol>
-            <li><strong><a href="/es/docs/01-install.html">Instalar</a></strong> — un comando, verifica con <code>nyx --version</code>.</li>
-            <li><strong><a href="/es/docs/02-new-project.html">Crear un proyecto</a></strong> — <code>nyx init</code>, declare the dependency, understand the layout.</li>
-            <li><strong><a href="/es/docs/03-first-api.html">Primera API</a></strong> — rutas, parámetros, input de forms, JSON de salida; prueba con curl.</li>
-            <li><strong><a href="/es/docs/04-middleware-sessions.html">Middleware y sesiones</a></strong> — the status-0 contract, CORS, login with cookie sessions.</li>
-            <li><strong><a href="/es/docs/05-templates-static-forms.html">Plantillas, estáticos y forms</a></strong> — escape-by-default rendering, cached static files.</li>
-            <li><strong><a href="/es/docs/06-websockets.html">WebSockets</a></strong> — rutas <code>app_ws</code> con parámetros <code>{room}</code>.</li>
-            <li><strong><a href="/es/docs/07-fullstack.html">Full-stack</a></strong> — sesiones + plantillas + almacenamiento en nyx-kv, desplegado con systemd.</li>
-        </ol>
+{{#each pages}}            <li><strong><a href="{{href}}">{{short}}</a></strong> — {{{blurb}}}</li>
+{{/each}}        </ol>
 
         <div class="docs-note">
             <strong>¿Ya conoces lo básico?</strong> La referencia de la API vive en el

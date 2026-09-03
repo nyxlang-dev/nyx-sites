@@ -25,14 +25,8 @@
     <aside class="docs-side">
         <div class="ds-title">Tutorial</div>
         <ol>
-            <li><a href="/docs/01-install.html">Install the toolchain</a></li>
-            <li><a href="/docs/02-new-project.html">Create a project</a></li>
-            <li><a href="/docs/03-first-api.html">Your first JSON API</a></li>
-            <li><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></li>
-            <li><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></li>
-            <li><a href="/docs/06-websockets.html">WebSockets</a></li>
-            <li><a href="/docs/07-fullstack.html">Ship a full-stack app</a></li>
-        </ol>
+{{#each pages}}            <li><a href="{{href}}">{{title}}</a></li>
+{{/each}}        </ol>
     </aside>
     <div class="docs-body">
         <h1>From zero to a deployed full-stack app</h1>
@@ -48,14 +42,8 @@
 
         <h2>The route</h2>
         <ol>
-            <li><strong><a href="/docs/01-install.html">Install</a></strong> — one command, verify with <code>nyx --version</code>.</li>
-            <li><strong><a href="/docs/02-new-project.html">Create a project</a></strong> — <code>nyx init</code>, declare the dependency, understand the layout.</li>
-            <li><strong><a href="/docs/03-first-api.html">First API</a></strong> — routes, path params, form input, JSON out; test with curl.</li>
-            <li><strong><a href="/docs/04-middleware-sessions.html">Middleware &amp; sessions</a></strong> — the status-0 contract, CORS, login with cookie sessions.</li>
-            <li><strong><a href="/docs/05-templates-static-forms.html">Templates, static &amp; forms</a></strong> — escape-by-default rendering, cached static files.</li>
-            <li><strong><a href="/docs/06-websockets.html">WebSockets</a></strong> — <code>app_ws</code> routes with <code>{room}</code> params.</li>
-            <li><strong><a href="/docs/07-fullstack.html">Full-stack</a></strong> — sessions + templates + nyx-kv storage, deployed with systemd.</li>
-        </ol>
+{{#each pages}}            <li><strong><a href="{{href}}">{{short}}</a></strong> — {{{blurb}}}</li>
+{{/each}}        </ol>
 
         <div class="docs-note">
             <strong>Already know the basics?</strong> The API reference lives in the
