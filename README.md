@@ -54,7 +54,21 @@ hasta entonces el rollback vuelve a un sitio que todavía nombra productos en
 5. bash scripts/cutover-static.sh swap nyxlang.com
 6. curls contra https://nyxlang.com             # el gateway drena keep-alives stale (~15 requests)
 7. commit — y RECIÉN ACÁ el release del monorepo / el sync del mirror público
+8. bash /home/admin/nyx/lang/scripts/sync_to_public.sh core     # + push del mirror público
+   bash scripts/sync-recipes.sh --check-mirror                  # 0 diferencias tras el push
 ```
+
+**Paso 8, no opcional (fase 2):** los 69 enlaces «Source →» del recetario NO
+apuntan al monorepo privado sino al mirror público
+(`github.com/nyxlang-dev/nyx/blob/main/examples/by-example/<slug>.nx`), y ese
+mirror puede tener recetas viejas — hoy tiene 8, cinco de ellas con código que
+ya no compila. Sin este paso, en el instante del swap el sitio muestra un
+programa y su enlace ofrece otro: el mismo drift que la fase 2 existe para
+matar, movido un salto más allá. `sync_to_public.sh core` copia
+`examples/by-example/*.nx` (líneas 116-117); `sync-recipes.sh --check-mirror`
+compara y avisa con ⚠ (sale 0 siempre: antes del paso 8 la diferencia es el
+estado esperado, y un clon sin el mirror al lado no puede comparar nada). El
+check L de `check-content.sh` lo corre en cada pasada y lo reporta como aviso.
 
 **Gate del paso 7 (no es una recomendación, es el orden):** ningún release
 del monorepo ni sync del mirror público antes del swap. `scripts/install.sh`,

@@ -93,7 +93,12 @@
 #   L. El recetario publicado no tiene drift con el monorepo:
 #      `scripts/sync-recipes.sh --check`. Es la única guardia que mira FUERA
 #      del repo (necesita examples/by-example/ del monorepo del lenguaje); si
-#      no lo encuentra, avisa con ⚠ y no falla.
+#      no lo encuentra, avisa con ⚠ y no falla. Corre además
+#      `sync-recipes.sh --check-mirror` y lo reporta como AVISO: los enlaces
+#      «Source →» del recetario apuntan al MIRROR PÚBLICO, que se sincroniza
+#      en el paso 8 del runbook (después del swap), así que una diferencia ahí
+#      no es un fallo del contenido — pero sí es la clase de cosa que se
+#      publica sin que nadie la mire.
 #
 #   QUÉ MIRA CADA CHECK. Sobre el ÁRBOL PUBLICADO (ROOT): A, B, C, D, E, F,
 #   K y la primera mitad de G (paridad de rutas y de <pre>/<h2> entre ROOT/ y
@@ -868,9 +873,20 @@ check_l() {
         return
     fi
 
-    local log
+    # NYX_SITE_DIR: sin esto sync-recipes.sh evaluaba SIEMPRE el
+    # nyxlang.com/content del repo, ignorando el $root recibido — así el
+    # autotest no podía plantarle un drift en su propio sitio-fixture y L era
+    # el único check que no se medía a sí mismo.
+    local log w
     log="$(mktemp "${TMPDIR:-/tmp}/check-content-recipes.XXXXXX")"
-    if bash "$REPO_ROOT/scripts/sync-recipes.sh" --check >"$log" 2>&1; then
+    if NYX_SITE_DIR="$site_dir" NYX_MONOREPO="$mono" \
+       bash "$REPO_ROOT/scripts/sync-recipes.sh" --check >"$log" 2>&1; then
+        # Los ⚠ del script (sidecars cuyo slug no está en el catálogo) son
+        # avisos, no fallos: se imprimen igual o nadie los ve nunca.
+        while IFS= read -r w; do
+            [ -z "$w" ] && continue
+            print_warn "[L] $w"
+        done < <(grep '⚠' "$log" 2>/dev/null | sed 's/^ *⚠ *//')
         print_ok "[L] $(tail -1 "$log")"
         CHECK_LAST_FAILS=0
     else
@@ -879,6 +895,24 @@ check_l() {
         CHECK_LAST_FAILS=1
     fi
     rm -f "$log"
+
+    # Mirror público (AVISO, nunca ✗): los enlaces «Source →» de las 69 páginas
+    # apuntan al mirror, no al monorepo privado, y el mirror se sincroniza en el
+    # paso 8 del runbook — DESPUÉS del swap. Que difiera antes del cutover es lo
+    # esperado; que nadie lo mire, no.
+    local mlog
+    mlog="$(mktemp "${TMPDIR:-/tmp}/check-content-mirror.XXXXXX")"
+    NYX_SITE_DIR="$site_dir" NYX_MONOREPO="$mono" \
+        bash "$REPO_ROOT/scripts/sync-recipes.sh" --check-mirror >"$mlog" 2>&1
+    if grep -q 'al día con el mirror' "$mlog"; then
+        print_ok "[L] $(tail -1 "$mlog")"
+    else
+        while IFS= read -r w; do
+            [ -z "$w" ] && continue
+            print_warn "[L] $w"
+        done < <(sed 's/^ *⚠ *//' "$mlog")
+    fi
+    rm -f "$mlog"
 }
 
 # ── Autotest (control positivo) — corre SIEMPRE primero ─────────────────

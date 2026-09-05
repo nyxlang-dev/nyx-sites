@@ -18,7 +18,22 @@
 #   bash scripts/sync-recipes.sh --check    no escribe nada; sale 1 si alguna
 #                                           copia difiere del monorepo, si falta
 #                                           o sobra alguna, o si la versión de
-#                                           content/site.toml está desactualizada
+#                                           content/site.toml está desactualizada.
+#                                           Además avisa (⚠, no ✗) de los
+#                                           sidecars cuyo slug no figura en el
+#                                           catálogo: prosa muerta que se
+#                                           acumula sin que nada la nombre
+#   bash scripts/sync-recipes.sh --check-mirror
+#                                           compara content/by-example/src/
+#                                           contra el MIRROR PÚBLICO
+#                                           ($HOME/nyx/public/nyx/examples/by-example),
+#                                           que es a donde apuntan los enlaces
+#                                           «Source →» de cada receta. Imprime ⚠
+#                                           por diferencia y SALE 0 SIEMPRE: el
+#                                           mirror se sincroniza DESPUÉS del
+#                                           swap (paso 8 del runbook), así que
+#                                           una diferencia antes del cutover es
+#                                           lo esperado, no un fallo
 #   bash scripts/sync-recipes.sh --drift    MODO EN RETIRO. Inventario de DRIFT:
 #                                           por cada receta publicada, si el
 #                                           código que mostraba el recetario
@@ -34,6 +49,13 @@
 #
 # Variables:
 #   NYX_MONOREPO   raíz del monorepo del lenguaje (default /home/admin/nyx/lang)
+#   NYX_SITE_DIR   directorio del sitio con content/ (default <repo>/nyxlang.com).
+#                  Existe para que el check L de check-content.sh pueda apuntar
+#                  este script al sitio-fixture de su autotest en vez de al
+#                  content/ real: sin esto, L evaluaba siempre el repo aunque le
+#                  pasaran otro $root, y no podía medirse a sí mismo.
+#   NYX_MIRROR     mirror público para --check-mirror
+#                  (default $HOME/nyx/public/nyx/examples/by-example)
 #   OLD_ROOT       raíz del sitio viejo para --drift (default nyxlang.com/static-next)
 #
 # El alcance sale de `content/by-example/recipes.toml`: se sincroniza lo que
@@ -42,25 +64,31 @@ set -uo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 ROOT="$PWD"
-SITE="$ROOT/nyxlang.com"
+SITE="${NYX_SITE_DIR:-$ROOT/nyxlang.com}"
 CONTENT="$SITE/content/by-example"
 SRC_DIR="$CONTENT/src"
 CATALOG="$CONTENT/recipes.toml"
 MONO="${NYX_MONOREPO:-/home/admin/nyx/lang}"
 EXAMPLES="$MONO/examples/by-example"
+MIRROR="${NYX_MIRROR:-$HOME/nyx/public/nyx/examples/by-example}"
 OLD_ROOT="${OLD_ROOT:-$SITE/static-next}"
 
 MODE="sync"
 case "${1:-}" in
-    "")        MODE="sync" ;;
-    --check)   MODE="check" ;;
-    --drift)   MODE="drift" ;;
-    -h|--help) sed -n '2,32p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    "")             MODE="sync" ;;
+    --check)        MODE="check" ;;
+    --check-mirror) MODE="check-mirror" ;;
+    --drift)        MODE="drift" ;;
+    -h|--help) sed -n '2,50p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "sync-recipes: argumento desconocido: $1" >&2; exit 1 ;;
 esac
 
 [ -f "$CATALOG" ]   || { echo "sync-recipes: falta $CATALOG" >&2; exit 1; }
-[ -d "$EXAMPLES" ]  || { echo "sync-recipes: falta $EXAMPLES (¿NYX_MONOREPO?)" >&2; exit 1; }
+# --check-mirror no toca el monorepo (compara la copia del sitio contra el
+# mirror público), así que no exige tenerlo al lado.
+if [ "$MODE" != "check-mirror" ]; then
+    [ -d "$EXAMPLES" ] || { echo "sync-recipes: falta $EXAMPLES (¿NYX_MONOREPO?)" >&2; exit 1; }
+fi
 
 # ── alcance ────────────────────────────────────────────────────────────────
 # recipes.toml es plano y regular: una tabla [rNN] por receta y un `clave =
@@ -78,7 +106,13 @@ catalog_rows() {
 }
 
 INCLUDED=()
+# TODOS los slugs del catálogo, excluidos incluidos: una receta excluida
+# conserva su sidecar a propósito (vuelve cuando se cierra su ficha), así que
+# el aviso de prosa huérfana se mide contra el catálogo entero, no contra
+# `order`.
+CATALOGED=()
 while read -r slug num excl side; do
+    CATALOGED+=("$slug")
     [ "$excl" = "0" ] && INCLUDED+=("$slug")
 done < <(catalog_rows)
 
@@ -214,6 +248,48 @@ if [ "$MODE" = "drift" ]; then
     exit 0
 fi
 
+# ── modo check-mirror ──────────────────────────────────────────────────────
+# Los enlaces «Source →» de las 69 páginas no apuntan al monorepo privado sino
+# al MIRROR PÚBLICO (github.com/nyxlang-dev/nyx → $HOME/nyx/public/nyx), que
+# `scripts/sync_to_public.sh core` del monorepo copia. En el instante del swap
+# ese mirror puede estar viejo: entonces la página muestra un código y su
+# enlace ofrece otro. Por eso el paso 8 del runbook sincroniza el mirror
+# DESPUÉS del swap — y por eso este modo AVISA (⚠) y sale 0 en vez de fallar:
+# una diferencia antes del cutover es el estado esperado, no un error. El
+# check L lo invoca por la misma razón, como aviso.
+if [ "$MODE" = "check-mirror" ]; then
+    if [ ! -d "$MIRROR" ]; then
+        echo "  ⚠ no está el mirror público en $MIRROR — no se puede comparar (¿NYX_MIRROR?)"
+        echo "sync-recipes --check-mirror: sin mirror que comparar"
+        exit 0
+    fi
+    diffs=0
+    for slug in "${INCLUDED[@]}"; do
+        ours="$SRC_DIR/$slug.nx"
+        theirs="$MIRROR/$slug.nx"
+        [ -f "$ours" ] || continue
+        if [ ! -f "$theirs" ]; then
+            echo "  ⚠ $slug: no está en el mirror público ($theirs)"
+            diffs=$((diffs + 1))
+            continue
+        fi
+        if ! cmp -s "$ours" "$theirs"; then
+            add=$(diff "$theirs" "$ours" | grep -c '^>')
+            del=$(diff "$theirs" "$ours" | grep -c '^<')
+            echo "  ⚠ $slug: el mirror público difiere de lo publicado (+$add / -$del)"
+            diffs=$((diffs + 1))
+        fi
+    done
+    if [ "$diffs" -eq 0 ]; then
+        echo "sync-recipes --check-mirror: ${#INCLUDED[@]} receta(s) al día con el mirror público ($MIRROR)"
+    else
+        echo "sync-recipes --check-mirror: $diffs receta(s) desfasadas en el mirror público"
+        echo "  el enlace « Source → » de esas páginas ofrece un código distinto al que muestran."
+        echo "  Se salda en el paso 8 del runbook: bash $MONO/scripts/sync_to_public.sh core + push"
+    fi
+    exit 0
+fi
+
 # ── modos sync / check ─────────────────────────────────────────────────────
 findings=0
 copied=0; same=0; stubs=0
@@ -263,6 +339,25 @@ for f in "$SRC_DIR"/*.nx; do
         fi
     fi
 done
+
+# ── prosa huérfana: sidecars fuera del catálogo (⚠, no ✗) ─────────────────
+# Un sidecar cuyo slug no figura NI en `order` ni como tabla [rNN] no lo mira
+# nadie: gen.nx recorre el catálogo, así que la prosa se queda en content/ sin
+# publicarse y sin que ninguna guardia la nombre. No puede ser un ✗ —las
+# recetas excluidas conservan su sidecar a propósito, y esas SÍ están en el
+# catálogo— pero la prosa muerta se acumula en silencio, y eso sí merece un
+# aviso.
+if [ "$MODE" = "check" ]; then
+    for f in "$CONTENT"/*.en.html "$CONTENT"/*.es.html; do
+        [ -e "$f" ] || continue
+        b="$(basename "$f")"
+        b="${b%.en.html}"; b="${b%.es.html}"
+        known=0
+        for slug in "${CATALOGED[@]}"; do [ "$slug" = "$b" ] && known=1 && break; done
+        [ "$known" = "1" ] && continue
+        echo "  ⚠ $(basename "$f"): el slug « $b » no está en recipes.toml — prosa que no publica nadie"
+    done
+fi
 
 # ── versión del sitio ──────────────────────────────────────────────────────
 site_toml="$SITE/content/site.toml"
