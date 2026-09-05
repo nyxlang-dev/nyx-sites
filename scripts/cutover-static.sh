@@ -20,11 +20,15 @@
 #              verde sobre static-next/. Luego `mv --exchange` (una sola
 #              llamada) y una verificación curl best-effort (si no hay
 #              servidor en $PORT, lo avisa y sigue en verde: no es un fallo
-#              de la ensayada, es la ausencia de servidor).
+#              de la ensayada, es la ausencia de servidor). Si HAY servidor y
+#              alguna verificación falla, sale 2: el intercambio ya se aplicó
+#              (es atómico) y el rc distinto de cero es la única señal —
+#              `cutover-static.sh swap … && echo ok` no puede dar verde falso.
 #   rollback — el mismo `mv --exchange` en sentido inverso (es su propio
 #              inverso), con la precondición de que static-next/ tenga la
-#              marca del sitio VIEJO (si no, ya se hizo el swap o nunca se
-#              hizo — no hay nada que revertir).
+#              marca del sitio VIEJO **y no la del nuevo** (si no, ya se hizo
+#              el swap o nunca se hizo — no hay nada que revertir). Mismo
+#              rc=2 que swap si la verificación posterior falla.
 #
 # El `mv --exchange` es atómico: o se aplicó entero o no se aplicó. El único
 # estado "a mitad de camino" posible es que el intercambio haya salido bien
@@ -86,7 +90,16 @@ site_relpath() {
 }
 
 is_new_mark() { [ -f "$1/shared/spec.css" ] && [ -f "$1/docs/index.html" ]; }
-is_old_mark() { [ -f "$1/shared/nyx-design-system.css" ]; }
+# OJO — la marca del sitio viejo NO puede ser sólo shared/nyx-design-system.css:
+# static-next/ (el sitio NUEVO) también lo lleva, porque gen-site.sh lo copia
+# para que las páginas LEGADO (learn/, by-example/) sigan teniendo su hoja de
+# estilos. Sin el `! is_new_mark` de adelante, la única precondición de
+# `rollback` era verdadera en los DOS estados y correr `rollback` ANTES del
+# swap hacía el cutover — salteándose check-content.sh, el chequeo de árbol
+# commiteado y la lista de archivos mínimos que sí exige `swap`.
+# Post-swap static-next/ es el sitio viejo (sin spec.css ni docs/index.html),
+# así que sigue dando verdadero y el rollback real no cambia.
+is_old_mark() { ! is_new_mark "$1" && [ -f "$1/shared/nyx-design-system.css" ]; }
 
 mv_exchange_supported() {
     mv --help 2>/dev/null | grep -q -- '--exchange'
@@ -168,7 +181,9 @@ verify_site() {
 
     if [ "$checks_ok" != "1" ]; then
         echo "AVISO: alguna verificación post-intercambio no dio lo esperado (ver arriba). El intercambio de directorios YA se aplicó (mv --exchange es atómico)." >&2
+        return 1
     fi
+    return 0
 }
 
 cmd_status() {
@@ -243,10 +258,16 @@ $dirty"
     SWAPPED=1
     echo "hecho: static/ y static-next/ se intercambiaron (una sola syscall, atómica)."
 
-    verify_site "nuevo" "$site_abs"
+    # rc≠0 si la verificación falló: el intercambio YA se aplicó (es atómico),
+    # así que el código de salida es la única señal de «andá a mirar». Sin
+    # esto, `cutover-static.sh swap … && echo ok` daba verde falso con seis
+    # links de la nav nueva en 404 (binario v1 todavía en producción).
+    local verify_ok=0
+    verify_site "nuevo" "$site_abs" || verify_ok=1
 
     echo
     echo "rollback: bash $SELF rollback $SITE_ARG"
+    [ "$verify_ok" = "0" ] || exit 2
 }
 
 cmd_rollback() {
@@ -268,10 +289,12 @@ cmd_rollback() {
     SWAPPED=1
     echo "hecho: static/ y static-next/ volvieron a intercambiarse."
 
-    verify_site "viejo" "$site_abs"
+    local verify_ok=0
+    verify_site "viejo" "$site_abs" || verify_ok=1
 
     echo
     echo "para reintentar el swap: bash $SELF swap $SITE_ARG"
+    [ "$verify_ok" = "0" ] || exit 2
 }
 
 case "$ACTION" in
