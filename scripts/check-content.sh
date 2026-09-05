@@ -80,6 +80,16 @@
 # salen de esta lista (learn/es/learn y shared/nyx-design-system.css se
 # quedan: son legado permanente, no de la fase 1 nada más).
 #
+# LEGADO en H e I (T7, gen-site.sh): la misma lista de arriba (learn/,
+# es/learn/, by-example/, es/by-example/, shared/nyx-design-system.css —
+# via legacy_prune_args, sin duplicar rutas) pasa a excluirse TAMBIÉN en
+# H (español neutro: ese contenido es preexistente, se regenera recién en
+# la fase 2) y en I (salida al día: gen.nx no lo produce, lo copia
+# gen-site.sh — no son huérfanos reales). I suma además install.sh solo,
+# aparte de legacy_prune_args: A-D ya lo descartan por extensión (.sh no
+# es .html/.css/.js) así que no hacía falta en esa lista, pero el listado
+# de I no filtra por extensión y gen.nx tampoco genera ese shim.
+#
 # set -u sin pipefail (grep sin coincidencias sale 1, y con -e o pipefail
 # eso mataría el script en la primera búsqueda vacía — la misma regla que
 # scripts/testing/run_templates_parity.sh del monorepo del lenguaje).
@@ -127,15 +137,25 @@ CHECK_LAST_FAILS=0
 # C y D — no por E/F (que sí escanean el legado) ni por G (que tiene su
 # propia lista de exclusiones, learn/shared/install.sh/by-example, porque
 # compara EN contra ES en vez de listar un solo lado).
+# Predicados -not -path del LEGADO (learn/es/learn/by-example/es/by-example
+# + shared/nyx-design-system.css) para un $root dado. Una sola función que
+# find_nolegacy (A-D), check_h y check_i (T7) reutilizan tal cual — no
+# duplicar esta lista de rutas en más de un lugar.
+legacy_prune_args() {
+    local root="$1"
+    LEGACY_PRUNE=(
+        -not -path "$root/learn/*"
+        -not -path "$root/es/learn/*"
+        -not -path "$root/by-example/*"
+        -not -path "$root/es/by-example/*"
+        -not -path "$root/shared/nyx-design-system.css"
+    )
+}
+
 find_nolegacy() {
     local root="$1"; shift
-    find "$root" -type f "$@" \
-        -not -path "$root/learn/*" \
-        -not -path "$root/es/learn/*" \
-        -not -path "$root/by-example/*" \
-        -not -path "$root/es/by-example/*" \
-        -not -path "$root/shared/nyx-design-system.css" \
-        2>/dev/null | sort
+    legacy_prune_args "$root"
+    find "$root" -type f "$@" "${LEGACY_PRUNE[@]}" 2>/dev/null | sort
 }
 
 # Escanea $files (lista separada por líneas) con el regex $2 y reporta cada
@@ -420,8 +440,15 @@ EOF2
 check_h() {
     local root="$1"
     local files n=0
+    # LEGADO (T7): mismo criterio que A-D — es/learn y es/by-example son
+    # contenido preexistente que gen-site.sh copia tal cual de static/ y
+    # se regenera recién en la fase 2; hasta entonces el voseo que ya
+    # tenía no es una regresión de este rediseño. Reutiliza
+    # legacy_prune_args (las cláusulas de learn/ y by-example/ sin es/ son
+    # inertes acá, el find ya está anclado bajo "$root/es").
+    legacy_prune_args "$root"
     files=$(find "$root/es" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
-        -not -path "$root/es/learn/*" 2>/dev/null | sort)
+        "${LEGACY_PRUNE[@]}" 2>/dev/null | sort)
     if [ -d "$SITE_DIR/content" ]; then
         local content_es
         content_es=$(find "$SITE_DIR/content" -type f -name '*.es.*' 2>/dev/null | sort)
@@ -465,8 +492,16 @@ check_i() {
     fresh="$(mktemp -d "${TMPDIR:-/tmp}/check-content-fresh.XXXXXX")"
     (cd "$SITE_DIR" && nyx gen.nx --out "$fresh") >/dev/null 2>&1
     fresh_files=$(find "$fresh" -type f 2>/dev/null | sed "s#^$fresh/##" | sort)
-    root_files=$(find "$root" -type f \
-        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null \
+    # LEGADO (T7): la misma lista que A-D/H (legacy_prune_args) — gen.nx no
+    # produce learn/es/learn/by-example/es/by-example/shared/nyx-design-system.css,
+    # los copia gen-site.sh tal cual, así que no son huérfanos reales.
+    # install.sh se suma acá aparte (no en legacy_prune_args: A-D lo
+    # descartan solo por extensión, .sh no es .html/.css/.js — pero el
+    # listado de I no filtra por extensión) por la misma razón de fondo:
+    # es el shim que copia gen-site.sh, gen.nx tampoco lo genera.
+    legacy_prune_args "$root"
+    root_files=$(find "$root" -type f "${LEGACY_PRUNE[@]}" \
+        -not -path "$root/install.sh" 2>/dev/null \
         | sed "s#^$root/##" | sort)
     rm -rf "$fresh"
 
