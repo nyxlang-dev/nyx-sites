@@ -8,8 +8,8 @@ longitud: 8
 substring(0,4): Hola
 toUpper: HOLA NYX
 toLower: hola nyx
-contains 'Nyx': 1
-contains 'Go': 0
+contains 'Nyx': si
+contains 'Go': no
 partes: 3
   uno
   dos
@@ -19,6 +19,6 @@ Lenguaje: Nyx v0.12
 <section data-part="explanation">
 <p><code>.trim()</code> returns a new string with leading and trailing whitespace removed. The original string is not modified — Nyx strings are immutable values; all methods return new strings.</p>
 <p><code>.substring(start, end)</code> extracts a slice from index <code>start</code> up to but not including index <code>end</code>. Indices are byte positions. <code>.length()</code> returns the byte length of the string, not the number of Unicode code points — for ASCII text they are the same.</p>
-<p><code>.contains(needle)</code> returns <code>1</code> if the substring is found, <code>0</code> otherwise. <code>.split(separator)</code> splits the string on every occurrence of the separator and returns an <code>Array</code> of the resulting parts.</p>
+<p><code>.contains(needle)</code> returns a <code>bool</code>, which is why the recipe prints it through the <code>si_no</code> helper instead of <code>int_to_string</code>. <code>.split(separator)</code> splits the string on every occurrence of the separator and returns an <code>Array</code> of the resulting parts.</p>
 <p>String interpolation with <code>${expr}</code> works inside any double-quoted string. The expression can be a variable, a function call, or any other expression — the result is automatically converted to its string representation and embedded inline.</p>
 </section>

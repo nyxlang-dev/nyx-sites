@@ -4,7 +4,7 @@
 </section>
 <section data-part="output">
 sha256("hello world"):
-  b94d27b9934d3e08a52e52d7da7dabfac484efe04294e576e5b9571d73f61a7d
+  b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
   longitud: 64 chars
 sha256(""):
   e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -12,9 +12,9 @@ md5("hello world"):
   5eb63bbbe01eeed093cb22bb8f5acdc3
   longitud: 32 chars
 hmac_sha256(key, data):
-  (valor dependiente de key y data)
-sha256 es determinista: 1
-hashes distintos para inputs distintos: 1
+  5f7881b8e97ca2ea9adbf0c50a0ccf6207eb8923b5e91e2810b292f7b20bae18
+sha256 es determinista: si
+hashes distintos para inputs distintos: si
 </section>
 <section data-part="explanation">
 <p><code>sha256(s)</code> retorna un string hexadecimal de 64 caracteres en minúsculas — la codificación estándar de un digest de 256 bits (32 bytes). El hash del string vacío <code>e3b0c44...</code> es una constante bien conocida que puede usarse para verificar que el toolchain está calculando correctamente. SHA-256 es adecuado para verificaciones de integridad de datos, hashing de contraseñas (con un KDF apropiado encima) y firmas digitales.</p>

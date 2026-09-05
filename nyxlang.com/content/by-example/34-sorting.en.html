@@ -15,5 +15,5 @@ Strings despues:
 <section data-part="explanation">
 <p><code>sort_int(nums)</code> sorts the array in place and returns it, so the return value and the original variable refer to the same sorted sequence. You can either use the return value or continue using the original variable — both point to the now-sorted data.</p>
 <p><code>sort_str</code> works identically for string arrays, ordering elements lexicographically (byte-by-byte, ascending). In the example, <code>"aguacate"</code> sorts first because <code>'a'</code> precedes <code>'b'</code>, <code>'c'</code>, and <code>'m'</code>.</p>
-<p>The helper <code>print_array</code> demonstrates manual array traversal using a <code>while</code> loop with an index variable — the standard Nyx pattern when you need index-based access rather than an iterator pipeline.</p>
+<p>The helpers <code>print_array</code> and <code>print_array_str</code> demonstrate manual array traversal with a <code>while</code> loop and an index variable — the standard Nyx pattern when you need index-based access rather than an iterator pipeline. There are two of them because an <code>Array</code> does not carry the type of its elements: the traversal declares it when reading, and reading a string array as <code>int</code> would print the address of each string instead of its text.</p>
 </section>

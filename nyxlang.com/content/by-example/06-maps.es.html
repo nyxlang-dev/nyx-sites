@@ -5,16 +5,16 @@
 <section data-part="output">
 paises: 3
 Capital de Francia: Paris
-tiene Argentina: 1
-tiene Brasil: 0
+tiene Argentina: si
+tiene Brasil: no
 claves (3):
-  Argentina
   Francia
   Japon
+  Argentina
 </section>
 <section data-part="explanation">
 <p>Los maps en Nyx se crean con <code>Map.new()</code> — no existe una sintaxis de map literal (sería ambigua con las expresiones de bloque). Los maps deben declararse con <code>var</code> si se pretende insertar o modificar entradas después de la creación.</p>
 <p>El método <code>.insert(key, value)</code> agrega o actualiza un par clave-valor. <code>.get(key)</code> obtiene el valor de una clave, devolviendo el valor almacenado como <code>String</code> (o el tipo correspondiente). Si la clave no existe, el comportamiento es indefinido — usa <code>.has(key)</code> primero para verificar la pertenencia.</p>
-<p><code>.has(key)</code> devuelve un <code>int</code>: <code>1</code> significa que la clave existe, <code>0</code> que no existe. Este patrón de entero como booleano es común en las funciones de salida de bajo nivel de Nyx. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
-<p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map. El orden de iteración sobre los hash maps no está garantizado que sea el orden de inserción, por lo que el orden de las claves en la salida puede variar entre ejecuciones.</p>
+<p><code>.has(key)</code> devuelve un <code>bool</code>, y en Nyx un bool no es un int: pasarlo directo a <code>int_to_string</code> no compila, así que la receta lo lleva a texto con el pequeño helper <code>si_no</code>. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
+<p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map, y el orden de iteración de un hash map no es el de inserción. Un <code>Array</code> tampoco lleva consigo el tipo de sus elementos, así que el cuerpo del bucle liga cada clave con <code>let clave: String = k</code> antes de imprimirla — sin esa anotación la concatenación emitiría la dirección de la clave en vez de su texto.</p>
 </section>

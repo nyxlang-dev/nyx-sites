@@ -2,18 +2,18 @@
 <section data-part="intro">
 <p>El módulo <code>std/random</code> provee un generador de números pseudoaleatorios xorshift64 rápido, y <code>std/uuid</code> genera UUID versión 4 según RFC 4122. Ambas son utilidades comúnmente necesarias para pruebas, simulaciones e identificadores de sistemas distribuidos.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 Numeros aleatorios (1-100):
-  42
-  7
-  83
-random_bool: 1
+  9
+  5
+  35
+random_bool: si
 random_float: (generado)
-uuid_v4: f47ac10b-58cc-4372-a567-0e02b2c3d479
+uuid_v4: 3d0702c0-6c28-4ecf-b36c-0281c464bea4
 longitud uuid: 36
-uuid valido: 1
-segundo uuid: 550e8400-e29b-41d4-a716-446655440000
-son distintos: 1
+uuid valido: si
+segundo uuid: 6b14c32d-27b3-4c1a-83e8-d6a093a5f501
+son distintos: si
 </section>
 <section data-part="explanation">
 <p><code>random_range(lo, hi)</code> retorna un entero uniformemente distribuido en el rango inclusivo <code>[lo, hi]</code>. <code>random_bool()</code> retorna <code>true</code> o <code>false</code> con igual probabilidad, y <code>random_float()</code> retorna un <code>float</code> en <code>[0.0, 1.0)</code>. Los tres se apoyan en el generador xorshift64 sembrado a partir del reloj del sistema al iniciar el programa.</p>

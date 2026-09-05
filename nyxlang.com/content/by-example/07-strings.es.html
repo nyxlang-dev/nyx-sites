@@ -8,8 +8,8 @@ longitud: 8
 substring(0,4): Hola
 toUpper: HOLA NYX
 toLower: hola nyx
-contains 'Nyx': 1
-contains 'Go': 0
+contains 'Nyx': si
+contains 'Go': no
 partes: 3
   uno
   dos
@@ -19,6 +19,6 @@ Lenguaje: Nyx v0.12
 <section data-part="explanation">
 <p><code>.trim()</code> devuelve un nuevo string con los espacios en blanco al inicio y al final eliminados. El string original no se modifica — los strings de Nyx son valores inmutables; todos los métodos devuelven strings nuevos.</p>
 <p><code>.substring(start, end)</code> extrae una porción desde el índice <code>start</code> hasta, sin incluir, el índice <code>end</code>. Los índices son posiciones de byte. <code>.length()</code> devuelve la longitud en bytes del string, no la cantidad de puntos de código Unicode — para texto ASCII son lo mismo.</p>
-<p><code>.contains(needle)</code> devuelve <code>1</code> si se encuentra la subcadena, <code>0</code> en caso contrario. <code>.split(separator)</code> divide el string en cada ocurrencia del separador y devuelve un <code>Array</code> con las partes resultantes.</p>
+<p><code>.contains(needle)</code> devuelve un <code>bool</code>, y por eso la receta lo imprime con el helper <code>si_no</code> en vez de con <code>int_to_string</code>. <code>.split(separator)</code> divide el string en cada ocurrencia del separador y devuelve un <code>Array</code> con las partes resultantes.</p>
 <p>La interpolación de strings con <code>${expr}</code> funciona dentro de cualquier string entre comillas dobles. La expresión puede ser una variable, una llamada a función o cualquier otra expresión — el resultado se convierte automáticamente a su representación de string y se incrusta en línea.</p>
 </section>

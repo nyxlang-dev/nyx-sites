@@ -5,16 +5,16 @@
 <section data-part="output">
 paises: 3
 Capital de Francia: Paris
-tiene Argentina: 1
-tiene Brasil: 0
+tiene Argentina: si
+tiene Brasil: no
 claves (3):
-  Argentina
   Francia
   Japon
+  Argentina
 </section>
 <section data-part="explanation">
 <p>Maps in Nyx are created with <code>Map.new()</code> — there is no map literal syntax (it would be ambiguous with block expressions). Maps must be declared with <code>var</code> if you intend to insert or modify entries after creation.</p>
 <p>The <code>.insert(key, value)</code> method adds or updates a key-value pair. <code>.get(key)</code> retrieves the value for a key, returning the stored value as a <code>String</code> (or the appropriate type). If the key does not exist, the behavior is undefined — use <code>.has(key)</code> first to check membership.</p>
-<p><code>.has(key)</code> returns an <code>int</code>: <code>1</code> means the key exists, <code>0</code> means it does not. This integer-as-boolean pattern is common in Nyx's low-level output functions. <code>.size()</code> returns the number of entries currently in the map.</p>
-<p><code>.keys()</code> returns an <code>Array</code> of all keys in the map. The iteration order over hash maps is not guaranteed to be insertion order, so key order in the output may differ between runs.</p>
+<p><code>.has(key)</code> returns a <code>bool</code>, and a bool is not an int in Nyx: passing it straight to <code>int_to_string</code> does not compile, so the recipe routes it through the small <code>si_no</code> helper to print it as text. <code>.size()</code> returns the number of entries currently in the map.</p>
+<p><code>.keys()</code> returns an <code>Array</code> of all keys in the map, and the iteration order of a hash map is not the insertion order. An <code>Array</code> does not carry the type of its elements either, so the loop body binds each key with <code>let clave: String = k</code> before printing it — without that annotation the concatenation would emit the address of the key instead of its text.</p>
 </section>
