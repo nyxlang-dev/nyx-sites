@@ -27,6 +27,42 @@ for rel in "${!BINS[@]}"; do
         sleep 0.2
     done
     if [ "$ok" = "1" ]; then echo "  PASS $rel (:$port → 200)"; else echo "  FAIL $rel (:$port → ${code:-sin respuesta})"; fail=1; fi
+
+    # nyxlang.com: rutas extra del rediseño. /docs/ y /es/docs/ existen o no
+    # según la raíz servida (NYX_STATIC_ROOT) — solo exigimos 200 cuando el
+    # directorio está presente bajo esa raíz; si no, alcanza con que no sea
+    # un 500 (404 limpio es el contrato de app_static_cached).
+    if [ "$rel" = "nyxlang.com/nyxlang-com" ] && [ "$ok" = "1" ]; then
+        static_root="${NYX_STATIC_ROOT:-static}"
+        check_path() {
+            local path="$1" want="$2"
+            local got
+            got=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port$path" 2>/dev/null || true)
+            if [ "$got" = "$want" ]; then
+                echo "  PASS $rel$path (→ $got)"
+            else
+                echo "  FAIL $rel$path (→ ${got:-sin respuesta}, esperaba $want)"
+                fail=1
+            fi
+        }
+        check_path "/by-example/" "200"
+        check_path "/learn/01.html" "200"
+        for docs_path in "/docs/" "/es/docs/"; do
+            docs_dir="$site_dir/$static_root${docs_path%/}"
+            if [ -d "$docs_dir" ]; then
+                check_path "$docs_path" "200"
+            else
+                got=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port$docs_path" 2>/dev/null || true)
+                if [ "$got" = "404" ]; then
+                    echo "  PASS $rel$docs_path (sin contenido, → 404 limpio)"
+                else
+                    echo "  FAIL $rel$docs_path (→ ${got:-sin respuesta}, esperaba 404)"
+                    fail=1
+                fi
+            fi
+        done
+    fi
+
     kill "$pid" 2>/dev/null || true
     wait "$pid" 2>/dev/null || true
 done
