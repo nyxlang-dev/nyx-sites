@@ -47,12 +47,14 @@ pub fn other_lang(lang: String) -> String {
 // (templates/index.html) es la raíz; las secciones que agreguen las tasks
 // siguientes cuelgan de un directorio con su nombre (…/docs/, …/by-example/).
 //
-// `docs-index` es la excepción declarada: el template se llama así (para no
-// chocar con el nombre de la SECCIÓN, `docs`) pero la página vive en /docs/.
+// `docs-index` y `by-example-index` son las excepciones declaradas: los
+// templates se llaman así (para no chocar con el nombre de la SECCIÓN, `docs` y
+// `by-example`) pero las páginas viven en /docs/ y /by-example/.
 pub fn page_href(tmpl_name: String, lang: String) -> String {
     let prefix: String = lang_prefix(lang)
     if tmpl_name == "index" { return prefix + "/" }
     if tmpl_name == "docs-index" { return prefix + "/docs/" }
+    if tmpl_name == "by-example-index" { return prefix + "/by-example/" }
     return prefix + "/" + tmpl_name + "/"
 }
 
@@ -66,6 +68,20 @@ pub fn doc_href(slug: String, lang: String) -> String {
 // Ruta relativa dentro del directorio de salida para esa misma página.
 pub fn doc_rel(slug: String, lang: String) -> String {
     let href: String = doc_href(slug, lang)
+    return href.substring(1, href.length())
+}
+
+// URL de una receta del recetario. Mismo esquema que la guía: son ARCHIVOS
+// dentro de /by-example/ (…/by-example/24-option-some-none.html), y el slug
+// numerado ES la ruta — la misma que publicaba el recetario viejo, que los
+// AGENTS.md sembrados por `nyx init` enlazan a mano.
+pub fn ex_href(slug: String, lang: String) -> String {
+    return page_href("by-example-index", lang) + slug + ".html"
+}
+
+// Ruta relativa dentro del directorio de salida para esa misma página.
+pub fn ex_rel(slug: String, lang: String) -> String {
+    let href: String = ex_href(slug, lang)
     return href.substring(1, href.length())
 }
 

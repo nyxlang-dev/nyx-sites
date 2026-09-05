@@ -15,13 +15,13 @@
 // generador PRODUCE; un archivo de más en <dir> no lo detecta (limitación
 // conocida, igual que gendocs).
 //
-// Secciones: `landing` (la ficha) y `docs` (la guía de seis pasos, EN y ES).
-// `by-example` está reconocida para que el flag no mienta, pero todavía no
-// genera nada.
+// Secciones: `landing` (la ficha), `docs` (la guía de seis pasos) y
+// `by-example` (el recetario), las tres en EN y ES.
 
 import "src/gen/content"
 import "src/gen/render"
 import "src/gen/highlight"
+import "src/gen/recipes"
 
 const CHECK_TMP_DIR: String = "static-next.tmp"
 
@@ -241,6 +241,256 @@ fn gen_docs(out_dir: String) -> Array {
     return written
 }
 
+// ── Recetario /by-example ───────────────────────────────────────────────────
+
+// Nombre de la clave i18n de una categoría: el id lleva guiones ("io-data") y
+// una clave de diccionario no (el check G de check-content.sh compara claves
+// con [a-z_0-9], así que un guión la volvería invisible para la guardia).
+fn cat_key(id: String) -> String {
+    let parts: Array = id.split("-")
+    var out: String = ""
+    var i: int = 0
+    while i < parts.length() {
+        let part: String = parts[i]
+        if i == 0 { out = part } else { out = out + "_" + part }
+        i = i + 1
+    }
+    return "ex_cat_" + out
+}
+
+// Aborta nombrando la receta si le falta una de sus tres piezas obligatorias.
+// El generador recorre `order`, NUNCA el directorio: una receta excluida deja
+// su sidecar en content/ y no debe publicarse, y una receta publicada sin .nx
+// o sin uno de sus dos sidecars sería una página muda. Falla ruidoso.
+fn require_recipe_piece(path: String, slug: String, what: String) {
+    if file_exists(path) == false {
+        print("error: la receta « " + slug + "  » está en `order` de recipes.toml pero le falta " + what + ": " + path)
+        exit(1)
+    }
+}
+
+// Copia de .nx que ya no publica nadie (un rename, o una receta excluida). El
+// catálogo es la fuente de verdad del alcance, así que recorremos SUS entradas
+// — no el directorio, que este lenguaje no sabe listar — y exigimos que ninguna
+// entrada fuera de `order` conserve su copia. `scripts/sync-recipes.sh --check`
+// cubre el caso complementario (un .nx que no figura en el catálogo en
+// absoluto) y es parte de la guardia; los dos juntos cierran el hueco.
+fn check_orphan_sources(cat: Map, order: Array) {
+    let keys: Array = cat.keys()
+    var i: int = 0
+    while i < keys.length() {
+        let k: String = keys[i]
+        if k.endsWith(".slug") {
+            let slug: String = cat.get_or(k, "")
+            if slug != "" and index_of_str(order, slug) < 0 {
+                let path: String = recipe_src_path(slug)
+                if file_exists(path) {
+                    print("error: « " + path + " » sobra: la receta " + slug + " no está en `order` de recipes.toml")
+                    print("       (corré `bash scripts/sync-recipes.sh` para borrar las copias huérfanas)")
+                    exit(1)
+                }
+            }
+        }
+        i = i + 1
+    }
+}
+
+// Genera el índice (/by-example/, /es/by-example/) y una página por receta
+// publicada, en los dos idiomas.
+//
+// Contexto PLANO: todo lo que el motor no sabe hacer se precalcula acá. El
+// índice viaja como `groups` (una entrada por categoría con el nombre ya
+// traducido y sus recetas adentro), y cada página recibe su código resaltado,
+// sus tres bloques de prosa, su rótulo de salida y sus vecinos ya resueltos.
+fn gen_by_example(out_dir: String) -> Array {
+    var written: Array = []
+    let cat: Map = load_recipes()
+    let order: Array = catalog_list(cat, "order")
+    let cats: Array = catalog_list(cat, "categories")
+    let site: Map = load_site()
+    let site_url: String = site.get_or("site_url", "")
+    let repo_url: String = site.get_or("repo_url", "")
+
+    // ── 1. Aserciones + resaltado (una vez por receta, no por idioma) ──
+    var nums: Array = []
+    var cat_ids: Array = []
+    var codes: Array = []
+    var r: int = 0
+    while r < order.length() {
+        let slug: String = order[r]
+        let num: String = recipe_num(slug)
+        let nx_path: String = recipe_src_path(slug)
+        require_recipe_piece(nx_path, slug, "el .nx sincronizado del monorepo")
+        require_recipe_piece(sidecar_path(slug, "en"), slug, "el sidecar EN")
+        require_recipe_piece(sidecar_path(slug, "es"), slug, "el sidecar ES")
+        let category: String = cat.get_or("r" + num + ".category", "")
+        if index_of_str(cats, category) < 0 {
+            print("error: la receta " + slug + " declara la categoría « " + category + " », que no está en `categories`")
+            exit(1)
+        }
+        nums.push(num)
+        cat_ids.push(category)
+        codes.push(highlight_sample(nx_path))
+        r = r + 1
+    }
+    check_orphan_sources(cat, order)
+
+    // ── 2. Las páginas, idioma por idioma ──
+    let langs: Array = ["en", "es"]
+    var li: int = 0
+    while li < langs.length() {
+        let lang: String = langs[li]
+        let dict: Map = load_i18n(lang)
+        let base: String = page_href("by-example-index", lang)
+        let suffix: String = dict.get_or("ex_page_suffix", "")
+        let out_label: String = dict.get_or("ex_output_label", "")
+        let out_illus: String = dict.get_or("ex_output_illustrative", "")
+
+        // Prosa de las 69, leída una sola vez y guardada en Arrays paralelos a
+        // `order`: la necesitan el índice (título + blurb) y la página (los
+        // tres bloques), y el prev/next necesita el título del vecino.
+        var titles: Array = []
+        var blurbs: Array = []
+        var intros: Array = []
+        var outputs: Array = []
+        var expls: Array = []
+        var labels: Array = []
+        var p: int = 0
+        while p < order.length() {
+            let slug2: String = order[p]
+            let path: String = sidecar_path(slug2, lang)
+            let side: String = read_fragment(path)
+            // El TÍTULO es texto, no HTML: el sidecar lo guarda con el
+            // escapado de la página vieja («File Read &amp; Write») y el
+            // template lo vuelve a escapar al interpolarlo, así que se
+            // des-escapa acá (hl_plain es el inverso del resaltado: saca tags
+            // y entidades). El BLURB sí es HTML — trae <code> — y viaja crudo.
+            titles.push(hl_plain(sidecar_title(side, path)))
+            blurbs.push(sidecar_blurb(side, path))
+            intros.push(sidecar_part(side, "intro", path))
+            outputs.push(sidecar_part(side, "output", path))
+            expls.push(sidecar_part(side, "explanation", path))
+            if sidecar_illustrative(side) {
+                labels.push(out_illus)
+            } else {
+                labels.push(out_label)
+            }
+            p = p + 1
+        }
+
+        // ── Índice: categorías en orden, con sus recetas ──
+        var groups: Array = []
+        var c: int = 0
+        while c < cats.length() {
+            let cid: String = cats[c]
+            var rows: Array = []
+            var q: int = 0
+            while q < order.length() {
+                let qcat: String = cat_ids[q]
+                if qcat == cid {
+                    let qslug: String = order[q]
+                    let qnum: String = nums[q]
+                    let qtitle: String = titles[q]
+                    let qblurb: String = blurbs[q]
+                    var item: Map = map_new()
+                    item.insert("num", qnum)
+                    item.insert("href", base + qslug + ".html")
+                    item.insert("title", qtitle)
+                    item.insert("blurb", qblurb)
+                    rows.push(item)
+                }
+                q = q + 1
+            }
+            if rows.length() > 0 {
+                var group: Map = map_new()
+                group.insert("cat_name", dict.get_or(cat_key(cid), ""))
+                group.insert("recipes", rows)
+                groups.push(group)
+            }
+            c = c + 1
+        }
+        var iextra: Map = map_new()
+        iextra.insert("title_key", "ex_index_title")
+        iextra.insert("desc_key", "ex_index_desc")
+        iextra.insert("groups", groups)
+        let ihtml: String = render_page("by-example-index", lang, iextra)
+        let irel: String = page_rel("by-example-index", lang)
+        write_page(out_dir, irel, ihtml)
+        written.push(irel)
+
+        // ── Una página por receta ──
+        var k: int = 0
+        while k < order.length() {
+            let slug3: String = order[k]
+            let title: String = titles[k]
+            let blurb: String = blurbs[k]
+            let num3: String = nums[k]
+            let cid3: String = cat_ids[k]
+            let code: String = codes[k]
+            let intro: String = intros[k]
+            let output: String = outputs[k]
+            let expl: String = expls[k]
+            let label: String = labels[k]
+
+            var extra: Map = map_new()
+            // El motor no concatena: <title> y meta description se arman acá.
+            // La descripción es el blurb SIN tags (hl_plain es el inverso del
+            // resaltado: quita etiquetas y des-escapa entidades), porque el
+            // layout la vuelve a escapar al interpolarla.
+            extra.insert("title", title + " — " + suffix)
+            extra.insert("description", hl_plain(blurb))
+            extra.insert("page_title", title)
+            extra.insert("num", num3)
+            extra.insert("category_name", dict.get_or(cat_key(cid3), ""))
+            extra.insert("file_name", slug3 + ".nx")
+            extra.insert("source_url", repo_url + "/blob/main/examples/by-example/" + slug3 + ".nx")
+            extra.insert("recipe_intro", intro)
+            extra.insert("recipe_code", code)
+            extra.insert("recipe_output", output)
+            extra.insert("recipe_explanation", expl)
+            extra.insert("output_label", label)
+            // Rutas propias: el template es uno solo para todas las recetas,
+            // así que canonical/hreflang NO pueden salir de su nombre.
+            extra.insert("canonical_url", site_url + ex_href(slug3, lang))
+            extra.insert("url_en", site_url + ex_href(slug3, "en"))
+            extra.insert("url_es", site_url + ex_href(slug3, "es"))
+            extra.insert("alt_href", ex_href(slug3, other_lang(lang)))
+
+            // Anterior: la receta previa, o el índice en la primera.
+            // Siguiente: la que viene; en la última no hay (el pie de página
+            // siempre ofrece el índice y la guía).
+            if k == 0 {
+                extra.insert("has_prev", "1")
+                extra.insert("prev_href", base)
+                extra.insert("prev_title", dict.get_or("ex_index_head", ""))
+            } else {
+                let pslug: String = order[k - 1]
+                let ptitle: String = titles[k - 1]
+                extra.insert("has_prev", "1")
+                extra.insert("prev_href", base + pslug + ".html")
+                extra.insert("prev_title", ptitle)
+            }
+            if k + 1 < order.length() {
+                let nslug: String = order[k + 1]
+                let ntitle: String = titles[k + 1]
+                extra.insert("has_next", "1")
+                extra.insert("next_href", base + nslug + ".html")
+                extra.insert("next_title", ntitle)
+            } else {
+                extra.insert("has_next", "")
+            }
+
+            let html: String = render_page("by-example-page", lang, extra)
+            let rel: String = ex_rel(slug3, lang)
+            write_page(out_dir, rel, html)
+            written.push(rel)
+            k = k + 1
+        }
+        li = li + 1
+    }
+    return written
+}
+
 // Copia los assets compartidos a <out>/shared/. Son texto (CSS/JS), así que
 // read_file/write_file alcanzan; si algún día entra un binario hay que pasar a
 // std/fs o a un copy del sistema.
@@ -278,6 +528,15 @@ fn generate(out_dir: String, only: String) -> Array {
             let rel3: String = docs[d]
             written.push(rel3)
             d = d + 1
+        }
+    }
+    if only == "" or only == "by-example" {
+        let recipes: Array = gen_by_example(out_dir)
+        var e: int = 0
+        while e < recipes.length() {
+            let rel4: String = recipes[e]
+            written.push(rel4)
+            e = e + 1
         }
     }
     // Los assets compartidos los usa CUALQUIER página, así que van con
@@ -404,7 +663,7 @@ fn main() -> int {
 
     let written: Array = generate(out_dir, only)
     if written.length() == 0 {
-        print("gen: nada que generar para « " + only + " » (sección todavía no implementada)")
+        print("gen: nada que generar para « " + only + " »")
         return 0
     }
     let version: String = site_version()

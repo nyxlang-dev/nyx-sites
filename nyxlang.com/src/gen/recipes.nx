@@ -1,0 +1,193 @@
+// src/gen/recipes.nx — catálogo y sidecars del recetario «Nyx por ejemplo».
+//
+// Dos fuentes, ninguna de las cuales se edita a mano acá:
+//   · content/by-example/recipes.toml       — el ALCANCE: qué se publica, en qué
+//                                             orden y bajo qué categoría.
+//   · content/by-example/<slug>.<lang>.html — la PROSA de cada receta (título,
+//                                             blurb, intro, salida, explicación).
+//   · content/by-example/src/<slug>.nx      — el CÓDIGO, copia byte a byte del
+//                                             monorepo (scripts/sync-recipes.sh).
+//
+// ── Formato de un sidecar ───────────────────────────────────────────────────
+//   <!-- title: … | blurb: … -->
+//   <section data-part="intro">…</section>
+//   <section data-part="output" [data-illustrative="1"]>…</section>
+//   <section data-part="explanation">…</section>
+//
+// Convención heredada de la extracción (T9): el salto de línea que sigue a
+// `<section …>` y el que precede a `</section>` son DELIMITADORES, no
+// contenido — por eso `sidecar_part` los recorta. El contenido de `output`
+// viene ya escapado como HTML (se publica crudo dentro de un <pre>); intro y
+// explanation son HTML de verdad (<p>, <code>, <em>, <strong>).
+//
+// La línea de metadatos se lee del FRAGMENTO, nunca de la página generada:
+// `render_page` (src/gen/render.nx) borra los comentarios HTML del resultado.
+// Tampoco se supone que sea la línea 1: un fragmento puede llevar arriba un
+// `<!-- not-a-version: … -->` para el check J de scripts/check-content.sh.
+//
+// Todo el escaneo usa `index_from`, no `indexOf(needle, desde)`: en este
+// compilador `indexOf` toma UN solo argumento y acepta el segundo en silencio
+// buscando siempre desde el byte 0 (mismo hallazgo que documenta
+// std/template.nx). Strings = bytes, así que los índices son de byte.
+
+import "std/toml"
+import "src/gen/content"
+
+const RECIPE_DIR: String = "content/by-example"
+
+// Primer índice de `needle` en `s` a partir de `start`, o -1.
+pub fn index_from(s: String, needle: String, start: int) -> int {
+    if start < 0 { return -1 }
+    let n: int = s.length()
+    if start >= n { return -1 }
+    let sub: String = s.substring(start, n)
+    let rel: int = sub.indexOf(needle)
+    if rel < 0 { return -1 }
+    return start + rel
+}
+
+// El catálogo, como Map plano: `categories`, `order` y `rNN.<clave>`.
+pub fn load_recipes() -> Map {
+    let raw: String = read_fragment(RECIPE_DIR + "/recipes.toml")
+    let parsed: Map = toml_parse(raw)
+    return parsed
+}
+
+// Una clave del catálogo con lista separada por comas ("order", "categories")
+// como Array. Aborta si falta o está vacía: sin ella no hay orden, y un Map no
+// tiene orden propio.
+pub fn catalog_list(cat: Map, key: String) -> Array {
+    let raw: String = cat.get_or(key, "")
+    if raw == "" {
+        print("error: " + RECIPE_DIR + "/recipes.toml no define « " + key + " »")
+        exit(1)
+    }
+    return raw.split(",")
+}
+
+// Número de una receta a partir de su slug ("24-option-some-none" -> "24").
+// Es también el nombre de su tabla en el catálogo: `[r` + num + `]`.
+pub fn recipe_num(slug: String) -> String {
+    let cut: int = slug.indexOf("-")
+    if cut <= 0 {
+        print("error: slug de receta sin número: « " + slug + " »")
+        exit(1)
+    }
+    return slug.substring(0, cut)
+}
+
+// Posición de `needle` en un Array de String, o -1.
+pub fn index_of_str(items: Array, needle: String) -> int {
+    var i: int = 0
+    while i < items.length() {
+        let v: String = items[i]
+        if v == needle { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+// Ruta del sidecar de una receta en un idioma.
+pub fn sidecar_path(slug: String, lang: String) -> String {
+    return RECIPE_DIR + "/" + slug + "." + lang + ".html"
+}
+
+// Ruta de la copia del .nx (la que sincroniza scripts/sync-recipes.sh).
+pub fn recipe_src_path(slug: String) -> String {
+    return RECIPE_DIR + "/src/" + slug + ".nx"
+}
+
+// ── Metadatos ───────────────────────────────────────────────────────────────
+
+// Valor de un campo de la línea `<!-- title: … | blurb: … -->`.
+// `field` es "title" o "blurb"; el título termina en el `|` y el blurb en el
+// cierre del comentario. Aborta si el marcador no está: publicar una receta sin
+// título es exactamente lo que el check K caza después, y más vale fallar acá.
+fn meta_field(text: String, field: String, path: String) -> String {
+    let head: int = text.indexOf("<!-- title:")
+    if head < 0 {
+        print("error: « " + path + " » no tiene la línea de metadatos <!-- title: … | blurb: … -->")
+        exit(1)
+    }
+    let close_at: int = index_from(text, "-->", head)
+    if close_at < 0 {
+        print("error: « " + path + " » tiene la línea de metadatos sin cerrar")
+        exit(1)
+    }
+    let bar: int = index_from(text, "|", head)
+    if bar < 0 or bar > close_at {
+        print("error: « " + path + " » no separa title y blurb con « | »")
+        exit(1)
+    }
+    if field == "title" {
+        let start: int = head + 11
+        let raw: String = text.substring(start, bar)
+        return raw.trim()
+    }
+    let bkey: int = index_from(text, "blurb:", bar)
+    if bkey < 0 or bkey > close_at {
+        print("error: « " + path + " » no declara « blurb: » en la línea de metadatos")
+        exit(1)
+    }
+    let bstart: int = bkey + 6
+    let braw: String = text.substring(bstart, close_at)
+    return braw.trim()
+}
+
+pub fn sidecar_title(text: String, path: String) -> String {
+    return meta_field(text, "title", path)
+}
+
+pub fn sidecar_blurb(text: String, path: String) -> String {
+    return meta_field(text, "blurb", path)
+}
+
+// ── Secciones ───────────────────────────────────────────────────────────────
+
+// Byte donde abre `<section data-part="<part>"` en `text`, o -1.
+fn part_open(text: String, part: String) -> int {
+    return text.indexOf("<section data-part=\"" + part + "\"")
+}
+
+// Contenido de una sección `data-part`, sin los saltos delimitadores.
+pub fn sidecar_part(text: String, part: String, path: String) -> String {
+    let tag_at: int = part_open(text, part)
+    if tag_at < 0 {
+        print("error: « " + path + " » no tiene la sección data-part=\"" + part + "\"")
+        exit(1)
+    }
+    let gt: int = index_from(text, ">", tag_at)
+    if gt < 0 {
+        print("error: « " + path + " » tiene <section data-part=\"" + part + "\" sin cerrar el tag")
+        exit(1)
+    }
+    var start: int = gt + 1
+    if start < text.length() {
+        let first: char = text.charAt(start)
+        if first == '\n' { start = start + 1 }
+    }
+    let close_at: int = index_from(text, "</section>", start)
+    if close_at < 0 {
+        print("error: « " + path + " » no cierra la sección data-part=\"" + part + "\"")
+        exit(1)
+    }
+    var end: int = close_at
+    if end > start {
+        let last: char = text.charAt(end - 1)
+        if last == '\n' { end = end - 1 }
+    }
+    return text.substring(start, end)
+}
+
+// ¿La salida de esta receta depende del entorno (reloj, red, pid, orden entre
+// hilos)? El marcador lo pusieron las tasks de contenido sobre la sección
+// `output`; acá solo cambia el rótulo del panel, nunca el contenido.
+pub fn sidecar_illustrative(text: String) -> bool {
+    let tag_at: int = part_open(text, "output")
+    if tag_at < 0 { return false }
+    let gt: int = index_from(text, ">", tag_at)
+    if gt < 0 { return false }
+    let tag: String = text.substring(tag_at, gt)
+    if tag.indexOf("data-illustrative") < 0 { return false }
+    return true
+}

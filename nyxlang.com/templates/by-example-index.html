@@ -1,0 +1,25 @@
+<!-- templates/by-example-index.html — índice del recetario (/by-example/ y
+     /es/by-example/). Estructura acá, texto en content/i18n/<lang>.toml, y la
+     lista `groups` la arma gen.nx: una entrada por categoría (nombre ya
+     resuelto por i18n) con sus recetas precalculadas (num, href, title, blurb),
+     porque el motor de templates no concatena rutas ni sabe agrupar. El blurb
+     entra CRUDO ({{{blurb}}}): trae <code> del sidecar y ya viene escapado.
+     Sin cifras a la vista: cuántas recetas hay se ve contándolas. -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp stamp-accent">{{ex_label}}</span></p>
+<div>
+<h1 class="band-title">{{ex_index_head}}</h1>
+<p class="band-sub prose">{{ex_index_lede}}</p>
+</div>
+</header>
+{{#each groups}}<section class="ex-cat">
+<h2 class="ex-cat-name">{{cat_name}}</h2>
+<ol class="steps">
+{{#each recipes}}<li class="step"><a class="step-link" href="{{href}}"><span class="step-num">{{num}}</span><span><span class="step-name">{{title}}</span><span class="step-note note">{{{blurb}}}</span></span></a></li>
+{{/each}}</ol>
+</section>
+{{/each}}<a class="callout" href="{{docs_href}}"><span><span class="callout-name">{{ex_docs_title}}</span><span class="step-note note">{{ex_docs_note}}</span></span><span class="callout-go">{{ex_docs_go}} →</span></a>
+</div>
+</section>

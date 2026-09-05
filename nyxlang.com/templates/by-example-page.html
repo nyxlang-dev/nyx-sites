@@ -1,0 +1,38 @@
+<!-- templates/by-example-page.html — una receta. El sello dice el número y la
+     categoría; los dos paneles son el código (del .nx sincronizado del
+     monorepo, resaltado por hl_nyx) y lo que el programa imprime; prev/next se
+     mueven dentro del conjunto PUBLICADO, no del directorio.
+
+     Los tres bloques de prosa entran crudos desde el sidecar
+     content/by-example/<slug>.<lang>.html; `recipe_output` también, porque el
+     sidecar lo guarda ya escapado. El <pre> del código NO lleva data-lang: ya
+     viene resaltado, y hl_pre_blocks solo toca los que lo declaran (así el
+     resaltado nunca se aplica dos veces). El rótulo del panel de salida lo
+     elige gen.nx: «salida ilustrativa» cuando el sidecar la marca como
+     dependiente del entorno (reloj, red, pid, orden entre hilos). -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">{{num}}</span> / {{category_name}}</span></p>
+<h1 class="doc-title">{{page_title}}</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose">{{{recipe_intro}}}</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">{{file_name}}</span><a href="{{source_url}}">{{ex_source_label}} →</a></div>
+<div class="panel-body"><pre>{{{recipe_code}}}</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">{{output_label}}</span><span>{{ex_output_note}}</span></div>
+<div class="panel-body"><pre class="recipe-output">{{{recipe_output}}}</pre></div>
+</div>
+<h2 class="recipe-head">{{ex_explanation_head}}</h2>
+<div class="recipe-prose">{{{recipe_explanation}}}</div>
+</article>
+<nav class="doc-nav" aria-label="{{ex_nav_label}}">
+{{#if has_prev}}<a class="doc-nav-link doc-nav-prev" href="{{prev_href}}"><span class="label">← {{ex_prev_label}}</span><span class="doc-nav-name">{{prev_title}}</span></a>{{/if}}
+{{#if has_next}}<a class="doc-nav-link doc-nav-next" href="{{next_href}}"><span class="label">{{ex_next_label}} →</span><span class="doc-nav-name">{{next_title}}</span></a>{{/if}}
+</nav>
+<p class="recipe-links"><a href="{{examples_href}}">{{ex_all_link}}</a><a href="{{docs_href}}">{{ex_docs_link}}</a></p>
+</div>
+</section>
