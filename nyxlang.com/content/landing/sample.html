@@ -1,0 +1,19 @@
+<span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span> <span class="fn">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span> <span class="fn">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span> <span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>text<span class="op">)</span>
+    <span class="kw">if</span> n <span class="op">&lt;</span> <span class="num">1</span> <span class="kw">or</span> n <span class="op">&gt;</span> <span class="num">65535</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span><span class="str">"out of range: ${text}"</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>n<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">bind_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">)?</span>   <span class="cm">// ? hands the Err back to the caller</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">bind_port</span><span class="op">(</span><span class="str">"8080"</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"listening on ${port}"</span><span class="op">),</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span>why<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"config error: ${why}"</span><span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
