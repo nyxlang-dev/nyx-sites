@@ -2,32 +2,51 @@ import "std/web"
 import "std/http"
 import "std/serve"
 
+// Raíz de estáticos configurable: el cutover del rediseño se hace con un
+// `mv --exchange static static-next` atómico en el servidor, pero este
+// binario se deploya ANTES que el contenido nuevo — con NYX_STATIC_ROOT
+// vacío (default "static") nada observable cambia hasta el swap.
+var g_root: String = "static"
+
+fn sp(rel: String) -> String {
+    return g_root + "/" + rel
+}
+
 fn handle_index(req: Request) -> Response {
-    return response_html(200, read_file("static/index.html"))
+    return response_html(200, read_file(sp("index.html")))
 }
 
 fn handle_index_es(req: Request) -> Response {
-    return response_html(200, read_file("static/es/index.html"))
+    return response_html(200, read_file(sp("es/index.html")))
 }
 
 fn handle_install(req: Request) -> Response {
     let hdrs: Array = ["Content-Type", "text/plain; charset=utf-8"]
-    return Response { status: 200, headers_flat: hdrs, body: read_file("static/install.sh") }
+    return Response { status: 200, headers_flat: hdrs, body: read_file(sp("install.sh")) }
 }
 
 fn handle_logo(req: Request) -> Response {
     let hdrs: Array = ["Content-Type", "image/png"]
-    return Response { status: 200, headers_flat: hdrs, body: read_file("static/logo.png") }
+    return Response { status: 200, headers_flat: hdrs, body: read_file(sp("logo.png")) }
 }
 
 fn handle_health(req: Request) -> Response {
     return response_json(200, "{\"status\":\"ok\"}")
 }
 
-fn main() {
+fn main() -> int {
     let port_str: String = getenv("PORT")
     var port: int = 3001
     if port_str != "" { port = string_to_int(port_str) }
+
+    let root_env: String = getenv("NYX_STATIC_ROOT")
+    if root_env != "" {
+        if root_env.endsWith("/") {
+            g_root = root_env.substring(0, root_env.length() - 1)
+        } else {
+            g_root = root_env
+        }
+    }
 
     let app: App = app_new()
     app_get(app, "/", handle_index)
@@ -35,14 +54,18 @@ fn main() {
     app_get(app, "/install.sh", handle_install)
     app_get(app, "/logo.png", handle_logo)
     app_get(app, "/api/health", handle_health)
-    // Contenido learn y cookbook: max-age corto (5 min) — cambia con commits.
-    app_static_cached(app, "/learn/", "static/learn/", 300)
-    app_static_cached(app, "/es/learn/", "static/es/learn/", 300)
-    app_static_cached(app, "/by-example/", "static/by-example/", 300)
-    app_static_cached(app, "/es/by-example/", "static/es/by-example/", 300)
+    // Contenido learn, cookbook y guía: max-age corto (5 min) — cambia con commits.
+    app_static_cached(app, "/learn/", sp("learn/"), 300)
+    app_static_cached(app, "/es/learn/", sp("es/learn/"), 300)
+    app_static_cached(app, "/by-example/", sp("by-example/"), 300)
+    app_static_cached(app, "/es/by-example/", sp("es/by-example/"), 300)
+    app_static_cached(app, "/docs/", sp("docs/"), 300)
+    app_static_cached(app, "/es/docs/", sp("es/docs/"), 300)
     // Assets compartidos (CSS/JS/imgs/fonts): max-age 1h — cambios menos
     // frecuentes y bundle lo suficientemente pequeño que revalidar ocasional
     // no duele.
-    app_static_cached(app, "/shared/", "static/shared/", 3600)
-    serve_app(app, port, 16)
+    app_static_cached(app, "/shared/", sp("shared/"), 3600)
+    let code: int = serve_app(app, port, 16)
+    if code < 0 { return 1 }
+    return 0
 }
