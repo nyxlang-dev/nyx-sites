@@ -16,3 +16,24 @@ make deploy     # deploy completo con restart verificado (sudo)
 
 Requiere el toolchain Nyx (`NYX_HOME`, default `/home/admin/NyxLang`).
 Ver `CLAUDE.md` para reglas operativas.
+
+## Cutover de nyxlang.com
+
+El rediseño genera el sitio nuevo al lado del viejo (`static-next/` junto a
+`static/`, ver `make gen`); el intercambio final es atómico, una sola
+syscall (`mv --exchange`, coreutils ≥ 9.7), sin restart y sin ventana:
+
+```bash
+make cutover-status                                          # solo lectura, no toca nada
+bash scripts/cutover-static.sh swap nyxlang.com               # precondiciones + mv --exchange + verificación
+bash scripts/cutover-static.sh rollback nyxlang.com           # revierte (el mismo mv --exchange, es su propio inverso)
+```
+
+`swap` aborta sin tocar nada si falta algo en `static-next/`, si hay
+cambios sin commitear en `static/`/`static-next/`, o si
+`scripts/check-content.sh static-next` no da verde. `PORT` (default 3001)
+y `BASE_URL` controlan contra qué servidor se verifica después del
+intercambio; sin servidor escuchando, el script lo avisa y omite los curls
+(no es un fallo). No hay target de Makefile para `swap`/`rollback` — se
+invocan a mano con la ruta del sitio explícita para que nadie los dispare
+sin querer.

@@ -8,7 +8,7 @@ export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
-.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks check-content preview preview-stop
+.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks check-content preview preview-stop cutover-status
 
 # ── Rediseño de nyxlang.com (rama redesign/spec-sheet) ──────────────────────
 # El sitio se GENERA: gen.nx lee content/ + templates/ y escribe static-next/.
@@ -80,6 +80,15 @@ smoke: build-all
 # Build + smoke + instalar units + restart secuencial verificado (sudo)
 deploy:
 	bash scripts/deploy.sh
+
+# Cutover de nyxlang.com (T12): intercambio atómico static/ <-> static-next/
+# (mv --exchange). `status` es de solo lectura, seguro de correr siempre.
+# `swap`/`rollback` NO tienen target: se invocan a mano con la ruta del
+# sitio explícita para que nadie los dispare por accidente.
+#   bash scripts/cutover-static.sh swap nyxlang.com
+#   bash scripts/cutover-static.sh rollback nyxlang.com
+cutover-status:
+	bash scripts/cutover-static.sh status nyxlang.com
 
 status:
 	@systemctl is-active nyx-landing-main nyx-serve-web nyx-proxy-web
