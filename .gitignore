@@ -4,6 +4,11 @@ serve.nyxlang.com/serve-nyxlang-com
 proxy.nyxlang.com/proxy-nyxlang-com
 edit.nyxlang.com/edit-nyxlang-com
 
+# Copias .prev de un deploy anterior (deploy.sh renombra el binario viejo).
+# Se acumulan una por deploy y nadie las mira; el cutover no las toca
+# (cutover-static.sh sólo mira static/ y static-next/).
+*.prev
+
 # Artefactos de build del PM
 */script.nx
 */script.ll
