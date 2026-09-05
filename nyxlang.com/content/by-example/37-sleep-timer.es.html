@@ -1,6 +1,6 @@
 <!-- title: Sleep y Temporizadores | blurb: Pausar la ejecución y medir tiempo transcurrido. -->
 <section data-part="intro">
-<p><code>time_ms()</code> retorna la hora actual del reloj de pared en milisegundos como <code>int</code>. Restar dos lecturas da una duración transcurrida. <code>sleep(ms)</code> suspende el hilo actual por la cantidad de milisegundos especificada.</p>
+<p><code>time_ms()</code> retorna una marca de tiempo monotónica en milisegundos como <code>int</code>. Restar dos lecturas da una duración transcurrida. <code>sleep(ms)</code> suspende el hilo actual por la cantidad de milisegundos especificada.</p>
 </section>
 <section data-part="output" data-illustrative="1">
 start
@@ -12,5 +12,5 @@ duracion loop: 0ms
 <section data-part="explanation">
 <p><code>time_ms()</code> es un envoltorio liviano sobre el reloj del sistema, que retorna una marca de tiempo monotónica en milisegundos adecuada para medir duraciones. Tomar la diferencia <code>t1 - t0</code> después de un <code>sleep(500)</code> debería producir un valor igual o apenas por encima de 500, dependiendo de la precisión del planificador del sistema operativo.</p>
 <p>La segunda medición envuelve un loop ajustado que suma enteros de 0 a 999 999. El resultado — 499 999 500 000 — es la suma estándar de la serie aritmética <code>n*(n-1)/2</code> para <code>n = 1 000 000</code>. La duración se redondea a cero porque LLVM optimiza el loop de forma agresiva al momento de generar código nativo.</p>
-<p>Tanto <code>time_ms</code> como <code>sleep</code> son funciones integradas disponibles sin necesidad de ningún import. Están implementadas en el módulo <code>time.c</code> del runtime y se mapean directamente a <code>clock_gettime(CLOCK_MONOTONIC)</code> y <code>nanosleep</code> en Linux.</p>
+<p>Tanto <code>time_ms</code> como <code>sleep</code> son funciones integradas disponibles sin necesidad de ningún import. Están implementadas en el runtime y se mapean directamente a <code>clock_gettime(CLOCK_MONOTONIC)</code> y <code>nanosleep</code> en Linux.</p>
 </section>

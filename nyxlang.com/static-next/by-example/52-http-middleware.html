@@ -80,7 +80,7 @@ routes: GET / and GET /api/status
 middleware: logging + CORS</pre></div>
 </div>
 <h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p><code>app_new()</code> creates an empty application. Route handlers take a <code>Request</code> struct (with fields: method, path, query, headers_flat, body) and return a <code>Response</code> struct. Helper functions like <code>response_new</code> and <code>response_json</code> create responses with appropriate headers.</p>
+<div class="recipe-prose"><p><code>app_new()</code> creates an empty application. Route handlers take a <code>Request</code> struct (with fields such as method, path, query, headers_flat and body) and return a <code>Response</code> struct. Helper functions like <code>response_new</code> and <code>response_json</code> create responses with appropriate headers.</p>
 <p><code>mw_logging</code> logs each request's method, path, status, and latency. <code>mw_cors</code> handles OPTIONS preflight requests and adds CORS headers. You can configure CORS with <code>cors_configure(origin, methods, headers)</code>.</p>
 <p>In production you hand the app to <code>serve_app(app, port, workers)</code> from <code>std/serve</code>, which runs it on a thread pool. The framework itself does no I/O — it only registers routes and matches them.</p></div>
 </article>

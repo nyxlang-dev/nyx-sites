@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MessagePack — Nyx por ejemplo</title>
-<meta name="description" content="Serialización binaria — ~30% más liviana que JSON.">
+<meta name="description" content="Serialización binaria: compacta, tipada, orientada a bytes.">
 <link rel="canonical" href="https://nyxlang.com/es/by-example/44-msgpack.html">
 <link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/44-msgpack.html">
 <link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/44-msgpack.html">
@@ -33,7 +33,7 @@
 <h1 class="doc-title">MessagePack</h1>
 </header>
 <article class="recipe">
-<div class="recipe-lede prose"><p><code>std/msgpack</code> ofrece serialización binaria que es aproximadamente un 30% más compacta que JSON para datos típicos. Cada valor se empaqueta en una cadena binaria compacta que preserva su tipo. Encaja bien en formatos en disco y en protocolos de red donde cada byte cuenta.</p></div>
+<div class="recipe-lede prose"><p><code>std/msgpack</code> ofrece una alternativa binaria compacta a JSON. Cada valor se empaqueta en una cadena binaria que preserva su tipo. Encaja bien en formatos en disco y en protocolos de red donde cada byte cuenta.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">44-msgpack.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/44-msgpack.nx">Fuente →</a></div>
 <div class="panel-body"><pre><span class="cm">// MessagePack binary serialization — compact alternative to JSON</span>

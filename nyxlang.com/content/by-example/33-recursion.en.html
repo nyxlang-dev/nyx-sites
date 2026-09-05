@@ -20,5 +20,5 @@ fib(20) = 6765
 <section data-part="explanation">
 <p><code>fib</code> has two base cases: <code>n == 0</code> returns <code>0</code> and <code>n == 1</code> returns <code>1</code>. Both are covered by the single guard <code>n &lt;= 1</code>. For any larger <code>n</code> the function calls itself twice and adds the results. Each recursive call moves one or two steps closer to the base, so the recursion always terminates.</p>
 <p>The naive double-recursive implementation has exponential time complexity — <code>fib(n)</code> recomputes sub-problems many times. For <code>fib(20)</code> this is still instant, but for large inputs (say <code>fib(40)</code>) a memoized or iterative version is preferred.</p>
-<p>Recursion in Nyx compiles directly to native function calls via LLVM. There is no interpreter overhead, and the generated code is equivalent to what you would write in C.</p>
+<p>Recursion in Nyx compiles directly to native function calls via LLVM; there is no interpreter overhead.</p>
 </section>

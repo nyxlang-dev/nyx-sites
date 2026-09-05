@@ -33,7 +33,7 @@
 <h1 class="doc-title">Sleep and Timers</h1>
 </header>
 <article class="recipe">
-<div class="recipe-lede prose"><p><code>time_ms()</code> returns the current wall-clock time in milliseconds as an <code>int</code>. Subtracting two readings gives an elapsed duration. <code>sleep(ms)</code> suspends the current thread for the specified number of milliseconds.</p></div>
+<div class="recipe-lede prose"><p><code>time_ms()</code> returns a monotonic timestamp in milliseconds as an <code>int</code>. Subtracting two readings gives an elapsed duration. <code>sleep(ms)</code> suspends the current thread for the specified number of milliseconds.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">37-sleep-timer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/37-sleep-timer.nx">Source →</a></div>
 <div class="panel-body"><pre><span class="cm">// Timer y sleep: medir tiempo transcurrido con time_ms() y pausar con sleep()</span>
@@ -80,7 +80,7 @@ duracion loop: 0ms</pre></div>
 <h2 class="recipe-head">How it works</h2>
 <div class="recipe-prose"><p><code>time_ms()</code> is a thin wrapper around the system clock, returning a monotonic millisecond timestamp suitable for duration measurements. Taking the difference <code>t1 - t0</code> after a <code>sleep(500)</code> should produce a value at or just above 500, depending on OS scheduler precision.</p>
 <p>The second measurement wraps a tight loop summing integers from 0 to 999 999. The result — 499 999 500 000 — is the standard arithmetic series sum <code>n*(n-1)/2</code> for <code>n = 1 000 000</code>. The duration rounds down to zero because LLVM optimizes the loop aggressively at native code generation time.</p>
-<p>Both <code>time_ms</code> and <code>sleep</code> are built-in functions available without any import. They are implemented in the runtime's <code>time.c</code> module and map directly to <code>clock_gettime(CLOCK_MONOTONIC)</code> and <code>nanosleep</code> on Linux.</p></div>
+<p>Both <code>time_ms</code> and <code>sleep</code> are built-in functions available without any import. They are implemented in the runtime and map directly to <code>clock_gettime(CLOCK_MONOTONIC)</code> and <code>nanosleep</code> on Linux.</p></div>
 </article>
 <nav class="doc-nav" aria-label="Previous and next recipe">
 <a class="doc-nav-link doc-nav-prev" href="/by-example/36-defer-cleanup.html"><span class="label">← Previous</span><span class="doc-nav-name">Defer and Cleanup</span></a>
