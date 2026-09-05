@@ -37,9 +37,14 @@ if ! nyx gen.nx --out static-next; then
     exit 1
 fi
 
-# ── 2. install.sh (shim, texto, tal cual) ───────────────────────────────
-echo "[2/4] install.sh (copia textual)"
+# ── 2. install.sh (shim, texto) + logo.png (binario) ────────────────────
+# logo.png: la ruta /logo.png sigue REGISTRADA en src/main.nx y read_file()
+# de un archivo inexistente devuelve "" — sin esta copia el cutover dejaba
+# un 200 image/png de 0 bytes, que es peor que servir el archivo. `cp`
+# (nunca write_file de Nyx: no es binary-safe).
+echo "[2/4] install.sh (copia textual) + logo.png (copia binaria)"
 cp static/install.sh static-next/install.sh
+cp static/logo.png static-next/logo.png
 
 # ── 3. Legado: learn/, by-example/, shared/nyx-design-system.css ───────
 # cp -r (nunca con Nyx: write_file no es binary-safe y estos árboles
@@ -108,8 +113,13 @@ sed -i 's|href="/by-example/20-generics.html"|href="/by-example/20-spawn-channel
 sed -i 's|href="/es/by-example/20-generics.html"|href="/es/by-example/20-spawn-channel.html"|' \
     static-next/es/by-example/21-traits.html
 
-# 4b. En los dos índices de «The Nyx Book»: elimina la columna de footer
-# "Products"/"Productos" (nyx-kv, nyx-serve, nyx-proxy) — awk en vez de
+# 4b. En TODAS las páginas de «The Nyx Book» (los dos índices Y los 72
+# capítulos): elimina la columna de footer "Products"/"Productos" (nyx-kv,
+# nyx-serve, nyx-proxy). Aplicarlo sólo a los índices dejaba 216 enlaces
+# cuya ETIQUETA es un nombre de producto (la prohibición del plan) y cuyo
+# DESTINO es la guía (el sed de 4a los redirige a /docs/) — lo peor de los
+# dos mundos. La forma del footer es la misma en índice y capítulo, así que
+# el mismo awk sirve para las 74 páginas de cada idioma — awk en vez de
 # sed multilínea (mismo criterio que strip_pre en check-content.sh: sed/awk
 # no manejan bien un patrón repartido en varias líneas sin volverse
 # ilegibles). Estado: guarda la línea de apertura del footer-col; si la
@@ -142,8 +152,9 @@ strip_products_footer_col() {
         END { if (pending != "") print pending }
     ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 }
-strip_products_footer_col "static-next/learn/index.html"
-strip_products_footer_col "static-next/es/learn/index.html"
+for f in static-next/learn/*.html static-next/es/learn/*.html; do
+    strip_products_footer_col "$f"
+done
 
 # 4c. Enlace a Playground en el nav de learn (no existe) y en el footer de
 # by-example/index.html (EN y ES) — se elimina.
@@ -176,5 +187,37 @@ done
 for f in static-next/es/learn/*.html; do
     patch_book_page "$f" "es"
 done
+
+# 4e. by-example legado, fase 1 (decisión del coordinador de la review final,
+# revisable por Ottavio): el recetario se SIGUE sirviendo — los AGENTS.md que
+# siembra `nyx init` enlazan a mano /by-example/ y el esquema NN-slug.html —
+# pero no se deja indexable la parte que habla de productos, ni se publican
+# nombres de producto como títulos de sección.
+#
+#   (a) noindex,follow en las recetas 71-100 (las de nyx-kv/serve/proxy/queue/
+#       db y los full-stack que las usan). `follow` a propósito: las URLs
+#       siguen respondiendo 200 y sus enlaces internos siguen valiendo.
+#   (b) los tres <h2> con nombre de producto pasan a títulos neutrales.
+#
+# El CONTENIDO de las recetas se deja como está: la fase 2 las regenera.
+for f in static-next/by-example/7[1-9]-*.html \
+         static-next/by-example/[89][0-9]-*.html \
+         static-next/by-example/100-*.html \
+         static-next/es/by-example/7[1-9]-*.html \
+         static-next/es/by-example/[89][0-9]-*.html \
+         static-next/es/by-example/100-*.html; do
+    sed -i '/<\/head>/i\    <meta name="robots" content="noindex,follow">' "$f"
+done
+
+sed -i \
+    -e 's|<h2>nyx-kv (Key-Value Store)</h2>|<h2>Key-value store</h2>|' \
+    -e 's|<h2>nyx-serve (Web Framework)</h2>|<h2>Web framework</h2>|' \
+    -e 's|<h2>nyx-proxy (Reverse Proxy)</h2>|<h2>Reverse proxy</h2>|' \
+    static-next/by-example/index.html
+sed -i \
+    -e 's|<h2>nyx-kv (Almacén Clave-Valor)</h2>|<h2>Almacén clave-valor</h2>|' \
+    -e 's|<h2>nyx-serve (Framework Web)</h2>|<h2>Framework web</h2>|' \
+    -e 's|<h2>nyx-proxy (Proxy Reverso)</h2>|<h2>Proxy inverso</h2>|' \
+    static-next/es/by-example/index.html
 
 echo "gen-site: static-next listo (generado + legado parcheado)"

@@ -532,10 +532,13 @@ check_i() {
     # install.sh se suma acá aparte (no en legacy_prune_args: A-D lo
     # descartan solo por extensión, .sh no es .html/.css/.js — pero el
     # listado de I no filtra por extensión) por la misma razón de fondo:
-    # es el shim que copia gen-site.sh, gen.nx tampoco lo genera.
+    # es el shim que copia gen-site.sh, gen.nx tampoco lo genera. logo.png
+    # va por la misma puerta: la ruta /logo.png sigue registrada en
+    # src/main.nx y gen-site.sh copia el archivo con `cp` (binario), gen.nx
+    # no lo produce.
     legacy_prune_args "$root"
     root_files=$(find "$root" -type f "${LEGACY_PRUNE[@]}" \
-        -not -path "$root/install.sh" 2>/dev/null \
+        -not -path "$root/install.sh" -not -path "$root/logo.png" 2>/dev/null \
         | sed "s#^$root/##" | sort)
     rm -rf "$fresh"
 
