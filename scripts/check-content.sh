@@ -486,10 +486,13 @@ check_g() {
 
     if [ -d "$root/es" ]; then
         local en_files es_files only_en only_es common
+        # .cutover-rollback: estado operativo, no contenido (ver check_i). Un
+        # archivo que no es de ningún idioma no declara paridad EN/ES.
         en_files=$(find "$root" -type f \
             -not -path "$root/es/*" -not -path "$root/learn/*" \
             -not -path "$root/shared/*" \
-            -not -name "install.sh" -not -name "logo.png" 2>/dev/null \
+            -not -name "install.sh" -not -name "logo.png" \
+            -not -name ".cutover-rollback" 2>/dev/null \
             | sed "s#^$root/##" | sort)
         es_files=$(find "$root/es" -type f \
             -not -path "$root/es/learn/*" 2>/dev/null \
@@ -684,8 +687,14 @@ check_i() {
     # src/main.nx y gen-site.sh copia el archivo con `cp` (binario), gen.nx
     # no lo produce.
     legacy_prune_args "$root"
+    # .cutover-rollback: marcador de la ventana de rollback (lo escribe
+    # cutover-static.sh al hacer swap, lo borra el rollback). No es contenido
+    # ni lo produce gen.nx: es estado operativo que vive dentro del árbol para
+    # viajar con él en el mv --exchange. Se ignora explícitamente, o cada
+    # corrida post-swap lo reportaría como huérfano.
     root_files=$(find "$root" -type f "${LEGACY_PRUNE[@]}" \
-        -not -path "$root/install.sh" -not -path "$root/logo.png" 2>/dev/null \
+        -not -path "$root/install.sh" -not -path "$root/logo.png" \
+        -not -name ".cutover-rollback" 2>/dev/null \
         | sed "s#^$root/##" | sort)
     rm -rf "$fresh"
 

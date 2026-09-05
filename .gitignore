@@ -18,3 +18,11 @@ __pycache__/
 # (static-next/ SÍ se commitea — es la salida que reemplaza a static/).
 nyxlang.com/static-next.tmp/
 nyxlang.com/.preview.pid
+
+# Marcador de la ventana de rollback: lo escribe `cutover-static.sh swap`
+# DENTRO del árbol que queda como static-next/ (para viajar con él en el
+# mv --exchange) y lo borra el rollback. Es estado operativo, no contenido:
+# si se commiteara, un clon nuevo traería una ventana de rollback que no
+# existe y gen-site.sh abortaría sin motivo.
+nyxlang.com/static/.cutover-rollback
+nyxlang.com/static-next/.cutover-rollback

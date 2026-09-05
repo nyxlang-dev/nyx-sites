@@ -34,6 +34,24 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SITE_DIR="$REPO_ROOT/nyxlang.com"
 cd "$SITE_DIR"
 
+# ── 0a. Ventana de rollback abierta: no se regenera ─────────────────────────
+# Después de un swap, static-next/ NO es «lo próximo a publicar»: es el sitio
+# ANTERIOR, o sea el rollback (README, §Cutover). Regenerarlo lo pisa y cierra
+# la ventana en silencio — después `cutover-static.sh rollback` aborta con un
+# mensaje que diagnostica mal la situación («no hay nada anterior que
+# restaurar»). Como `make verify` depende de `gen`, reverificar después de
+# publicar es un movimiento natural del operador, así que la guarda es
+# mecánica y no sólo una línea de runbook. El marcador lo pone el swap y lo
+# quita el rollback.
+if [ -f static-next/.cutover-rollback ] && [ "${FORCE_GEN:-0}" != "1" ]; then
+    echo "error: static-next/ es el ROLLBACK de un swap ya aplicado, no el sitio próximo." >&2
+    echo "       (marcador: $SITE_DIR/static-next/.cutover-rollback)" >&2
+    sed 's/^/       /' static-next/.cutover-rollback >&2
+    echo "       Para volver atrás:  bash scripts/cutover-static.sh rollback nyxlang.com" >&2
+    echo "       Para regenerar igual (cierra la ventana de rollback):  FORCE_GEN=1 make gen" >&2
+    exit 1
+fi
+
 # ── 0. Lo que gen.nx pasó a producir y antes se copiaba ─────────────────────
 # El recetario se GENERA desde la fase 2. Sin este borrado, las páginas de la
 # versión anterior que gen.nx ya no produce (una receta excluida, un rename)

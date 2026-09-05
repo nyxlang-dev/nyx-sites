@@ -58,6 +58,15 @@ hasta entonces el rollback vuelve a un sitio que todavía nombra productos en
    bash scripts/sync-recipes.sh --check-mirror                  # 0 diferencias tras el push
 ```
 
+**Entre el paso 5 y el cierre de la ventana de rollback, NO corras `make gen`
+ni `make verify`**: los dos reescriben `static-next/`, que después del swap ES
+el sitio anterior — el rollback. Si ya pasó, deshaz el swap con `git checkout
+-- nyxlang.com/static nyxlang.com/static-next` ANTES del commit del paso 7.
+Desde la review final hay además una guarda mecánica: `swap` deja un marcador
+`.cutover-rollback` en el árbol que queda como `static-next/`, `gen-site.sh`
+aborta mientras ese archivo exista (`FORCE_GEN=1 make gen` lo ignora a
+propósito) y `rollback` lo retira. El marcador no se commitea (`.gitignore`).
+
 **Paso 8, no opcional (fase 2):** los 69 enlaces «Source →» del recetario NO
 apuntan al monorepo privado sino al mirror público
 (`github.com/nyxlang-dev/nyx/blob/main/examples/by-example/<slug>.nx`), y ese

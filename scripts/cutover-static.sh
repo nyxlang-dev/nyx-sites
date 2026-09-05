@@ -31,6 +31,14 @@
 #              nunca se hizo el swap — no hay nada que revertir). Mismo
 #              rc=2 que swap si la verificación posterior falla.
 #
+# VENTANA DE ROLLBACK. Después del swap, static-next/ ya no es «lo próximo a
+# publicar»: es el sitio ANTERIOR, o sea el rollback. Un `make gen` ahí lo
+# reescribe y la ventana se cierra sin que nadie lo diga (después, `rollback`
+# aborta con un mensaje que diagnostica mal: «no hay nada anterior que
+# restaurar»). Por eso `swap` deja un marcador $ROLLBACK_MARK en el árbol que
+# queda como static-next/, gen-site.sh ABORTA mientras ese archivo exista
+# (salvo FORCE_GEN=1) y `rollback` lo borra al revertir.
+#
 # El `mv --exchange` es atómico: o se aplicó entero o no se aplicó. El único
 # estado "a mitad de camino" posible es que el intercambio haya salido bien
 # pero la VERIFICACIÓN posterior falle (p.ej. el servidor tarda en responder)
@@ -59,6 +67,12 @@ case "$ACTION" in
         exit 1
         ;;
 esac
+
+# Nombre del marcador de ventana de rollback. Vive DENTRO del árbol, así que
+# viaja con él en el mv --exchange: escrito en static-next/ después del swap,
+# vuelve a static/ si alguien revierte, y por eso el rollback borra los dos
+# caminos posibles.
+ROLLBACK_MARK=".cutover-rollback"
 
 abort() {
     echo "ABORTADO: $*" >&2
@@ -288,6 +302,20 @@ $dirty"
     SWAPPED=1
     echo "hecho: static/ y static-next/ se intercambiaron (una sola syscall, atómica)."
 
+    # El árbol que ACABA de quedar en static-next/ es el sitio anterior: el
+    # rollback. Se marca para que gen-site.sh no lo pise sin querer.
+    {
+        echo "# VENTANA DE ROLLBACK — lo escribió scripts/cutover-static.sh al hacer swap."
+        echo "# Este árbol es el sitio ANTERIOR: es a lo que vuelve"
+        echo "#   bash scripts/cutover-static.sh rollback $SITE_ARG"
+        echo "# Mientras exista este archivo, gen-site.sh (make gen / make verify) ABORTA:"
+        echo "# regenerar static-next/ acá pisa el rollback y cierra la ventana en silencio."
+        echo "# Lo borra el rollback. Para regenerar igual: FORCE_GEN=1 make gen"
+        echo "swap: $(date -Is)"
+        echo "generacion_guardada: $gen_now"
+    } > "$staticn/$ROLLBACK_MARK"
+    echo "marcador de rollback: $staticn/$ROLLBACK_MARK (gen-site.sh aborta mientras exista)"
+
     # rc≠0 si la verificación falló: el intercambio YA se aplicó (es atómico),
     # así que el código de salida es la única señal de «hay que ir a mirar». Sin
     # esto, `cutover-static.sh swap … && echo ok` daba verde falso con seis
@@ -326,6 +354,13 @@ cmd_rollback() {
     fi
     SWAPPED=1
     echo "hecho: static/ y static-next/ volvieron a intercambiarse."
+
+    # El marcador viaja con el árbol: escrito en static-next/ por el swap,
+    # después de revertir está en static/. Se borran los dos caminos por si
+    # alguien hizo swap dos veces o lo copió a mano — `rm -f` no falla si no
+    # está.
+    rm -f "$static/$ROLLBACK_MARK" "$staticn/$ROLLBACK_MARK"
+    echo "marcador de rollback retirado: gen-site.sh vuelve a generar sin FORCE_GEN."
 
     local verify_ok=0
     verify_site "anterior" "$site_abs" || verify_ok=1
