@@ -19,11 +19,18 @@
 #                                           copia difiere del monorepo, si falta
 #                                           o sobra alguna, o si la versión de
 #                                           content/site.toml está desactualizada
-#   bash scripts/sync-recipes.sh --drift    inventario de DRIFT: por cada receta
-#                                           publicada, si el código que muestra
-#                                           el recetario VIEJO ya no coincide con
-#                                           el .nx de hoy. Escribe (y muestra)
-#                                           content/by-example/DRIFT.md
+#   bash scripts/sync-recipes.sh --drift    MODO EN RETIRO. Inventario de DRIFT:
+#                                           por cada receta publicada, si el
+#                                           código que mostraba el recetario
+#                                           VIEJO ya no coincide con el .nx de
+#                                           hoy. Necesita ese árbol viejo, que
+#                                           la fase 2 del rediseño reemplaza por
+#                                           el recetario generado: cuando no lo
+#                                           encuentra, avisa y sale 0 sin tocar
+#                                           content/by-example/DRIFT.md, que
+#                                           quedó CONGELADO como inventario
+#                                           histórico. Se borra junto con el
+#                                           modo cuando se limpie la fase 2.
 #
 # Variables:
 #   NYX_MONOREPO   raíz del monorepo del lenguaje (default /home/admin/nyx/lang)
@@ -141,6 +148,19 @@ old_published_code() {
 }
 
 if [ "$MODE" = "drift" ]; then
+    # El modo compara contra el recetario VIEJO (páginas con <h2>Code</h2>
+    # escritas a mano). Desde la fase 2 el árbol publicado es el generado, que
+    # no tiene ese marcador: sin esta guarda, --drift informaría «receta nueva»
+    # para las 69 y sobreescribiría DRIFT.md con un inventario falso. Avisar y
+    # salir 0 es lo correcto: no hay nada que medir, y no es un error.
+    probe="$OLD_ROOT/by-example/01-hello-world.html"
+    if [ ! -f "$probe" ] || ! grep -q '<h2>Code</h2>' "$probe"; then
+        echo "sync-recipes --drift: no hay recetario VIEJO en $OLD_ROOT (páginas con <h2>Code</h2>)."
+        echo "  El modo compara contra el sitio anterior a la fase 2 y se retira con él."
+        echo "  content/by-example/DRIFT.md queda como está: es un inventario histórico congelado."
+        echo "  Para medir contra otro árbol: OLD_ROOT=<ruta> bash scripts/sync-recipes.sh --drift"
+        exit 0
+    fi
     tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
     out="$CONTENT/DRIFT.md"
     drifted=0; equal=0; nopage=0; total=0

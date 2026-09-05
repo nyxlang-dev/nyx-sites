@@ -1,5 +1,15 @@
 # DRIFT del recetario — código publicado vs. `.nx` del monorepo
 
+> **CONGELADO — inventario histórico, no un archivo vivo.** Es la foto que se
+> tomó el 2026-09-06 para dirigir la revisión de prosa del recetario: 71 recetas
+> publicadas entonces, 18 con el código desfasado. Después de esa revisión, `31`
+> y `63` quedaron EXCLUIDAS (`reason = "broken-with-0.31.0"` en `recipes.toml`)
+> y las publicadas pasaron a ser 69, así que las filas de abajo hablan de un
+> alcance que ya no es el vigente. El modo `--drift` que lo generó necesita el
+> recetario VIEJO —el escrito a mano, con `<h2>Code</h2>`—, que la fase 2
+> reemplaza por el generado: desde entonces avisa y sale 0 sin escribir nada.
+> Este archivo y ese modo se borran juntos cuando se limpie la fase 2.
+
 Generado por `bash scripts/sync-recipes.sh --drift`. NO se edita a mano.
 
 Compara, por cada receta publicada, el código que muestra el recetario VIEJO

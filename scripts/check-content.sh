@@ -64,7 +64,9 @@
 #      sintético del autotest, que no pretende ser un sitio generado).
 #   J. Versión: `nyx --version` (el toolchain del PATH) tiene que coincidir
 #      con `version` de content/site.toml y con TODO literal X.Y.Z bajo
-#      content/docs/ y content/landing/. Sin esto, el próximo bump del
+#      content/docs/, content/landing/ y content/by-example/. Un número
+#      punteado más largo (una IPv4 como 127.0.0.1, que el recetario publica)
+#      NO cuenta como literal de versión — ver `version_literals`. Sin esto, el próximo bump del
 #      lenguaje deja la landing con un sello viejo y la guía enseñando
 #      `nyx --version → nyx 0.31.0` — exactamente el defecto que este
 #      rediseño existe para reparar. Un literal que NO es la versión del
@@ -78,11 +80,29 @@
 #      primera línea del fragmento, fuera de todo <pre>.
 #   K. HTML publicado sin agujeros: ningún <title></title>, ningún
 #      content="" en la meta description, ningún <h1>/<h2> vacío y ningún
-#      `{{` residual, fuera del LEGADO. Una clave i18n ausente interpola ""
+#      `{{` residual FUERA de <pre> y de <code>, todo fuera del LEGADO.
+#      La excepción de <pre>/<code> es la convención de la fase 2: ahí `{{`
+#      es contenido (la receta 102 enseña std/template y muestra su sintaxis
+#      en el código y en la explicación), no una interpolación sin resolver.
+#      Una clave i18n ausente interpola ""
 #      en silencio (documentado en src/gen/render.nx:18) y title_key/desc_key
 #      se resuelven con get_or(..., ""), así que un `stem` mal escrito
 #      publica un <title>/<h1> vacío en los DOS idiomas sin que G (que
 #      compara EN contra ES, no contra un valor esperado) diga nada.
+#
+#   L. El recetario publicado no tiene drift con el monorepo:
+#      `scripts/sync-recipes.sh --check`. Es la única guardia que mira FUERA
+#      del repo (necesita examples/by-example/ del monorepo del lenguaje); si
+#      no lo encuentra, avisa con ⚠ y no falla.
+#
+#   QUÉ MIRA CADA CHECK. Sobre el ÁRBOL PUBLICADO (ROOT): A, B, C, D, E, F,
+#   K y la primera mitad de G (paridad de rutas y de <pre>/<h2> entre ROOT/ y
+#   ROOT/es/). Sobre content/ del sitio: J (literales de versión), L (drift
+#   del recetario), la segunda mitad de G (claves de i18n, pares
+#   *.en.html/*.es.html y prosa pendiente) y H, que mira las DOS cosas
+#   (ROOT/es/ y content/**/*.es.*). I compara ROOT contra una generación
+#   fresca, o sea las dos puntas a la vez. `content/` incluye el recetario:
+#   content/by-example/ son sidecars de prosa, y se juzgan como contenido.
 #
 #   Autotest (control positivo): corre PRIMERO, siempre. Crea un SITIO
 #      temporal (content/ + static-next/) con errores plantados a propósito
@@ -105,41 +125,28 @@
 #   lo mismo que nada sospechoso) — rc=0 sobre la nada. Si falta, imprime
 #   «GUARDIA SIN MATERIAL» y sale 2, mismo trato que el autotest roto.
 #
-# LEGADO (TRANSITORIO — fix round 1, ruling del coordinador): en la fase 1
-# del rediseño, static-next/ tiene que seguir sirviendo el by-example VIEJO
-# — los AGENTS.md que siembra `nyx init` enlazan a mano
-# https://nyxlang.com/by-example/, así que la T7 va a copiar tal cual a
-# static-next/ los directorios learn/, es/learn/, by-example/, es/by-example/
-# y el archivo shared/nyx-design-system.css (las páginas legado lo
-# necesitan). Mientras ese contenido no se vuelva a generar (fase 2:
-# by-example regenerado por gen.nx), A/B/C/D no lo escanean — sería puro
-# ruido sobre contenido que nadie tocó.
+# LEGADO (PERMANENTE, lo que queda tras la fase 2): «The Nyx Book»
+# (learn/, es/learn/) y su hoja shared/nyx-design-system.css, que
+# gen-site.sh copia tal cual de static/ y que nadie reescribe. A, B, C, D,
+# H e I no lo escanean (via legacy_prune_args) — sería ruido sobre
+# contenido que ya no se mantiene y que gen.nx no produce. E (anclas
+# muertas) y F (enlaces internos) SÍ lo escanean completo: son regresiones
+# reales incluso en contenido legado, y gen-site.sh es quien parchea sus
+# anclas. G lo excluye igual que a `shared/`: no declara paridad EN/ES bajo
+# este esquema. I suma además install.sh y logo.png, aparte de
+# legacy_prune_args: A-D ya los descartan por extensión (.sh/.png no son
+# .html/.css/.js), pero el listado de I no filtra por extensión y gen.nx
+# tampoco genera esos dos archivos, que copia gen-site.sh.
 #
-# CONSECUENCIA CONOCIDA de esa exclusión (deuda de fase 2, no una regresión
-# — ya pasa hoy en producción): las 276 páginas del legado (101 by-example
-# EN + 101 ES + 37 learn EN + 37 ES) cargan Google Fonts
-# (fonts.googleapis / fonts.gstatic). El check D lo detectaría, pero el
-# legado está exento, así que la fase 1 NO cumple el criterio del plan
-# «ninguna página con Google Fonts» para ese material. Se retira cuando la
-# fase 2 regenere by-example y learn con el sistema de diseño nuevo (que no
-# tiene una sola fuente externa); ahí estas rutas salen de la lista y D las
-# empieza a ver. E (anclas muertas) y F (enlaces
-# internos) SÍ lo escanean completo: son regresiones reales incluso en
-# contenido legado, y la T7 es quien parchea sus anclas. G lo excluye igual
-# que a `shared/`: no es contenido que declare paridad EN/ES bajo este
-# esquema. Cuando by-example/ se regenere, `by-example/` y `es/by-example/`
-# salen de esta lista (learn/es/learn y shared/nyx-design-system.css se
-# quedan: son legado permanente, no de la fase 1 nada más).
+# by-example/ y es/by-example/ YA NO SON LEGADO (fase 2): el recetario lo
+# genera gen.nx desde content/by-example/, así que TODOS los checks lo
+# miran. Sus 138 páginas ya no cargan Google Fonts.
 #
-# LEGADO en H e I (T7, gen-site.sh): la misma lista de arriba (learn/,
-# es/learn/, by-example/, es/by-example/, shared/nyx-design-system.css —
-# via legacy_prune_args, sin duplicar rutas) pasa a excluirse TAMBIÉN en
-# H (español neutro: ese contenido es preexistente, se regenera recién en
-# la fase 2) y en I (salida al día: gen.nx no lo produce, lo copia
-# gen-site.sh — no son huérfanos reales). I suma además install.sh solo,
-# aparte de legacy_prune_args: A-D ya lo descartan por extensión (.sh no
-# es .html/.css/.js) así que no hacía falta en esa lista, pero el listado
-# de I no filtra por extensión y gen.nx tampoco genera ese shim.
+# DEUDA CONOCIDA que queda: las 74 páginas de learn/ y es/learn/ SÍ cargan
+# Google Fonts (fonts.googleapis / fonts.gstatic). El check D lo detectaría,
+# pero learn/ está exento, así que el sitio todavía no cumple el criterio
+# del plan «ninguna página con Google Fonts» para ese material. Se salda el
+# día que el libro se regenere o se retire; ahí learn/ sale de esta lista.
 #
 # set -u sin pipefail (grep sin coincidencias sale 1, y con -e o pipefail
 # eso mataría el script en la primera búsqueda vacía — la misma regla que
@@ -191,17 +198,20 @@ CHECK_LAST_WARNS=0
 # C y D — no por E/F (que sí escanean el legado) ni por G (que tiene su
 # propia lista de exclusiones, learn/shared/install.sh/by-example, porque
 # compara EN contra ES en vez de listar un solo lado).
-# Predicados -not -path del LEGADO (learn/es/learn/by-example/es/by-example
-# + shared/nyx-design-system.css) para un $root dado. Una sola función que
-# find_nolegacy (A-D), check_h y check_i (T7) reutilizan tal cual — no
-# duplicar esta lista de rutas en más de un lugar.
+# Predicados -not -path del LEGADO (learn/, es/learn/ y
+# shared/nyx-design-system.css) para un $root dado. Una sola función que
+# find_nolegacy (A-D), check_h y check_i reutilizan tal cual — no duplicar
+# esta lista de rutas en más de un lugar.
+#
+# by-example/ y es/by-example/ SALIERON de esta lista en la fase 2: el
+# recetario lo genera gen.nx desde content/by-example/, así que todos los
+# checks lo miran como contenido propio (y el check I lo compara contra la
+# generación fresca, en vez de tratarlo como huérfano).
 legacy_prune_args() {
     local root="$1"
     LEGACY_PRUNE=(
         -not -path "$root/learn/*"
         -not -path "$root/es/learn/*"
-        -not -path "$root/by-example/*"
-        -not -path "$root/es/by-example/*"
         -not -path "$root/shared/nyx-design-system.css"
     )
 }
@@ -272,6 +282,35 @@ strip_pre() {
             print out
         }
     ' "$1"
+}
+
+# Gemelo de strip_pre para <code>…</code>, pero como FILTRO de stdin (se
+# encadena después de strip_pre). Usado SOLO por el sub-check de `{{` de K.
+strip_code() {
+    awk '
+        {
+            line = $0
+            out = ""
+            while (length(line) > 0) {
+                if (!incode) {
+                    i = index(line, "<code")
+                    if (i == 0) { out = out line; line = ""; break }
+                    out = out substr(line, 1, i - 1)
+                    line = substr(line, i)
+                    gt = index(line, ">")
+                    if (gt == 0) { incode = 1; line = ""; break }
+                    line = substr(line, gt + 1)
+                    incode = 1
+                } else {
+                    j = index(line, "</code>")
+                    if (j == 0) { line = ""; break }
+                    line = substr(line, j + 7)
+                    incode = 0
+                }
+            }
+            print out
+        }
+    '
 }
 
 # ── A. Denylist de productos + herramientas de IA fuera de --agent= ─────
@@ -412,20 +451,24 @@ EOF
 }
 
 # ── G. Paridad EN/ES ──────────────────────────────────────────────────────
+# site_dir se deriva de $root (igual que check_j, y no de la global SITE_DIR)
+# para que el autotest mire el content/ de SU sitio-fixture y no el real: con
+# la global, el control positivo leía los diccionarios y los sidecars de
+# verdad y mezclaba sus hallazgos con los plantados.
 check_g() {
     local root="$1"
+    local site_dir; site_dir="$(dirname "$root")"
     local fails=0 warns=0
 
     if [ -d "$root/es" ]; then
         local en_files es_files only_en only_es common
         en_files=$(find "$root" -type f \
             -not -path "$root/es/*" -not -path "$root/learn/*" \
-            -not -path "$root/by-example/*" \
             -not -path "$root/shared/*" \
             -not -name "install.sh" -not -name "logo.png" 2>/dev/null \
             | sed "s#^$root/##" | sort)
         es_files=$(find "$root/es" -type f \
-            -not -path "$root/es/learn/*" -not -path "$root/es/by-example/*" 2>/dev/null \
+            -not -path "$root/es/learn/*" 2>/dev/null \
             | sed "s#^$root/es/##" | sort)
 
         only_en=$(comm -23 <(printf '%s\n' "$en_files") <(printf '%s\n' "$es_files"))
@@ -475,7 +518,7 @@ EOF2
     fi
 
     # Claves de i18n
-    local en_toml="$SITE_DIR/content/i18n/en.toml" es_toml="$SITE_DIR/content/i18n/es.toml"
+    local en_toml="$site_dir/content/i18n/en.toml" es_toml="$site_dir/content/i18n/es.toml"
     if [ -f "$en_toml" ] && [ -f "$es_toml" ]; then
         local en_keys es_keys
         # [a-z_0-9], no [a-z_]: una clave con un dígito (p.ej. `nav_v2 = …`)
@@ -491,7 +534,7 @@ EOF2
     fi
 
     # content/**/*.en.html <-> *.es.html
-    local content_dir="$SITE_DIR/content"
+    local content_dir="$site_dir/content"
     if [ -d "$content_dir" ]; then
         while IFS= read -r enf; do
             [ -z "$enf" ] && continue
@@ -509,7 +552,7 @@ EOF2
         # El rojo se apaga escribiendo la prosa, no borrando la palabra.
         while IFS= read -r todof; do
             [ -z "$todof" ] && continue
-            print_bad "[G] content: prosa pendiente (TODO) en ${todof#$SITE_DIR/}"
+            print_bad "[G] content: prosa pendiente (TODO) en ${todof#$site_dir/}"
             fails=$((fails + 1))
         done < <(grep -rl 'TODO' "$content_dir" --include='*.html' 2>/dev/null | sort)
     fi
@@ -527,12 +570,11 @@ EOF2
 check_h() {
     local root="$1"
     local files n=0
-    # LEGADO (T7): mismo criterio que A-D — es/learn y es/by-example son
-    # contenido preexistente que gen-site.sh copia tal cual de static/ y
-    # se regenera recién en la fase 2; hasta entonces el voseo que ya
-    # tenía no es una regresión de este rediseño. Reutiliza
-    # legacy_prune_args (las cláusulas de learn/ y by-example/ sin es/ son
-    # inertes acá, el find ya está anclado bajo "$root/es").
+    # LEGADO: mismo criterio que A-D — es/learn/ es contenido preexistente
+    # que gen-site.sh copia tal cual de static/ y que nadie reescribe; el
+    # voseo que ya tenía no es una regresión de este rediseño. Reutiliza
+    # legacy_prune_args (la cláusula de learn/ sin es/ es inerte acá: el
+    # find ya está anclado bajo "$root/es").
     legacy_prune_args "$root"
     files=$(find "$root/es" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
         "${LEGACY_PRUNE[@]}" 2>/dev/null | sort)
@@ -582,9 +624,10 @@ check_i() {
     fresh="$(mktemp -d "${TMPDIR:-/tmp}/check-content-fresh.XXXXXX")"
     (cd "$SITE_DIR" && nyx gen.nx --out "$fresh") >/dev/null 2>&1
     fresh_files=$(find "$fresh" -type f 2>/dev/null | sed "s#^$fresh/##" | sort)
-    # LEGADO (T7): la misma lista que A-D/H (legacy_prune_args) — gen.nx no
-    # produce learn/es/learn/by-example/es/by-example/shared/nyx-design-system.css,
-    # los copia gen-site.sh tal cual, así que no son huérfanos reales.
+    # LEGADO: la misma lista que A-D/H (legacy_prune_args) — gen.nx no
+    # produce learn/, es/learn/ ni shared/nyx-design-system.css: los copia
+    # gen-site.sh tal cual, así que no son huérfanos reales. by-example/ SÍ
+    # se compara desde la fase 2 (gen.nx lo genera).
     # install.sh se suma acá aparte (no en legacy_prune_args: A-D lo
     # descartan solo por extensión, .sh no es .html/.css/.js — pero el
     # listado de I no filtra por extensión) por la misma razón de fondo:
@@ -625,6 +668,31 @@ EOF
     fi
 
     CHECK_LAST_FAILS=$fails
+}
+
+# Literales X.Y.Z de un texto, SIN los que son parte de un número punteado más
+# largo: «127.0.0.1» contiene «127.0.0», que no es una versión sino una IPv4, y
+# el recetario publica varias (45-dns-resolve, 47-tcp-server). Se rechaza un
+# candidato si lo precede un dígito o un punto, o si lo sigue un dígito, o si lo
+# sigue un punto y otro dígito. awk con match() porque `grep -oE` no tiene
+# lookaround y el contexto de un byte es justo lo que hace falta mirar.
+version_literals() {
+    printf '%s\n' "$1" | awk '
+    {
+        base = 0
+        rest = $0
+        while (match(rest, /[0-9]+\.[0-9]+\.[0-9]+/)) {
+            s = RSTART; l = RLENGTH
+            lit = substr(rest, s, l)
+            before = (base + s > 1) ? substr($0, base + s - 1, 1) : ""
+            aft1 = substr($0, base + s + l, 1)
+            aft2 = substr($0, base + s + l + 1, 1)
+            if (before !~ /[0-9.]/ && aft1 !~ /[0-9]/ && !(aft1 == "." && aft2 ~ /[0-9]/))
+                print lit
+            base = base + s + l - 1
+            rest = substr($0, base + 1)
+        }
+    }'
 }
 
 # ── J. Versión publicada == versión del toolchain ────────────────────────
@@ -671,7 +739,8 @@ check_j() {
 
     local dirs d f exempt line lineno text lit checked=0
     dirs="$site_dir/content/docs
-$site_dir/content/landing"
+$site_dir/content/landing
+$site_dir/content/by-example"
     while IFS= read -r d; do
         [ -d "$d" ] || continue
         while IFS= read -r f; do
@@ -698,7 +767,7 @@ $lit
                     print_bad "[J] $f:$lineno: literal « $lit » != $nyx_ver (nyx --version) — si no es una versión del toolchain, márcalo con <!-- not-a-version: $lit -->"
                     fails=$((fails + 1))
                 done <<EOF
-$(printf '%s\n' "$text" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+$(version_literals "$text")
 EOF
             done < <(grep -nE '[0-9]+\.[0-9]+\.[0-9]+' "$f" 2>/dev/null)
         done < <(find "$d" -type f -name '*.html' 2>/dev/null | sort)
@@ -732,8 +801,7 @@ check_k() {
             'titulo vacio:<title>[[:space:]]*</title>' \
             'meta description vacia:name="description"[^>]*content=""' \
             'h1 vacio:<h1[^>]*>[[:space:]]*</h1>' \
-            'h2 vacio:<h2[^>]*>[[:space:]]*</h2>' \
-            'interpolacion residual:{{'
+            'h2 vacio:<h2[^>]*>[[:space:]]*</h2>'
         do
             label="${pat%%:*}"
             while IFS= read -r hit; do
@@ -742,6 +810,19 @@ check_k() {
                 n=$((n + 1))
             done < <(grep -nE -- "${pat#*:}" "$f" 2>/dev/null)
         done
+        # `{{` residual: FUERA de <pre> y de <code>. La convención (fase 2):
+        # dentro de un bloque de código o de un <code> inline, `{{` es el
+        # tema del que habla la página — la receta 102 enseña std/template y
+        # muestra `{{clave}}`, `{{{crudo}}}` y `{{#each}}` tanto en su código
+        # como en su explicación. Fuera de ahí sigue siendo lo que este check
+        # persigue: una interpolación que el generador no resolvió. strip_pre
+        # conserva una línea de salida por línea de entrada, así que los
+        # números de línea que reporta grep -n siguen siendo los del archivo.
+        while IFS= read -r hit; do
+            [ -z "$hit" ] && continue
+            print_bad "[K] interpolacion residual — $f:$hit"
+            n=$((n + 1))
+        done < <(strip_pre "$f" | strip_code | grep -nE -- '{{' 2>/dev/null)
     done <<EOF
 $files
 EOF
@@ -752,6 +833,46 @@ EOF
         print_bad "[K] $n agujero(s) en el HTML publicado"
     fi
     CHECK_LAST_FAILS=$n
+}
+
+# ── L. El recetario publicado sale del monorepo, sin drift ───────────────
+# El código de cada receta tiene UNA fuente de verdad: examples/by-example/ del
+# monorepo del lenguaje. `scripts/sync-recipes.sh --check` compara copia por
+# copia (y la versión de content/site.toml contra VERSION), sin escribir nada.
+# Sin esto, el sitio podía publicar código que el monorepo ya no tiene — que es
+# exactamente la clase de mentira que este rediseño existe para reparar.
+#
+# Este check mira content/, no el árbol publicado: es la única guardia que sale
+# del repo (necesita el monorepo). Si no lo encuentra, avisa con ⚠ y no falla —
+# un clon sin el monorepo al lado no puede verificar el drift, pero tampoco es
+# un hallazgo de contenido.
+check_l() {
+    local root="$1"
+    local site_dir; site_dir="$(dirname "$root")"
+
+    if [ ! -f "$site_dir/content/by-example/recipes.toml" ]; then
+        print_warn "[L] $site_dir/content/by-example/recipes.toml no existe — se salta (root sin recetario al lado)"
+        CHECK_LAST_FAILS=0
+        return
+    fi
+    local mono="${NYX_MONOREPO:-/home/admin/nyx/lang}"
+    if [ ! -d "$mono/examples/by-example" ]; then
+        print_warn "[L] no está $mono/examples/by-example — no se puede verificar el drift del recetario (¿NYX_MONOREPO?)"
+        CHECK_LAST_FAILS=0
+        return
+    fi
+
+    local log
+    log="$(mktemp "${TMPDIR:-/tmp}/check-content-recipes.XXXXXX")"
+    if bash "$REPO_ROOT/scripts/sync-recipes.sh" --check >"$log" 2>&1; then
+        print_ok "[L] $(tail -1 "$log")"
+        CHECK_LAST_FAILS=0
+    else
+        print_bad "[L] el recetario del sitio no coincide con el monorepo:"
+        sed 's/^/      /' "$log"
+        CHECK_LAST_FAILS=1
+    fi
+    rm -f "$log"
 }
 
 # ── Autotest (control positivo) — corre SIEMPRE primero ─────────────────
@@ -795,6 +916,11 @@ HTML
 <!-- not-a-version: 0.1.0 -->
 <p>La toolchain dice 9.9.9 y el proyecto de ejemplo va en 0.1.0.</p>
 HTML
+    # Par ES del fragmento, sin literales de versión: G exige que cada
+    # content/**/*.en.html tenga su .es.html, y el fixture tiene que ser un
+    # sitio bien formado en todo lo que NO es el error plantado. Sin literales
+    # para que J siga contando exactamente 2.
+    printf '<p>Par ES del fragmento del autotest.</p>\n' > "$site/content/docs/fixture.es.html"
 
     check_a "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: A no detectó el control positivo"; broken=1; }
     check_b "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: B no detectó el control positivo"; broken=1; }
@@ -846,17 +972,12 @@ check_floor() {
         broken=1
     fi
 
-    # OJO — "el legado" acá es MÁS ANGOSTO que `find_nolegacy` (A-D/G/H/I):
-    # solo learn/+es/learn/ (el legado PERMANENTE, nunca enlazado — la
-    # definición original de la T6, antes de que la T7 sumara by-example/
-    # como excepción TRANSITORIA de fase 1). Con la lista completa de
-    # find_nolegacy, tanto static-next (16 páginas propias: landing+docs)
-    # como static (2: solo index.html/es/index.html, todo lo demás es
-    # by-example/learn) quedan por debajo de cualquier piso razonable — el
-    # piso dejaría de medir "¿hay un sitio acá?" y pasaría a medir "¿ya se
-    # regeneró by-example?", que es el trabajo de I, no de esto. by-example
-    # es contenido real y enlazado (a diferencia de learn/): cuenta para
-    # "hay material", aunque A-D no lo escaneen todavía.
+    # "El legado" acá es learn/+es/learn/, que desde la fase 2 coincide con
+    # `find_nolegacy` salvo por shared/nyx-design-system.css (un .css, que
+    # este conteo de .html no mira igual). Se mantiene explícito y no se
+    # deriva de legacy_prune_args a propósito: el piso mide "¿hay un sitio
+    # acá?", y esa pregunta no debe cambiar de significado cada vez que un
+    # directorio entra o sale de la lista de exenciones.
     n=$(find "$root" -type f -name '*.html' \
         -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$n" -lt "$MIN_HTML_FILES" ]; then
@@ -877,7 +998,7 @@ run_autotest
 check_floor "$ROOT"
 
 TOTAL_FAIL=0
-for c in a b c d e f g h i j k; do
+for c in a b c d e f g h i j k l; do
     banner "check $c ($ROOT)"
     "check_$c" "$ROOT"
     TOTAL_FAIL=$((TOTAL_FAIL + CHECK_LAST_FAILS))
