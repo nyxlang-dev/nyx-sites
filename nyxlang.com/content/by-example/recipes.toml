@@ -1,0 +1,752 @@
+# content/by-example/recipes.toml — catálogo del recetario «Nyx por ejemplo».
+#
+# Fuente de verdad del ALCANCE: qué recetas se publican, en qué orden y bajo qué
+# categoría. Lo consumen `scripts/sync-recipes.sh` (copia de los .nx, stubs,
+# --check, --drift) y el generador (`gen.nx`, sección by-example).
+#
+# Claves PLANAS a propósito: std/toml (`toml_parse`) devuelve un Map<String> y
+# prefija cada clave con el nombre de la sección, así `[r24]` + `slug = "…"` se
+# lee como `r24.slug`. Todos los valores son strings (incluidos los 0/1), porque
+# eso es lo que devuelve el parser y lo que consume el motor de templates.
+#
+# El nombre de cada tabla es `r` + el número con cero a la izquierda:
+# `[r01]`…`[r70]`, `[r71]`…`[r100]`, `[r101]`, `[r102]`.
+#
+# Claves de cada tabla `[rNN]`:
+#   slug      nombre del archivo sin extensión, IDÉNTICO al .nx del monorepo
+#             (`examples/by-example/<slug>.nx`) y a la URL (`<slug>.html`).
+#   num       número de la receta, con cero a la izquierda, tal como se muestra.
+#   category  id de categoría (ver `categories`); estable, el nombre visible sale
+#             de los diccionarios i18n.
+#   excluded  "1" = NO se publica. Las recetas de los stacks extraídos (71-100) y
+#             54-resp-protocol quedan fuera del sitio: su código depende de
+#             productos que ya no viven en este repo. Sus URLs viejas
+#             (/by-example/71-kv-basic.html y compañía) DEJAN DE EXISTIR en la
+#             fase 2 — decisión del plan del rediseño, no un descuido.
+#   sidecar   "1" = su prosa (título, blurb, intro, salida, explicación) se
+#             extrajo del recetario viejo a content/by-example/<slug>.{en,es}.html.
+#             "0" = no hay prosa heredada: o está excluida, o es una receta nueva
+#             cuyo sidecar nace como STUB con TODO (101 y 102).
+#
+# La numeración NO es contigua ni ordinal: 54 falta, y 101/102 van al final. El
+# orden de publicación es el de `order`, no el de las claves de un Map.
+
+# Categorías, en orden de aparición en el índice.
+categories = "fundamentals,io-data,types-patterns,advanced,networking,concurrency,systems"
+
+# Recetas publicadas, en orden de índice y de la navegación prev/next.
+order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,31-iterator-enumerate,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,63-select-channel,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style"
+
+[r01]
+slug = "01-hello-world"
+num = "01"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r02]
+slug = "02-variables"
+num = "02"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r03]
+slug = "03-functions"
+num = "03"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r04]
+slug = "04-control-flow"
+num = "04"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r05]
+slug = "05-arrays"
+num = "05"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r06]
+slug = "06-maps"
+num = "06"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r07]
+slug = "07-strings"
+num = "07"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r08]
+slug = "08-structs"
+num = "08"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r09]
+slug = "09-enums"
+num = "09"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r10]
+slug = "10-closures"
+num = "10"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+
+[r11]
+slug = "11-file-read-write"
+num = "11"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r12]
+slug = "12-stdin-input"
+num = "12"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r13]
+slug = "13-cli-args"
+num = "13"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r14]
+slug = "14-env-vars"
+num = "14"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r15]
+slug = "15-json-parse"
+num = "15"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r16]
+slug = "16-json-serialize"
+num = "16"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r17]
+slug = "17-regex"
+num = "17"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r18]
+slug = "18-csv"
+num = "18"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r19]
+slug = "19-datetime"
+num = "19"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r20]
+slug = "20-spawn-channel"
+num = "20"
+category = "io-data"
+excluded = "0"
+sidecar = "1"
+
+[r21]
+slug = "21-traits"
+num = "21"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r22]
+slug = "22-trait-bounds"
+num = "22"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r23]
+slug = "23-derive-clone"
+num = "23"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r24]
+slug = "24-option-some-none"
+num = "24"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r25]
+slug = "25-result-ok-err"
+num = "25"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r26]
+slug = "26-try-operator"
+num = "26"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r27]
+slug = "27-if-let"
+num = "27"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r28]
+slug = "28-match-guard"
+num = "28"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r29]
+slug = "29-iterator-map-filter"
+num = "29"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r30]
+slug = "30-iterator-fold"
+num = "30"
+category = "types-patterns"
+excluded = "0"
+sidecar = "1"
+
+[r31]
+slug = "31-iterator-enumerate"
+num = "31"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r32]
+slug = "32-iterator-take-skip"
+num = "32"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r33]
+slug = "33-recursion"
+num = "33"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r34]
+slug = "34-sorting"
+num = "34"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r35]
+slug = "35-error-handling"
+num = "35"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r36]
+slug = "36-defer-cleanup"
+num = "36"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r37]
+slug = "37-sleep-timer"
+num = "37"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r38]
+slug = "38-crypto-hash"
+num = "38"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r39]
+slug = "39-random-uuid"
+num = "39"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r40]
+slug = "40-thread-spawn"
+num = "40"
+category = "advanced"
+excluded = "0"
+sidecar = "1"
+
+[r41]
+slug = "41-base64"
+num = "41"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r42]
+slug = "42-url-encode"
+num = "42"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r43]
+slug = "43-toml-config"
+num = "43"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r44]
+slug = "44-msgpack"
+num = "44"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r45]
+slug = "45-dns-resolve"
+num = "45"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r46]
+slug = "46-tcp-client"
+num = "46"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r47]
+slug = "47-tcp-server"
+num = "47"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r48]
+slug = "48-udp-socket"
+num = "48"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r49]
+slug = "49-http-get"
+num = "49"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r50]
+slug = "50-http-post"
+num = "50"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r51]
+slug = "51-http-server"
+num = "51"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r52]
+slug = "52-http-middleware"
+num = "52"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r53]
+slug = "53-websocket"
+num = "53"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r54]
+slug = "54-resp-protocol"
+num = "54"
+category = "networking"
+excluded = "1"
+sidecar = "0"
+
+[r55]
+slug = "55-sqlite"
+num = "55"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r56]
+slug = "56-csv-write"
+num = "56"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r57]
+slug = "57-mutex"
+num = "57"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r58]
+slug = "58-channel-patterns"
+num = "58"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r59]
+slug = "59-worker-pool"
+num = "59"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r60]
+slug = "60-producer-consumer"
+num = "60"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r61]
+slug = "61-waitgroup"
+num = "61"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r62]
+slug = "62-semaphore"
+num = "62"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r63]
+slug = "63-select-channel"
+num = "63"
+category = "concurrency"
+excluded = "0"
+sidecar = "1"
+
+[r64]
+slug = "64-fork-exec"
+num = "64"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r65]
+slug = "65-pipes"
+num = "65"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r66]
+slug = "66-signal-handling"
+num = "66"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r67]
+slug = "67-file-watcher"
+num = "67"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r68]
+slug = "68-process-control"
+num = "68"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r69]
+slug = "69-raw-terminal"
+num = "69"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r70]
+slug = "70-shebang-script"
+num = "70"
+category = "systems"
+excluded = "0"
+sidecar = "1"
+
+[r71]
+slug = "71-kv-basic"
+num = "71"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r72]
+slug = "72-kv-lists"
+num = "72"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r73]
+slug = "73-kv-hashes"
+num = "73"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r74]
+slug = "74-kv-auth"
+num = "74"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r75]
+slug = "75-kv-pubsub"
+num = "75"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r76]
+slug = "76-kv-expire"
+num = "76"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r77]
+slug = "77-kv-pipelined"
+num = "77"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r78]
+slug = "78-serve-routes"
+num = "78"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r79]
+slug = "79-serve-json-api"
+num = "79"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r80]
+slug = "80-serve-static"
+num = "80"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r81]
+slug = "81-serve-sessions"
+num = "81"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r82]
+slug = "82-serve-multithread"
+num = "82"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r83]
+slug = "83-serve-cors"
+num = "83"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r84]
+slug = "84-serve-fullstack"
+num = "84"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r85]
+slug = "85-proxy-config"
+num = "85"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r86]
+slug = "86-proxy-vhost"
+num = "86"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r87]
+slug = "87-proxy-health"
+num = "87"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r88]
+slug = "88-proxy-ratelimit"
+num = "88"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r89]
+slug = "89-proxy-tls-sni"
+num = "89"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r90]
+slug = "90-queue-enqueue"
+num = "90"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r91]
+slug = "91-queue-consumer"
+num = "91"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r92]
+slug = "92-db-sql"
+num = "92"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r93]
+slug = "93-db-transactions"
+num = "93"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r94]
+slug = "94-http2-server"
+num = "94"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r95]
+slug = "95-http2-frames"
+num = "95"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r96]
+slug = "96-rest-api"
+num = "96"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r97]
+slug = "97-realtime-pubsub"
+num = "97"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r98]
+slug = "98-microservice"
+num = "98"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r99]
+slug = "99-rate-limited-api"
+num = "99"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r100]
+slug = "100-production-stack"
+num = "100"
+category = "products"
+excluded = "1"
+sidecar = "0"
+
+[r101]
+slug = "101-file-errors-two-tier"
+num = "101"
+category = "io-data"
+excluded = "0"
+sidecar = "0"
+
+[r102]
+slug = "102-template-flask-style"
+num = "102"
+category = "advanced"
+excluded = "0"
+sidecar = "0"
