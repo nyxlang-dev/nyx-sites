@@ -214,7 +214,10 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* El comando de instalación es el objeto central de la página: va en grafito
    para que sea el único bloque oscuro del hero — y para que el prompt pueda
    ser ámbar (5.3:1 sobre grafito; sobre papel el ámbar no llegaría a AA). */
-.cmd {
+/* Selector con etiqueta a propósito: `.cmd` a secas también matchearía el
+   <span class="cmd"> que emite hl_shell dentro de un <pre>, y le pegaría el
+   borde y el fondo del bloque. El bloque del hero es un div; el token, un span. */
+div.cmd {
   margin-top: 34px;
   border: 1px solid var(--ink);
   background: var(--panel);
@@ -229,7 +232,7 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   border-bottom: 1px solid var(--panel-line);
 }
 .cmd-head .label { color: #9aa3ad; }
-.cmd .btn { color: var(--panel-ink); background: transparent; border-color: #4a5056; }
+div.cmd .btn { color: var(--panel-ink); background: transparent; border-color: #4a5056; }
 .cmd-body {
   display: flex;
   align-items: baseline;
@@ -321,8 +324,9 @@ code:not([class]) {
 .term-note { display: block; color: #7d8590; white-space: pre-wrap; margin: 0 0 10px 0; }
 .term-note:last-child { margin-bottom: 0; }
 
-/* Resaltado de sintaxis. En T2 los spans van a mano (el tokenizador llega en
-   la T3); las clases son las mismas que emitirá hl_nyx. */
+/* Resaltado de sintaxis. Las clases las emite src/gen/highlight.nx: hl_nyx da
+   kw/str/cm/num/ty/fn/op sobre código Nyx, hl_shell da prompt/cmd sobre bloques
+   de terminal. */
 .kw { color: #e6e7e4; font-weight: 700; }
 .str { color: #c9d1c3; }
 .cm  { color: #7d8590; }
@@ -330,6 +334,8 @@ code:not([class]) {
 .ty  { color: #a5c8ff; }
 .fn  { color: #e6e7e4; }
 .op  { color: #9aa3ad; }
+.prompt { color: var(--accent); font-weight: 700; }
+.cmd { color: var(--panel-ink); }
 
 /* ── 9. Listas numeradas (pasos de la guía) ────────────────────────────── */
 .steps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; }

@@ -47,7 +47,9 @@
 </div>
 </section>
 
-<!-- ── Muestra de código: sample.nx, verificado con nyx check ───────────── -->
+<!-- ── Muestra de código: sample.nx, resaltado por hl_nyx en gen.nx. El <pre>
+     va SIN data-lang a propósito: sample_code ya llega resaltado, y hl_pre_blocks
+     sólo entra en los <pre data-lang=...> que traen código en crudo. ───────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -58,7 +60,6 @@
 <div>
 <div class="panel">
 <div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
-<!-- T3: reemplazar por hl_nyx -->
 <div class="panel-body"><pre>{{{sample_code}}}</pre></div>
 </div>
 </div>
@@ -66,7 +67,7 @@
 <table class="kv kv-wide">
 <tr><th>{{sample_k_shows}}</th><td>{{sample_v_shows}}</td></tr>
 <tr><th>{{sample_k_checked}}</th><td><code>nyx check</code> — {{sample_v_checked}}</td></tr>
-<tr><th>{{sample_k_run}}</th><td><code>nyx run sample.nx</code></td></tr>
+<tr><th>{{sample_k_run}}</th><td><code>nyx sample.nx</code></td></tr>
 </table>
 </div>
 </div>

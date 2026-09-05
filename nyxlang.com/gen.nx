@@ -20,6 +20,7 @@
 
 import "src/gen/content"
 import "src/gen/render"
+import "src/gen/highlight"
 
 const CHECK_TMP_DIR: String = "static-next.tmp"
 
@@ -30,17 +31,32 @@ const CHECK_TMP_DIR: String = "static-next.tmp"
 // El cuerpo sale de templates/index.html (UN solo template para los dos
 // idiomas) + content/i18n/<lang>.toml. Los dos bloques largos que no caben en
 // una clave de diccionario viajan por `extra` como HTML crudo:
-//   · sample_code     — content/landing/sample.html, el resaltado a mano de
-//                       content/landing/sample.nx (T3 lo reemplaza por hl_nyx)
+//   · sample_code     — content/landing/sample.nx pasado por hl_nyx: el .nx es
+//                       la ÚNICA copia del código, el HTML se deriva de él
 //   · agents_excerpt  — content/landing/agents-<lang>.html, extracto LITERAL
 //                       del AGENTS.md que siembra `nyx init`
 // Los enlaces de los seis pasos de la guía se arman acá y no en el template
 // porque el motor no concatena: la clave que llega ya trae el prefijo de
 // idioma (/docs/… en inglés, /es/docs/… en español).
+// Resalta un archivo .nx y VERIFICA que el resaltado sea transparente: sacarle
+// los tags al HTML tiene que devolver el fuente byte a byte. Es la afirmación
+// de la landing que cualquiera puede refutar copiando y pegando el bloque, así
+// que preferimos fallar la generación antes que publicar un ejemplo alterado.
+fn highlight_sample(path: String) -> String {
+    let src: String = read_fragment(path)
+    let html: String = hl_nyx(src)
+    let back: String = hl_plain(html)
+    if back != src {
+        print("error: el resaltado alteró « " + path + " » — hl_plain(hl_nyx(src)) != src")
+        exit(1)
+    }
+    return html
+}
+
 fn gen_landing(out_dir: String) -> Array {
     var written: Array = []
     let langs: Array = ["en", "es"]
-    let sample: String = read_fragment("content/landing/sample.html")
+    let sample: String = highlight_sample("content/landing/sample.nx")
     var i: int = 0
     while i < langs.length() {
         let lang: String = langs[i]

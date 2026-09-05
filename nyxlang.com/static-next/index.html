@@ -76,7 +76,9 @@
 </div>
 </section>
 
-<!-- ── Muestra de código: sample.nx, verificado con nyx check ───────────── -->
+<!-- ── Muestra de código: sample.nx, resaltado por hl_nyx en gen.nx. El <pre>
+     va SIN data-lang a propósito: sample_code ya llega resaltado, y hl_pre_blocks
+     sólo entra en los <pre data-lang=...> que traen código en crudo. ───────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -87,34 +89,32 @@
 <div>
 <div class="panel">
 <div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
-<!-- T3: reemplazar por hl_nyx -->
-<div class="panel-body"><pre><span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span> <span class="fn">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span> <span class="fn">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span> <span class="op">}</span>
-
-<span class="kw">fn</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
-    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>text<span class="op">)</span>
-    <span class="kw">if</span> n <span class="op">&lt;</span> <span class="num">1</span> <span class="kw">or</span> n <span class="op">&gt;</span> <span class="num">65535</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span><span class="str">"out of range: ${text}"</span><span class="op">)</span> <span class="op">}</span>
-    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>n<span class="op">)</span>
+<div class="panel-body"><pre><span class="kw">enum</span> <span class="ty">Shape</span> <span class="op">{</span>
+    <span class="ty">Circle</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Square</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Rect</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">)</span>
 <span class="op">}</span>
 
-<span class="kw">fn</span> <span class="fn">bind_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
-    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">)?</span>   <span class="cm">// ? hands the Err back to the caller</span>
-    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span>
+<span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>            <span class="cm">// exhaustive: every variant must be covered</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>  <span class="op">=&gt;</span> <span class="num">3</span> <span class="op">*</span> r <span class="op">*</span> r<span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span>l<span class="op">)</span>  <span class="op">=&gt;</span> l <span class="op">*</span> l<span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span> <span class="op">=&gt;</span> w <span class="op">*</span> h
+    <span class="op">}</span>
 <span class="op">}</span>
 
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
-    <span class="kw">match</span> <span class="fn">bind_port</span><span class="op">(</span><span class="str">"8080"</span><span class="op">)</span> <span class="op">{</span>
-        <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"listening on ${port}"</span><span class="op">),</span>
-        <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span>why<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"config error: ${why}"</span><span class="op">)</span>
-    <span class="op">}</span>
+    <span class="kw">let</span> rect<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">7</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;area = ${area(rect)}&quot;</span><span class="op">)</span>
 <span class="op">}</span>
 </pre></div>
 </div>
 </div>
 <div>
 <table class="kv kv-wide">
-<tr><th>Shows</th><td>An enum with an exhaustive match, error propagation with ?, string interpolation and explicit types on every binding.</td></tr>
+<tr><th>Shows</th><td>An enum with an exhaustive match over every variant, string interpolation and explicit types on every binding.</td></tr>
 <tr><th>Checked with</th><td><code>nyx check</code> — parses and type-checks, without linking and without running.</td></tr>
-<tr><th>Run it</th><td><code>nyx run sample.nx</code></td></tr>
+<tr><th>Run it</th><td><code>nyx sample.nx</code></td></tr>
 </table>
 </div>
 </div>

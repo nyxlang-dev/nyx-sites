@@ -1,19 +1,18 @@
-enum Result { Ok(int), Err(String) }
-
-fn parse_port(text: String) -> Result {
-    let n: int = string_to_int(text)
-    if n < 1 or n > 65535 { return Result.Err("out of range: ${text}") }
-    return Result.Ok(n)
+enum Shape {
+    Circle(int),
+    Square(int),
+    Rect(int, int)
 }
 
-fn bind_port(text: String) -> Result {
-    let port: int = parse_port(text)?   // ? hands the Err back to the caller
-    return Result.Ok(port)
+fn area(s: Shape) -> int {
+    return match s {            // exhaustive: every variant must be covered
+        Shape.Circle(r)  => 3 * r * r,
+        Shape.Square(l)  => l * l,
+        Shape.Rect(w, h) => w * h
+    }
 }
 
 fn main() {
-    match bind_port("8080") {
-        Result.Ok(port) => print("listening on ${port}"),
-        Result.Err(why) => print("config error: ${why}")
-    }
+    let rect: Shape = Shape.Rect(3, 7)
+    print("area = ${area(rect)}")
 }
