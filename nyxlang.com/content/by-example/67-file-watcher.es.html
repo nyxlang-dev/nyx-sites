@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p>Sin inotify/kqueue, la vigilancia de archivos usa polling: llamar a <code>stat()</code> periódicamente y comparar el mtime. <code>stat</code> devuelve <code>[size, mode, mtime, is_dir, is_regular]</code>.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 watching: /tmp/nyx_watch_test.txt
 initial mtime: ...
 file size: 15 bytes

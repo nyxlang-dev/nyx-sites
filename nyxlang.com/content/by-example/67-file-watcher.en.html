@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p>Without inotify/kqueue, file watching uses polling: call <code>stat()</code> periodically and compare the mtime. <code>stat</code> returns <code>[size, mode, mtime, is_dir, is_regular]</code>.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 watching: /tmp/nyx_watch_test.txt
 initial mtime: ...
 file size: 15 bytes

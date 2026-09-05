@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 parent: spawned child 12345
 hello from child
 parent: child exited with 0

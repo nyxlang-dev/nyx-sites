@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p><code>pipe_new()</code> crea una tubería (pipe) unidireccional que devuelve <code>[read_fd, write_fd]</code>. Combinado con <code>fork</code>, <code>dup2</code> y <code>execvp</code>, esto permite capturar la salida de un comando externo — el mismo mecanismo que usan las shells de Unix para el operador <code>|</code> (pipe).</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 ls output (first 200 chars):
 ...
 </section>

@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p><code>WaitGroup</code> de <code>std/sync</code> coordina múltiples hilos. <code>wg_add</code> establece el contador esperado, cada hilo llama a <code>wg_done</code> al terminar, y <code>wg_wait</code> bloquea hasta que el contador llega a cero.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 task C running
 task C done
 task A running

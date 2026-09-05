@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p><code>WaitGroup</code> from <code>std/sync</code> coordinates multiple threads. <code>wg_add</code> sets the expected count, each thread calls <code>wg_done</code> when finished, and <code>wg_wait</code> blocks until the count reaches zero.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 task C running
 task C done
 task A running

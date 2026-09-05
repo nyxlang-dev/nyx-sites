@@ -2,7 +2,7 @@
 <section data-part="intro">
 <p><code>pipe_new()</code> creates a unidirectional pipe returning <code>[read_fd, write_fd]</code>. Combined with <code>fork</code>, <code>dup2</code>, and <code>execvp</code>, this lets you capture the output of an external command — the same mechanism Unix shells use for <code>|</code> (pipe).</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 ls output (first 200 chars):
 ...
 </section>
