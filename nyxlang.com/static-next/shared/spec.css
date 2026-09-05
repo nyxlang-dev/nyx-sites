@@ -470,3 +470,167 @@ code:not([class]) {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ── 14. Guía /docs ────────────────────────────────────────────────────────
+   Bloque agregado por la T4. Mismo lenguaje que la ficha — hairlines, sellos,
+   mono como voz, un solo acento — y una sola idea nueva: la retícula de dos
+   columnas con el índice de los seis pasos pegado al margen. El cuerpo de una
+   página de la guía es prosa larga, así que ahí (y sólo ahí) el párrafo, la
+   lista y la nota usan la sans; los <pre> siguen siendo paneles grafito,
+   porque el resaltado de hl_nyx está calibrado para fondo oscuro. */
+.doc-head {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 34px;
+}
+.doc-title {
+  margin-top: 18px;
+  font-size: clamp(1.6rem, 3.4vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.022em;
+  max-width: 22ch;
+}
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 212px minmax(0, 1fr);
+  gap: 0;
+}
+
+/* Índice lateral: hairline por paso, el activo en tinta con el número ámbar.
+   `position: sticky` sobre el contenedor interno para que el índice acompañe
+   la lectura sin fijar la columna entera (que arrastraría el borde). */
+.doc-toc { padding-right: 28px; }
+.doc-toc-inner { position: sticky; top: 24px; }
+.doc-toc-label { display: block; margin-bottom: 12px; }
+.doc-toc-label a { color: var(--steel); }
+.doc-toc-label a:hover { color: var(--ink); }
+.doc-toc-list { border-top: 1px solid var(--line); }
+.doc-toc-item { border-bottom: 1px solid var(--line-soft); }
+.doc-toc-link {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 0;
+  font-size: 0.8125rem;
+  color: var(--steel);
+}
+.doc-toc-link:hover { color: var(--ink); text-decoration: none; }
+.doc-toc-link:hover .doc-toc-name { text-decoration: underline; text-underline-offset: 3px; }
+.doc-toc-num { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; }
+.doc-toc-link.is-active { color: var(--ink); font-weight: 600; }
+.doc-toc-link.is-active .doc-toc-num { color: var(--accent); }
+
+/* Cuerpo: hairline vertical de separación, igual que .cols. */
+.doc-body {
+  border-left: 1px solid var(--line);
+  padding-left: 32px;
+  min-width: 0;
+}
+.doc-body > * + * { margin-top: 16px; }
+.doc-body h2 {
+  margin-top: 40px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.doc-body > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.doc-body h3 { margin-top: 26px; font-size: 0.9375rem; font-weight: 600; }
+.doc-body p,
+.doc-body ul,
+.doc-body ol {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.62;
+  max-width: 68ch;
+}
+.doc-body li { position: relative; padding-left: 20px; }
+.doc-body li + li { margin-top: 6px; }
+.doc-body ul > li::before {
+  content: "·";
+  position: absolute;
+  left: 5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.doc-body ol { counter-reset: docstep; }
+.doc-body ol > li { counter-increment: docstep; padding-left: 28px; }
+.doc-body ol > li::before {
+  content: counter(docstep, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--steel);
+}
+.doc-body pre {
+  margin: 0;
+  padding: 15px 16px;
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 1px solid var(--ink);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  tab-size: 4;
+}
+/* Nota al margen del texto: mismo filete ámbar que .callout. */
+.doc-body .doc-note {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.doc-body .doc-note code { background: var(--paper); }
+
+/* Anterior / siguiente: dos celdas de la misma retícula, hairline entre ellas. */
+.doc-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 48px;
+  border-top: 1px solid var(--line);
+}
+.doc-nav-link { display: block; padding: 16px 0; }
+.doc-nav-prev { padding-right: 24px; }
+.doc-nav-next {
+  grid-column: 2;
+  text-align: right;
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.doc-nav-name { display: block; margin-top: 4px; font-size: 0.9375rem; font-weight: 600; }
+.doc-nav-link:hover { text-decoration: none; }
+.doc-nav-link:hover .doc-nav-name { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 900px) {
+  /* El índice pasa arriba, en fila: sin columna lateral no hay sticky que
+     valga, y el cuerpo recupera el ancho completo. */
+  .doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .doc-toc { padding-right: 0; margin-bottom: 28px; }
+  .doc-toc-inner { position: static; }
+  .doc-toc-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .doc-body { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 560px) {
+  .doc-toc-list { grid-template-columns: minmax(0, 1fr); }
+  .doc-nav { grid-template-columns: minmax(0, 1fr); }
+  .doc-nav-prev { padding-right: 0; border-bottom: 1px solid var(--line-soft); }
+  .doc-nav-next {
+    grid-column: 1;
+    text-align: left;
+    padding-left: 0;
+    border-left: 0;
+  }
+}

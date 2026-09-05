@@ -1,0 +1,19 @@
+<!-- templates/docs-index.html — índice de la guía (/docs/ y /es/docs/).
+     Estructura acá, texto en content/i18n/<lang>.toml, y la lista `steps` la
+     arma gen.nx (num, href, title, blurb) porque el motor de templates no
+     concatena rutas. Mismos ladrillos que la landing: banda, sello, .steps. -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp stamp-accent">{{docs_label}}</span></p>
+<div>
+<h1 class="band-title">{{docs_index_head}}</h1>
+<p class="band-sub prose">{{docs_index_lede}}</p>
+</div>
+</header>
+<ol class="steps">
+{{#each steps}}<li class="step"><a class="step-link" href="{{href}}"><span class="step-num">{{num}}</span><span><span class="step-name">{{title}}</span><span class="step-note note">{{blurb}}</span></span></a></li>
+{{/each}}</ol>
+<a class="callout" href="{{examples_href}}"><span><span class="callout-name">{{docs_examples_title}}</span><span class="step-note note">{{docs_examples_note}}</span></span><span class="callout-go">{{docs_examples_go}} →</span></a>
+</div>
+</section>

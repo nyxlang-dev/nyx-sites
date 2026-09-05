@@ -15,8 +15,9 @@
 // generador PRODUCE; un archivo de más en <dir> no lo detecta (limitación
 // conocida, igual que gendocs).
 //
-// Secciones: en esta task existe solo `landing`; `docs` y `by-example` están
-// reconocidas para que el flag no mienta, pero todavía no generan nada.
+// Secciones: `landing` (la ficha) y `docs` (la guía de seis pasos, EN y ES).
+// `by-example` está reconocida para que el flag no mienta, pero todavía no
+// genera nada.
 
 import "src/gen/content"
 import "src/gen/render"
@@ -82,6 +83,164 @@ fn gen_landing(out_dir: String) -> Array {
     return written
 }
 
+// ── Guía /docs ──────────────────────────────────────────────────────────────
+
+// Número de paso con dos dígitos ("01"…"06"): es el que se ve en el sello, en
+// el índice lateral y en el slug del archivo, y tiene que ser el mismo.
+fn pad2(n: int) -> String {
+    if n < 10 { return "0" + int_to_string(n) }
+    return int_to_string(n)
+}
+
+// Las seis páginas de la guía, EN ORDEN. Cada una tiene dos identificadores:
+//   · slug  — la URL y el nombre del fragmento (content/docs/<slug>.<lang>.html)
+//   · stem  — la raíz de sus claves i18n: docs_<stem>_title / _note / _desc.
+// Los `stem` son los que YA usa la landing para su lista de pasos, así el
+// nombre de un paso se escribe una sola vez y no puede divergir entre la ficha,
+// el índice de la guía y el índice lateral de cada página.
+//
+// Se devuelven como Arrays de String (no como un Array de Map): un Map anidado
+// que vuelve de una función es uno de los gotchas del lenguaje, y acá no hace
+// falta — los Maps de los ítems se arman dentro de gen_docs.
+fn doc_slugs() -> Array {
+    return ["01-install", "02-first-program", "03-project"]
+}
+fn doc_stems() -> Array {
+    return ["install", "program", "project"]
+}
+
+// Genera el índice (/docs/, /es/docs/) y las seis páginas en los dos idiomas.
+//
+// Todo lo que el motor de templates no sabe hacer se precalcula acá y viaja en
+// `extra`: las rutas (no concatena), los ítems del índice lateral con el paso
+// activo marcado (no tiene condicionales sobre el ítem de afuera), y las URLs
+// canónicas/alternas de cada página (no se derivan del nombre del template,
+// porque los seis pasos comparten uno solo).
+fn gen_docs(out_dir: String) -> Array {
+    var written: Array = []
+    let langs: Array = ["en", "es"]
+    let slugs: Array = doc_slugs()
+    let stems: Array = doc_stems()
+    let total: String = pad2(slugs.length())
+    let site: Map = load_site()
+    let site_url: String = site.get_or("site_url", "")
+
+    var li: int = 0
+    while li < langs.length() {
+        let lang: String = langs[li]
+        let dict: Map = load_i18n(lang)
+        let base: String = page_href("docs-index", lang)
+        let suffix: String = dict.get_or("docs_page_suffix", "")
+
+        // ── Índice: la lista de los seis, sin ninguno activo ──
+        var idx_items: Array = []
+        var s: int = 0
+        while s < slugs.length() {
+            let slug: String = slugs[s]
+            let stem: String = stems[s]
+            var item: Map = map_new()
+            item.insert("num", pad2(s + 1))
+            item.insert("href", base + slug + ".html")
+            item.insert("title", dict.get_or("docs_" + stem + "_title", ""))
+            item.insert("blurb", dict.get_or("docs_" + stem + "_note", ""))
+            item.insert("active", "")
+            item.insert("is_current", "")
+            idx_items.push(item)
+            s = s + 1
+        }
+        var iextra: Map = map_new()
+        iextra.insert("title_key", "docs_index_title")
+        iextra.insert("desc_key", "docs_index_desc")
+        iextra.insert("steps", idx_items)
+        let ihtml: String = render_page("docs-index", lang, iextra)
+        let irel: String = page_rel("docs-index", lang)
+        write_page(out_dir, irel, ihtml)
+        written.push(irel)
+
+        // ── Las seis páginas ──
+        var p: int = 0
+        while p < slugs.length() {
+            let slug2: String = slugs[p]
+            let stem2: String = stems[p]
+            let num: String = pad2(p + 1)
+            let title: String = dict.get_or("docs_" + stem2 + "_title", "")
+
+            // El índice lateral se rearma por página porque cambia el activo.
+            var toc: Array = []
+            var t: int = 0
+            while t < slugs.length() {
+                // Los elementos de un Array se anotan SIEMPRE al leerlos: sin
+                // el `: String` el compilador los trata como int y la ruta sale
+                // con un número donde iba el slug (silencioso, no falla).
+                let tslug: String = slugs[t]
+                let tstem: String = stems[t]
+                var titem: Map = map_new()
+                titem.insert("num", pad2(t + 1))
+                titem.insert("href", base + tslug + ".html")
+                titem.insert("title", dict.get_or("docs_" + tstem + "_title", ""))
+                if t == p {
+                    titem.insert("active", " is-active")
+                    titem.insert("is_current", "1")
+                } else {
+                    titem.insert("active", "")
+                    titem.insert("is_current", "")
+                }
+                toc.push(titem)
+                t = t + 1
+            }
+
+            var extra: Map = map_new()
+            // El <title> es «<paso> — <sufijo>»: el motor no concatena, así que
+            // se arma acá y se pasa ya resuelto (por eso no hay title_key).
+            extra.insert("title", title + " — " + suffix)
+            extra.insert("desc_key", "docs_" + stem2 + "_desc")
+            extra.insert("page_title", title)
+            extra.insert("num", num)
+            extra.insert("total", total)
+            extra.insert("steps", toc)
+            extra.insert("doc_body", read_fragment("content/docs/" + slug2 + "." + lang + ".html"))
+            // Rutas propias: el template es uno solo para los seis pasos, así
+            // que canonical/hreflang NO pueden salir de su nombre.
+            extra.insert("canonical_url", site_url + doc_href(slug2, lang))
+            extra.insert("url_en", site_url + doc_href(slug2, "en"))
+            extra.insert("url_es", site_url + doc_href(slug2, "es"))
+            extra.insert("alt_href", doc_href(slug2, other_lang(lang)))
+
+            // Anterior: el paso previo, o el índice de la guía en el primero.
+            // Siguiente: el paso que viene; en el último no hay (el cierre de
+            // la página 06 es el enlace al recetario, dentro del fragmento).
+            if p == 0 {
+                extra.insert("has_prev", "1")
+                extra.insert("prev_href", base)
+                extra.insert("prev_title", dict.get_or("docs_index_head", ""))
+            } else {
+                let pslug: String = slugs[p - 1]
+                let pstem: String = stems[p - 1]
+                extra.insert("has_prev", "1")
+                extra.insert("prev_href", base + pslug + ".html")
+                extra.insert("prev_title", dict.get_or("docs_" + pstem + "_title", ""))
+            }
+            if p + 1 < slugs.length() {
+                let nslug: String = slugs[p + 1]
+                let nstem: String = stems[p + 1]
+                extra.insert("has_next", "1")
+                extra.insert("next_href", base + nslug + ".html")
+                extra.insert("next_title", dict.get_or("docs_" + nstem + "_title", ""))
+            } else {
+                extra.insert("has_next", "")
+            }
+
+            let html: String = render_page("docs-page", lang, extra)
+            let rel: String = doc_rel(slug2, lang)
+            write_page(out_dir, rel, html)
+            written.push(rel)
+            p = p + 1
+        }
+        li = li + 1
+    }
+    return written
+}
+
 // Copia los assets compartidos a <out>/shared/. Son texto (CSS/JS), así que
 // read_file/write_file alcanzan; si algún día entra un binario hay que pasar a
 // std/fs o a un copy del sistema.
@@ -111,6 +270,20 @@ fn generate(out_dir: String, only: String) -> Array {
             written.push(rel)
             i = i + 1
         }
+    }
+    if only == "" or only == "docs" {
+        let docs: Array = gen_docs(out_dir)
+        var d: int = 0
+        while d < docs.length() {
+            let rel3: String = docs[d]
+            written.push(rel3)
+            d = d + 1
+        }
+    }
+    // Los assets compartidos los usa CUALQUIER página, así que van con
+    // cualquier sección: generar sólo `docs` en un <out> vacío tiene que dejar
+    // páginas que no estén sin hoja de estilo.
+    if written.length() > 0 {
         let assets: Array = gen_assets(out_dir)
         var j: int = 0
         while j < assets.length() {

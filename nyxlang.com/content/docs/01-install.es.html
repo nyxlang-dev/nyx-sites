@@ -1,0 +1,65 @@
+<p class="prose">El instalador construye Nyx desde el código fuente en tu máquina: clona el repositorio, compila el compilador y las herramientas, y deja un comando enlazado en tu PATH. Corre en Linux y en ningún otro lado — <code>install.sh</code> se detiene con un error en cualquier otro sistema operativo.</p>
+
+<h2>Qué necesitas</h2>
+<p>Tres programas — <code>clang</code>, <code>make</code> y <code>git</code> — y tres juegos de cabeceras de desarrollo: <code>libgc</code>, OpenSSL y zlib. No hace falta que los instales a mano: el instalador chequea cada uno e instala los que falten con el gestor de paquetes que encuentre — <code>apt</code>, <code>dnf</code>, <code>pacman</code>, <code>apk</code>, <code>xbps</code>, o <code>pkg</code> en Termux. Fuera de Termux usa <code>sudo</code> para hacerlo.</p>
+
+<table class="kv kv-wide">
+<tr><th>Sistema operativo</th><td>Linux. Cualquier otro detiene el instalador con un error.</td></tr>
+<tr><th>Arquitecturas</th><td><code>x86_64</code>, <code>aarch64</code>, <code>armv7l</code>.</td></tr>
+<tr><th>También soportado</th><td>Termux en Android, que usa <code>pkg</code> y no necesita <code>sudo</code>.</td></tr>
+</table>
+
+<h2>Instalar</h2>
+<pre data-lang="sh">$ curl -sSf https://nyxlang.com/install.sh | sh</pre>
+<p>Esa es toda la instalación. Tarda unos minutos, y casi todos se van en compilar.</p>
+
+<h2>Qué hace el instalador</h2>
+<ol>
+<li><strong>Chequea la plataforma.</strong> Linux más una de las tres arquitecturas de arriba, o se detiene.</li>
+<li><strong>Chequea las dependencias</strong> e instala las que falten con tu gestor de paquetes.</li>
+<li><strong>Clona el repositorio</strong> en <code>~/.nyx</code>. Si <code>~/.nyx</code> ya es un clon de git, en vez de clonar hace fetch y reset.</li>
+<li><strong>Compila el compilador</strong> a partir de los archivos semilla de LLVM IR que vienen commiteados en el repositorio.</li>
+<li><strong>Compila las herramientas</strong>: el gestor de paquetes, el corredor de tests, el chequeador, vet y el formateador. Cada uno es un binario aparte, y todos se construyen acá — por eso la instalación no es instantánea.</li>
+<li><strong>Ordena el árbol</strong>: los binarios pasan a <code>~/.nyx/bin/</code> y se borra todo lo que no hace falta para ejecutar Nyx, conservando el runtime en C, la biblioteca estándar, las plantillas de proyecto y el changelog.</li>
+<li><strong>Enlaza el comando</strong>: <code>~/.local/bin/nyx</code> apunta al wrapper que vive dentro de <code>~/.nyx</code>. En Termux el enlace va a <code>$PREFIX/bin/nyx</code>.</li>
+<li><strong>Arregla tu PATH</strong> si <code>~/.local/bin</code> no estaba, agregando una línea <code>export</code> a <code>~/.bashrc</code>, <code>~/.zshrc</code> o <code>~/.profile</code> — el primero que exista.</li>
+</ol>
+
+<h2>Verificar</h2>
+<pre data-lang="sh">$ nyx --version
+nyx 0.31.0</pre>
+<p>Si el shell responde <code>command not found</code>, el enlace existe pero este shell todavía no tomó el PATH nuevo. Mira <em>Problemas comunes</em>, más abajo.</p>
+
+<h2>Actualizar</h2>
+<pre data-lang="sh">$ nyx update</pre>
+<p>Trae la versión más reciente a <code>~/.nyx</code>, recompila el compilador y las cinco herramientas, y después imprime dos cosas que vale la pena leer: <strong>What's new</strong>, las entradas del changelog entre la versión que tenías y la que quedó, y <strong>las trampas que ya no hace falta esquivar</strong> — los gotchas corregidos en el medio, sacados de la tabla propia de la toolchain y no de una lista escrita a mano.</p>
+<p class="doc-note">Actualizar la toolchain no actualiza los documentos ya sembrados dentro de tus proyectos. Dentro de un proyecto, <code>nyx update --sync-docs</code> los refresca y deja un <code>.bak</code> de todo lo que reemplaza. El paso 04 cuenta qué son esos documentos.</p>
+
+<h2>Desinstalar</h2>
+<pre data-lang="sh">$ nyx uninstall
+Uninstalling Nyx...
+Nyx has been uninstalled.</pre>
+<p>Borra <code>~/.nyx</code> y <code>~/.local/bin/nyx</code>. Tus proyectos quedan intactos — son directorios comunes con archivos de código.</p>
+
+<h2>Termux</h2>
+<p>Termux se detecta solo y se trata como un destino de primera: los paquetes vienen de <code>pkg</code>, nada corre con <code>sudo</code>, y el comando se enlaza en <code>$PREFIX/bin</code>, que ya está en tu PATH — así que no hay perfil que editar ni terminal nueva que abrir.</p>
+
+<h2>Compilar desde el código fuente</h2>
+<p>Si prefieres no correr un instalador, el repositorio se construye solo. Este también es el camino si quieres trabajar sobre el compilador.</p>
+<pre data-lang="sh">$ sudo apt install clang make git libgc-dev libssl-dev zlib1g-dev
+$ git clone https://github.com/nyxlang-dev/nyx.git
+$ cd nyx
+$ make bootstrap</pre>
+<p><code>make bootstrap</code> produce <code>nyx_bootstrap</code> a partir de los archivos semilla de LLVM IR commiteados en el repositorio — así se construye un compilador que se hospeda a sí mismo sin tenerlo ya instalado.</p>
+
+<h2>Problemas comunes</h2>
+<h3>No supported package manager found</h3>
+<p>El instalador conoce <code>apt</code>, <code>dnf</code>, <code>pacman</code>, <code>apk</code>, <code>xbps</code> y el <code>pkg</code> de Termux. En cualquier otro se detiene e imprime la lista de paquetes que quería; instálalos a mano con tu propio gestor y corre el instalador de nuevo.</p>
+<h3>nyx: command not found, recién instalado</h3>
+<p>El enlace está; el PATH de este shell no. El instalador lo dice cuando pasa, y te indica qué archivo editó:</p>
+<pre data-lang="sh">$ source ~/.bashrc</pre>
+<p>Abrir una terminal nueva funciona igual de bien.</p>
+<h3>Un aviso sobre libgc durante la instalación</h3>
+<p>Si tu distribución trae un <code>libgc</code>/<code>bdwgc</code> anterior a 8.2, el instalador avisa y sigue:</p>
+<pre data-lang="sh">warn libgc/bdwgc 8.0.4-1 detected (&lt; 8.2 required for healthy concurrency under load).</pre>
+<p>Por debajo de 8.2 falta una función de la que depende el scheduler, y el recolector de basura puede hacer crashear un programa con muchas tareas concurrentes. Los programas de un solo hilo no se ven afectados. El runtime repite el aviso al arrancar cuando ocurre, así que el problema nunca es silencioso — pero la solución real es actualizar el paquete.</p>

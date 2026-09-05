@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primer programa — Documentación de Nyx</title>
+<meta name="description" content="Escribe hello.nx, conviértelo en un binario nativo y aprende los tres comandos que revisan tu trabajo antes de ejecutarlo.">
+<link rel="canonical" href="https://nyxlang.com/es/docs/02-first-program.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/02-first-program.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/02-first-program.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/02-first-program.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/docs/02-first-program.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">02</span> / 03</span></p>
+<h1 class="doc-title">Primer programa</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Pasos">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/es/docs/">Nyx, paso a paso</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="/es/docs/01-install.html"><span class="doc-toc-num">01</span><span class="doc-toc-name">Instalación</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/es/docs/02-first-program.html" aria-current="page"><span class="doc-toc-num">02</span><span class="doc-toc-name">Primer programa</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/es/docs/03-project.html"><span class="doc-toc-num">03</span><span class="doc-toc-name">Proyectos</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">Un programa de Nyx es un archivo. No hay proyecto que crear, ni archivo de build que escribir, ni runtime que distribuir: un comando convierte el archivo en un binario nativo y lo ejecuta.</p>
+
+<h2>hello.nx</h2>
+<p>Todo programa arranca en <code>fn main()</code>. Pon esto en un archivo llamado <code>hello.nx</code>:</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Hello, world!&quot;</span><span class="op">)</span>
+<span class="op">}</span></pre>
+<p>Y ejecútalo:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx hello.nx</span>
+Hello, world!</pre>
+
+<h2>Qué pasó recién</h2>
+<p>El comando <code>nyx</code> es un wrapper sobre toda la toolchain. Cuando le das un archivo hace cuatro cosas, en un directorio temporal que borra al salir:</p>
+<ol>
+<li>El compilador lee <code>hello.nx</code> y emite LLVM IR.</li>
+<li><code>clang</code> compila ese IR junto con el runtime en C — el recolector de basura, strings, arrays, maps, sockets, hilos — en un solo ejecutable.</li>
+<li>El ejecutable corre, con los argumentos que hayas puesto después del nombre del archivo.</li>
+<li>El directorio temporal desaparece.</li>
+</ol>
+<p>Nada se interpreta y nada queda dando vueltas. La salida es un binario nativo de verdad; la única razón por la que no lo ves es que este comando lo tira. El paso 03 muestra cómo conservarlo.</p>
+<p class="doc-note">Si la compilación falla, todo el log del build se vuelca a la salida de error — los diagnósticos del compilador y, con <code>NYX_DIAG=json</code>, su forma legible por máquina. Un fallo nunca es una sola línea muda.</p>
+
+<h2>Chequear antes de ejecutar</h2>
+<p>Compilar y linkear toma segundos. Chequear tipos toma una fracción de eso, y ahí se atrapan casi todos los errores:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx check hello.nx</span></pre>
+<p><code>nyx check</code> analiza y chequea tipos, y ahí se detiene — no linkea y no ejecuta. Cuando sale bien imprime un índice legible por máquina de lo que encontró (<code>DEF:</code> para definiciones, <code>SYM:</code> para símbolos en alcance) y sale 0; cuando falla imprime el diagnóstico y sale 1. El código de salida es el punto: <code>nyx check && nyx hello.nx</code> se puede encadenar sin riesgo.</p>
+
+<h2>Leer un error</h2>
+<p>Supongamos que <code>greet.nx</code> llama a una función que no existe:</p>
+<pre data-lang="nyx" data-fragment="error"><span class="kw">fn</span> <span class="fn">greet</span><span class="op">(</span>name<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="str">&quot;Hello, &quot;</span> <span class="op">+</span> name <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">greet</span><span class="op">(</span><span class="str">&quot;world&quot;</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">greeting</span><span class="op">(</span><span class="str">&quot;Nyx&quot;</span><span class="op">))</span>
+<span class="op">}</span></pre>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx greet.nx</span>
+
+  nyx v0.31.0
+
+  lex     1538 tokens
+  parse   OK
+  ✗ error [NYX1002] in &#x27;main&#x27; (line 7): &#x27;greeting&#x27; not declared (did you mean &#x27;greet&#x27;?)
+  check   FAILED
+error: compilation failed for greet.nx</pre>
+<p>Tres cosas para sacar de esa línea. El <strong>código</strong> — <code>NYX1002</code> — es estable y se puede buscar. La <strong>ubicación</strong> es la función que lo contiene y la línea dentro del archivo. Y la <strong>sugerencia</strong> entre paréntesis es el compilador comparando tu identificador contra los que sí conoce; cuando ofrece uno, casi siempre acierta.</p>
+<p>Los nombres de fase arriba del error dicen hasta dónde llegó: el lexer produjo tokens, el parser terminó bien, y el fallo vino del chequeador. Un error de parser en vez de uno de chequeo significa que la forma del código está mal, no el significado.</p>
+
+<h2>Dos herramientas más</h2>
+<p><code>nyx vet</code> lee el archivo buscando cosas que el compilador acepta pero que probablemente no querías: variables sin usar, código muerto, imports sin usar. También nombra las trampas conocidas del lenguaje en vez de dejar que se conviertan más tarde en un error de parser confuso — cada una como un aviso con su código, el archivo y la línea:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx vet shapes.nx</span>
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.</pre>
+<p><code>nyx fmt</code> imprime el archivo en su forma canónica por la salida estándar. No edita nada, así que no se pierde nada si el resultado te sorprende:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx fmt hello.nx</span>
+fn main() {
+    print(&quot;Hello, world!&quot;)
+}</pre>
+<p>Las dos usan <code>src/main.nx</code> cuando no les das un archivo — que es el punto de entrada de un proyecto, y ese es el paso siguiente.</p>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Pasos">
+<a class="doc-nav-link doc-nav-prev" href="/es/docs/01-install.html"><span class="label">← Anterior</span><span class="doc-nav-name">Instalación</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/docs/03-project.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Proyectos</span></a>
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

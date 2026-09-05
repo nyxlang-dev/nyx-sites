@@ -1,0 +1,30 @@
+<!-- templates/docs-page.html — una página de la guía. El sello dice el número
+     del paso sobre el total; el índice lateral repite los seis con el actual
+     marcado (`active` e `is_current` los precalcula gen.nx por idioma); el
+     cuerpo entra crudo desde content/docs/<slug>.<lang>.html y sus
+     <pre data-lang=...> los resalta hl_pre_blocks en render_page. -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">{{num}}</span> / {{total}}</span></p>
+<h1 class="doc-title">{{page_title}}</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="{{docs_toc_label}}">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="{{docs_href}}">{{docs_index_head}}</a></p>
+<ol class="doc-toc-list">
+{{#each steps}}<li class="doc-toc-item"><a class="doc-toc-link{{active}}" href="{{href}}"{{#if is_current}} aria-current="page"{{/if}}><span class="doc-toc-num">{{num}}</span><span class="doc-toc-name">{{title}}</span></a></li>
+{{/each}}</ol>
+</div>
+</nav>
+<article class="doc-body">
+{{{doc_body}}}
+</article>
+</div>
+<nav class="doc-nav" aria-label="{{docs_toc_label}}">
+{{#if has_prev}}<a class="doc-nav-link doc-nav-prev" href="{{prev_href}}"><span class="label">← {{docs_prev_label}}</span><span class="doc-nav-name">{{prev_title}}</span></a>{{/if}}
+{{#if has_next}}<a class="doc-nav-link doc-nav-next" href="{{next_href}}"><span class="label">{{docs_next_label}} →</span><span class="doc-nav-name">{{next_title}}</span></a>{{/if}}
+</nav>
+</div>
+</section>

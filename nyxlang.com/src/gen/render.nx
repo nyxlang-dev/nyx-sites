@@ -46,10 +46,27 @@ pub fn other_lang(lang: String) -> String {
 // URL pública de una página, por nombre de template e idioma. La landing
 // (templates/index.html) es la raíz; las secciones que agreguen las tasks
 // siguientes cuelgan de un directorio con su nombre (…/docs/, …/by-example/).
+//
+// `docs-index` es la excepción declarada: el template se llama así (para no
+// chocar con el nombre de la SECCIÓN, `docs`) pero la página vive en /docs/.
 pub fn page_href(tmpl_name: String, lang: String) -> String {
     let prefix: String = lang_prefix(lang)
     if tmpl_name == "index" { return prefix + "/" }
+    if tmpl_name == "docs-index" { return prefix + "/docs/" }
     return prefix + "/" + tmpl_name + "/"
+}
+
+// URL de una página de la guía. Son ARCHIVOS dentro de /docs/, no directorios:
+// son seis, comparten índice lateral y se leen en orden, así que el slug
+// numerado ES la ruta (…/docs/01-install.html) y no hay un index.html por paso.
+pub fn doc_href(slug: String, lang: String) -> String {
+    return page_href("docs-index", lang) + slug + ".html"
+}
+
+// Ruta relativa dentro del directorio de salida para esa misma página.
+pub fn doc_rel(slug: String, lang: String) -> String {
+    let href: String = doc_href(slug, lang)
+    return href.substring(1, href.length())
 }
 
 // Ruta relativa dentro del directorio de salida para esa misma página.
@@ -107,13 +124,18 @@ fn build_ctx(tmpl_name: String, lang: String, extra: Map) -> Map {
     ctx.insert("docs_href", page_href("docs", lang))
     ctx.insert("examples_href", page_href("by-example", lang))
 
-    // `extra` va último: una página puede pisar cualquier valor derivado.
+    // `extra` va último: una página puede pisar cualquier valor derivado
+    // (las páginas de la guía pisan canonical_url/url_en/url_es/alt_href,
+    // porque su ruta no se deriva del nombre del template sino del slug).
+    //
+    // El valor NO se tipa como String a propósito: además de texto, `extra`
+    // puede traer un Array de Map — la lista que consume un {{#each}} del
+    // template (índice lateral de la guía). Tiparlo rompería esa lista.
     let keys: Array = extra.keys()
     var i: int = 0
     while i < keys.length() {
         let k: String = keys[i]
-        let v: String = extra.get_or(k, "")
-        ctx.insert(k, v)
+        ctx.insert(k, extra.get(k))
         i = i + 1
     }
 

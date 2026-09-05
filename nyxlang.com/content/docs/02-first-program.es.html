@@ -1,0 +1,59 @@
+<p class="prose">Un programa de Nyx es un archivo. No hay proyecto que crear, ni archivo de build que escribir, ni runtime que distribuir: un comando convierte el archivo en un binario nativo y lo ejecuta.</p>
+
+<h2>hello.nx</h2>
+<p>Todo programa arranca en <code>fn main()</code>. Pon esto en un archivo llamado <code>hello.nx</code>:</p>
+<pre data-lang="nyx">fn main() {
+    print("Hello, world!")
+}</pre>
+<p>Y ejecútalo:</p>
+<pre data-lang="sh">$ nyx hello.nx
+Hello, world!</pre>
+
+<h2>Qué pasó recién</h2>
+<p>El comando <code>nyx</code> es un wrapper sobre toda la toolchain. Cuando le das un archivo hace cuatro cosas, en un directorio temporal que borra al salir:</p>
+<ol>
+<li>El compilador lee <code>hello.nx</code> y emite LLVM IR.</li>
+<li><code>clang</code> compila ese IR junto con el runtime en C — el recolector de basura, strings, arrays, maps, sockets, hilos — en un solo ejecutable.</li>
+<li>El ejecutable corre, con los argumentos que hayas puesto después del nombre del archivo.</li>
+<li>El directorio temporal desaparece.</li>
+</ol>
+<p>Nada se interpreta y nada queda dando vueltas. La salida es un binario nativo de verdad; la única razón por la que no lo ves es que este comando lo tira. El paso 03 muestra cómo conservarlo.</p>
+<p class="doc-note">Si la compilación falla, todo el log del build se vuelca a la salida de error — los diagnósticos del compilador y, con <code>NYX_DIAG=json</code>, su forma legible por máquina. Un fallo nunca es una sola línea muda.</p>
+
+<h2>Chequear antes de ejecutar</h2>
+<p>Compilar y linkear toma segundos. Chequear tipos toma una fracción de eso, y ahí se atrapan casi todos los errores:</p>
+<pre data-lang="sh">$ nyx check hello.nx</pre>
+<p><code>nyx check</code> analiza y chequea tipos, y ahí se detiene — no linkea y no ejecuta. Cuando sale bien imprime un índice legible por máquina de lo que encontró (<code>DEF:</code> para definiciones, <code>SYM:</code> para símbolos en alcance) y sale 0; cuando falla imprime el diagnóstico y sale 1. El código de salida es el punto: <code>nyx check && nyx hello.nx</code> se puede encadenar sin riesgo.</p>
+
+<h2>Leer un error</h2>
+<p>Supongamos que <code>greet.nx</code> llama a una función que no existe:</p>
+<pre data-lang="nyx" data-fragment="error">fn greet(name: String) -&gt; String {
+    return "Hello, " + name + "!"
+}
+
+fn main() {
+    print(greet("world"))
+    print(greeting("Nyx"))
+}</pre>
+<pre data-lang="sh">$ nyx greet.nx
+
+  nyx v0.31.0
+
+  lex     1538 tokens
+  parse   OK
+  ✗ error [NYX1002] in 'main' (line 7): 'greeting' not declared (did you mean 'greet'?)
+  check   FAILED
+error: compilation failed for greet.nx</pre>
+<p>Tres cosas para sacar de esa línea. El <strong>código</strong> — <code>NYX1002</code> — es estable y se puede buscar. La <strong>ubicación</strong> es la función que lo contiene y la línea dentro del archivo. Y la <strong>sugerencia</strong> entre paréntesis es el compilador comparando tu identificador contra los que sí conoce; cuando ofrece uno, casi siempre acierta.</p>
+<p>Los nombres de fase arriba del error dicen hasta dónde llegó: el lexer produjo tokens, el parser terminó bien, y el fallo vino del chequeador. Un error de parser en vez de uno de chequeo significa que la forma del código está mal, no el significado.</p>
+
+<h2>Dos herramientas más</h2>
+<p><code>nyx vet</code> lee el archivo buscando cosas que el compilador acepta pero que probablemente no querías: variables sin usar, código muerto, imports sin usar. También nombra las trampas conocidas del lenguaje en vez de dejar que se conviertan más tarde en un error de parser confuso — cada una como un aviso con su código, el archivo y la línea:</p>
+<pre data-lang="sh">$ nyx vet shapes.nx
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.</pre>
+<p><code>nyx fmt</code> imprime el archivo en su forma canónica por la salida estándar. No edita nada, así que no se pierde nada si el resultado te sorprende:</p>
+<pre data-lang="sh">$ nyx fmt hello.nx
+fn main() {
+    print("Hello, world!")
+}</pre>
+<p>Las dos usan <code>src/main.nx</code> cuando no les das un archivo — que es el punto de entrada de un proyecto, y ese es el paso siguiente.</p>
