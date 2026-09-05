@@ -25,6 +25,7 @@
 
 import "std/template"
 import "src/gen/content"
+import "src/gen/highlight"
 
 const TEMPLATE_DIR: String = "templates"
 
@@ -137,18 +138,97 @@ fn register_partials() {
     tpl_partial("footer", read_fragment(TEMPLATE_DIR + "/footer.html"))
 }
 
+// ── Limpieza del HTML publicado ─────────────────────────────────────────────
+
+// Saca los comentarios HTML (<!-- … -->) del resultado final.
+//
+// Los templates están comentados en castellano para quien los edite; esas notas
+// son internas y no tienen por qué viajar a cada visitante en el view-source.
+// Cuando el comentario ocupaba la línea entera se borra también la sangría y el
+// salto, así no quedan líneas en blanco donde había una nota.
+//
+// LÍMITE CONOCIDO: no distingue el contexto, así que un `<!--` dentro de un
+// <pre> (o de un <script>/<style>) también se borraría. Hoy no hay ninguno —
+// los <pre> del sitio llevan código Nyx y salida de terminal — y si algún día
+// hace falta mostrar un comentario HTML en un ejemplo, la salida es escribirlo
+// escapado (&lt;!-- … --&gt;), que es lo que corresponde dentro de un <pre>.
+fn strip_html_comments(html: String) -> String {
+    var out: Array = []
+    let n: int = html.length()
+    var i: int = 0
+    var seg_start: int = 0   // inicio del texto pendiente de emitir
+    var line_start: int = 0  // byte siguiente al último "\n" visto
+    while i < n {
+        let c: char = html.charAt(i)
+        if c == '\n' {
+            line_start = i + 1
+            i = i + 1
+        } else {
+            var is_open: bool = false
+            if c == '<' {
+                if html.indexOf("<!--", i) == i { is_open = true }
+            }
+            if is_open == false {
+                i = i + 1
+            } else {
+                var end: int = html.indexOf("-->", i)
+                if end < 0 { end = n } else { end = end + 3 }
+                // ¿La línea sólo tenía blancos antes del comentario? Si sí, se
+                // descarta la línea entera (sangría + comentario + salto).
+                var only_blanks: bool = true
+                if line_start < seg_start { only_blanks = false }
+                var k: int = line_start
+                while k < i {
+                    let b: char = html.charAt(k)
+                    if b != ' ' and b != '\t' { only_blanks = false }
+                    k = k + 1
+                }
+                var cut: int = i
+                if only_blanks { cut = line_start }
+                if cut > seg_start {
+                    let keep: String = html.substring(seg_start, cut)
+                    out.push(keep)
+                }
+                seg_start = end
+                if only_blanks and end < n {
+                    if html.charAt(end) == '\n' {
+                        seg_start = end + 1
+                        line_start = seg_start
+                    }
+                }
+                i = seg_start
+            }
+        }
+    }
+    if n > seg_start {
+        let tail: String = html.substring(seg_start, n)
+        out.push(tail)
+    }
+    return out.join("")
+}
+
 // ── API pública ─────────────────────────────────────────────────────────────
 
 // Renderiza una página completa (cuerpo + layout) y devuelve el HTML.
+//
+// Dos pasadas de post-proceso, en este orden:
+//   1. hl_pre_blocks sobre el CUERPO: resalta el contenido de los
+//      <pre data-lang="nyx"|"sh"> que traigan los fragmentos. Un <pre> SIN
+//      data-lang queda intacto — ese es el canal para HTML que ya viene
+//      resaltado (la muestra de la landing, que gen.nx pasa por hl_nyx), y por
+//      eso el resaltado nunca se aplica dos veces sobre lo mismo.
+//   2. strip_html_comments sobre la página YA armada: se van los comentarios
+//      del layout, de los partials y del template de página de una sola vez.
 pub fn render_page(tmpl_name: String, lang: String, extra: Map) -> String {
     register_partials()
     var ctx: Map = build_ctx(tmpl_name, lang, extra)
     let page_tmpl: String = read_fragment(TEMPLATE_DIR + "/" + tmpl_name + ".html")
-    let body: String = tpl_render(page_tmpl, ctx)
+    let rendered: String = tpl_render(page_tmpl, ctx)
+    let body: String = hl_pre_blocks(rendered)
     ctx.insert("body", body)
     let layout_tmpl: String = read_fragment(TEMPLATE_DIR + "/layout.html")
     let html: String = tpl_render(layout_tmpl, ctx)
-    return html
+    return strip_html_comments(html)
 }
 
 // mkdir recursivo: el builtin mkdir() crea UN nivel (devuelve -EEXIST si ya

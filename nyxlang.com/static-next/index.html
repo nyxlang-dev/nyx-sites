@@ -12,8 +12,6 @@
 <link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-<!-- templates/nav.html — navegación. El <nav> lleva el hairline de ancho
-     completo y .nav-inner.wrap centra el contenido en la retícula de 1040px. -->
 <nav class="nav" aria-label="Main">
 <div class="nav-inner wrap">
 <a class="nav-wordmark" href="/">NYX</a>
@@ -27,14 +25,8 @@
 </div>
 </nav>
 
-<main><!-- templates/index.html — cuerpo de la landing (EN y ES desde este único
-     template). Estructura acá, texto en content/i18n/<lang>.toml, fragmentos
-     largos en content/landing/. OJO: el motor interpola también DENTRO de los
-     comentarios, así que acá no se escriben tags de ejemplo. Los literales
-     iguales en los dos idiomas (comandos, rutas, arquitecturas, licencia) van
-     escritos acá una sola vez, no en los diccionarios. -->
+<main>
 
-<!-- ── Hero: sello, título, apoyo y el comando de instalación ───────────── -->
 <section class="hero">
 <div class="wrap hero-inner">
 <p class="hero-meta"><span class="stamp stamp-accent">Spec sheet <span class="stamp-num stamp-num-end">v0.31.0</span></span><span class="hero-rule"></span></p>
@@ -49,7 +41,6 @@
 </div>
 </section>
 
-<!-- ── 01 INSTALL: tabla de requisitos + primer proyecto ────────────────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -76,9 +67,6 @@
 </div>
 </section>
 
-<!-- ── Muestra de código: sample.nx, resaltado por hl_nyx en gen.nx. El <pre>
-     va SIN data-lang a propósito: sample_code ya llega resaltado, y hl_pre_blocks
-     sólo entra en los <pre data-lang=...> que traen código en crudo. ───────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -121,7 +109,6 @@
 </div>
 </section>
 
-<!-- ── 02 DOCS: los seis pasos de la guía + el recetario ────────────────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -140,7 +127,6 @@
 </div>
 </section>
 
-<!-- ── 03 DEVELOP WITH AGENTS: qué se siembra + extracto real de AGENTS.md ─ -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -187,7 +173,6 @@
 </div>
 </section>
 
-<!-- ── 04 SOURCE ───────────────────────────────────────────────────────── -->
 <section class="band">
 <div class="wrap band-inner">
 <header class="band-head">
@@ -203,8 +188,6 @@
 </div>
 </section>
 </main>
-<!-- templates/footer.html — pie. Mismo patrón que el nav: hairline al ancho
-     de la ventana, contenido dentro de la retícula. -->
 <footer class="footer">
 <div class="footer-inner wrap">
 <p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
