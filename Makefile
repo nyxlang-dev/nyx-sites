@@ -8,7 +8,7 @@ export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
-.PHONY: build-all smoke deploy status clean gen gen-check preview preview-stop
+.PHONY: build-all smoke deploy status clean gen gen-test gen-check preview preview-stop
 
 # ── Rediseño de nyxlang.com (rama redesign/spec-sheet) ──────────────────────
 # El sitio se GENERA: gen.nx lee content/ + templates/ y escribe static-next/.
@@ -18,6 +18,16 @@ PORT ?= 13191
 
 gen:
 	cd nyxlang.com && nyx gen.nx --out static-next
+
+# Suite del generador: los tests del tokenizador (src/gen/highlight.nx) + la
+# muestra de la landing compilada y EJECUTADA de verdad.
+#
+# Ojo con la muestra: se verifica con `nyx <archivo>` y NO con `nyx check`,
+# que no resuelve el prelude (ni los imports del proyecto) y da NYX1002 falsos
+# — ver el reporte de la T1. `nyx <archivo>` compila, linkea y corre.
+gen-test:
+	cd nyxlang.com && nyx test
+	cd nyxlang.com && nyx content/landing/sample.nx
 
 # Falla (rc=1) si static-next/ no coincide con lo que gen.nx produce hoy.
 gen-check:

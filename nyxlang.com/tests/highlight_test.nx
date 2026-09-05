@@ -1,0 +1,152 @@
+// tests/highlight_test.nx — suite de src/gen/highlight.nx.
+//
+// Se corre con `nyx test` desde nyxlang.com/ (o `nyx tests/highlight_test.nx`,
+// que ejecuta main()). OJO: los tests TIENEN que ser bloques `test "…" { … }`;
+// un archivo con funciones `test_*` se saltea EN SILENCIO y uno creería que
+// está cubierto.
+//
+// La propiedad que más importa acá no es el color sino que el resaltado sea
+// TRANSPARENTE: quitarle los spans a la salida y des-escapar las entidades
+// tiene que devolver la entrada byte a byte. Ese inverso es `hl_plain` (del
+// propio módulo, porque el generador lo usa como guarda antes de publicar), y
+// varios casos de abajo lo usan como oráculo.
+//
+// HALLAZGO: `nyx test` corre el binario con cwd = ~/.nyx, no el directorio del
+// proyecto — un test NO puede leer archivos del repo por ruta relativa. Por eso
+// acá todo el código de prueba va inline; que la muestra REAL de la landing
+// sobreviva al resaltado lo verifica gen.nx con hl_plain en cada generación.
+
+import "src/gen/highlight"
+
+test "palabra clave vs identificador con el mismo prefijo" {
+    let src: String = "for format in formats"
+    let out: String = hl_nyx(src)
+    assert(out.contains("<span class=\"kw\">for</span>"))
+    // `format` y `formats` empiezan con `for` pero NO son palabras clave:
+    // salen sin span (el escáner compara la palabra ENTERA, no un prefijo).
+    assert(out.contains("<span class=\"kw\">format</span>") == false)
+    assert(out.contains("<span class=\"kw\">formats</span>") == false)
+    assert(hl_plain(out) == src)
+}
+
+test "string con < & y comilla escapada adentro" {
+    let src: String = "let s: String = \"a<b&c\\\"d\""
+    let out: String = hl_nyx(src)
+    // El string entero es UN token: empieza y termina en la comilla real, la
+    // escapada de adentro no lo corta.
+    assert(out.contains("<span class=\"str\">&quot;a&lt;b&amp;c\\&quot;d&quot;</span>"))
+    assert(hl_plain(out) == src)
+}
+
+test "comentario que contiene comillas" {
+    let src: String = "let n: int = 1  // dice \"hola\" y no abre un string\nlet m: int = 2"
+    let out: String = hl_nyx(src)
+    assert(out.contains("<span class=\"cm\">// dice &quot;hola&quot; y no abre un string</span>"))
+    // La línea siguiente sigue siendo código.
+    assert(out.contains("<span class=\"kw\">let</span> m"))
+    assert(hl_plain(out) == src)
+}
+
+test "comentario de bloque, incluso anidado" {
+    let src: String = "let a: int = 1 /* nota /* anidada */ sigue */ let b: int = 2"
+    let out: String = hl_nyx(src)
+    assert(out.contains("<span class=\"cm\">/* nota /* anidada */ sigue */</span>"))
+    assert(out.contains("<span class=\"kw\">let</span> b"))
+}
+
+test "numeros hexadecimales y flotantes" {
+    let out: String = hl_nyx("0xFF 3.14 1_000 1e9 42")
+    assert(out.contains("<span class=\"num\">0xFF</span>"))
+    assert(out.contains("<span class=\"num\">3.14</span>"))
+    assert(out.contains("<span class=\"num\">1_000</span>"))
+    assert(out.contains("<span class=\"num\">1e9</span>"))
+    assert(out.contains("<span class=\"num\">42</span>"))
+}
+
+test "Option<int>: tipos ty y el < como operador" {
+    let out: String = hl_nyx("fn f(x: Option<int>) -> int")
+    assert(out.contains("<span class=\"ty\">Option</span>"))
+    assert(out.contains("<span class=\"ty\">int</span>"))
+    assert(out.contains("<span class=\"op\">&lt;</span>"))
+}
+
+test "llamada como fn, identificador suelto como texto plano" {
+    let out: String = hl_nyx("foo(bar)\nfoo")
+    assert(out.contains("<span class=\"fn\">foo</span>"))
+    // `bar` es un argumento, no una llamada: sin span.
+    assert(out.contains("<span class=\"fn\">bar</span>") == false)
+    // El `foo` suelto de la segunda línea tampoco lleva span.
+    assert(out.endsWith("\nfoo"))
+}
+
+test "la flecha -> sale como un solo operador" {
+    let out: String = hl_nyx("x -> y")
+    assert(out.contains("<span class=\"op\">-&gt;</span>"))
+}
+
+test "espacios, tabs y saltos de linea se conservan" {
+    let src: String = "fn main() {\n\tlet x: int = 1\n\n    return\n}\n"
+    let out: String = hl_nyx(src)
+    let back: String = hl_plain(out)
+    assert(back == src)
+    assert(back.length() == src.length())
+}
+
+test "hl_shell: prompt, comando y salida" {
+    let out: String = hl_shell("$ nyx run\nlistening on 8080")
+    assert(out.contains("<span class=\"prompt\">$</span>"))
+    assert(out.contains("<span class=\"cmd\">nyx run</span>"))
+    // La línea de salida va plana, sin spans.
+    assert(out.endsWith("\nlistening on 8080"))
+    assert(out.contains("<span class=\"cmd\">listening") == false)
+}
+
+test "hl_shell escapa la salida" {
+    let out: String = hl_shell("error: <stdin> & co")
+    assert(out == "error: &lt;stdin&gt; &amp; co")
+}
+
+test "hl_pre_blocks resalta solo los pre con data-lang" {
+    let frag: String = "<pre data-lang=\"nyx\">let a: int = 1</pre>\n<pre>ya resaltado &lt;x&gt;</pre>"
+    let out: String = hl_pre_blocks(frag)
+    assert(out.contains("<pre data-lang=\"nyx\"><span class=\"kw\">let</span>"))
+    // El <pre> sin data-lang queda intacto, byte a byte.
+    assert(out.contains("<pre>ya resaltado &lt;x&gt;</pre>"))
+}
+
+test "hl_pre_blocks des-escapa antes de tokenizar" {
+    // El fragmento trae el código escapado (es HTML): &lt; tiene que volver a
+    // ser `<` para que el tokenizador lo vea como operador, y salir escapado.
+    let frag: String = "<pre data-lang=\"nyx\">if a &lt; b { }</pre>"
+    let out: String = hl_pre_blocks(frag)
+    assert(out.contains("<span class=\"kw\">if</span>"))
+    assert(out.contains("<span class=\"op\">&lt;</span>"))
+}
+
+test "hl_pre_blocks tambien hace bloques de terminal" {
+    let frag: String = "<pre data-lang=\"sh\">$ nyx init my-app</pre>"
+    let out: String = hl_pre_blocks(frag)
+    assert(out.contains("<span class=\"prompt\">$</span>"))
+    assert(out.contains("<span class=\"cmd\">nyx init my-app</span>"))
+}
+
+test "una muestra con la forma de la de la landing" {
+    // Misma forma que content/landing/sample.nx (enum de dominio, match
+    // exhaustivo, interpolación, tipos explícitos). El archivo REAL lo verifica
+    // gen.nx en cada generación — acá no se puede leer (ver el HALLAZGO de la
+    // cabecera: `nyx test` corre con cwd = ~/.nyx).
+    // El "$" y el "{" van partidos a propósito: si la interpolación llegara
+    // entera al literal, el compilador la evaluaría acá adentro.
+    let interp: String = "$" + "{area(c)}"
+    let src: String = "enum Shape {\n    Circle(int)\n}\n\nfn area(s: Shape) -> int {\n    return match s {          // exhaustivo\n        Shape.Circle(r) => 3 * r * r\n    }\n}\n\nfn main() {\n    let c: Shape = Shape.Circle(2)\n    print(\"area = " + interp + "\")\n}\n"
+    let out: String = hl_nyx(src)
+    // 1. Transparencia: el código publicado es EXACTAMENTE el fuente.
+    assert(hl_plain(out) == src)
+    // 2. Y las clases que la hoja de estilo espera están todas.
+    assert(out.contains("<span class=\"kw\">enum</span>"))
+    assert(out.contains("<span class=\"ty\">Shape</span>"))
+    assert(out.contains("<span class=\"kw\">match</span>"))
+    assert(out.contains("<span class=\"cm\">// exhaustivo</span>"))
+    assert(out.contains("<span class=\"num\">3</span>"))
+    assert(out.contains("<span class=\"str\">"))
+}
