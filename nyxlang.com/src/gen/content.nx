@@ -1,0 +1,67 @@
+// src/gen/content.nx — carga del contenido del sitio para el generador estático.
+//
+// Todo lo que el generador lee de disco pasa por acá: datos globales
+// (content/site.toml), diccionarios de idioma (content/i18n/<lang>.toml) y
+// fragmentos de texto sueltos (templates/*.html, assets/*).
+//
+// Contrato de datos: TODO es un Map PLANO de String -> String. std/toml
+// devuelve exactamente eso (con claves "seccion.clave" cuando hay `[seccion]`,
+// por eso los .toml del sitio no usan secciones) y el motor de templates
+// también quiere un contexto plano, así que no hay traducción de formas en el
+// medio y evitamos el gotcha de los Maps anidados devueltos por función.
+//
+// Política de errores: ruidosa. Un archivo faltante aborta con la ruta en el
+// mensaje — nunca devolvemos "" en silencio, porque un fragmento vacío se
+// vuelve una página vacía publicada sin que nadie se entere.
+
+import "std/toml"
+
+const CONTENT_DIR: String = "content"
+
+// Lee un archivo de texto o aborta nombrando la ruta.
+//
+// read_file() devuelve "" tanto para "no existe" como para "existe vacío":
+// chequeamos file_exists primero para poder distinguir, y tratamos el vacío
+// como error igual (ningún archivo del sitio tiene por qué estar vacío).
+pub fn read_fragment(path: String) -> String {
+    if file_exists(path) == false {
+        print("error: no existe el archivo « " + path + " » (cwd: " + getcwd() + ")")
+        exit(1)
+    }
+    let text: String = read_file(path)
+    if text == "" {
+        print("error: el archivo « " + path + " » está vacío")
+        exit(1)
+    }
+    return text
+}
+
+// Datos globales del sitio: version, site_url, repo_url, install_cmd.
+pub fn load_site() -> Map {
+    let path: String = CONTENT_DIR + "/site.toml"
+    let raw: String = read_fragment(path)
+    let parsed: Map = toml_parse(raw)
+    return parsed
+}
+
+// Diccionario de un idioma ("en" | "es"). Las claves son las mismas en los dos
+// archivos (la suite de la task lo verifica con diff), así que una clave que
+// falta acá es un bug de contenido, no un caso a manejar en el render.
+pub fn load_i18n(lang: String) -> Map {
+    let path: String = CONTENT_DIR + "/i18n/" + lang + ".toml"
+    let raw: String = read_fragment(path)
+    let parsed: Map = toml_parse(raw)
+    return parsed
+}
+
+// Versión publicada del lenguaje (la del archivo VERSION del monorepo, copiada
+// a site.toml cuando se corta release).
+pub fn site_version() -> String {
+    let site: Map = load_site()
+    let v: String = site.get_or("version", "")
+    if v == "" {
+        print("error: content/site.toml no define « version »")
+        exit(1)
+    }
+    return v
+}

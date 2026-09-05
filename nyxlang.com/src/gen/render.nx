@@ -1,0 +1,201 @@
+// src/gen/render.nx — render de páginas y escritura de la salida.
+//
+// ── Contrato del motor (std/template) ───────────────────────────────────────
+// Lo que el motor SÍ hace:
+//   {{clave}}     interpola escapando HTML (std/url html_escape)
+//   {{{clave}}}   interpola CRUDO — solo para HTML que generamos nosotros
+//   {{#if k}}…{{else}}…{{/if}}, {{#each k}}…{{/each}}
+//   {{> nombre}}  incluye un partial registrado con tpl_partial(nombre, texto),
+//                 renderizado con el contexto ACTUAL (verificado: esta es la
+//                 sintaxis que soporta; no hay `{{> nombre arg}}`)
+// Lo que NO hace, y condiciona cómo escribimos los templates:
+//   · el contexto es PLANO: no existe `a.b`, una clave es una clave
+//   · dentro de un {{#each}} solo se ve el Map del ítem, no el contexto de afuera
+//     (lo que el ítem necesite hay que meterlo en el ítem)
+//   · no hay control de whitespace ({{~ ~}}): los tags salen con el espacio que
+//     los rodea, así que van pegados al texto cuando importa el byte exacto
+//   · no hay `else if` — se anidan {{#if}}
+//   · una clave ausente interpola "" sin avisar
+//
+// ── Cómo se arma una página ─────────────────────────────────────────────────
+// El template de página (templates/<nombre>.html) produce el CUERPO; el layout
+// (templates/layout.html) lo envuelve y lo interpola con {{{body}}} sin
+// escapar. Los dos se renderizan con el mismo contexto, así que el layout ve
+// también el diccionario del idioma.
+
+import "std/template"
+import "src/gen/content"
+
+const TEMPLATE_DIR: String = "templates"
+
+// ── Rutas canónicas ─────────────────────────────────────────────────────────
+
+// Prefijo de idioma: el inglés vive en la raíz, el español bajo /es.
+pub fn lang_prefix(lang: String) -> String {
+    if lang == "es" { return "/es" }
+    return ""
+}
+
+// El otro idioma (el del selector EN/ES).
+pub fn other_lang(lang: String) -> String {
+    if lang == "es" { return "en" }
+    return "es"
+}
+
+// URL pública de una página, por nombre de template e idioma. La landing es la
+// raíz; las secciones que agreguen las tasks siguientes cuelgan de un
+// directorio con su nombre (…/docs/, …/by-example/).
+pub fn page_href(tmpl_name: String, lang: String) -> String {
+    let prefix: String = lang_prefix(lang)
+    if tmpl_name == "landing" { return prefix + "/" }
+    return prefix + "/" + tmpl_name + "/"
+}
+
+// Ruta relativa dentro del directorio de salida para esa misma página.
+pub fn page_rel(tmpl_name: String, lang: String) -> String {
+    let href: String = page_href(tmpl_name, lang)
+    // href siempre termina en "/" → el archivo es index.html de ese directorio,
+    // y se le saca la barra inicial para que quede relativo a <out>.
+    let tail: String = href.substring(1, href.length())
+    return tail + "index.html"
+}
+
+// ── Contexto ────────────────────────────────────────────────────────────────
+
+// Diccionario del idioma + datos del sitio + rutas + `extra`, todo plano.
+//
+// Convención para el <title> y la meta description: `extra` no trae el texto
+// sino la CLAVE i18n que lo contiene ("title_key" / "desc_key"), y acá se
+// resuelve contra el diccionario ya cargado. Así el generador nunca duplica
+// texto traducible.
+fn build_ctx(tmpl_name: String, lang: String, extra: Map) -> Map {
+    var ctx: Map = load_i18n(lang)
+    let site: Map = load_site()
+
+    let version: String = site.get_or("version", "")
+    let site_url: String = site.get_or("site_url", "")
+    let repo_url: String = site.get_or("repo_url", "")
+    let install_cmd: String = site.get_or("install_cmd", "")
+    ctx.insert("version", version)
+    ctx.insert("site_url", site_url)
+    ctx.insert("repo_url", repo_url)
+    ctx.insert("install_cmd", install_cmd)
+    ctx.insert("changelog_url", repo_url + "/blob/main/CHANGELOG.md")
+
+    let alt: String = other_lang(lang)
+    let prefix: String = lang_prefix(lang)
+    let href_en: String = page_href(tmpl_name, "en")
+    let href_es: String = page_href(tmpl_name, "es")
+    let self_href: String = page_href(tmpl_name, lang)
+    let alt_href: String = page_href(tmpl_name, alt)
+    ctx.insert("lang", lang)
+    ctx.insert("lang_prefix", prefix)
+    ctx.insert("alt_lang", alt)
+    ctx.insert("alt_href", alt_href)
+    ctx.insert("url_en", site_url + href_en)
+    ctx.insert("url_es", site_url + href_es)
+    ctx.insert("canonical_url", site_url + self_href)
+
+    // Etiqueta del selector: el nombre del OTRO idioma, escrito en ese idioma.
+    let alt_label: String = ctx.get_or("lang_alt_label", "")
+    ctx.insert("alt_label", alt_label)
+
+    // Rutas de la navegación, ya con el prefijo de idioma.
+    ctx.insert("home_href", prefix + "/")
+    ctx.insert("install_href", prefix + "/#install")
+    ctx.insert("docs_href", page_href("docs", lang))
+    ctx.insert("examples_href", page_href("by-example", lang))
+
+    // `extra` va último: una página puede pisar cualquier valor derivado.
+    let keys: Array = extra.keys()
+    var i: int = 0
+    while i < keys.length() {
+        let k: String = keys[i]
+        let v: String = extra.get_or(k, "")
+        ctx.insert(k, v)
+        i = i + 1
+    }
+
+    let title_key: String = ctx.get_or("title_key", "")
+    if title_key != "" {
+        let title: String = ctx.get_or(title_key, "")
+        ctx.insert("title", title)
+    }
+    let desc_key: String = ctx.get_or("desc_key", "")
+    if desc_key != "" {
+        let desc: String = ctx.get_or(desc_key, "")
+        ctx.insert("description", desc)
+    }
+    return ctx
+}
+
+// Registra los partials comunes. Es idempotente (el registro es un Map por
+// nombre) y barato, así que se llama en cada render en vez de exigir un init
+// que alguien se puede olvidar de invocar.
+fn register_partials() {
+    tpl_partial("nav", read_fragment(TEMPLATE_DIR + "/nav.html"))
+    tpl_partial("footer", read_fragment(TEMPLATE_DIR + "/footer.html"))
+}
+
+// ── API pública ─────────────────────────────────────────────────────────────
+
+// Renderiza una página completa (cuerpo + layout) y devuelve el HTML.
+pub fn render_page(tmpl_name: String, lang: String, extra: Map) -> String {
+    register_partials()
+    var ctx: Map = build_ctx(tmpl_name, lang, extra)
+    let page_tmpl: String = read_fragment(TEMPLATE_DIR + "/" + tmpl_name + ".html")
+    let body: String = tpl_render(page_tmpl, ctx)
+    ctx.insert("body", body)
+    let layout_tmpl: String = read_fragment(TEMPLATE_DIR + "/layout.html")
+    let html: String = tpl_render(layout_tmpl, ctx)
+    return html
+}
+
+// mkdir recursivo: el builtin mkdir() crea UN nivel (devuelve -EEXIST si ya
+// está), así que recorremos los prefijos de la ruta creando lo que falte.
+fn mkdir_p(dir: String) {
+    if dir == "" { return }
+    let parts: Array = dir.split("/")
+    var acc: String = ""
+    var i: int = 0
+    while i < parts.length() {
+        let part: String = parts[i]
+        if i == 0 {
+            acc = part
+        } else {
+            acc = acc + "/" + part
+        }
+        if part != "" and part != "." and part != ".." {
+            if file_exists(acc) == false { mkdir(acc) }
+        }
+        i = i + 1
+    }
+}
+
+// Directorio padre de una ruta ("a/b/c.html" -> "a/b", "x.html" -> "").
+fn parent_dir(path: String) -> String {
+    var cut: int = -1
+    var i: int = 0
+    while i < path.length() {
+        let c: char = path.charAt(i)
+        if c == '/' { cut = i }
+        i = i + 1
+    }
+    if cut < 0 { return "" }
+    return path.substring(0, cut)
+}
+
+// Escribe <out_dir>/<rel>, creando los directorios intermedios.
+//
+// Solo texto: write_file() NO es binary-safe (trunca en el primer NUL), y todo
+// lo que emite este generador es HTML/CSS/JS.
+pub fn write_page(out_dir: String, rel: String, html: String) {
+    let full: String = out_dir + "/" + rel
+    let dir: String = parent_dir(full)
+    mkdir_p(dir)
+    let ok: bool = write_file(full, html)
+    if ok == false {
+        print("error: no se pudo escribir « " + full + " »")
+        exit(1)
+    }
+}

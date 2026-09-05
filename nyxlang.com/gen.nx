@@ -1,0 +1,205 @@
+// gen.nx — generador estático de nyxlang.com.
+//
+// Uso:
+//   nyx gen.nx --out <dir> [--only landing|docs|by-example] [--check]
+//
+// El sitio dejó de ser HTML escrito a mano: cada página sale de un template
+// (templates/) + contenido (content/) y se escribe en <dir>. Durante el
+// rediseño <dir> es static-next/, que al final se intercambia con static/.
+//
+// --check no escribe en <dir>: genera todo en un directorio temporal
+// (static-next.tmp/, gitignorado) y compara byte a byte contra <dir>,
+// imprimiendo una línea « stale: <ruta> » por diferencia y saliendo 1 — el
+// mismo contrato que `nyx_gendocs --check` del monorepo, para poder correrlo
+// en CI y detectar salida sin regenerar. Compara los archivos que el
+// generador PRODUCE; un archivo de más en <dir> no lo detecta (limitación
+// conocida, igual que gendocs).
+//
+// Secciones: en esta task existe solo `landing`; `docs` y `by-example` están
+// reconocidas para que el flag no mienta, pero todavía no generan nada.
+
+import "src/gen/content"
+import "src/gen/render"
+
+const CHECK_TMP_DIR: String = "static-next.tmp"
+
+// ── Secciones ───────────────────────────────────────────────────────────────
+
+// Genera la landing (EN + ES) en out_dir. Devuelve las rutas relativas escritas.
+fn gen_landing(out_dir: String) -> Array {
+    var written: Array = []
+    let langs: Array = ["en", "es"]
+    var i: int = 0
+    while i < langs.length() {
+        let lang: String = langs[i]
+        var extra: Map = map_new()
+        // Convención de src/gen/render.nx: se pasan CLAVES i18n, no textos.
+        extra.insert("title_key", "title_home")
+        extra.insert("desc_key", "placeholder_body")
+        let html: String = render_page("landing", lang, extra)
+        let rel: String = page_rel("landing", lang)
+        write_page(out_dir, rel, html)
+        written.push(rel)
+        i = i + 1
+    }
+    return written
+}
+
+// Copia los assets compartidos a <out>/shared/. Son texto (CSS/JS), así que
+// read_file/write_file alcanzan; si algún día entra un binario hay que pasar a
+// std/fs o a un copy del sistema.
+fn gen_assets(out_dir: String) -> Array {
+    var written: Array = []
+    let names: Array = ["spec.css", "copy.js"]
+    var i: int = 0
+    while i < names.length() {
+        let name: String = names[i]
+        let text: String = read_fragment("assets/" + name)
+        let rel: String = "shared/" + name
+        write_page(out_dir, rel, text)
+        written.push(rel)
+        i = i + 1
+    }
+    return written
+}
+
+// Genera todo lo pedido por `only` ("" = todo) y devuelve las rutas escritas.
+fn generate(out_dir: String, only: String) -> Array {
+    var written: Array = []
+    if only == "" or only == "landing" {
+        let pages: Array = gen_landing(out_dir)
+        var i: int = 0
+        while i < pages.length() {
+            let rel: String = pages[i]
+            written.push(rel)
+            i = i + 1
+        }
+        let assets: Array = gen_assets(out_dir)
+        var j: int = 0
+        while j < assets.length() {
+            let rel2: String = assets[j]
+            written.push(rel2)
+            j = j + 1
+        }
+    }
+    return written
+}
+
+// ── --check ─────────────────────────────────────────────────────────────────
+
+// Compara lo generado en tmp_dir contra out_dir. Devuelve la cantidad de
+// archivos que difieren o faltan.
+fn compare_tree(tmp_dir: String, out_dir: String, rels: Array) -> int {
+    var stale: int = 0
+    var i: int = 0
+    while i < rels.length() {
+        let rel: String = rels[i]
+        let want_path: String = tmp_dir + "/" + rel
+        let have_path: String = out_dir + "/" + rel
+        let want: String = read_file(want_path)
+        if file_exists(have_path) == false {
+            print("stale: " + have_path + " (falta)")
+            stale = stale + 1
+        } else {
+            let have: String = read_file(have_path)
+            if have != want {
+                print("stale: " + have_path)
+                stale = stale + 1
+            }
+        }
+        i = i + 1
+    }
+    return stale
+}
+
+fn run_check(out_dir: String, only: String) -> int {
+    exec_code("rm -rf '" + CHECK_TMP_DIR + "'")
+    let rels: Array = generate(CHECK_TMP_DIR, only)
+    let stale: int = compare_tree(CHECK_TMP_DIR, out_dir, rels)
+    exec_code("rm -rf '" + CHECK_TMP_DIR + "'")
+    if stale > 0 {
+        print("gen: " + int_to_string(stale) + " archivo(s) desactualizado(s) en " + out_dir + " — corré `make gen`")
+        return 1
+    }
+    return 0
+}
+
+// ── CLI ─────────────────────────────────────────────────────────────────────
+
+fn usage() {
+    print("uso: nyx gen.nx --out <dir> [--only landing|docs|by-example] [--check]")
+}
+
+fn known_section(name: String) -> bool {
+    if name == "landing" { return true }
+    if name == "docs" { return true }
+    if name == "by-example" { return true }
+    return false
+}
+
+fn main() -> int {
+    let args: Array = get_args()
+    var out_dir: String = ""
+    var only: String = ""
+    var check: bool = false
+
+    var i: int = 1
+    while i < args.length() {
+        let arg: String = args[i]
+        if arg == "--out" {
+            if i + 1 >= args.length() {
+                print("error: --out requiere un directorio")
+                usage()
+                return 1
+            }
+            let val: String = args[i + 1]
+            out_dir = val
+            i = i + 2
+        } else if arg == "--only" {
+            if i + 1 >= args.length() {
+                print("error: --only requiere una sección")
+                usage()
+                return 1
+            }
+            let val2: String = args[i + 1]
+            only = val2
+            i = i + 2
+        } else if arg == "--check" {
+            check = true
+            i = i + 1
+        } else {
+            print("error: argumento desconocido « " + arg + " »")
+            usage()
+            return 1
+        }
+    }
+
+    if out_dir == "" {
+        print("error: falta --out <dir>")
+        usage()
+        return 1
+    }
+    if only != "" and known_section(only) == false {
+        print("error: sección desconocida « " + only + " » (landing | docs | by-example)")
+        return 1
+    }
+
+    if check {
+        return run_check(out_dir, only)
+    }
+
+    let written: Array = generate(out_dir, only)
+    if written.length() == 0 {
+        print("gen: nada que generar para « " + only + " » (sección todavía no implementada)")
+        return 0
+    }
+    let version: String = site_version()
+    print("gen: v" + version + " → " + out_dir + " (" + int_to_string(written.length()) + " archivos)")
+    var k: int = 0
+    while k < written.length() {
+        let rel: String = written[k]
+        print("  " + rel)
+        k = k + 1
+    }
+    return 0
+}
