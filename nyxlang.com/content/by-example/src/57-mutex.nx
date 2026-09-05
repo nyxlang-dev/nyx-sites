@@ -1,0 +1,35 @@
+// Mutex — protecting shared state between threads
+// Mutex — proteger estado compartido entre hilos
+
+var counter: int = 0
+
+fn increment_task() -> int {
+    // Handle opaco tipado Map (convención del ecosistema desde v0.24.x, B1):
+    // anotarlo `int` es error del checker — antes truncaba el puntero en silencio.
+    // Opaque handle typed Map (ecosystem convention since v0.24.x, B1):
+    // annotating it `int` is a checker error — it used to silently truncate the pointer.
+    let m: Map = mutex_new()
+    var i: int = 0
+    while i < 1000 {
+        mutex_lock(m)
+        counter = counter + 1
+        mutex_unlock(m)
+        i = i + 1
+    }
+    mutex_destroy(m)
+    return 0
+}
+
+fn main() -> int {
+    // Without a mutex, concurrent increments would lose updates.
+    // The mutex ensures only one thread modifies counter at a time.
+    let h1: int = thread_spawn(increment_task)
+    let h2: int = thread_spawn(increment_task)
+
+    thread_join(h1)
+    thread_join(h2)
+
+    print("counter: " + int_to_string(counter))
+    // Expected: 2000 (1000 per thread, no lost updates)
+    return 0
+}
