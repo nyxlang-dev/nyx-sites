@@ -175,7 +175,13 @@ VOSEO_RE='\b(sos|tenés|podés|querés|sabés|hacé|seguí|ofrecé|leé|probá|d
 
 DENY_PRODUCTS_RE='nyx-kv|nyxkv|nyx-serve|nyx-proxy|nyx-edit|nyx-db|nyx-queue|nyx-shell|\bgateway\b|playground|serve\.nyxlang|proxy\.nyxlang|edit\.nyxlang|nyxkv\.com'
 AI_TOOLS_RE='\bclaude\b|cursor|copilot'
-METRICS_RE='req/s|ops/s|[0-9][0-9.,]*\s*(ms|µs|x faster|× faster|veces más rápido)|benchmark|faster than|más rápido que|[0-9]+ (recipes|recetas|tests|seconds|segundos)'
+# El porcentaje comparativo entró en la fase 2 (review final): «~30% smaller
+# than JSON» / «~30% más liviana que JSON» vivía en seis superficies
+# publicadas de 44-msgpack y este regex no lo veía — B daba verde sobre una
+# cifra de rendimiento que nada mide. Dos formas: el porcentaje seguido de un
+# comparativo (EN o ES) y el «~N%» aproximado, que ya es una medición sin
+# medición aunque no traiga comparativo detrás.
+METRICS_RE='req/s|ops/s|[0-9][0-9.,]*\s*(ms|µs|x faster|× faster|veces más rápido)|benchmark|faster than|más rápido que|[0-9]+ (recipes|recetas|tests|seconds|segundos)|[0-9]+ ?% ?(smaller|larger|faster|slower|less|more|más|menos|mayor|menor)|~[0-9]+ ?%'
 PLATFORMS_RE='macOS|mac os|Windows|brew install|WSL'
 IDENTITY_RE='Ephemeris|Fraunces|fonts\.googleapis|fonts\.gstatic|logo\.png'
 
@@ -896,6 +902,7 @@ run_autotest() {
 <head><title></title></head>
 <body>
 <p>nyx-kv procesa 9,971 req/s, mucho más rápido que la competencia en macOS.</p>
+<p>El formato binario es ~30% smaller than JSON y un 12% menos pesado que YAML.</p>
 <a href="/no-existe.html">enlace roto</a>
 <a href="/es/#products">ancla muerta</a>
 <p>{{clave_que_no_existe}}</p>
@@ -923,7 +930,12 @@ HTML
     printf '<p>Par ES del fragmento del autotest.</p>\n' > "$site/content/docs/fixture.es.html"
 
     check_a "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: A no detectó el control positivo"; broken=1; }
-    check_b "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: B no detectó el control positivo"; broken=1; }
+    # Exactamente 4, no «≥1»: son DOS líneas plantadas (la de req/s y la del
+    # porcentaje comparativo, que es lo único que ejercita el patrón nuevo de
+    # la fase 2) por DOS copias del fixture (index.html y su gemela es/). Con
+    # «≥1» la línea de req/s sola alcanzaba para dar el autotest por bueno y
+    # el patrón del porcentaje podía quedarse ciego sin que nadie lo viera.
+    check_b "$aroot"; [ "$CHECK_LAST_FAILS" -eq 4 ] || { print_bad "AUTOTEST ROTO: B vio $CHECK_LAST_FAILS hallazgo(s), esperaba 4 (req/s + porcentaje comparativo, en index.html y en es/index.html)"; broken=1; }
     check_c "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: C no detectó el control positivo"; broken=1; }
     check_e "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: E no detectó el control positivo"; broken=1; }
     check_f "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: F no detectó el control positivo"; broken=1; }
