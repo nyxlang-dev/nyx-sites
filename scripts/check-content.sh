@@ -437,8 +437,11 @@ EOF2
     local en_toml="$SITE_DIR/content/i18n/en.toml" es_toml="$SITE_DIR/content/i18n/es.toml"
     if [ -f "$en_toml" ] && [ -f "$es_toml" ]; then
         local en_keys es_keys
-        en_keys=$(grep -o '^[a-z_]* =' "$en_toml" | sort)
-        es_keys=$(grep -o '^[a-z_]* =' "$es_toml" | sort)
+        # [a-z_0-9], no [a-z_]: una clave con un dígito (p.ej. `nav_v2 = …`)
+        # no coincidía en NINGUNO de los dos lados, así que la comparación
+        # pasaba en verde sin haber comparado esa clave.
+        en_keys=$(grep -o '^[a-z_0-9]* =' "$en_toml" | sort)
+        es_keys=$(grep -o '^[a-z_0-9]* =' "$es_toml" | sort)
         if [ "$en_keys" != "$es_keys" ]; then
             print_bad "[G] content/i18n/en.toml y es.toml no tienen las mismas claves:"
             diff <(printf '%s\n' "$en_keys") <(printf '%s\n' "$es_keys") | sed 's/^/      /'
