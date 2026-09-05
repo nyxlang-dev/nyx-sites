@@ -8,7 +8,7 @@ export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
-.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks preview preview-stop
+.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks check-content preview preview-stop
 
 # ── Rediseño de nyxlang.com (rama redesign/spec-sheet) ──────────────────────
 # El sitio se GENERA: gen.nx lee content/ + templates/ y escribe static-next/.
@@ -38,6 +38,16 @@ gen-check:
 # lo confirma. Depende de `gen`, porque lee static-next/, no content/.
 gen-docblocks: gen
 	cd nyxlang.com && sh ../scripts/check-doc-blocks.sh static-next
+
+# Guardias del contenido PUBLICADO: productos/métricas/plataformas no
+# soportadas/identidad vieja/anclas muertas/enlaces rotos/paridad EN-ES/
+# voseo/salida al día. Corre el autotest de control positivo primero — si
+# el instrumento no ve sus propios errores plantados, sale 2 sin evaluar
+# nada más. ROOT sobreescribible: `make check-content ROOT=nyxlang.com/static`
+# corre sobre el árbol que se va a servir (lo que hace deploy.sh).
+ROOT ?= nyxlang.com/static-next
+check-content:
+	bash scripts/check-content.sh $(ROOT)
 
 # Preview local en background (nunca en foreground: bloquea la sesión).
 # NYX_STATIC_ROOT lo implementa la T5; hasta entonces el binario sirve

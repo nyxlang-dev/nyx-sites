@@ -20,6 +20,14 @@ cd "$ROOT"
 echo "[1/4] Build (std/serve del core, sin vendoring)..."
 make build-all
 
+# Red de seguridad de contenido: productos/métricas/plataformas no
+# soportadas/identidad vieja/anclas muertas/enlaces rotos/paridad EN-ES/
+# voseo/salida al día. Corre sobre el árbol que se va a SERVIR (static, no
+# static-next: eso es lo que este deploy realmente publica). `set -e`
+# arriba hace que un rc=1 acá aborte el deploy antes de tocar systemd.
+echo "[1.5] Guardias de contenido publicado..."
+bash scripts/check-content.sh nyxlang.com/static
+
 echo "[2/4] Smoke efímero..."
 bash scripts/smoke.sh
 
