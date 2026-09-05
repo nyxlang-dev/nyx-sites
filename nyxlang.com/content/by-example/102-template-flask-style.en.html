@@ -1,10 +1,12 @@
-<!-- title: Template Flask Style | blurb: Template engine, Flask-style — {{}}, {{{raw}}}, #if, #each, partials -->
+<!-- title: Template Engine, Flask-Style | blurb: Interpolation, <code>#if</code>, <code>#each</code> and partials with <code>std/template</code>. -->
 <section data-part="intro">
-<p>TODO — write the introduction for this recipe.</p>
+<p><code>std/template</code> is the pure rendering engine: no networking, no I/O. <code>tpl_render(tmpl, ctx)</code> takes a template string and a <code>Map</code> context and returns the finished text, so it works standalone as well as behind an HTTP server. This recipe drives it on its own and checks every feature with <code>assert</code>, which makes the program its own test.</p>
 </section>
 <section data-part="output">
-TODO
+OK: motor de templates (interpolación, #if, #each, partial) verificado end-to-end
 </section>
 <section data-part="explanation">
-<p>TODO — write the explanation for this recipe.</p>
+<p><code>{{key}}</code> HTML-escapes the value, which is what makes interpolation XSS-safe by default: the context holds <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> and the render produces the escaped entities. <code>{{{key}}}</code> does not escape and is only for content you already trust or have sanitized yourself.</p>
+<p><code>{{#if key}}…{{else}}…{{/if}}</code> counts a key as truthy when it exists and its value is neither empty nor <code>"0"</code> — the recipe asserts both branches. <code>{{#each key}}</code> expects the key to resolve to an array of <code>Map</code> values and renders its body once per element, using that element as the context of the block, which is what lets one <code>{{#each}}</code> nest inside another.</p>
+<p><code>tpl_partial(name, tmpl)</code> registers a reusable fragment by name and <code>{{&gt; name}}</code> includes it rendered with the CURRENT context, not a fresh or empty one. Every assertion holds, so the single line of output is the whole proof: escaping, conditionals, loops and partials behave as documented.</p>
 </section>

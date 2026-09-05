@@ -1,10 +1,15 @@
-<!-- title: File Errors Two Tier | blurb: TODO -->
+<!-- title: File Errors: Two Tiers | blurb: <code>Result</code> when the caller can react, panic when dying is the honest move. -->
 <section data-part="intro">
-<p>TODO — write the introduction for this recipe.</p>
+<p>Nyx handles I/O failures on two tiers. Tier one returns <code>Result&lt;T, Error&gt;</code> and propagates it with <code>?</code>, so the caller decides what to do about the failure; tier two calls <code>unwrap()</code> and dies on the spot, which is the honest choice when there is no reasonable fallback. This recipe uses <code>try_read_file</code> and <code>try_write_file</code> from <code>std/fs</code> together with <code>std/error</code>.</p>
 </section>
 <section data-part="output">
-TODO
+puerto=8080
+modo=dev
+
+kind: not_found
 </section>
 <section data-part="explanation">
-<p>TODO — write the explanation for this recipe.</p>
+<p><code>cargar_config</code> is tier one: <code>try_read_file(path)?</code> either yields the file contents or returns early with the <code>Error</code> untouched. The function never has to know why the read failed — <code>?</code> propagates the typed error and <code>Result.Ok(contenido)</code> wraps the success.</p>
+<p>Seeding the example file under <code>/tmp</code> is tier two. If that write fails, the directory is not writable and there is no sensible fallback, so <code>w.unwrap()</code> aborts. The annotation on <code>let w: Result&lt;int, Error&gt;</code> is required: a <code>let</code> without a type loses the generic parameters and <code>.unwrap()</code> stops dispatching.</p>
+<p>Both calls to <code>cargar_config</code> are matched exhaustively. The second one asks for a file that does not exist, and the <code>Result.Err</code> branch reads <code>e.kind</code> — a field of the error value, not a message to parse — which is why the last line of output is <code>not_found</code>.</p>
 </section>

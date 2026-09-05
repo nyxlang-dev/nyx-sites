@@ -1,10 +1,15 @@
-<!-- title: File Errors Two Tier | blurb: Errores tipados de E/S: Result&lt;T, Error&gt; cuando el caller reacciona, panic cuando morir es correcto -->
+<!-- title: Errores de archivo: dos niveles | blurb: <code>Result</code> cuando quien llama puede reaccionar, panic cuando morir es lo honesto. -->
 <section data-part="intro">
-<p>TODO — falta escribir la introducción de esta receta.</p>
+<p>Nyx maneja los fallos de E/S en dos niveles. El primero devuelve <code>Result&lt;T, Error&gt;</code> y lo propaga con <code>?</code>, así que quien llama decide qué hacer con el fallo; el segundo llama a <code>unwrap()</code> y muere en el acto, que es la opción honesta cuando no hay un fallback razonable. Esta receta usa <code>try_read_file</code> y <code>try_write_file</code> de <code>std/fs</code> junto con <code>std/error</code>.</p>
 </section>
 <section data-part="output">
-TODO
+puerto=8080
+modo=dev
+
+kind: not_found
 </section>
 <section data-part="explanation">
-<p>TODO — falta escribir la explicación de esta receta.</p>
+<p><code>cargar_config</code> es el primer nivel: <code>try_read_file(path)?</code> entrega el contenido del archivo o retorna temprano con el <code>Error</code> intacto. La función nunca necesita saber por qué falló la lectura — <code>?</code> propaga el error tipado y <code>Result.Ok(contenido)</code> envuelve el caso de éxito.</p>
+<p>Sembrar el archivo de ejemplo en <code>/tmp</code> es el segundo nivel. Si esa escritura falla, el directorio no es escribible y no hay un fallback sensato, así que <code>w.unwrap()</code> aborta. La anotación de <code>let w: Result&lt;int, Error&gt;</code> es obligatoria: un <code>let</code> sin tipo pierde los parámetros genéricos y <code>.unwrap()</code> deja de despachar.</p>
+<p>Las dos llamadas a <code>cargar_config</code> se resuelven con match exhaustivo. La segunda pide un archivo que no existe, y la rama <code>Result.Err</code> lee <code>e.kind</code> — un campo del valor de error, no un mensaje que haya que parsear — y por eso la última línea de la salida es <code>not_found</code>.</p>
 </section>

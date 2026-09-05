@@ -1,10 +1,12 @@
-<!-- title: Template Flask Style | blurb: Motor de templates estilo Flask — interpolación, condicionales, loops, partials -->
+<!-- title: Motor de templates estilo Flask | blurb: Interpolación, <code>#if</code>, <code>#each</code> y partials con <code>std/template</code>. -->
 <section data-part="intro">
-<p>TODO — falta escribir la introducción de esta receta.</p>
+<p><code>std/template</code> es el motor de render puro: sin red y sin E/S. <code>tpl_render(tmpl, ctx)</code> recibe un string de template y un contexto <code>Map</code>, y devuelve el texto final, así que sirve tanto por su cuenta como detrás de un servidor HTTP. Esta receta lo ejercita sola y verifica cada capacidad con <code>assert</code>, de modo que el programa es su propio test.</p>
 </section>
 <section data-part="output">
-TODO
+OK: motor de templates (interpolación, #if, #each, partial) verificado end-to-end
 </section>
 <section data-part="explanation">
-<p>TODO — falta escribir la explicación de esta receta.</p>
+<p><code>{{key}}</code> escapa el valor como HTML, y eso es lo que hace que la interpolación sea segura contra XSS por defecto: el contexto guarda <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> y el render produce las entidades escapadas. <code>{{{key}}}</code> no escapa y solo se usa con contenido en el que ya confías o que ya sanitizaste.</p>
+<p><code>{{#if key}}…{{else}}…{{/if}}</code> considera verdadera una clave cuando existe y su valor no es vacío ni <code>"0"</code> — la receta verifica las dos ramas. <code>{{#each key}}</code> espera que la clave resuelva a un array de <code>Map</code> y renderiza su cuerpo una vez por elemento, usando ese elemento como contexto del bloque, que es lo que permite anidar un <code>{{#each}}</code> dentro de otro.</p>
+<p><code>tpl_partial(name, tmpl)</code> registra un fragmento reusable por nombre y <code>{{&gt; name}}</code> lo incluye renderizado con el contexto ACTUAL, no con uno nuevo ni vacío. Todas las aserciones se cumplen, así que la única línea de salida es la prueba completa: escapado, condicionales, loops y partials se comportan como está documentado.</p>
 </section>
