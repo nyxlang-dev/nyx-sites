@@ -26,18 +26,39 @@ const CHECK_TMP_DIR: String = "static-next.tmp"
 // ── Secciones ───────────────────────────────────────────────────────────────
 
 // Genera la landing (EN + ES) en out_dir. Devuelve las rutas relativas escritas.
+//
+// El cuerpo sale de templates/index.html (UN solo template para los dos
+// idiomas) + content/i18n/<lang>.toml. Los dos bloques largos que no caben en
+// una clave de diccionario viajan por `extra` como HTML crudo:
+//   · sample_code     — content/landing/sample.html, el resaltado a mano de
+//                       content/landing/sample.nx (T3 lo reemplaza por hl_nyx)
+//   · agents_excerpt  — content/landing/agents-<lang>.html, extracto LITERAL
+//                       del AGENTS.md que siembra `nyx init`
+// Los enlaces de los seis pasos de la guía se arman acá y no en el template
+// porque el motor no concatena: la clave que llega ya trae el prefijo de
+// idioma (/docs/… en inglés, /es/docs/… en español).
 fn gen_landing(out_dir: String) -> Array {
     var written: Array = []
     let langs: Array = ["en", "es"]
+    let sample: String = read_fragment("content/landing/sample.html")
     var i: int = 0
     while i < langs.length() {
         let lang: String = langs[i]
         var extra: Map = map_new()
         // Convención de src/gen/render.nx: se pasan CLAVES i18n, no textos.
         extra.insert("title_key", "title_home")
-        extra.insert("desc_key", "placeholder_body")
-        let html: String = render_page("landing", lang, extra)
-        let rel: String = page_rel("landing", lang)
+        extra.insert("desc_key", "meta_description")
+        extra.insert("sample_code", sample)
+        extra.insert("agents_excerpt", read_fragment("content/landing/agents-" + lang + ".html"))
+        let docs: String = page_href("docs", lang)
+        extra.insert("docs_install_href", docs + "01-install.html")
+        extra.insert("docs_program_href", docs + "02-first-program.html")
+        extra.insert("docs_project_href", docs + "03-project.html")
+        extra.insert("docs_agents_href", docs + "04-agents.html")
+        extra.insert("docs_cli_href", docs + "05-cli.html")
+        extra.insert("docs_syntax_href", docs + "06-syntax.html")
+        let html: String = render_page("index", lang, extra)
+        let rel: String = page_rel("index", lang)
         write_page(out_dir, rel, html)
         written.push(rel)
         i = i + 1

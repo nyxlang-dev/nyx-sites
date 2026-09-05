@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nyx — un lenguaje de tipado gradual que compila a código nativo</title>
-<meta name="description" content="Marcador de posición: la landing llega en la próxima tarea. Esta página ya sale del generador estático escrito en Nyx: layout, navegación, pie y diccionarios ya están en su lugar.">
+<meta name="description" content="Nyx es un lenguaje de tipado gradual que compila a código nativo con LLVM. Un comando lo instala en Linux, y cada proyecto que crea lleva el contexto que un agente de IA necesita para escribirlo bien.">
 <link rel="canonical" href="https://nyxlang.com/es/">
 <link rel="alternate" hreflang="en" href="https://nyxlang.com/">
 <link rel="alternate" hreflang="es" href="https://nyxlang.com/es/">
@@ -12,7 +12,10 @@
 <link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
+<!-- templates/nav.html — navegación. El <nav> lleva el hairline de ancho
+     completo y .nav-inner.wrap centra el contenido en la retícula de 1040px. -->
 <nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
 <a class="nav-wordmark" href="/es/">NYX</a>
 <ul class="nav-links">
 <li><a href="/es/#install">Instalar</a></li>
@@ -21,16 +24,193 @@
 <li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
 </ul>
 <a class="nav-lang" href="/" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main><section class="hero">
-<h1 class="hero-title">Nyx — un lenguaje de tipado gradual que compila a código nativo</h1>
-<p class="hero-lede">Marcador de posición: la landing llega en la próxima tarea. Esta página ya sale del generador estático escrito en Nyx: layout, navegación, pie y diccionarios ya están en su lugar.</p>
-<p class="hero-install" id="install"><code data-copy="curl -sSf https://nyxlang.com/install.sh | sh">curl -sSf https://nyxlang.com/install.sh | sh</code></p>
+<main><!-- templates/index.html — cuerpo de la landing (EN y ES desde este único
+     template). Estructura acá, texto en content/i18n/<lang>.toml, fragmentos
+     largos en content/landing/. OJO: el motor interpola también DENTRO de los
+     comentarios, así que acá no se escriben tags de ejemplo. Los literales
+     iguales en los dos idiomas (comandos, rutas, arquitecturas, licencia) van
+     escritos acá una sola vez, no en los diccionarios. -->
+
+<!-- ── Hero: sello, título, apoyo y el comando de instalación ───────────── -->
+<section class="hero">
+<div class="wrap hero-inner">
+<p class="hero-meta"><span class="stamp stamp-accent">Hoja de especificaciones <span class="stamp-num stamp-num-end">v0.31.0</span></span><span class="hero-rule"></span></p>
+<h1 class="hero-title">Software nativo, documentado para agentes.</h1>
+<p class="hero-lede prose">Nyx compila a código nativo con LLVM, hospeda su propio compilador y entrega cada proyecto con lo que un agente de IA necesita para escribirlo bien.</p>
+
+<div class="cmd" id="install">
+<div class="cmd-head"><span class="label">Instalación</span><button class="btn" type="button" data-copy="curl -sSf https://nyxlang.com/install.sh | sh" data-copy-label="Copiar" data-copied-label="Copiado">Copiar</button></div>
+<div class="cmd-body"><span class="cmd-prompt">$</span><span class="cmd-text">curl -sSf https://nyxlang.com/install.sh | sh</span></div>
+</div>
+<p class="cmd-foot"><span class="tick">Linux</span> · x86_64 / aarch64 / armv7l · Termux</p>
+</div>
+</section>
+
+<!-- ── 01 INSTALL: tabla de requisitos + primer proyecto ────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">01</span> Instalación</span></p>
+<div><h2 class="band-title">Un comando para instalarlo. Uno para empezar un proyecto.</h2></div>
+</header>
+<div class="cols cols-58">
+<div>
+<table class="kv">
+<tr><th>Requisitos</th><td>clang, make y git, más las cabeceras de desarrollo de libgc, OpenSSL y zlib. El instalador instala lo que falte con el gestor de paquetes que encuentre: apt, dnf, pacman, apk, xbps, o pkg en Termux.</td></tr>
+<tr><th>Instala en</th><td>~/.nyx, con un enlace en ~/.local/bin/nyx (en Termux, $PREFIX/bin/nyx). Si ese directorio no está en tu PATH, el instalador lo agrega a tu perfil de shell y te avisa.</td></tr>
+<tr><th>Verificar</th><td><code>nyx --version</code> — imprime la versión instalada.</td></tr>
+<tr><th>Actualizar</th><td><code>nyx update</code> — trae la versión más reciente, la recompila e imprime qué cambió.</td></tr>
+<tr><th>Desinstalar</th><td><code>nyx uninstall</code> — borra la toolchain y el enlace que creó.</td></tr>
+</table>
+</div>
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">Primer proyecto</span><span>terminal</span></div>
+<div class="panel-body"><pre><span class="term-line"><span class="term-prompt">$</span> nyx init my-app</span><span class="term-note">  crea nyx.toml, src/main.nx, AGENTS.md y docs/nyx/</span><span class="term-line"><span class="term-prompt">$</span> cd my-app</span><span class="term-line"><span class="term-prompt">$</span> nyx run</span><span class="term-note">  compila el proyecto y lo ejecuta</span></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── Muestra de código: sample.nx, verificado con nyx check ───────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">Muestra</span></p>
+<div><h2 class="band-title">Cómo se lee el lenguaje.</h2></div>
+</header>
+<div class="cols cols-64">
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
+<!-- T3: reemplazar por hl_nyx -->
+<div class="panel-body"><pre><span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span> <span class="fn">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span> <span class="fn">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span> <span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>text<span class="op">)</span>
+    <span class="kw">if</span> n <span class="op">&lt;</span> <span class="num">1</span> <span class="kw">or</span> n <span class="op">&gt;</span> <span class="num">65535</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span><span class="str">"out of range: ${text}"</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>n<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">bind_port</span><span class="op">(</span>text<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">parse_port</span><span class="op">(</span>text<span class="op">)?</span>   <span class="cm">// ? hands the Err back to the caller</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">bind_port</span><span class="op">(</span><span class="str">"8080"</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="fn">Ok</span><span class="op">(</span>port<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"listening on ${port}"</span><span class="op">),</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="fn">Err</span><span class="op">(</span>why<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">"config error: ${why}"</span><span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+</div>
+<div>
+<table class="kv kv-wide">
+<tr><th>Muestra</th><td>Un enum con match exhaustivo, propagación de errores con ?, interpolación de strings y tipos explícitos en cada binding.</td></tr>
+<tr><th>Verificado con</th><td><code>nyx check</code> — analiza y chequea tipos, sin linkear y sin ejecutar.</td></tr>
+<tr><th>Ejecútalo</th><td><code>nyx run sample.nx</code></td></tr>
+</table>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── 02 DOCS: los seis pasos de la guía + el recetario ────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">02</span> Documentación</span></p>
+<div><h2 class="band-title">La guía, paso a paso.</h2></div>
+</header>
+<ol class="steps">
+<li class="step"><a class="step-link" href="/es/docs/01-install.html"><span class="step-num">01</span><span><span class="step-name">Instalación</span><span class="step-note note">requisitos, qué queda dónde, cómo actualizar y cómo desinstalar.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/docs/02-first-program.html"><span class="step-num">02</span><span><span class="step-name">Primer programa</span><span class="step-note note">de un solo archivo .nx a un binario nativo que puedes distribuir.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/docs/03-project.html"><span class="step-num">03</span><span><span class="step-name">Proyectos</span><span class="step-note note">nyx.toml, src/, tests/ y dependencias.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/docs/04-agents.html"><span class="step-num">04</span><span><span class="step-name">Agentes</span><span class="step-note note">AGENTS.md, CAPABILITIES.md y docs/nyx/: el contexto que lee un asistente.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/docs/05-cli.html"><span class="step-num">05</span><span><span class="step-name">Línea de comandos</span><span class="step-note note">cada subcomando: build, run, check, vet, fmt, test, add, update.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/docs/06-syntax.html"><span class="step-num">06</span><span><span class="step-name">Sintaxis</span><span class="step-note note">tipos, enums, match exhaustivo, Result y el operador ?.</span></span></a></li>
+</ol>
+<a class="callout" href="/es/by-example/"><span><span class="callout-name">Nyx por ejemplo</span><span class="step-note note">Recetas resueltas, desde el hola mundo hasta un servidor HTTP. Lee una, cópiala, cámbiala.</span></span><span class="callout-go">Abrir →</span></a>
+</div>
+</section>
+
+<!-- ── 03 DEVELOP WITH AGENTS: qué se siembra + extracto real de AGENTS.md ─ -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">03</span> Desarrolla con agentes</span></p>
+<div><h2 class="band-title">Cada proyecto lleva el contexto que un agente necesita para escribirlo.</h2></div>
+</header>
+<div class="cols">
+<div class="stack">
+<div>
+<p class="label kv-title">Lo que siembra nyx init</p>
+<table class="kv kv-wide">
+<tr><th>AGENTS.md</th><td>El manual de campo: cómo se construye un programa acá, los rieles duros y las trampas que arruinan un primer intento. Neutral respecto del proveedor, según la convención agents.md.</td></tr>
+<tr><th>CAPABILITIES.md</th><td>Índice generado de la biblioteca estándar — lo que ya existe, para que nadie lo reinvente. Se regenera en cada build.</td></tr>
+<tr><th>docs/nyx/</th><td>La referencia densa más tres guías: escribir un programa, arreglar un error de compilación y reportar fricción.</td></tr>
+</table>
+</div>
+<div>
+<p class="label kv-title">Herramientas</p>
+<ul class="tools">
+<li class="tool"><span class="tool-cmd">nyx vet</span><span class="note">Nombra las trampas grep-ables en lugar de dejar un error del parser: <code>warning[W101] src/main.nx:12</code></span></li>
+<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">Adaptadores opcionales de tres líneas, uno por herramienta. AGENTS.md sigue siendo la única fuente de verdad; el adaptador solo apunta ahí.</span></li>
+<li class="tool"><span class="tool-cmd">nyx init --sdd</span><span class="note">Siembra el andamiaje orientado a especificación: constitución, glosario, plantilla de ADR y specs/ — así el agente pregunta en vez de inventar.</span></li>
+<li class="tool"><span class="tool-cmd">nyx report</span><span class="note">Deja un FRICTION.md en el proyecto. No se envía nada por su cuenta.</span></li>
+</ul>
+</div>
+</div>
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">AGENTS.md — sembrado por nyx init</span><span>extracto</span></div>
+<div class="panel-body"><pre><span class="cm">&gt;</span> <span class="cm">**</span><span class="kw">REGLA DE ORO — NO leas el fuente del compilador ni de la biblioteca estándar</span><span class="cm">**</span>
+<span class="cm">&gt;</span> (<span class="str">`std/`</span>, <span class="str">`compiler/`</span>, ni nada bajo tu instalación de Nyx) «para entender cómo funciona».
+<span class="cm">&gt;</span> No hace falta y te vas a perder. Si buscas una función, búscala en <span class="str">`CAPABILITIES.md`</span>. <span class="cm">…</span>
+
+<span class="cm">##</span> <span class="kw">Rieles duros (NO hagas esto)</span>
+
+<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO inventes sintaxis.</span><span class="cm">**</span> Si dudas de que una palabra clave o una feature exista,
+  probablemente no exista — revisa <span class="str">`CAPABILITIES.md`</span> (o <span class="ty">&lt;https://nyxlang.com/by-example/&gt;</span>)
+  en vez de adivinar.
+<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO reinventes lo que ya hace la stdlib.</span><span class="cm">**</span> Si <span class="str">`CAPABILITIES.md`</span> lo lista, úsalo.
+<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO parches una limitación.</span><span class="cm">**</span> Repórtala con <span class="str">`nyx report`</span> y detente.
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── 04 SOURCE ───────────────────────────────────────────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">04</span> Fuente</span></p>
+<div><h2 class="band-title">Abierto, versionado y honesto sobre ser 0.x.</h2></div>
+</header>
+<table class="kv kv-wide">
+<tr><th>Licencia</th><td>Apache-2.0</td></tr>
+<tr><th>Repositorio</th><td><a href="https://github.com/nyxlang-dev/nyx">https://github.com/nyxlang-dev/nyx</a></td></tr>
+<tr><th>Changelog</th><td><a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">CHANGELOG.md</a> — cada versión, con qué cambió y por qué.</td></tr>
+<tr><th>Estado</th><td>0.x: en desarrollo activo. La API puede cambiar y no se garantiza la compatibilidad entre versiones minor.</td></tr>
+</table>
+</div>
 </section>
 </main>
+<!-- templates/footer.html — pie. Mismo patrón que el nav: hairline al ancho
+     de la ventana, contenido dentro de la retícula. -->
 <footer class="footer">
-<p class="footer-meta"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
 </footer>
 
 <script src="/shared/copy.js" defer></script>

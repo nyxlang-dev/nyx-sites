@@ -1,0 +1,146 @@
+<!-- templates/index.html — cuerpo de la landing (EN y ES desde este único
+     template). Estructura acá, texto en content/i18n/<lang>.toml, fragmentos
+     largos en content/landing/. OJO: el motor interpola también DENTRO de los
+     comentarios, así que acá no se escriben tags de ejemplo. Los literales
+     iguales en los dos idiomas (comandos, rutas, arquitecturas, licencia) van
+     escritos acá una sola vez, no en los diccionarios. -->
+
+<!-- ── Hero: sello, título, apoyo y el comando de instalación ───────────── -->
+<section class="hero">
+<div class="wrap hero-inner">
+<p class="hero-meta"><span class="stamp stamp-accent">{{hero_stamp}} <span class="stamp-num stamp-num-end">v{{version}}</span></span><span class="hero-rule"></span></p>
+<h1 class="hero-title">{{hero_title}}</h1>
+<p class="hero-lede prose">{{hero_lede}}</p>
+
+<div class="cmd" id="install">
+<div class="cmd-head"><span class="label">{{hero_install_label}}</span><button class="btn" type="button" data-copy="{{install_cmd}}" data-copy-label="{{hero_copy}}" data-copied-label="{{hero_copied}}">{{hero_copy}}</button></div>
+<div class="cmd-body"><span class="cmd-prompt">$</span><span class="cmd-text">{{install_cmd}}</span></div>
+</div>
+<p class="cmd-foot"><span class="tick">Linux</span> · x86_64 / aarch64 / armv7l · Termux</p>
+</div>
+</section>
+
+<!-- ── 01 INSTALL: tabla de requisitos + primer proyecto ────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">01</span> {{install_label}}</span></p>
+<div><h2 class="band-title">{{install_title}}</h2></div>
+</header>
+<div class="cols cols-58">
+<div>
+<table class="kv">
+<tr><th>{{install_k_requires}}</th><td>{{install_v_requires}}</td></tr>
+<tr><th>{{install_k_target}}</th><td>{{install_v_target}}</td></tr>
+<tr><th>{{install_k_verify}}</th><td><code>nyx --version</code> — {{install_v_verify}}</td></tr>
+<tr><th>{{install_k_update}}</th><td><code>nyx update</code> — {{install_v_update}}</td></tr>
+<tr><th>{{install_k_remove}}</th><td><code>nyx uninstall</code> — {{install_v_remove}}</td></tr>
+</table>
+</div>
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">{{install_steps_label}}</span><span>terminal</span></div>
+<div class="panel-body"><pre><span class="term-line"><span class="term-prompt">$</span> nyx init my-app</span><span class="term-note">  {{install_step_init}}</span><span class="term-line"><span class="term-prompt">$</span> cd my-app</span><span class="term-line"><span class="term-prompt">$</span> nyx run</span><span class="term-note">  {{install_step_run}}</span></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── Muestra de código: sample.nx, verificado con nyx check ───────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">{{sample_label}}</span></p>
+<div><h2 class="band-title">{{sample_title}}</h2></div>
+</header>
+<div class="cols cols-64">
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
+<!-- T3: reemplazar por hl_nyx -->
+<div class="panel-body"><pre>{{{sample_code}}}</pre></div>
+</div>
+</div>
+<div>
+<table class="kv kv-wide">
+<tr><th>{{sample_k_shows}}</th><td>{{sample_v_shows}}</td></tr>
+<tr><th>{{sample_k_checked}}</th><td><code>nyx check</code> — {{sample_v_checked}}</td></tr>
+<tr><th>{{sample_k_run}}</th><td><code>nyx run sample.nx</code></td></tr>
+</table>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── 02 DOCS: los seis pasos de la guía + el recetario ────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">02</span> {{docs_label}}</span></p>
+<div><h2 class="band-title">{{docs_title}}</h2></div>
+</header>
+<ol class="steps">
+<li class="step"><a class="step-link" href="{{docs_install_href}}"><span class="step-num">01</span><span><span class="step-name">{{docs_install_title}}</span><span class="step-note note">{{docs_install_note}}</span></span></a></li>
+<li class="step"><a class="step-link" href="{{docs_program_href}}"><span class="step-num">02</span><span><span class="step-name">{{docs_program_title}}</span><span class="step-note note">{{docs_program_note}}</span></span></a></li>
+<li class="step"><a class="step-link" href="{{docs_project_href}}"><span class="step-num">03</span><span><span class="step-name">{{docs_project_title}}</span><span class="step-note note">{{docs_project_note}}</span></span></a></li>
+<li class="step"><a class="step-link" href="{{docs_agents_href}}"><span class="step-num">04</span><span><span class="step-name">{{docs_agents_title}}</span><span class="step-note note">{{docs_agents_note}}</span></span></a></li>
+<li class="step"><a class="step-link" href="{{docs_cli_href}}"><span class="step-num">05</span><span><span class="step-name">{{docs_cli_title}}</span><span class="step-note note">{{docs_cli_note}}</span></span></a></li>
+<li class="step"><a class="step-link" href="{{docs_syntax_href}}"><span class="step-num">06</span><span><span class="step-name">{{docs_syntax_title}}</span><span class="step-note note">{{docs_syntax_note}}</span></span></a></li>
+</ol>
+<a class="callout" href="{{examples_href}}"><span><span class="callout-name">{{docs_examples_title}}</span><span class="step-note note">{{docs_examples_note}}</span></span><span class="callout-go">{{docs_examples_go}} →</span></a>
+</div>
+</section>
+
+<!-- ── 03 DEVELOP WITH AGENTS: qué se siembra + extracto real de AGENTS.md ─ -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">03</span> {{agents_label}}</span></p>
+<div><h2 class="band-title">{{agents_title}}</h2></div>
+</header>
+<div class="cols">
+<div class="stack">
+<div>
+<p class="label kv-title">{{agents_files_label}}</p>
+<table class="kv kv-wide">
+<tr><th>AGENTS.md</th><td>{{agents_v_agentsmd}}</td></tr>
+<tr><th>CAPABILITIES.md</th><td>{{agents_v_capabilities}}</td></tr>
+<tr><th>docs/nyx/</th><td>{{agents_v_docs}}</td></tr>
+</table>
+</div>
+<div>
+<p class="label kv-title">{{agents_tools_label}}</p>
+<ul class="tools">
+<li class="tool"><span class="tool-cmd">nyx vet</span><span class="note">{{agents_v_vet}} <code>warning[W101] src/main.nx:12</code></span></li>
+<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">{{agents_v_adapter}}</span></li>
+<li class="tool"><span class="tool-cmd">nyx init --sdd</span><span class="note">{{agents_v_sdd}}</span></li>
+<li class="tool"><span class="tool-cmd">nyx report</span><span class="note">{{agents_v_report}}</span></li>
+</ul>
+</div>
+</div>
+<div>
+<div class="panel">
+<div class="panel-head"><span class="panel-name">{{agents_panel_label}}</span><span>{{agents_panel_note}}</span></div>
+<div class="panel-body"><pre>{{{agents_excerpt}}}</pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ── 04 SOURCE ───────────────────────────────────────────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp"><span class="stamp-num">04</span> {{source_label}}</span></p>
+<div><h2 class="band-title">{{source_title}}</h2></div>
+</header>
+<table class="kv kv-wide">
+<tr><th>{{source_k_license}}</th><td>Apache-2.0</td></tr>
+<tr><th>{{source_k_repo}}</th><td><a href="{{repo_url}}">{{repo_url}}</a></td></tr>
+<tr><th>{{source_k_changelog}}</th><td><a href="{{changelog_url}}">CHANGELOG.md</a> — {{source_v_changelog}}</td></tr>
+<tr><th>{{source_k_status}}</th><td>{{source_v_status}}</td></tr>
+</table>
+</div>
+</section>

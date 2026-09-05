@@ -42,12 +42,12 @@ pub fn other_lang(lang: String) -> String {
     return "es"
 }
 
-// URL pública de una página, por nombre de template e idioma. La landing es la
-// raíz; las secciones que agreguen las tasks siguientes cuelgan de un
-// directorio con su nombre (…/docs/, …/by-example/).
+// URL pública de una página, por nombre de template e idioma. La landing
+// (templates/index.html) es la raíz; las secciones que agreguen las tasks
+// siguientes cuelgan de un directorio con su nombre (…/docs/, …/by-example/).
 pub fn page_href(tmpl_name: String, lang: String) -> String {
     let prefix: String = lang_prefix(lang)
-    if tmpl_name == "landing" { return prefix + "/" }
+    if tmpl_name == "index" { return prefix + "/" }
     return prefix + "/" + tmpl_name + "/"
 }
 

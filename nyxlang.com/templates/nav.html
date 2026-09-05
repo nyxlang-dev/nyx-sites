@@ -1,4 +1,7 @@
+<!-- templates/nav.html — navegación. El <nav> lleva el hairline de ancho
+     completo y .nav-inner.wrap centra el contenido en la retícula de 1040px. -->
 <nav class="nav" aria-label="{{nav_label}}">
+<div class="nav-inner wrap">
 <a class="nav-wordmark" href="{{home_href}}">NYX</a>
 <ul class="nav-links">
 <li><a href="{{install_href}}">{{nav_install}}</a></li>
@@ -7,4 +10,5 @@
 <li><a href="{{repo_url}}">{{nav_github}}</a></li>
 </ul>
 <a class="nav-lang" href="{{alt_href}}" hreflang="{{alt_lang}}" lang="{{alt_lang}}" title="{{lang_switch_label}}">{{alt_label}}</a>
+</div>
 </nav>
