@@ -1,17 +1,17 @@
 <!-- title: Process Control | blurb: PID, working directory, terminal detection, and file stat. -->
 <section data-part="intro">
-<p>Nyx provides POSIX process builtins: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. These are the building blocks for tools like nyx-shell.</p>
+<p>Nyx provides POSIX process builtins: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. These are the building blocks for command-line tools and shells.</p>
 </section>
-<section data-part="output">
-my pid: 12345
-cwd: /home/admin/NyxLang
+<section data-part="output" data-illustrative="1">
+my pid: 1501659
+cwd: /tmp/demo
 stdout is not a terminal (piped)
 /tmp is a directory
 changed to: /tmp
-back to: /home/admin/NyxLang
+back to: /tmp/demo
 </section>
 <section data-part="explanation">
 <p><code>getpid()</code> returns the current process ID. <code>getcwd()</code> returns the current working directory as a string. <code>chdir(path)</code> changes the working directory.</p>
 <p><code>isatty(fd)</code> checks whether a file descriptor refers to a terminal. File descriptor 0 is stdin, 1 is stdout, 2 is stderr. This is useful for deciding whether to emit color codes or interactive prompts.</p>
-<p><code>stat(path)</code> returns metadata about a file or directory as <code>[size, mode, mtime, is_dir, is_regular]</code>. The <code>is_dir</code> flag (index 3) is 1 for directories, 0 otherwise. These primitives are the foundation of nyx-shell's built-in commands.</p>
+<p><code>stat(path)</code> returns metadata about a file or directory as <code>[size, mode, mtime, is_dir, is_regular]</code>. The <code>is_dir</code> flag (index 3) is 1 for directories, 0 otherwise. These primitives are what a shell built in Nyx uses for its built-in commands.</p>
 </section>

@@ -8,5 +8,5 @@ listening on :8080
 <section data-part="explanation">
 <p><code>http_serve(port, handler)</code> listens on the given port and enters an infinite accept loop. For each connection, it parses the HTTP request into an array, calls the handler function, sends the response, and closes the connection. It only returns on failure — a negative value when the port cannot be bound — so this example checks that return value and exits with status 1 instead of pretending to serve.</p>
 <p><code>http_response(status, body)</code> builds a properly formatted HTTP/1.1 response with Content-Length and Connection: close headers. For custom headers (like Content-Type: application/json), use <code>http_response_with_headers</code>.</p>
-<p>For multi-threaded serving, use <code>http_serve_mt(port, num_workers, handler)</code> which dispatches connections to a thread pool via channels — this is how nyx-serve achieves 73K req/s.</p>
+<p>For multi-threaded serving, use <code>http_serve_mt(port, num_workers, handler)</code>, which dispatches connections to a thread pool through channels — the same path a production HTTP server written in Nyx takes.</p>
 </section>

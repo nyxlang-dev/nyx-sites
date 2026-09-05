@@ -1,8 +1,8 @@
 <!-- title: Terminal Raw | blurb: Entrada carácter por carácter con <code>raw_mode_enter</code>. -->
 <section data-part="intro">
-<p><code>raw_mode_enter()</code> desactiva el buffering de línea y el echo, permitiendo entrada carácter por carácter. <code>read_byte()</code> lee un solo byte. Siempre hay que llamar a <code>raw_mode_exit()</code> para restaurar el terminal. Así es como nyx-edit implementa su editor de texto.</p>
+<p><code>raw_mode_enter()</code> desactiva el buffering de línea y el echo, permitiendo entrada carácter por carácter. <code>read_byte()</code> lee un solo byte. Siempre hay que llamar a <code>raw_mode_exit()</code> para restaurar el terminal. Así es como un editor de texto de pantalla completa lee la entrada.</p>
 </section>
-<section data-part="output">
+<section data-part="output" data-illustrative="1">
 not a terminal — skipping raw mode demo
 run interactively to see keypress reading
 </section>

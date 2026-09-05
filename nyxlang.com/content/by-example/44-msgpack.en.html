@@ -1,6 +1,6 @@
 <!-- title: MessagePack | blurb: Binary serialization — ~30% smaller than JSON. -->
 <section data-part="intro">
-<p><code>std/msgpack</code> provides binary serialization that is roughly 30% smaller than JSON for typical data. Each value is packed into a compact binary string that preserves its type. This is used internally by nyx-kv for its <code>.ndb</code> persistence format.</p>
+<p><code>std/msgpack</code> provides binary serialization that is roughly 30% smaller than JSON for typical data. Each value is packed into a compact binary string that preserves its type. It is the right fit for on-disk formats and wire protocols where every byte counts.</p>
 </section>
 <section data-part="output">
 int type:  int

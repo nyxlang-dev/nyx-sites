@@ -1,6 +1,6 @@
 <!-- title: TOML Config | blurb: Parsing configuration strings with <code>std/toml</code>. -->
 <section data-part="intro">
-<p><code>std/toml</code> parses TOML configuration strings into a flat <code>Map</code> with dot-notation keys. TOML is the configuration format used by <code>nyx.toml</code> (the package manager manifest) and <code>proxy.toml</code> (nyx-proxy configuration).</p>
+<p><code>std/toml</code> parses TOML configuration strings into a flat <code>Map</code> with dot-notation keys. TOML is the configuration format used by <code>nyx.toml</code> (the package manager manifest) and by any service that keeps its settings in a <code>.toml</code> file.</p>
 </section>
 <section data-part="output">
 host: localhost
@@ -11,5 +11,5 @@ db: /var/data/app.db
 <section data-part="explanation">
 <p><code>toml_parse</code> reads a TOML string and returns a <code>Map&lt;String&gt;</code> where section keys use dot notation: <code>[server]</code> + <code>host = "localhost"</code> becomes <code>"server.host" → "localhost"</code>. All values are stored as strings internally.</p>
 <p>Typed accessors — <code>toml_get</code> (string), <code>toml_get_int</code>, <code>toml_get_bool</code> — convert from the string representation and accept a default value if the key is missing. <code>toml_has</code> checks whether a key exists without reading its value.</p>
-<p>This is the same parser used by <code>nyx build</code> to read <code>nyx.toml</code> project manifests and by <code>nyx-proxy</code> to read its routing configuration.</p>
+<p>This is the same parser <code>nyx build</code> uses to read <code>nyx.toml</code> project manifests, and the one you reach for when a server has to load its routing table from a <code>.toml</code> file at startup.</p>
 </section>

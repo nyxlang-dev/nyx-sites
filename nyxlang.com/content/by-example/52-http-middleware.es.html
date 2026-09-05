@@ -10,5 +10,5 @@ middleware: logging + CORS
 <section data-part="explanation">
 <p><code>app_new()</code> crea una aplicación vacía. Los handlers de ruta reciben una struct <code>Request</code> (con los campos: method, path, query, headers_flat, body) y retornan una struct <code>Response</code>. Funciones auxiliares como <code>response_new</code> y <code>response_json</code> crean respuestas con los headers apropiados.</p>
 <p><code>mw_logging</code> registra el método, la ruta, el status y la latencia de cada petición. <code>mw_cors</code> maneja las peticiones OPTIONS de preflight y agrega los headers CORS. Puedes configurar CORS con <code>cors_configure(origin, methods, headers)</code>.</p>
-<p>En producción, pasa la app a <code>serve_app(app, port, workers)</code> de <code>nyx-serve</code> para levantar un servidor HTTP multi-hilo. Así están construidos los cuatro sitios de nyxlang.com.</p>
+<p>En producción le pasas la app a <code>serve_app(app, port, workers)</code> de <code>std/serve</code>, que la ejecuta sobre un pool de hilos. El framework en sí no hace E/S — solo registra rutas y las hace coincidir.</p>
 </section>
