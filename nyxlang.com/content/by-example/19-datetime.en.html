@@ -10,6 +10,6 @@ From epoch: 2026-04-15 12:00:00
 </section>
 <section data-part="explanation">
 <p><code>time()</code> returns the current Unix timestamp as an <code>int</code> — the number of seconds since the Unix epoch (1970-01-01 00:00:00 UTC). This is the standard way to record event times, measure durations by subtracting two timestamps, or set expiry times for caches and tokens.</p>
-<p><code>time_ms()</code> returns the same value but with millisecond precision, useful for benchmarking short operations or generating monotonically increasing IDs. <code>datetime_now()</code> returns the local time formatted as a human-readable string in ISO-8601 style.</p>
+<p><code>time_ms()</code> returns the same value but with millisecond precision, useful for timing short operations or generating monotonically increasing IDs. <code>datetime_now()</code> returns the local time formatted as a human-readable string in ISO-8601 style.</p>
 <p><code>datetime_from_epoch(ts)</code> converts any Unix timestamp back to the same human-readable format. This is handy when you store raw timestamps in a database or log file and want to display them later. For more advanced date arithmetic — adding days, parsing arbitrary formats, or working with time zones — see <code>std/datetime</code>.</p>
 </section>

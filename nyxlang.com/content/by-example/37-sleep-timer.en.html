@@ -11,6 +11,6 @@ duracion loop: 0ms
 </section>
 <section data-part="explanation">
 <p><code>time_ms()</code> is a thin wrapper around the system clock, returning a monotonic millisecond timestamp suitable for duration measurements. Taking the difference <code>t1 - t0</code> after a <code>sleep(500)</code> should produce a value at or just above 500, depending on OS scheduler precision.</p>
-<p>The second measurement wraps a tight loop summing integers from 0 to 999 999. The result — 499 999 500 000 — is the standard arithmetic series sum <code>n*(n-1)/2</code> for <code>n = 1 000 000</code>. The duration rounds to <code>0ms</code> because LLVM optimizes the loop aggressively at native code generation time.</p>
+<p>The second measurement wraps a tight loop summing integers from 0 to 999 999. The result — 499 999 500 000 — is the standard arithmetic series sum <code>n*(n-1)/2</code> for <code>n = 1 000 000</code>. The duration rounds down to zero because LLVM optimizes the loop aggressively at native code generation time.</p>
 <p>Both <code>time_ms</code> and <code>sleep</code> are built-in functions available without any import. They are implemented in the runtime's <code>time.c</code> module and map directly to <code>clock_gettime(CLOCK_MONOTONIC)</code> and <code>nanosleep</code> on Linux.</p>
 </section>

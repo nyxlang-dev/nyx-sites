@@ -12,5 +12,5 @@ new size: 17 bytes
 <section data-part="explanation">
 <p><code>stat(path)</code> returns an array with five elements: <code>[size, mode, mtime, is_dir, is_regular]</code>. The <code>mtime</code> field is the file's last modification time as a Unix timestamp.</p>
 <p>This recipe creates a file, records its initial mtime, waits just over one second (to ensure the filesystem timestamp changes), modifies the file, and checks the mtime again. If the new mtime is greater, the file has changed.</p>
-<p>This polling approach works on any filesystem but is not efficient for watching many files. For production use, you would want inotify (Linux) or kqueue (macOS) bindings, which Nyx can access via FFI.</p>
+<p>This polling approach works on any filesystem but is not efficient for watching many files. For production use, you would want inotify bindings on Linux, which Nyx can access via FFI.</p>
 </section>

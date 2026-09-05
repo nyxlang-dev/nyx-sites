@@ -17,6 +17,6 @@ all done
 </section>
 <section data-part="explanation">
 <p><code>sem_new(2)</code> creates a semaphore with 2 permits. At most 2 threads can hold a permit simultaneously. When a third thread calls <code>sem_acquire</code>, it blocks until one of the first two calls <code>sem_release</code>.</p>
-<p>Five threads compete for the semaphore. <code>sem_count</code> returns the number of remaining permits, which drops to 0 when both are taken. After sleeping 50ms (simulating work), each thread releases its permit and signals the WaitGroup.</p>
+<p>Five threads compete for the semaphore. <code>sem_count</code> returns the number of remaining permits, which drops to 0 when both are taken. After sleeping 50 milliseconds (simulating work), each thread releases its permit and signals the WaitGroup.</p>
 <p>This pattern is useful for rate-limiting access to external resources like database connections, file descriptors, or API endpoints where you want controlled concurrency rather than full mutual exclusion.</p>
 </section>
