@@ -60,11 +60,36 @@
 #      corre en máquinas con la toolchain, que falte no es un pase gratis).
 #      Se salta con ⚠ solo si ROOT no tiene un gen.nx al lado (el fixture
 #      sintético del autotest, que no pretende ser un sitio generado).
-#   J. Autotest (control positivo): corre PRIMERO, siempre. Crea un ROOT
-#      temporal con un HTML que dispara A, B, C, E y F a propósito; si
-#      alguno de los cinco no lo detecta, el script se declara ROTO y sale 2
-#      antes de tocar el árbol real — un guardia que no ve sus propios
-#      controles positivos no prueba nada estando en verde.
+#   J. Versión: `nyx --version` (el toolchain del PATH) tiene que coincidir
+#      con `version` de content/site.toml y con TODO literal X.Y.Z bajo
+#      content/docs/ y content/landing/. Sin esto, el próximo bump del
+#      lenguaje deja la landing con un sello viejo y la guía enseñando
+#      `nyx --version → nyx 0.31.0` — exactamente el defecto que este
+#      rediseño existe para reparar. Un literal que NO es la versión del
+#      toolchain (p.ej. el `0.1.0` del proyecto de ejemplo en una
+#      transcripción) se exime con un comentario HTML:
+#        <!-- not-a-version -->          exime la línea donde está
+#        <!-- not-a-version: 0.1.0 -->   exime ESE literal en todo el archivo
+#      La segunda forma existe porque un comentario DENTRO de un <pre> no
+#      sirve: el resaltador escapa el `<` antes de que strip_html_comments
+#      corra, y el comentario se vería como texto en la página. Va en la
+#      primera línea del fragmento, fuera de todo <pre>.
+#   K. HTML publicado sin agujeros: ningún <title></title>, ningún
+#      content="" en la meta description, ningún <h1>/<h2> vacío y ningún
+#      `{{` residual, fuera del LEGADO. Una clave i18n ausente interpola ""
+#      en silencio (documentado en src/gen/render.nx:18) y title_key/desc_key
+#      se resuelven con get_or(..., ""), así que un `stem` mal escrito
+#      publica un <title>/<h1> vacío en los DOS idiomas sin que G (que
+#      compara EN contra ES, no contra un valor esperado) diga nada.
+#
+#   Autotest (control positivo): corre PRIMERO, siempre. Crea un SITIO
+#      temporal (content/ + static-next/) con errores plantados a propósito
+#      que disparan A, B, C, E, F, G, J y K; si alguno no lo detecta, el
+#      script se declara ROTO y sale 2 antes de tocar el árbol real — un
+#      guardia que no ve sus propios controles positivos no prueba nada
+#      estando en verde. D y H comparten scan_denylist con A y C (cobertura
+#      indirecta); I queda sin control positivo (ficha [BAJA] en el
+#      TASKS.md del monorepo).
 #
 #   Piso mínimo (corre después del autotest, antes de evaluar A-I sobre
 #   ROOT, sin depender de `nyx` ni de `gen.nx`): ROOT/index.html y
@@ -86,7 +111,17 @@
 # y el archivo shared/nyx-design-system.css (las páginas legado lo
 # necesitan). Mientras ese contenido no se vuelva a generar (fase 2:
 # by-example regenerado por gen.nx), A/B/C/D no lo escanean — sería puro
-# ruido sobre contenido que nadie tocó. E (anclas muertas) y F (enlaces
+# ruido sobre contenido que nadie tocó.
+#
+# CONSECUENCIA CONOCIDA de esa exclusión (deuda de fase 2, no una regresión
+# — ya pasa hoy en producción): las 276 páginas del legado (101 by-example
+# EN + 101 ES + 37 learn EN + 37 ES) cargan Google Fonts
+# (fonts.googleapis / fonts.gstatic). El check D lo detectaría, pero el
+# legado está exento, así que la fase 1 NO cumple el criterio del plan
+# «ninguna página con Google Fonts» para ese material. Se retira cuando la
+# fase 2 regenere by-example y learn con el sistema de diseño nuevo (que no
+# tiene una sola fuente externa); ahí estas rutas salen de la lista y D las
+# empieza a ver. E (anclas muertas) y F (enlaces
 # internos) SÍ lo escanean completo: son regresiones reales incluso en
 # contenido legado, y la T7 es quien parchea sus anclas. G lo excluye igual
 # que a `shared/`: no es contenido que declare paridad EN/ES bajo este
@@ -145,6 +180,9 @@ print_warn() { printf '  \xe2\x9a\xa0 %s\n' "$1"; }
 banner() { printf -- '\n── %s ──\n' "$1"; }
 
 CHECK_LAST_FAILS=0
+# Los ⚠ de G (rollout incremental) no son fallos, pero el control positivo
+# del autotest necesita poder verlos: check_g los deja acá.
+CHECK_LAST_WARNS=0
 
 # Lista archivos bajo $1=root con los predicados -name que sigan ($2, $3…),
 # excluyendo el LEGADO (ver comentario arriba de `set -u`). Usada por A, B,
@@ -381,7 +419,8 @@ check_g() {
         en_files=$(find "$root" -type f \
             -not -path "$root/es/*" -not -path "$root/learn/*" \
             -not -path "$root/by-example/*" \
-            -not -path "$root/shared/*" -not -name "install.sh" 2>/dev/null \
+            -not -path "$root/shared/*" \
+            -not -name "install.sh" -not -name "logo.png" 2>/dev/null \
             | sed "s#^$root/##" | sort)
         es_files=$(find "$root/es" -type f \
             -not -path "$root/es/learn/*" -not -path "$root/es/by-example/*" 2>/dev/null \
@@ -468,6 +507,7 @@ EOF2
         print_bad "[G] $fails asimetría(s) estructural(es) ($warns aviso(s) aparte)"
     fi
     CHECK_LAST_FAILS=$fails
+    CHECK_LAST_WARNS=$warns
 }
 
 # ── H. Español neutro (excepto learn/) ───────────────────────────────────
@@ -574,28 +614,191 @@ EOF
     CHECK_LAST_FAILS=$fails
 }
 
-# ── J. Autotest (control positivo) — corre SIEMPRE primero ──────────────
+# ── J. Versión publicada == versión del toolchain ────────────────────────
+# site_dir se deriva de $root (no se usa la global SITE_DIR) para que el
+# autotest pueda plantar un sitio-fixture completo — content/ + árbol
+# publicado — y ver el ✗ de verdad.
+#
+# Exenciones para un literal X.Y.Z que NO es la versión del toolchain:
+#   <!-- not-a-version -->          en la misma línea
+#   <!-- not-a-version: 0.1.0 -->   ese literal, en todo el archivo
+# (ver la nota de la cabecera: dentro de un <pre> un comentario HTML se ve).
+check_j() {
+    local root="$1"
+    local site_dir; site_dir="$(dirname "$root")"
+    local fails=0
+
+    if ! command -v nyx >/dev/null 2>&1; then
+        print_bad "[J] nyx no está en PATH — no se puede comparar la versión publicada con la del toolchain"
+        CHECK_LAST_FAILS=1
+        return
+    fi
+
+    local nyx_ver
+    nyx_ver="$(nyx --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    if [ -z "$nyx_ver" ]; then
+        print_bad "[J] « nyx --version » no devolvió una versión X.Y.Z"
+        CHECK_LAST_FAILS=1
+        return
+    fi
+
+    local toml="$site_dir/content/site.toml" toml_ver
+    if [ -f "$toml" ]; then
+        toml_ver="$(grep -E '^version[[:space:]]*=' "$toml" | head -1 \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+        if [ "$toml_ver" = "$nyx_ver" ]; then
+            print_ok "[J] content/site.toml: version = $toml_ver == nyx --version"
+        else
+            print_bad "[J] content/site.toml: version = ${toml_ver:-<ninguna>} != $nyx_ver (nyx --version)"
+            fails=$((fails + 1))
+        fi
+    else
+        print_warn "[J] $toml no existe — sin sello de versión que comparar"
+    fi
+
+    local dirs d f exempt line lineno text lit checked=0
+    dirs="$site_dir/content/docs
+$site_dir/content/landing"
+    while IFS= read -r d; do
+        [ -d "$d" ] || continue
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            # El literal se toma del propio marcador; después del número
+            # puede seguir texto explicativo, siempre DENTRO del comentario.
+            exempt="$(grep -oE '<!--[[:space:]]*not-a-version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' "$f" 2>/dev/null \
+                | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -u)"
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                lineno="${line%%:*}"
+                text="${line#*:}"
+                # exención de línea
+                case "$text" in *not-a-version*) continue ;; esac
+                while IFS= read -r lit; do
+                    [ -z "$lit" ] && continue
+                    checked=$((checked + 1))
+                    if [ "$lit" = "$nyx_ver" ]; then continue; fi
+                    case "
+$exempt
+" in *"
+$lit
+"*) continue ;; esac
+                    print_bad "[J] $f:$lineno: literal « $lit » != $nyx_ver (nyx --version) — si no es una versión del toolchain, márcalo con <!-- not-a-version: $lit -->"
+                    fails=$((fails + 1))
+                done <<EOF
+$(printf '%s\n' "$text" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+EOF
+            done < <(grep -nE '[0-9]+\.[0-9]+\.[0-9]+' "$f" 2>/dev/null)
+        done < <(find "$d" -type f -name '*.html' 2>/dev/null | sort)
+    done <<EOF
+$dirs
+EOF
+
+    if [ "$fails" -eq 0 ]; then
+        print_ok "[J] $checked literal(es) X.Y.Z en content/ coinciden con nyx $nyx_ver (o están exentos)"
+    else
+        print_bad "[J] $fails desajuste(s) de versión"
+    fi
+    CHECK_LAST_FAILS=$fails
+}
+
+# ── K. HTML publicado sin agujeros ───────────────────────────────────────
+# Una clave i18n ausente interpola "" en silencio (src/gen/render.nx:18) y
+# title_key/desc_key salen de get_or(..., ""), así que un `stem` mal escrito
+# publica un <title>/<h1> vacío en los DOS idiomas y G sigue en verde
+# (compara EN contra ES, no contra un valor esperado). Esto lo mira contra
+# un valor esperado: que no esté vacío.
+check_k() {
+    local root="$1"
+    local files n=0 f label pat hit
+    files=$(find_nolegacy "$root" -name '*.html')
+    [ -z "$files" ] && { print_ok "[K] 0 archivos que revisar"; CHECK_LAST_FAILS=0; return; }
+
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        for pat in \
+            'titulo vacio:<title>[[:space:]]*</title>' \
+            'meta description vacia:name="description"[^>]*content=""' \
+            'h1 vacio:<h1[^>]*>[[:space:]]*</h1>' \
+            'h2 vacio:<h2[^>]*>[[:space:]]*</h2>' \
+            'interpolacion residual:{{'
+        do
+            label="${pat%%:*}"
+            while IFS= read -r hit; do
+                [ -z "$hit" ] && continue
+                print_bad "[K] $label — $f:$hit"
+                n=$((n + 1))
+            done < <(grep -nE -- "${pat#*:}" "$f" 2>/dev/null)
+        done
+    done <<EOF
+$files
+EOF
+
+    if [ "$n" -eq 0 ]; then
+        print_ok "[K] 0 títulos/encabezados vacíos, 0 meta description vacía, 0 {{ residual"
+    else
+        print_bad "[K] $n agujero(s) en el HTML publicado"
+    fi
+    CHECK_LAST_FAILS=$n
+}
+
+# ── Autotest (control positivo) — corre SIEMPRE primero ─────────────────
 run_autotest() {
-    banner "J — autotest (control positivo)"
-    local tmp broken=0
+    banner "autotest (control positivo)"
+    local tmp broken=0 site aroot
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/check-content-autotest.XXXXXX")"
-    cat > "$tmp/index.html" <<'HTML'
+    # Sitio-fixture COMPLETO (content/ + árbol publicado), no un solo HTML
+    # suelto: J compara content/site.toml y los literales de content/docs
+    # contra `nyx --version`, y G compara el listado EN contra el ES bajo el
+    # root. Los dos necesitan la forma de un sitio para poder fallar.
+    site="$tmp/site"
+    aroot="$site/static-next"
+    mkdir -p "$aroot/es" "$site/content/docs"
+
+    # A (nyx-kv), B (req/s + «más rápido que»), C (macOS), E (#products),
+    # F (enlace roto), K (<title> vacío + {{ residual}).
+    cat > "$aroot/index.html" <<'HTML'
 <!doctype html>
 <html>
-<head><title>fixture</title></head>
+<head><title></title></head>
 <body>
 <p>nyx-kv procesa 9,971 req/s, mucho más rápido que la competencia en macOS.</p>
 <a href="/no-existe.html">enlace roto</a>
 <a href="/es/#products">ancla muerta</a>
+<p>{{clave_que_no_existe}}</p>
 </body>
 </html>
 HTML
+    cp "$aroot/index.html" "$aroot/es/index.html"
+    # G: una página EN sin gemela ES → ⚠ (por diseño no es ✗: el rollout
+    # incremental no se bloquea, se hace visible).
+    printf '<p>pagina sin par ES</p>\n' > "$aroot/solo-en.html"
 
-    check_a "$tmp"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: A no detectó el control positivo"; broken=1; }
-    check_b "$tmp"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: B no detectó el control positivo"; broken=1; }
-    check_c "$tmp"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: C no detectó el control positivo"; broken=1; }
-    check_e "$tmp"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: E no detectó el control positivo"; broken=1; }
-    check_f "$tmp"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: F no detectó el control positivo"; broken=1; }
+    # J: site.toml con una versión que no es la del toolchain, un literal
+    # X.Y.Z equivocado en content/docs, y un literal EXENTO que no debe
+    # contar (control negativo adentro del positivo: si la exención se
+    # rompiera y contara 3, el autotest también lo ve).
+    printf 'version = "0.0.1"\n' > "$site/content/site.toml"
+    cat > "$site/content/docs/fixture.en.html" <<'HTML'
+<!-- not-a-version: 0.1.0 -->
+<p>La toolchain dice 9.9.9 y el proyecto de ejemplo va en 0.1.0.</p>
+HTML
+
+    check_a "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: A no detectó el control positivo"; broken=1; }
+    check_b "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: B no detectó el control positivo"; broken=1; }
+    check_c "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: C no detectó el control positivo"; broken=1; }
+    check_e "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: E no detectó el control positivo"; broken=1; }
+    check_f "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: F no detectó el control positivo"; broken=1; }
+    check_g "$aroot"; [ "$CHECK_LAST_WARNS" -ge 1 ] || { print_bad "AUTOTEST ROTO: G no vio la página EN sin gemela ES"; broken=1; }
+    check_k "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: K no detectó el control positivo"; broken=1; }
+
+    check_j "$aroot"
+    if command -v nyx >/dev/null 2>&1; then
+        # Exactamente 2: el site.toml y el 9.9.9. Ni 1 (se le escapó uno) ni
+        # 3 (la exención <!-- not-a-version: 0.1.0 --> dejó de funcionar).
+        [ "$CHECK_LAST_FAILS" -eq 2 ] || { print_bad "AUTOTEST ROTO: J vio $CHECK_LAST_FAILS hallazgo(s), esperaba 2 (site.toml + 9.9.9, con 0.1.0 exento)"; broken=1; }
+    else
+        [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: J no detectó el control positivo"; broken=1; }
+    fi
 
     rm -rf "$tmp"
 
@@ -604,7 +807,7 @@ HTML
         printf 'Abortando antes de evaluar el árbol real.\n'
         exit 2
     fi
-    print_ok "autotest: A, B, C, E y F detectan el control positivo — el instrumento sirve"
+    print_ok "autotest: A, B, C, E, F, G, J y K detectan el control positivo — el instrumento sirve"
 }
 
 # ── Piso mínimo (fix round 2) ─────────────────────────────────────────────
@@ -661,7 +864,7 @@ run_autotest
 check_floor "$ROOT"
 
 TOTAL_FAIL=0
-for c in a b c d e f g h i; do
+for c in a b c d e f g h i j k; do
     banner "check $c ($ROOT)"
     "check_$c" "$ROOT"
     TOTAL_FAIL=$((TOTAL_FAIL + CHECK_LAST_FAILS))
