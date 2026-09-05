@@ -22,12 +22,12 @@
 <h2>vet names the trap instead of leaving a parser error</h2>
 <p>Some mistakes are grep-able: they have a shape. <code>nyx vet</code> matches those shapes and reports each one with a stable code, the file and the line, so an assistant gets the trap by name instead of a confusing error three steps later:</p>
 <pre data-lang="sh">$ nyx vet shapes.nx
-warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.
-warning[W102] shapes.nx:3: Map literal keys must be STRINGS: `{"k": 1}` and `{}` work (v0.16), but `{ident: 1}` is NOT a map literal and fails loudly with `NYX0106`.
-warning[W104] shapes.nx:4: Channels must be Map, not int: `let ch: Map = channel_new(10)`, never `let ch: int`.
-warning[W103] shapes.nx:5: `charAt()` returns int (ASCII/codepoint), NOT String — compare with numbers: `if c == 65`.
-warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bind`: a failed bind (port taken) returns `-1` — `if http_serve(8080, handler) &lt; 0 { return 1 }`.</pre>
-<p>Those five are the codes that exist today. Each one also carries the identifier of its entry in the reference, so the warning and the long explanation cannot say different things: they are generated from the same table.</p>
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`. (docs/nyx/LLM.md §5 enum-dot-not-colons)
+warning[W102] shapes.nx:3: Map literal keys must be STRINGS: `{"k": 1}` and `{}` work (v0.16), but `{ident: 1}` is NOT a map literal and fails loudly with `NYX0106`. (docs/nyx/LLM.md §5 map-literal-string-keys)
+warning[W104] shapes.nx:4: Channels must be Map, not int: `let ch: Map = channel_new(10)`, never `let ch: int`. (docs/nyx/LLM.md §5 channel-is-map)
+warning[W103] shapes.nx:5: `charAt()` returns int (ASCII/codepoint), NOT String — compare with numbers: `if c == 65`. (docs/nyx/LLM.md §5 charat-returns-int)
+warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bind`: a failed bind (port taken) returns `-1` — `if http_serve(8080, handler) &lt; 0 { return 1 }`. (docs/nyx/LLM.md §5 check-bind-return)</pre>
+<p>Those five are the codes that exist today. The tail of each line — <code>(docs/nyx/LLM.md §5 enum-dot-not-colons)</code> — points at the entry that explains it at length, inside the project. The warning and that entry cannot say different things: both are generated from the same table.</p>
 
 <h2>Adapters, if your tool wants its own file</h2>
 <pre data-lang="sh">$ nyx init my-app --agent=claude,cursor,copilot</pre>

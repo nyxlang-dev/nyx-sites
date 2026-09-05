@@ -71,12 +71,12 @@
 <h2>vet nombra la trampa en vez de dejar un error del parser</h2>
 <p>Algunos errores son grep-ables: tienen forma. <code>nyx vet</code> matchea esas formas y reporta cada una con un código estable, el archivo y la línea, así el asistente recibe la trampa por su nombre en vez de un error confuso tres pasos más adelante:</p>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx vet shapes.nx</span>
-warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.
-warning[W102] shapes.nx:3: Map literal keys must be STRINGS: `{&quot;k&quot;: 1}` and `{}` work (v0.16), but `{ident: 1}` is NOT a map literal and fails loudly with `NYX0106`.
-warning[W104] shapes.nx:4: Channels must be Map, not int: `let ch: Map = channel_new(10)`, never `let ch: int`.
-warning[W103] shapes.nx:5: `charAt()` returns int (ASCII/codepoint), NOT String — compare with numbers: `if c == 65`.
-warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bind`: a failed bind (port taken) returns `-1` — `if http_serve(8080, handler) &lt; 0 { return 1 }`.</pre>
-<p>Esos cinco son los códigos que existen hoy. Cada uno lleva además el identificador de su entrada en la referencia, así el aviso y la explicación larga no pueden decir cosas distintas: se generan de la misma tabla.</p>
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`. (docs/nyx/LLM.md §5 enum-dot-not-colons)
+warning[W102] shapes.nx:3: Map literal keys must be STRINGS: `{&quot;k&quot;: 1}` and `{}` work (v0.16), but `{ident: 1}` is NOT a map literal and fails loudly with `NYX0106`. (docs/nyx/LLM.md §5 map-literal-string-keys)
+warning[W104] shapes.nx:4: Channels must be Map, not int: `let ch: Map = channel_new(10)`, never `let ch: int`. (docs/nyx/LLM.md §5 channel-is-map)
+warning[W103] shapes.nx:5: `charAt()` returns int (ASCII/codepoint), NOT String — compare with numbers: `if c == 65`. (docs/nyx/LLM.md §5 charat-returns-int)
+warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bind`: a failed bind (port taken) returns `-1` — `if http_serve(8080, handler) &lt; 0 { return 1 }`. (docs/nyx/LLM.md §5 check-bind-return)</pre>
+<p>Esos cinco son los códigos que existen hoy. La cola de cada línea — <code>(docs/nyx/LLM.md §5 enum-dot-not-colons)</code> — apunta a la entrada que lo explica largo, dentro del proyecto. El aviso y esa entrada no pueden decir cosas distintas: los dos se generan de la misma tabla.</p>
 
 <h2>Adaptadores, si tu herramienta quiere su propio archivo</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx init my-app --agent=claude,cursor,copilot</span></pre>

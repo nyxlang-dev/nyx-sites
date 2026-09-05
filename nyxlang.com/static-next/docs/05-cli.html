@@ -86,7 +86,7 @@
 <tr><th>nyx --version</th><td>Print the installed version, as <code>nyx 0.31.0</code>.</td></tr>
 <tr><th>nyx --help</th><td>Print this list. <code>nyx help</code> works too.</td></tr>
 </table>
-<p class="doc-note">Once a day, before doing anything else, the wrapper compares your local commit against the remote and mentions it on standard error if a newer version exists. It never updates on its own.</p>
+<p class="doc-note">Once a day — after locating the toolchain and the compiler binary, and before dispatching your subcommand — the wrapper compares your local commit against the remote and mentions it on standard error if a newer version exists. It never updates on its own.</p>
 
 <h2>Environment variables</h2>
 <table class="kv kv-wide">

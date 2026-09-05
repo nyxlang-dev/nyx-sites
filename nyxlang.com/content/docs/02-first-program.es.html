@@ -48,9 +48,9 @@ error: compilation failed for greet.nx</pre>
 <p>Los nombres de fase arriba del error dicen hasta dónde llegó: el lexer produjo tokens, el parser terminó bien, y el fallo vino del chequeador. Un error de parser en vez de uno de chequeo significa que la forma del código está mal, no el significado.</p>
 
 <h2>Dos herramientas más</h2>
-<p><code>nyx vet</code> lee el archivo buscando cosas que el compilador acepta pero que probablemente no querías: variables sin usar, código muerto, imports sin usar. También nombra las trampas conocidas del lenguaje en vez de dejar que se conviertan más tarde en un error de parser confuso — cada una como un aviso con su código, el archivo y la línea:</p>
+<p><code>nyx vet</code> lee el archivo buscando cosas que el compilador acepta pero que probablemente no querías: variables sin usar, código muerto, imports sin usar. También nombra las trampas conocidas del lenguaje en vez de dejar que se conviertan más tarde en un error de parser confuso — cada una como un aviso con su código, el archivo, la línea, y dónde está la explicación larga:</p>
 <pre data-lang="sh">$ nyx vet shapes.nx
-warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.</pre>
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`. (docs/nyx/LLM.md §5 enum-dot-not-colons)</pre>
 <p><code>nyx fmt</code> imprime el archivo en su forma canónica por la salida estándar. No edita nada, así que no se pierde nada si el resultado te sorprende:</p>
 <pre data-lang="sh">$ nyx fmt hello.nx
 fn main() {
