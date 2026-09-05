@@ -35,6 +35,7 @@ main = "src/main.nx"
 nyx v0.31.0 — build
 -&gt; building my-app v0.1.0
    compiling src/main.nx
+✓ Built: my-app
 build complete</pre>
 <p>That leaves <code>./my-app</code> next to <code>nyx.toml</code>: a native executable you can copy to another machine of the same architecture. <code>nyx run</code> does the same build and then runs it.</p>
 <p>Arguments after <code>nyx run</code> go to your program, not to Nyx. When an argument could be mistaken for a flag, put <code>--</code> first:</p>
@@ -48,6 +49,10 @@ build complete</pre>
     }
 }</pre>
 <pre data-lang="sh">$ nyx run -- --verbose one
+nyx v0.31.0 — run
+-&gt; building my-app v0.1.0
+   compiling src/main.nx
+✓ Built: my-app
 0: ./my-app
 1: --verbose
 2: one</pre>

@@ -83,6 +83,7 @@ main = &quot;src/main.nx&quot;
 nyx v0.31.0 — build
 -&gt; building my-app v0.1.0
    compiling src/main.nx
+✓ Built: my-app
 build complete</pre>
 <p>Eso deja <code>./my-app</code> al lado de <code>nyx.toml</code>: un ejecutable nativo que puedes copiar a otra máquina de la misma arquitectura. <code>nyx run</code> hace el mismo build y después lo ejecuta.</p>
 <p>Los argumentos después de <code>nyx run</code> van a tu programa, no a Nyx. Cuando un argumento se podría confundir con una bandera, antepón <code>--</code>:</p>
@@ -96,6 +97,10 @@ build complete</pre>
     <span class="op">}</span>
 <span class="op">}</span></pre>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx run -- --verbose one</span>
+nyx v0.31.0 — run
+-&gt; building my-app v0.1.0
+   compiling src/main.nx
+✓ Built: my-app
 0: ./my-app
 1: --verbose
 2: one</pre>
