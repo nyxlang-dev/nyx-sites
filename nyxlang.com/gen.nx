@@ -103,10 +103,10 @@ fn pad2(n: int) -> String {
 // que vuelve de una función es uno de los gotchas del lenguaje, y acá no hace
 // falta — los Maps de los ítems se arman dentro de gen_docs.
 fn doc_slugs() -> Array {
-    return ["01-install", "02-first-program", "03-project", "04-agents"]
+    return ["01-install", "02-first-program", "03-project", "04-agents", "05-cli", "06-syntax"]
 }
 fn doc_stems() -> Array {
-    return ["install", "program", "project", "agents"]
+    return ["install", "program", "project", "agents", "cli", "syntax"]
 }
 
 // Genera el índice (/docs/, /es/docs/) y las seis páginas en los dos idiomas.

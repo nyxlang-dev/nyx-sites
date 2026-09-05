@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Command line — Nyx docs</title>
+<meta name="description" content="Every nyx subcommand and flag, in the order nyx --help prints them, plus the environment variables that change what they do.">
+<link rel="canonical" href="https://nyxlang.com/docs/05-cli.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/05-cli.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/05-cli.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/05-cli.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/docs/05-cli.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">05</span> / 06</span></p>
+<h1 class="doc-title">Command line</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Steps">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/docs/">Nyx, step by step</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/01-install.html"><span class="doc-toc-num">01</span><span class="doc-toc-name">Install</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/02-first-program.html"><span class="doc-toc-num">02</span><span class="doc-toc-name">First program</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/03-project.html"><span class="doc-toc-num">03</span><span class="doc-toc-name">Projects</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/04-agents.html"><span class="doc-toc-num">04</span><span class="doc-toc-name">Agents</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/docs/05-cli.html" aria-current="page"><span class="doc-toc-num">05</span><span class="doc-toc-name">Command line</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/06-syntax.html"><span class="doc-toc-num">06</span><span class="doc-toc-name">Syntax</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">One command does everything: it runs a file, manages a project, checks your work and maintains the toolchain. This page lists all of it in the order <code>nyx --help</code> prints it.</p>
+
+<h2>Running a file</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx &lt;file.nx&gt; [args...]</span></pre>
+<p>Compiles the file to a native binary in a temporary directory, runs it with the arguments you gave, and cleans up. It also works as a shebang: a <code>.nx</code> file starting with <code>#!/usr/bin/env nyx</code> is an executable script.</p>
+
+<h2>Projects</h2>
+<table class="kv kv-wide">
+<tr><th>nyx init [name]</th><td>Create a project: <code>nyx.toml</code>, <code>src/main.nx</code>, <code>.gitignore</code>, <code>AGENTS.md</code>, <code>CAPABILITIES.md</code> and <code>docs/nyx/</code>.</td></tr>
+<tr><th class="kv-cmd">&nbsp;&nbsp;--lang en|es</th><td>Language of the seeded documents. Defaults to <code>NYX_LANG</code>, and to <code>en</code> if that is unset.</td></tr>
+<tr><th class="kv-cmd">&nbsp;&nbsp;--agent=…</th><td><code>--agent=claude,cursor,copilot</code> — also seed the three-line adapter for each named tool.</td></tr>
+<tr><th class="kv-cmd">&nbsp;&nbsp;--sdd</th><td>Also seed the spec-driven scaffolding described in step 04.</td></tr>
+<tr><th>nyx sdd init</th><td>Seed that same scaffolding in a project that already exists: constitution, glossary, evidence, ADR template, <code>specs/</code>, the constitution test and the guide.</td></tr>
+<tr><th>nyx sdd evidence</th><td>Regenerate <code>docs/evidence/</code> for the toolchain currently installed.</td></tr>
+<tr><th>nyx add &lt;pkg&gt;</th><td>Add a package dependency. <code>--from &lt;url&gt;</code> names where to clone it from.</td></tr>
+<tr><th>nyx build</th><td>Build the project into a binary named after <code>[package].name</code>.</td></tr>
+<tr><th>nyx run [args…]</th><td>Build and run. Arguments go to your program; use <code>--</code> before any that could be mistaken for a flag of <code>nyx</code> itself. <code>nyx run file.nx</code> runs that file directly instead.</td></tr>
+<tr><th>nyx info</th><td>Print the project's name, version, entry point and memory mode.</td></tr>
+<tr><th>nyx capabilities [out.md]</th><td>Regenerate the standard-library index. <code>nyx build</code> does it for you when the file is missing or was written by another version, so you rarely need this by hand.</td></tr>
+</table>
+
+<h2>Self-check</h2>
+<p>None of these link or execute anything, and all of them exit non-zero on a problem, so they chain with <code>&amp;&amp;</code>. Given no file, they use <code>src/main.nx</code> in a project and <code>script.nx</code> outside one.</p>
+<table class="kv kv-wide">
+<tr><th>nyx check [f.nx]</th><td>Parse and type-check. The fastest feedback there is.</td></tr>
+<tr><th>nyx fmt [f.nx]</th><td>Print the file in canonical form on standard output. It never edits in place.</td></tr>
+<tr><th>nyx vet [f.nx]</th><td>Unused variables, dead code, unused imports, and the language's known traps as <code>warning[W1NN] file:line</code>.</td></tr>
+<tr><th>nyx test</th><td>Run every <code>tests/*.nx</code>. Tests are <code>test "name" { … }</code> blocks; a file with <code>test_*</code> functions is skipped in silence.</td></tr>
+</table>
+
+<h2>Toolchain</h2>
+<table class="kv kv-wide">
+<tr><th>nyx update</th><td>Fetch the latest version into <code>~/.nyx</code>, rebuild the compiler and the five tools, then print what changed and which traps were fixed.</td></tr>
+<tr><th>nyx update --sync-docs</th><td>Run inside a project: refresh <code>AGENTS.md</code>, the reference and the guides from the installed toolchain, regenerate <code>CAPABILITIES.md</code>, and leave a <code>.bak</code> of anything replaced.</td></tr>
+<tr><th>nyx report [f.md]</th><td>Create a <code>FRICTION.md</code> in the project for a bug, a limitation or a documentation gap. It is local; <code>--send</code> is a separate, explicit step.</td></tr>
+<tr><th>nyx uninstall</th><td>Remove <code>~/.nyx</code> and <code>~/.local/bin/nyx</code>.</td></tr>
+<tr><th>nyx --version</th><td>Print the installed version, as <code>nyx 0.31.0</code>.</td></tr>
+<tr><th>nyx --help</th><td>Print this list. <code>nyx help</code> works too.</td></tr>
+</table>
+<p class="doc-note">Once a day, before doing anything else, the wrapper compares your local commit against the remote and mentions it on standard error if a newer version exists. It never updates on its own.</p>
+
+<h2>Environment variables</h2>
+<table class="kv kv-wide">
+<tr><th>NYX_LANG</th><td><code>es</code> switches the compiler's diagnostics to Spanish and makes <code>nyx init</code> seed the Spanish documents. Anything else means English.</td></tr>
+<tr><th>NYX_HOME</th><td>Where the toolchain lives. Set it to use an installation other than <code>~/.nyx</code> — building the compiler from a clone, for instance.</td></tr>
+<tr><th>NYX_DIAG</th><td><code>json</code> adds one NDJSON line per diagnostic, alongside the human-readable output.</td></tr>
+<tr><th>NYX_PROJECT_DIR</th><td>The project root used to resolve <code>import "src/…"</code>. The wrapper finds it by walking up from the current directory; setting it explicitly wins.</td></tr>
+</table>
+<p>With <code>NYX_LANG=es</code>, the diagnostic from step 02 comes out like this:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">NYX_LANG=es nyx greet.nx</span>
+  ✗ error [NYX1002] en &#x27;main&#x27; (línea 7): &#x27;greeting&#x27; no declarado (¿quisiste decir &#x27;greet&#x27;?)</pre>
+<p>And with <code>NYX_DIAG=json</code>, the same failure also produces a line meant for a program to read:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx greet.nx</span>
+{&quot;code&quot;:&quot;NYX1002&quot;,&quot;severity&quot;:&quot;error&quot;,&quot;phase&quot;:&quot;semantic&quot;,&quot;line&quot;:7,&quot;column&quot;:19,&quot;function&quot;:&quot;main&quot;,&quot;message&quot;:&quot;&#x27;greeting&#x27; not declared (did you mean &#x27;greet&#x27;?)&quot;,&quot;suggestion&quot;:&quot;greet&quot;}</pre>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Steps">
+<a class="doc-nav-link doc-nav-prev" href="/docs/04-agents.html"><span class="label">← Previous</span><span class="doc-nav-name">Agents</span></a>
+<a class="doc-nav-link doc-nav-next" href="/docs/06-syntax.html"><span class="label">Next →</span><span class="doc-nav-name">Syntax</span></a>
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

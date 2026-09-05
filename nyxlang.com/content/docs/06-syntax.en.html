@@ -1,0 +1,269 @@
+<p class="prose">A tour of the language in twelve programs. Every one of them is compiled and run by the check that publishes this page, so what you read here is what the compiler in the footer accepts today.</p>
+
+<h2>Variables and types</h2>
+<p><code>let</code> binds once, <code>var</code> can be reassigned, <code>const</code> is a compile-time constant. Types are written after the name; the language is gradually typed, but annotating is what keeps the compiler honest — and, as you will see with arrays, sometimes it is what keeps it correct.</p>
+<pre data-lang="nyx">fn main() {
+    let name: String = "Nyx"   // immutable
+    var counter: int = 0       // mutable
+    const MAX: int = 100       // constant
+
+    counter = counter + 1
+    print(name)
+    print(counter)
+    print(MAX)
+}</pre>
+
+<h2>Functions</h2>
+<p>Parameters are typed, the return type follows <code>-&gt;</code>, and a function with no return type returns nothing.</p>
+<pre data-lang="nyx">fn add(a: int, b: int) -&gt; int {
+    return a + b
+}
+
+fn greet(name: String) -&gt; String {
+    return "Hello, " + name + "!"
+}
+
+fn main() {
+    print(add(3, 4))
+    print(greet("world"))
+}</pre>
+
+<h2>Control flow</h2>
+<p><code>if</code>/<code>else</code>, <code>while</code>, and <code>for</code> over a range or over anything iterable. No parentheses around the condition; braces are not optional.</p>
+<pre data-lang="nyx">fn main() {
+    let x: int = 10
+    if x &gt; 5 {
+        print("greater")
+    } else {
+        print("less or equal")
+    }
+
+    var i: int = 0
+    while i &lt; 3 {
+        print(i)
+        i = i + 1
+    }
+
+    for j in 0..3 {
+        print(j)
+    }
+}</pre>
+
+<h2>Arrays</h2>
+<p>Arrays grow with <code>push</code>, iterate with <code>for</code>, and chain through <code>iter()</code>. The lambda passed to <code>filter</code> is an ordinary typed function without a name.</p>
+<pre data-lang="nyx">fn main() {
+    var nums: Array = [1, 2, 3, 4, 5]
+    nums.push(6)
+    print(nums.length())
+
+    for n in nums {
+        print(n)
+    }
+
+    let evens: Array = nums.iter()
+        .filter(fn(x: int) -&gt; bool { return x % 2 == 0 })
+        .collect()
+    print(evens.length())
+}</pre>
+
+<h2>Maps</h2>
+<p><code>insert</code>, <code>get</code>, <code>has</code>, <code>size</code>, and <code>keys()</code> to walk them.</p>
+<pre data-lang="nyx">fn main() {
+    var capitals: Map = Map.new()
+    capitals.insert("Argentina", "Buenos Aires")
+    capitals.insert("France", "Paris")
+
+    print(capitals.size())            // 2
+    print(capitals.get("France"))     // Paris
+    print(capitals.has("Brazil"))     // false
+
+    let ks: Array = capitals.keys()
+    var i: int = 0
+    while i &lt; ks.length() {
+        let k: String = ks[i]
+        print(k + " -&gt; " + capitals.get(k))
+        i = i + 1
+    }
+}</pre>
+<p class="doc-note">Notice <code>let k: String = ks[i]</code> rather than using <code>ks[i]</code> directly. An element read out of an <code>Array</code> without a type annotation is treated as an <code>int</code> — which, passed to <code>get</code>, is not a compile error but the wrong lookup. Annotate the element; it costs one line and removes a whole class of confusing bugs.</p>
+
+<h2>Strings are bytes</h2>
+<p><code>length()</code>, <code>substring()</code>, <code>indexOf()</code> and <code>charAt()</code> all count bytes, not characters. For characters — UTF-8 codepoints — there is <code>char_length()</code>. The rest is what you would expect: <code>trim()</code>, <code>split()</code>, <code>contains()</code>, <code>toUpper()</code>, <code>toLower()</code>, and <code>${…}</code> interpolation inside a literal.</p>
+<pre data-lang="nyx">fn main() {
+    let text: String = "  café latte  "
+    let clean: String = text.trim()
+
+    print(clean.length())         // 11 — BYTES: é takes two
+    print(clean.char_length())    // 10 — UTF-8 codepoints
+    print(clean.substring(0, 3))  // "caf" — substring cuts bytes too
+    print(clean.contains("latte"))
+
+    let parts: Array = clean.split(" ")
+    print(parts.length())         // 2
+
+    let lang: String = "Nyx"
+    print("language: ${lang}")
+}</pre>
+
+<h2>Structs</h2>
+<p>Fields are typed; methods live in an <code>impl</code> block and take <code>self</code>.</p>
+<pre data-lang="nyx">struct Point {
+    x: int,
+    y: int
+}
+
+impl Point {
+    fn distance_sq(self) -&gt; int {
+        return self.x * self.x + self.y * self.y
+    }
+}
+
+fn main() {
+    let p: Point = Point { x: 3, y: 4 }
+    print(p.distance_sq())   // 25
+}</pre>
+
+<h2>Enums and match</h2>
+<p>A variant can carry data, and <code>match</code> must cover every one of them. The separator is a dot — <code>Shape.Circle</code> — never a double colon; that mistake is common enough that <code>nyx vet</code> has a warning for it.</p>
+<pre data-lang="nyx">enum Shape {
+    Circle(int),
+    Rect(int, int),
+    Empty
+}
+
+fn area(s: Shape) -&gt; int {
+    return match s {
+        Shape.Circle(r)  =&gt; 3 * r * r,
+        Shape.Rect(w, h) =&gt; w * h,
+        Shape.Empty      =&gt; 0
+    }
+}
+
+fn main() {
+    print(area(Shape.Circle(5)))
+    print(area(Shape.Rect(3, 7)))
+    print(area(Shape.Empty))
+}</pre>
+
+<h2>Option</h2>
+<p>Absence is a value, not a null. <code>match</code> handles both cases, and <code>if let</code> is the short form when you only care about one.</p>
+<pre data-lang="nyx">fn first_positive(nums: Array, index: int) -&gt; Option&lt;int&gt; {
+    let val: int = nums[index]
+    if val &gt; 0 {
+        return Option.Some(val)
+    }
+    return Option.None
+}
+
+fn describe(opt: Option&lt;int&gt;) -&gt; String {
+    return match opt {
+        Option.Some(v) =&gt; "found: " + int_to_string(v),
+        Option.None    =&gt; "nothing"
+    }
+}
+
+fn main() {
+    let nums: Array = [10, -5, 3]
+    print(describe(first_positive(nums, 0)))
+    print(describe(first_positive(nums, 1)))
+
+    if let Option.Some(v) = first_positive(nums, 2) {
+        print("if let: " + int_to_string(v))
+    } else {
+        print("if let: nothing")
+    }
+}</pre>
+
+<h2>Result and the ? operator</h2>
+<p>Failure is a value too. <code>?</code> unwraps the success case and returns the error to the caller, so a chain of fallible steps reads like a chain of ordinary ones.</p>
+<pre data-lang="nyx">enum Result {
+    Ok(int),
+    Err(String)
+}
+
+fn parse_positive(s: String) -&gt; Result {
+    let n: int = string_to_int(s)
+    if n &lt;= 0 {
+        return Result.Err("not positive: " + s)
+    }
+    return Result.Ok(n)
+}
+
+fn double_it(n: int) -&gt; Result {
+    if n &gt; 1000 {
+        return Result.Err("too large")
+    }
+    return Result.Ok(n * 2)
+}
+
+// ? hands the Err back to the caller, no explicit match needed
+fn pipeline(s: String) -&gt; Result {
+    let n: int = parse_positive(s)?
+    let d: int = double_it(n)?
+    return Result.Ok(d + 1)
+}
+
+fn show(r: Result) {
+    match r {
+        Result.Ok(v)  =&gt; print("ok: " + int_to_string(v)),
+        Result.Err(e) =&gt; print("err: " + e)
+    }
+}
+
+fn main() {
+    show(pipeline("42"))
+    show(pipeline("-5"))
+    show(pipeline("2000"))
+}</pre>
+
+<h2>Traits</h2>
+<p>A trait is a set of methods a type promises to have. <code>dyn Trait</code> as a parameter type accepts any type that implements it.</p>
+<pre data-lang="nyx">trait Describable {
+    fn describe(self) -&gt; String
+}
+
+struct Cat { name: String }
+
+impl Describable for Cat {
+    fn describe(self) -&gt; String {
+        return self.name + " the cat"
+    }
+}
+
+fn print_desc(d: dyn Describable) {
+    print(d.describe())
+}
+
+fn main() {
+    let c: Cat = Cat { name: "Whiskers" }
+    print_desc(c)
+}</pre>
+
+<h2>Closures</h2>
+<p>A function defined inside another captures its environment, and <code>Fn</code> is the type of a function value — returnable, storable, passable as an argument.</p>
+<pre data-lang="nyx">fn make_adder(n: int) -&gt; Fn {
+    fn add(x: int) -&gt; int {
+        return n + x
+    }
+    return add
+}
+
+fn apply(f: Fn, value: int) -&gt; int {
+    return f(value)
+}
+
+fn main() {
+    let add5: Fn = make_adder(5)
+    print(add5(3))
+    print(apply(add5, 10))
+
+    let nums: Array = [1, 2, 3, 4, 5, 6]
+    let evens: Array = nums.iter()
+        .filter(fn(x: int) -&gt; bool { return x % 2 == 0 })
+        .collect()
+    print(evens.length())
+}</pre>
+
+<h2>Where to go next</h2>
+<p>This was the shape of the language. What the standard library can do — HTTP servers and clients, JSON, TOML, CSV, SQLite, sockets, TLS, threads and channels, cryptography, dates — is a different question, and it is answered by worked examples rather than by prose.</p>
+<a class="callout" href="/by-example/"><span><span class="callout-name">Nyx by example</span><span class="step-note note">Around a hundred recipes, from hello world to an HTTP server. Read one, copy it, change it.</span></span><span class="callout-go">Open →</span></a>
