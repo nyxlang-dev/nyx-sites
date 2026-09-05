@@ -7,6 +7,6 @@ status: HTTP/1.0 200 OK
 body (first 256 bytes): &lt;!doctype html&gt;...
 </section>
 <section data-part="explanation">
-<p><code>tcp_connect(host, port)</code> resuelve el nombre de host y crea una conexión TCP, devolviendo un descriptor de archivo. <code>tcp_write</code> envía datos, <code>tcp_read_line</code> lee hasta encontrar <code>\n</code>, y <code>tcp_read(fd, n)</code> lee hasta <code>n</code> bytes. Siempre cierre las conexiones con <code>tcp_close</code>.</p>
-<p>Este es el nivel más bajo de redes en Nyx. Para HTTP, use <code>std/http</code>, que envuelve estas primitivas con el parseo de solicitud/respuesta (ver receta 49).</p>
+<p><code>tcp_connect(host, port)</code> resuelve el nombre de host y crea una conexión TCP, devolviendo un descriptor de archivo. <code>tcp_write</code> envía datos, <code>tcp_read_line</code> lee hasta encontrar <code>\n</code>, y <code>tcp_read(fd, n)</code> lee hasta <code>n</code> bytes. Cierra siempre las conexiones con <code>tcp_close</code>.</p>
+<p>Este es el nivel más bajo de redes en Nyx. Para HTTP, usa <code>std/http</code>, que envuelve estas primitivas con el parseo de solicitud/respuesta (ver receta 49).</p>
 </section>

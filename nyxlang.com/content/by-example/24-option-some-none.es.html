@@ -8,7 +8,7 @@ no encontrado
 if let Some: valor es 7
 </section>
 <section data-part="explanation">
-<p><code>Option&lt;T&gt;</code> es un enum genérico con dos variantes: <code>Option.Some(value)</code> envuelve un valor existente de tipo <code>T</code>, y <code>Option.None</code> señala su ausencia. Como forma parte del prelude, no necesitás importarlo — siempre está disponible. Este patrón elimina toda una clase de bugs relacionados con nulos al hacer explícita la opcionalidad en el sistema de tipos.</p>
+<p><code>Option&lt;T&gt;</code> es un enum genérico con dos variantes: <code>Option.Some(value)</code> envuelve un valor existente de tipo <code>T</code>, y <code>Option.None</code> señala su ausencia. Como forma parte del prelude, no necesitas importarlo — siempre está disponible. Este patrón elimina toda una clase de bugs relacionados con nulos al hacer explícita la opcionalidad en el sistema de tipos.</p>
 <p>La función <code>describe</code> muestra un <code>match</code> exhaustivo sobre un <code>Option</code>. El compilador exige que se manejen ambos casos — olvidarse de <code>Option.None</code> es un error en tiempo de compilación. El caso <code>Some</code> usa desestructuración de patrones para vincular el valor interno directamente a <code>v</code>, que luego queda disponible en la expresión de ese caso.</p>
-<p><code>if let Option.Some(v) = c</code> es un atajo conciso para cuando solo te interesa el caso <code>Some</code> y querés recurrir a una rama <code>else</code> para el caso <code>None</code>. Vincula <code>v</code> dentro del cuerpo del if sin la formalidad de una expresión match completa.</p>
+<p><code>if let Option.Some(v) = c</code> es un atajo conciso para cuando solo te interesa el caso <code>Some</code> y quieres recurrir a una rama <code>else</code> para el caso <code>None</code>. Vincula <code>v</code> dentro del cuerpo del if sin la formalidad de una expresión match completa.</p>
 </section>

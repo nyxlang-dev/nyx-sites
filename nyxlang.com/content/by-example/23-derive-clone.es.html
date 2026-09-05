@@ -10,7 +10,7 @@ Rect original: w=100
 Rect clon:     w=100
 </section>
 <section data-part="explanation">
-<p>Colocar <code>#[derive(Clone, Debug)]</code> encima de la declaración de un struct le indica al compilador de Nyx que sintetice automáticamente las implementaciones de trait correspondientes. Obtenés un <code>.clone()</code> y un <code>.debug_str()</code> completamente funcionales sin escribir una sola línea de código de implementación. Esto elimina toda una categoría de código repetitivo.</p>
+<p>Colocar <code>#[derive(Clone, Debug)]</code> encima de la declaración de un struct le indica al compilador de Nyx que sintetice automáticamente las implementaciones de trait correspondientes. Obtienes un <code>.clone()</code> y un <code>.debug_str()</code> completamente funcionales sin escribir una sola línea de código de implementación. Esto elimina toda una categoría de código repetitivo.</p>
 <p><code>Clone</code> realiza una copia campo por campo del struct. Después de <code>let p2 = p1.clone()</code>, modificar <code>p2</code> no afecta a <code>p1</code> — cada uno mantiene su propia copia independiente de los datos. Esto es seguro incluso para structs que contienen campos alojados en el heap, porque la macro derive maneja la lógica de la copia profunda.</p>
 <p><code>Debug</code> genera un método <code>.debug_str()</code> que formatea el struct con el nombre de su tipo y los valores de sus campos en una forma legible — útil para logging, tests e inspección durante el desarrollo. Se pueden derivar múltiples traits en una sola anotación listándolos separados por comas dentro de los paréntesis.</p>
 </section>
