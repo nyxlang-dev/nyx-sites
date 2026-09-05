@@ -23,6 +23,13 @@
 #             productos que ya no viven en este repo. Sus URLs viejas
 #             (/by-example/71-kv-basic.html y compañía) DEJAN DE EXISTIR en la
 #             fase 2 — decisión del plan del rediseño, no un descuido.
+#   reason    presente SOLO cuando `excluded = "1"` por un motivo distinto del
+#             split de los stacks. Hoy: "broken-with-0.31.0" en 31 y 63, dos
+#             recetas que el propio compilador no puede correr (31 hace SIGSEGV
+#             porque `enumerate()` no devuelve pares; 63 se cuelga porque
+#             `select` consume el valor del canal y el `case` lo vuelve a pedir).
+#             Las dos tienen ficha [ALTA] en el TASKS.md del monorepo y vuelven
+#             al `order` cuando esas fichas se cierren; su sidecar se conserva.
 #   sidecar   "1" = su prosa (título, blurb, intro, salida, explicación) se
 #             extrajo del recetario viejo a content/by-example/<slug>.{en,es}.html.
 #             "0" = no hay prosa heredada: o está excluida, o es una receta nueva
@@ -35,7 +42,7 @@
 categories = "fundamentals,io-data,types-patterns,advanced,networking,concurrency,systems"
 
 # Recetas publicadas, en orden de índice y de la navegación prev/next.
-order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,31-iterator-enumerate,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,63-select-channel,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style"
+order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style"
 
 [r01]
 slug = "01-hello-world"
@@ -251,7 +258,8 @@ sidecar = "1"
 slug = "31-iterator-enumerate"
 num = "31"
 category = "advanced"
-excluded = "0"
+excluded = "1"
+reason = "broken-with-0.31.0"
 sidecar = "1"
 
 [r32]
@@ -475,7 +483,8 @@ sidecar = "1"
 slug = "63-select-channel"
 num = "63"
 category = "concurrency"
-excluded = "0"
+excluded = "1"
+reason = "broken-with-0.31.0"
 sidecar = "1"
 
 [r64]
