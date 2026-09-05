@@ -1,0 +1,17 @@
+<!-- title: Structs | blurb: Definir tipos de datos con campos y agregar métodos vía <code>impl</code>. -->
+<section data-part="intro">
+<p>Los structs permiten agrupar datos relacionados bajo un tipo con nombre. Se les puede asociar comportamiento con un bloque <code>impl</code>, dándoles métodos que operan sobre sus campos a través de un parámetro <code>self</code>.</p>
+</section>
+<section data-part="output">
+Punto: (3, 4)
+Distancia al origen: 7
+Punto: (-2, 5)
+Distancia al origen: 7
+Area del rectangulo: 42
+</section>
+<section data-part="explanation">
+<p>Un struct se define con la palabra clave <code>struct</code>, un nombre, y una lista de campos tipados separados por comas dentro de llaves. Los nombres de structs siguen PascalCase por convención. Los campos se acceden con notación de punto: <code>instance.field</code>.</p>
+<p>Los métodos se definen en un bloque <code>impl</code> para el struct. El primer parámetro <code>self</code> se refiere a la instancia sobre la que se llama el método — es similar a <code>this</code> en otros lenguajes. Los métodos pueden acceder a cualquier campo del struct a través de <code>self.field_name</code>.</p>
+<p>La instanciación de structs usa la sintaxis de inicialización de campos: <code>TypeName { field: value, ... }</code>. Todos los campos deben proporcionarse; no hay valores por defecto a menos que se escriba explícitamente un método constructor.</p>
+<p>El ejemplo de distancia Manhattan muestra cómo los métodos pueden contener lógica arbitraria, variables locales y control de flujo — son simplemente funciones asociadas a un tipo. Puede haber múltiples bloques <code>impl</code> para el mismo struct, y cada struct puede tener su propio <code>impl</code> independiente.</p>
+</section>

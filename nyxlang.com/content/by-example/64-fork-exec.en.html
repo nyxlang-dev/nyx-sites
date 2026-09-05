@@ -1,0 +1,14 @@
+<!-- title: Fork &amp; Exec | blurb: Running external commands with <code>fork</code>, <code>execvp</code>, and <code>waitpid</code>. -->
+<section data-part="intro">
+<p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p>
+</section>
+<section data-part="output">
+parent: spawned child 12345
+hello from child
+parent: child exited with 0
+</section>
+<section data-part="explanation">
+<p><code>fork()</code> duplicates the current process. It returns 0 in the child and the child's PID in the parent. Because Nyx uses the Boehm garbage collector, the child process must <strong>not</strong> allocate GC-managed memory — it must call <code>execvp()</code> immediately to replace its process image with a new program.</p>
+<p><code>execvp(command, args)</code> replaces the current process with the given command. The first element of <code>args</code> is conventionally the program name. If <code>execvp</code> succeeds, it never returns.</p>
+<p><code>waitpid(pid, 0)</code> blocks the parent until the child exits and returns the exit status. This is the standard Unix pattern for spawning subprocesses.</p>
+</section>

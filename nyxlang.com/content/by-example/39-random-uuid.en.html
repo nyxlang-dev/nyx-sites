@@ -1,0 +1,22 @@
+<!-- title: Random Numbers and UUID | blurb: Generating random numbers and unique identifiers. -->
+<section data-part="intro">
+<p>The <code>std/random</code> module provides a fast xorshift64 pseudo-random number generator, and <code>std/uuid</code> generates RFC 4122 version 4 UUIDs. Both are commonly needed utilities for testing, simulations, and distributed-system identifiers.</p>
+</section>
+<section data-part="output">
+Numeros aleatorios (1-100):
+  42
+  7
+  83
+random_bool: 1
+random_float: (generado)
+uuid_v4: f47ac10b-58cc-4372-a567-0e02b2c3d479
+longitud uuid: 36
+uuid valido: 1
+segundo uuid: 550e8400-e29b-41d4-a716-446655440000
+son distintos: 1
+</section>
+<section data-part="explanation">
+<p><code>random_range(lo, hi)</code> returns a uniformly distributed integer in the inclusive range <code>[lo, hi]</code>. <code>random_bool()</code> returns either <code>true</code> or <code>false</code> with equal probability, and <code>random_float()</code> returns a <code>float</code> in <code>[0.0, 1.0)</code>. All three are backed by the xorshift64 generator seeded from the system clock at program start.</p>
+<p><code>uuid_v4()</code> generates a 36-character string in the canonical UUID format <code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code>. The <code>4</code> in the third group encodes the version, and the high bits of the fourth group encode the variant. Every call produces a new random UUID; the probability of two UUIDs colliding is astronomically small.</p>
+<p><code>uuid_is_valid(s)</code> validates that a string conforms to the UUID format — useful for sanitizing user input or configuration values before treating them as identifiers. The final assertion confirms that two separately generated UUIDs are always distinct.</p>
+</section>

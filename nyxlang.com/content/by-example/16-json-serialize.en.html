@@ -1,0 +1,14 @@
+<!-- title: JSON Serialize | blurb: Converting data structures back to JSON strings. -->
+<section data-part="intro">
+<p>This example builds on the JSON foundations from the previous page to show how real-world data — a list of people — is serialized into a nested JSON response. A helper function encapsulates the per-record construction, keeping <code>main</code> clean and readable.</p>
+</section>
+<section data-part="output">
+{"nombre":"Bob","edad":25,"activo":true}
+[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]
+{"meta":{"version":1,"total":3},"data":[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]}
+</section>
+<section data-part="explanation">
+<p><code>build_persona</code> is a plain Nyx function that takes typed arguments and returns a JSON object node. Wrapping construction logic in a function prevents key/value array mismatches and makes the code self-documenting — the function signature tells you exactly what fields each record contains.</p>
+<p>Arrays of objects are built by pushing individual object nodes into a plain <code>Array</code> and wrapping the result with <code>json_array</code>. Because JSON nodes are just tagged arrays, they compose naturally: you can push an object node as the value of another object's field to create arbitrarily deep nesting.</p>
+<p>The final <code>resp</code> object wraps <code>meta</code> and <code>data</code> into a single API-style response envelope. This pattern — a metadata object plus a data array — is common in REST APIs and shows how <code>std/json</code> handles real production shapes without any special-case syntax.</p>
+</section>

@@ -1,0 +1,15 @@
+<!-- title: Argumentos de CLI | blurb: Acceder a los argumentos de línea de comandos con <code>get_args</code>. -->
+<section data-part="intro">
+<p>Los argumentos de línea de comandos se acceden mediante <code>get_args()</code>, que devuelve el array <code>argv</code> completo como un <code>Array</code> de <code>String</code>. El índice <code>0</code> es siempre la ruta del programa, y los índices siguientes contienen los argumentos pasados por el usuario.</p>
+</section>
+<section data-part="output">
+Total de argumentos: 3
+  [0] programa: ./programa
+  [1] arg: arg1
+  [2] arg: arg2
+</section>
+<section data-part="explanation">
+<p><code>get_args()</code> es una función integrada que envuelve el array <code>argv</code> de C en un <code>Array</code> de Nyx. A diferencia de C, no necesitas <code>argc</code> por separado — simplemente llama a <code>.length()</code> sobre el array devuelto. El primer elemento (índice 0) es siempre la ruta del ejecutable tal como la reporta el sistema operativo.</p>
+<p>El bucle <code>while</code> con una variable de índice manual es el patrón de iteración estándar cuando necesitas el índice junto con el valor. Para los casos en los que solo te interesan los valores, los métodos de iterador de Nyx como <code>.map</code> y <code>.filter</code> son más ergonómicos.</p>
+<p>La guarda al final detecta cuando no se proporcionaron argumentos del usuario e imprime una sugerencia de uso. Construir herramientas de CLI en Nyx normalmente combina <code>get_args()</code> con el módulo <code>std/cli</code> para el parseo de flags, pero este ejemplo muestra la base cruda.</p>
+</section>

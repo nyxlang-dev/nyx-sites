@@ -1,0 +1,18 @@
+<!-- title: WaitGroup | blurb: Esperar a múltiples threads con <code>wg_add</code>/<code>wg_done</code>/<code>wg_wait</code>. -->
+<section data-part="intro">
+<p><code>WaitGroup</code> de <code>std/sync</code> coordina múltiples hilos. <code>wg_add</code> establece el contador esperado, cada hilo llama a <code>wg_done</code> al terminar, y <code>wg_wait</code> bloquea hasta que el contador llega a cero.</p>
+</section>
+<section data-part="output">
+task C running
+task C done
+task A running
+task A done
+task B running
+task B done
+all tasks completed
+</section>
+<section data-part="explanation">
+<p><code>WaitGroup</code> se importa de <code>std/sync</code>. Mantiene un contador interno: <code>wg_add(wg, 3)</code> lo establece en 3, cada llamada a <code>wg_done</code> lo decrementa en 1, y <code>wg_wait</code> bloquea hasta que el contador llega a cero.</p>
+<p>Tres tareas se ejecutan de forma concurrente con distintas duraciones de espera (5ms, 10ms, 20ms). La tarea C termina primero porque duerme menos tiempo. El orden exacto de la salida depende de la planificación de hilos, pero "all tasks completed" siempre se imprime al final porque <code>wg_wait</code> garantiza que todos los hilos ya llamaron a <code>wg_done</code>.</p>
+<p>Este patrón es ideal cuando se necesita repartir trabajo entre múltiples hilos y esperar a que todos terminen antes de continuar. A diferencia de <code>thread_join</code>, no es necesario rastrear los handles de cada hilo individualmente.</p>
+</section>

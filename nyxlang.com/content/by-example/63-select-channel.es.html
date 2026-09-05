@@ -1,0 +1,14 @@
+<!-- title: Select Channel | blurb: Multiplexar channels con la sentencia <code>select</code>. -->
+<section data-part="intro">
+<p>La sentencia <code>select</code> multiplexa varios canales, esperando al primero que tenga datos disponibles. Cada <code>case</code> nombra una variable de canal. Es similar a la sentencia select de Go.</p>
+</section>
+<section data-part="output">
+from ch1: 42
+from ch2: 99
+both received
+</section>
+<section data-part="explanation">
+<p>La sentencia <code>select</code> monitorea múltiples canales simultáneamente. Cuando hay datos disponibles en cualquier canal, se ejecuta la rama <code>case</code> correspondiente. Si varios canales tienen datos, se elige uno.</p>
+<p>Dos hilos emisores envían valores tras distintos retardos (10ms y 20ms). El hilo principal usa <code>select</code> dentro de un bucle para recibir del canal que esté listo primero. Como <code>sender1</code> duerme menos, <code>ch1</code> suele entregar primero.</p>
+<p>Los canales se declaran como tipo <code>Map</code> -- este es un detalle específico de Nyx. El patrón <code>select</code> es esencial para construir sistemas orientados a eventos, timeouts y multiplexores fan-in donde se necesita reaccionar a la primera señal disponible entre varias fuentes.</p>
+</section>

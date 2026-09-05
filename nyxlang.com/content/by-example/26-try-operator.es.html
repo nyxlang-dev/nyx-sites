@@ -1,0 +1,14 @@
+<!-- title: Operador Try | blurb: Propagación de errores con cortocircuito usando <code>?</code>. -->
+<section data-part="intro">
+<p>El operador <code>?</code> es azúcar sintáctica para propagar errores. Agregar <code>?</code> a una expresión que retorna <code>Result</code> desempaqueta el valor <code>Ok</code> o retorna inmediatamente el <code>Err</code> al que llamó — sin necesidad de un match explícito.</p>
+</section>
+<section data-part="output">
+ok: 85
+err: no es positivo: -5
+err: numero demasiado grande
+</section>
+<section data-part="explanation">
+<p>Sin <code>?</code>, cada llamada que puede fallar requeriría una expresión <code>match</code> para revisar errores antes de continuar. El operador <code>?</code> automatiza esto: si el resultado es <code>Ok(v)</code>, desempaqueta <code>v</code> y continúa; si es <code>Err(e)</code>, retorna inmediatamente <code>Err(e)</code> desde la función contenedora. La firma de la función también debe retornar un <code>Result</code> para que esto funcione.</p>
+<p>La función <code>pipeline</code> encadena dos pasos que pueden fallar: parsear un entero positivo y duplicarlo dentro de un límite. Ambas líneas usan <code>?</code>, así que el primer error encontrado corta el resto de la función. Cuando se pasa <code>"-5"</code>, <code>parse_positive</code> retorna <code>Err</code> de inmediato y <code>double_it</code> nunca se llama.</p>
+<p>Este patrón mantiene la lógica del camino feliz limpia y legible — <code>pipeline</code> se lee casi como código imperativo secuencial — a la vez que preserva un manejo de errores completo y explícito. Es el estilo preferido para operaciones de múltiples pasos en Nyx frente a expresiones match anidadas profundamente.</p>
+</section>

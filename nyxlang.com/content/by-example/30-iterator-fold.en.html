@@ -1,0 +1,16 @@
+<!-- title: Iterator: fold | blurb: Reducing a sequence to a single value with <code>fold</code>. -->
+<section data-part="intro">
+<p><code>fold</code> is the general-purpose iterator consumer that reduces a sequence to a single value. It takes an initial accumulator and a two-argument function, applies the function to each element and the running accumulator, and returns the final accumulated result.</p>
+</section>
+<section data-part="output">
+suma(1..5) = 15
+producto(1..5) = 120
+max(1..5) = 5
+suma pares = 26
+100 + sum(1,2,3) = 106
+</section>
+<section data-part="explanation">
+<p><code>fold(init, f)</code> is equivalent to manually writing a loop with an accumulator variable: it starts with <code>acc = init</code> and for each element <code>x</code> computes <code>acc = f(acc, x)</code>, returning the final <code>acc</code>. The choice of initial value is important: <code>0</code> is the identity for addition (adding zero changes nothing), while <code>1</code> is the identity for multiplication. Choosing the wrong initial value gives incorrect results.</p>
+<p>The <code>max_val</code> accumulator function selects the larger of the current accumulator and the incoming element, so folding an array with <code>0</code> as the start finds the maximum. This works correctly here because all values are positive; for arrays that may contain negatives, the initial value should be set to the minimum possible integer.</p>
+<p>Combining <code>filter</code> and <code>fold</code> in one pipeline — as in the even-sum example — is idiomatic Nyx: filter narrows the stream, then fold reduces it, with no intermediate array allocated. Many classic operations (<code>sum</code>, <code>product</code>, <code>count</code>, <code>any</code>, <code>all</code>) are special cases of fold and can be expressed this way.</p>
+</section>

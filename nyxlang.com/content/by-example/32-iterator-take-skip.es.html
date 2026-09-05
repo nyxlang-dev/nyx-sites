@@ -1,0 +1,19 @@
+<!-- title: Iterador: take() y skip() | blurb: Recortar secuencias con <code>take</code> y <code>skip</code>. -->
+<section data-part="intro">
+<p><code>take(n)</code> limita un iterador a sus primeros <code>n</code> elementos, mientras que <code>skip(n)</code> descarta los primeros <code>n</code> y produce el resto. Juntos forman los bloques básicos de ventanas deslizantes, recortes y paginación sobre cualquier secuencia.</p>
+</section>
+<section data-part="output">
+skip(2): 8 elementos
+take(3): 3 elementos
+  [0]=1 [2]=3
+skip(2).take(3): 3 elementos
+  3
+  4
+  5
+pagina 2 (skip 3, take 3): 3 elementos
+</section>
+<section data-part="explanation">
+<p><code>skip(2)</code> sobre un array de 10 elementos produce los elementos en las posiciones 2 a 9, dando 8 elementos. <code>take(3)</code> detiene el iterador después de los primeros 3 elementos, produciendo <code>[1, 2, 3]</code> — así que <code>[0]</code> es <code>1</code> y <code>[2]</code> es <code>3</code>.</p>
+<p>Encadenar <code>skip(2).take(3)</code> primero descarta dos elementos, y luego limita el resto a tres — produciendo <code>[3, 4, 5]</code>. Este es el patrón clásico de ventana deslizante. El orden importa: <code>take(3).skip(2)</code> en cambio daría un único elemento.</p>
+<p>El ejemplo de paginación al final muestra un uso real directo: para obtener la página <em>P</em> de tamaño <em>N</em>, se escribe <code>.skip((P-1) * N).take(N)</code>. Ambos adaptadores son perezosos — no se asigna ningún elemento hasta que se llama a <code>.collect()</code>.</p>
+</section>

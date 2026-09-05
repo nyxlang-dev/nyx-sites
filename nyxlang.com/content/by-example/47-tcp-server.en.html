@@ -1,0 +1,14 @@
+<!-- title: TCP Server | blurb: Listening, accepting, and echoing with <code>tcp_listen</code>. -->
+<section data-part="intro">
+<p>A minimal TCP echo server using built-in primitives. <code>tcp_listen</code> binds to a port, <code>tcp_accept</code> waits for a client connection, then you read and write data on the client socket. This is the foundation for all Nyx network servers.</p>
+</section>
+<section data-part="output">
+echo server listening on :9000
+client connected
+received: hello
+done
+</section>
+<section data-part="explanation">
+<p><code>tcp_listen("0.0.0.0", port)</code> creates a listening socket on all interfaces. <code>tcp_accept</code> blocks until a client connects and returns a new file descriptor for that connection. The server reads one line, echoes it back prefixed with "echo: ", and closes both sockets.</p>
+<p>For a production server, you would wrap the accept in a <code>while</code> loop and spawn a thread per client, or use <code>http_serve_mt</code> which handles the thread pool automatically.</p>
+</section>

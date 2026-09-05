@@ -1,0 +1,12 @@
+<!-- title: Mutex | blurb: Proteger estado compartido entre threads con locks. -->
+<section data-part="intro">
+<p><code>mutex_new()</code> crea un lock de exclusión mutua. <code>mutex_lock</code> y <code>mutex_unlock</code> aseguran que solo un hilo acceda al estado compartido a la vez. Sin un mutex, los incrementos concurrentes perderían actualizaciones debido a condiciones de carrera.</p>
+</section>
+<section data-part="output">
+counter: 2000
+</section>
+<section data-part="explanation">
+<p><code>mutex_new()</code> reserva un nuevo mutex y devuelve un handle opaco. Antes de acceder a la variable compartida <code>counter</code>, cada hilo llama a <code>mutex_lock(m)</code> para adquirir acceso exclusivo, y luego a <code>mutex_unlock(m)</code> para liberarlo.</p>
+<p>Dos hilos incrementan el contador 1000 veces cada uno. Sin el mutex, algunos incrementos se perderían porque ambos hilos podrían leer el mismo valor simultáneamente. Con el mutex, el conteo final siempre es exactamente 2000.</p>
+<p>Siempre llama a <code>mutex_destroy(m)</code> cuando el mutex ya no se necesita, para liberar recursos del sistema. En código de producción, considera envolver las secciones críticas en funciones auxiliares para asegurar que nunca se olvide el unlock.</p>
+</section>

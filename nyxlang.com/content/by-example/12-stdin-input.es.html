@@ -1,0 +1,14 @@
+<!-- title: Entrada por Stdin | blurb: Leer entrada del usuario desde la terminal con <code>read_line</code>. -->
+<section data-part="intro">
+<p>Leer desde la entrada estándar en Nyx se hace con <code>read_line()</code>, que bloquea hasta que el usuario presiona Enter y devuelve el texto ingresado como un <code>String</code>. Una función complementaria, <code>print_no_newline</code>, te permite mostrar un prompt sin avanzar a la siguiente línea, manteniendo el cursor justo después de los dos puntos.</p>
+</section>
+<section data-part="output">
+Ingresa tu nombre: Alice
+Hola, Alice! Bienvenido a Nyx.
+Longitud del nombre: 5
+</section>
+<section data-part="explanation">
+<p><code>print_no_newline(s)</code> escribe un string a stdout sin agregar un salto de línea, a diferencia del <code>print</code> normal. Esta es la forma idiomática de mostrar un prompt en línea para que la entrada del usuario aparezca en la misma línea.</p>
+<p><code>read_line()</code> lee caracteres desde stdin hasta encontrar un carácter de nueva línea. El string devuelto puede incluir un <code>\n</code> al final dependiendo de la plataforma y de cómo se haya canalizado la entrada, así que llamar a <code>.trim()</code> es una buena práctica para eliminar espacios en blanco al inicio y al final.</p>
+<p>La guarda <code>if/else</code> maneja con elegancia el caso de entrada vacía. En testing automatizado puedes proveer la entrada mediante redirección de shell: <code>echo "Alice" | ./programa</code>, lo cual hace que <code>read_line()</code> devuelva <code>"Alice\n"</code> sin bloquearse.</p>
+</section>

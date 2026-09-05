@@ -1,0 +1,15 @@
+<!-- title: Trait Bounds | blurb: Constraining generics with <code>&lt;T: Display&gt;</code>. -->
+<section data-part="intro">
+<p>Trait bounds constrain generic type parameters so a function can call trait methods on values of unknown type. The syntax <code>&lt;T: TraitName&gt;</code> means "this function works for any type T that implements TraitName".</p>
+</section>
+<section data-part="output">
+(7, 2)
+Circulo{radio=10}
+(7, 2)
+(7, 2)
+</section>
+<section data-part="explanation">
+<p><code>print_it&lt;T: Display&gt;</code> is a generic function that accepts any type <code>T</code> as long as it implements <code>Display</code>. The bound <code>T: Display</code> tells the compiler two things: it may generate a specialized version for each concrete type used at the call site (monomorphization), and it guarantees that <code>x.to_string()</code> is always a valid call inside the function body.</p>
+<p><code>show_twice</code> demonstrates that trait-bounded generics are ordinary functions — they can hold local variables, call the trait method multiple times, and produce any side effects. The compiler produces separate machine-code versions for <code>Point</code> and any other type you pass, so there is zero virtual dispatch overhead.</p>
+<p>At the call site, the type argument is written explicitly as <code>print_it&lt;Point&gt;(p)</code>. Nyx can often infer the type argument, but being explicit is always valid and sometimes clearer when reading code.</p>
+</section>

@@ -1,0 +1,17 @@
+<!-- title: Lectura y Escritura de Archivos | blurb: Leer y escribir archivos con <code>read_file</code> y <code>write_file</code>. -->
+<section data-part="intro">
+<p>Nyx provee las funciones integradas <code>write_file</code> y <code>read_file</code> para I/O de archivos simple sin necesidad de ningún import. Escribir un archivo es una sola llamada; volver a leerlo devuelve el contenido completo como un <code>String</code>. Este ejemplo también muestra <code>str_byte_length</code>, que cuenta bytes crudos en lugar de caracteres.</p>
+</section>
+<section data-part="output">
+Archivo escrito en: /tmp/nyx_example_11.txt
+Contenido leido:
+Hola desde Nyx!
+Segunda línea.
+Tercera línea.
+Bytes: 47
+</section>
+<section data-part="explanation">
+<p><code>write_file(path, content)</code> crea o sobrescribe el archivo en <code>path</code> con el string dado. Los caracteres de nueva línea (<code>\n</code>) incrustados en el string se convierten en saltos de línea reales dentro del archivo. No hace falta abrir ni cerrar ningún manejador de archivo — la función se encarga de todo internamente.</p>
+<p><code>read_file(path)</code> lee el archivo completo y devuelve su contenido como un único <code>String</code>. Para archivos grandes usarías I/O por streaming desde <code>std/io</code>, pero para la mayoría de los scripts este enfoque de una sola pasada es perfectamente suficiente.</p>
+<p><code>str_byte_length</code> devuelve la cantidad de bytes en un string codificado en UTF-8, que puede diferir de la cantidad de puntos de código Unicode. Esto es útil cuando te importa el tamaño de almacenamiento y no la cantidad de caracteres.</p>
+</section>

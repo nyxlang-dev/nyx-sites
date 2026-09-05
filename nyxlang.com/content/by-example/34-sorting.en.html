@@ -1,0 +1,19 @@
+<!-- title: Sorting | blurb: Sorting arrays of integers and strings. -->
+<section data-part="intro">
+<p>The <code>std/array</code> module provides <code>sort_int</code> and <code>sort_str</code> for in-place sorting of numeric and string arrays respectively. Both functions sort ascending and return the same array they mutated.</p>
+</section>
+<section data-part="output">
+Antes de ordenar:
+[64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
+Despues de ordenar:
+[3, 8, 11, 12, 22, 25, 47, 55, 64, 90]
+Strings antes:
+[manzana, banana, cereza, aguacate]
+Strings despues:
+[aguacate, banana, cereza, manzana]
+</section>
+<section data-part="explanation">
+<p><code>sort_int(nums)</code> sorts the array in place and returns it, so the return value and the original variable refer to the same sorted sequence. You can either use the return value or continue using the original variable — both point to the now-sorted data.</p>
+<p><code>sort_str</code> works identically for string arrays, ordering elements lexicographically (byte-by-byte, ascending). In the example, <code>"aguacate"</code> sorts first because <code>'a'</code> precedes <code>'b'</code>, <code>'c'</code>, and <code>'m'</code>.</p>
+<p>The helper <code>print_array</code> demonstrates manual array traversal using a <code>while</code> loop with an index variable — the standard Nyx pattern when you need index-based access rather than an iterator pipeline.</p>
+</section>

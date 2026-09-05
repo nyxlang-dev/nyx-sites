@@ -1,0 +1,15 @@
+<!-- title: Manejo de Errores | blurb: Bloques try/catch para recuperarse de errores en tiempo de ejecución. -->
+<section data-part="intro">
+<p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. El built-in <code>throw</code> lanza un error de tipo string que se puede capturar, mientras que <code>panic</code> termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante.</p>
+</section>
+<section data-part="output">
+Error capturado: division por cero: denominador es 0
+resultado: 5
+panic atrapado: algo salio muy mal
+manejado: error interno
+</section>
+<section data-part="explanation">
+<p><code>throw(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>throw</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
+<p><code>panic</code> señala una condición irrecuperable — por defecto aborta el proceso, pero también se puede capturar con <code>try</code>/<code>catch</code> cuando la recuperación es genuinamente posible. Esto lo hace útil para aserciones durante el desarrollo que pueden envolverse en tests.</p>
+<p>Los bloques <code>try</code> anidados permiten manejar los errores internos localmente sin propagarlos a los manejadores externos. En el último ejemplo, el <code>catch</code> interno maneja <code>"error interno"</code> por completo, así que nunca se llega al <code>catch</code> externo.</p>
+</section>

@@ -1,0 +1,18 @@
+<!-- title: WebSocket | blurb: RFC 6455 framing, parsing, and handshake responses. -->
+<section data-part="intro">
+<p><code>std/websocket</code> implements RFC 6455 WebSocket framing. <code>ws_frame</code> wraps a text payload into a WebSocket frame, <code>ws_parse</code> extracts the payload from a frame, and <code>ws_handshake_response</code> generates the HTTP 101 Upgrade response required to establish a WebSocket connection.</p>
+</section>
+<section data-part="output">
+frame length: 19 bytes
+payload length: 17 bytes
+parsed: Hello, WebSocket!
+handshake response:
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+</section>
+<section data-part="explanation">
+<p>A WebSocket frame has a 2-byte header (FIN bit, opcode, payload length) followed by the payload. <code>ws_frame</code> creates a text frame (opcode 0x81) with the correct length encoding. <code>ws_parse</code> reads the header and extracts the payload bytes.</p>
+<p>The handshake response computes the <code>Sec-WebSocket-Accept</code> header by concatenating the client's key with a magic GUID and computing SHA-1. This is handled by <code>runtime/websocket.c</code>.</p>
+</section>

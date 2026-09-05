@@ -1,0 +1,19 @@
+<!-- title: Ordenamiento | blurb: Ordenar arrays de enteros y strings. -->
+<section data-part="intro">
+<p>El módulo <code>std/array</code> provee <code>sort_int</code> y <code>sort_str</code> para ordenar in-place arrays numéricos y de strings respectivamente. Ambas funciones ordenan de forma ascendente y retornan el mismo array que mutaron.</p>
+</section>
+<section data-part="output">
+Antes de ordenar:
+[64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
+Despues de ordenar:
+[3, 8, 11, 12, 22, 25, 47, 55, 64, 90]
+Strings antes:
+[manzana, banana, cereza, aguacate]
+Strings despues:
+[aguacate, banana, cereza, manzana]
+</section>
+<section data-part="explanation">
+<p><code>sort_int(nums)</code> ordena el array in-place y lo retorna, así que el valor de retorno y la variable original referencian la misma secuencia ya ordenada. Se puede usar el valor de retorno o seguir usando la variable original — ambos apuntan a los datos ya ordenados.</p>
+<p><code>sort_str</code> funciona de forma idéntica para arrays de strings, ordenando los elementos lexicográficamente (byte por byte, de forma ascendente). En el ejemplo, <code>"aguacate"</code> se ordena primero porque <code>'a'</code> precede a <code>'b'</code>, <code>'c'</code> y <code>'m'</code>.</p>
+<p>La función auxiliar <code>print_array</code> demuestra el recorrido manual de un array usando un loop <code>while</code> con una variable índice — el patrón estándar de Nyx cuando se necesita acceso por índice en lugar de un pipeline de iteradores.</p>
+</section>

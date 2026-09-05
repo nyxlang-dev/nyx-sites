@@ -1,0 +1,30 @@
+<!-- title: Control Flow | blurb: if/else, while loops, for-range, for-in, break and continue. -->
+<section data-part="intro">
+<p>Nyx provides the standard set of control flow constructs: conditional branches with <code>if/else if/else</code>, counter loops with <code>while</code>, and iteration with <code>for</code> over ranges and collections. Loop control uses <code>break</code> and <code>continue</code>.</p>
+</section>
+<section data-part="output">
+entre 5 y 10
+while: 1
+while: 2
+while: 3
+while: 4
+while: 5
+range: 0
+range: 1
+range: 2
+range: 3
+range: 4
+color: rojo
+color: verde
+color: azul
+k = 1
+k = 2
+k = 4
+k = 5
+</section>
+<section data-part="explanation">
+<p>The <code>if</code> statement evaluates a boolean condition without parentheses. You can chain conditions with <code>else if</code> and provide a fallback with <code>else</code>. All branch bodies must be enclosed in curly braces — no single-line shortcuts.</p>
+<p>The <code>while</code> loop runs its body as long as the condition is true. Because Nyx does not have a built-in <code>for (int i = 0; i &lt; n; i++)</code> form, <code>while</code> fills that role when you need a manual counter.</p>
+<p>The <code>for x in start..end</code> form iterates over a half-open range: <code>0..5</code> produces <code>0, 1, 2, 3, 4</code> (5 is excluded). The <code>for x in collection</code> form iterates over any array or iterable value.</p>
+<p><code>continue</code> skips the remainder of the current loop iteration and jumps to the next one. <code>break</code> exits the loop immediately. In the example, <code>k = 3</code> is skipped by <code>continue</code>, and the loop stops when <code>k</code> reaches <code>6</code>.</p>
+</section>

@@ -1,0 +1,20 @@
+<!-- title: Maps | blurb: Key-value storage with <code>Map.new()</code>, insert, get, has, and key iteration. -->
+<section data-part="intro">
+<p>A <code>Map</code> stores key-value pairs with fast lookup by key. Maps are created with <code>Map.new()</code> and support insertion, retrieval, membership testing, and key enumeration.</p>
+</section>
+<section data-part="output">
+paises: 3
+Capital de Francia: Paris
+tiene Argentina: 1
+tiene Brasil: 0
+claves (3):
+  Argentina
+  Francia
+  Japon
+</section>
+<section data-part="explanation">
+<p>Maps in Nyx are created with <code>Map.new()</code> — there is no map literal syntax (it would be ambiguous with block expressions). Maps must be declared with <code>var</code> if you intend to insert or modify entries after creation.</p>
+<p>The <code>.insert(key, value)</code> method adds or updates a key-value pair. <code>.get(key)</code> retrieves the value for a key, returning the stored value as a <code>String</code> (or the appropriate type). If the key does not exist, the behavior is undefined — use <code>.has(key)</code> first to check membership.</p>
+<p><code>.has(key)</code> returns an <code>int</code>: <code>1</code> means the key exists, <code>0</code> means it does not. This integer-as-boolean pattern is common in Nyx's low-level output functions. <code>.size()</code> returns the number of entries currently in the map.</p>
+<p><code>.keys()</code> returns an <code>Array</code> of all keys in the map. The iteration order over hash maps is not guaranteed to be insertion order, so key order in the output may differ between runs.</p>
+</section>

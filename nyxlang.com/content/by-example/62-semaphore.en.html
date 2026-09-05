@@ -1,0 +1,22 @@
+<!-- title: Semaphore | blurb: Limiting concurrent access with <code>sem_acquire</code>/<code>sem_release</code>. -->
+<section data-part="intro">
+<p>A <code>Semaphore</code> from <code>std/sync</code> limits the number of concurrent accesses to a resource. <code>sem_new(n)</code> creates a semaphore with n permits, <code>sem_acquire</code> takes a permit (blocking if none available), and <code>sem_release</code> returns one.</p>
+</section>
+<section data-part="output">
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+released
+all done
+</section>
+<section data-part="explanation">
+<p><code>sem_new(2)</code> creates a semaphore with 2 permits. At most 2 threads can hold a permit simultaneously. When a third thread calls <code>sem_acquire</code>, it blocks until one of the first two calls <code>sem_release</code>.</p>
+<p>Five threads compete for the semaphore. <code>sem_count</code> returns the number of remaining permits, which drops to 0 when both are taken. After sleeping 50ms (simulating work), each thread releases its permit and signals the WaitGroup.</p>
+<p>This pattern is useful for rate-limiting access to external resources like database connections, file descriptors, or API endpoints where you want controlled concurrency rather than full mutual exclusion.</p>
+</section>

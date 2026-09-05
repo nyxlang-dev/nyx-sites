@@ -1,0 +1,17 @@
+<!-- title: Regular Expressions | blurb: Match, extract, and replace with POSIX regex. -->
+<section data-part="intro">
+<p>The <code>std/regex</code> module wraps POSIX extended regular expressions. Three functions cover the most common operations: testing whether a pattern matches, extracting the first match, and replacing matches in a string. Patterns follow the standard POSIX ERE syntax.</p>
+</section>
+<section data-part="output">
+Email: alice@example.com -> 1
+Email: no-es-email -> 0
+Email: bob.dev@nyx-lang.org -> 1
+Version encontrada: 0.12.0
+Sin espacios dobles: Hola mundo Nyx
+Sin HTML: nyx es rapido
+</section>
+<section data-part="explanation">
+<p><code>regex_is_match(str, pattern)</code> returns a <code>bool</code> (represented as <code>1</code>/<code>0</code> when printed via <code>int_to_string</code>) indicating whether the pattern matches anywhere in the string. Anchoring with <code>^</code> and <code>$</code> forces a full-string match, which is essential for input validation like the email check here.</p>
+<p><code>regex_match(str, pattern)</code> returns the first substring that matches the pattern, or an empty string if there is no match. It is useful for extraction tasks such as parsing version numbers, dates, or identifiers out of larger text.</p>
+<p><code>regex_replace</code> substitutes the first match with a replacement string, while <code>regex_replace_all</code> replaces every non-overlapping match. The HTML tag-stripping example uses the pattern <code>&lt;[^&gt;]+&gt;</code> to match any complete HTML tag and replaces it with an empty string, leaving only the text content.</p>
+</section>

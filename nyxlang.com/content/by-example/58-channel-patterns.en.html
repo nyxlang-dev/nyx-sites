@@ -1,0 +1,17 @@
+<!-- title: Channel Patterns | blurb: Message passing with buffered channels and sentinels. -->
+<section data-part="intro">
+<p>Channels are the primary message-passing mechanism in Nyx. <code>channel_new(capacity)</code> creates a buffered channel, <code>channel_send</code> pushes a value, and <code>channel_recv</code> blocks until a value is available. Channels are declared as <code>Map</code> type.</p>
+</section>
+<section data-part="output">
+received: 0
+received: 1
+received: 2
+received: 3
+received: 4
+done
+</section>
+<section data-part="explanation">
+<p>Channels in Nyx use the <code>Map</code> type as their declaration type -- this is a key detail to remember. <code>channel_new(10)</code> creates a buffered channel that can hold up to 10 values before a sender blocks.</p>
+<p>The producer sends integers 0 through 4, then sends <code>-1</code> as a sentinel value to signal completion. The main thread loops calling <code>channel_recv</code>, which blocks until data is available, and stops when it receives the sentinel.</p>
+<p>Always call <code>channel_destroy</code> after both sender and receiver are done to free the underlying resources. The <code>thread_join</code> call ensures the producer has finished before cleanup.</p>
+</section>

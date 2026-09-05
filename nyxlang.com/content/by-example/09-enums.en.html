@@ -1,0 +1,15 @@
+<!-- title: Enums | blurb: Algebraic data types with data-carrying variants and exhaustive <code>match</code>. -->
+<section data-part="intro">
+<p>Nyx enums are algebraic data types (ADTs): each variant can carry different data, and <code>match</code> expressions destructure them exhaustively. This makes it impossible to forget a case at compile time.</p>
+</section>
+<section data-part="output">
+circulo de radio 5 -> area aprox 75
+cuadrado de lado 4 -> area 16
+rectangulo 3x7 -> area 21
+</section>
+<section data-part="explanation">
+<p>An enum is declared with the <code>enum</code> keyword followed by a name and a list of variants. Each variant can carry zero or more typed values in parentheses: <code>Circle(int)</code> carries one integer (the radius), <code>Rectangle(int, int)</code> carries two (width and height). Variants without parentheses would be simple tags.</p>
+<p>Enum values are constructed with dot notation: <code>Shape.Circle(5)</code>. Note that Nyx uses <code>Shape.Circle</code>, not <code>Shape::Circle</code> — the dot is the variant separator throughout the language.</p>
+<p>The <code>match</code> expression destructures an enum value and binds the inner data to local names. Each arm has the form <code>Pattern => expression</code>. The compiler enforces exhaustiveness: if any variant is missing from a <code>match</code>, the program will not compile.</p>
+<p>The area formula for the circle uses integer arithmetic (<code>r * r * 3</code> as an approximation of π·r²), which is why the result is labeled "aprox". Real programs would use <code>float</code> and the <code>math</code> standard library for precise results.</p>
+</section>

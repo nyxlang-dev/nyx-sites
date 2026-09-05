@@ -1,0 +1,13 @@
+<!-- title: Socket UDP | blurb: Datagramas sin conexión con <code>udp_bind</code> y <code>udp_sendto</code>. -->
+<section data-part="intro">
+<p>UDP es un protocolo sin conexión: cada datagrama es independiente, sin handshake ni entrega garantizada. <code>udp_bind</code> crea un socket, <code>udp_sendto</code> envía datos a una dirección, y <code>udp_recvfrom</code> recibe datos. UDP es ideal para aplicaciones en tiempo real donde la baja latencia importa más que la confiabilidad.</p>
+</section>
+<section data-part="output">
+UDP socket bound to :9001
+sent: hello via UDP
+received: hello via UDP
+</section>
+<section data-part="explanation">
+<p><code>udp_bind(host, port)</code> crea un socket UDP vinculado a la dirección dada. A diferencia de TCP, no hay configuración de conexión — puedes enviar inmediatamente a cualquier dirección con <code>udp_sendto(sock, data, host, port)</code>. <code>udp_recvfrom(sock, max_bytes)</code> bloquea hasta que llega un datagrama.</p>
+<p>En este ejemplo, el socket se envía a sí mismo (loopback). En la práctica, tendrías sockets separados de emisor y receptor en distintos hosts o puertos. Los sockets UDP se cierran con <code>tcp_close</code> (el mismo mecanismo de descriptor de archivo subyacente).</p>
+</section>

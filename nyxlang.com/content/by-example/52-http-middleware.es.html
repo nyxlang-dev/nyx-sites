@@ -1,0 +1,14 @@
+<!-- title: Middleware HTTP | blurb: Framework web con <code>App</code>, rutas, logging y CORS. -->
+<section data-part="intro">
+<p>El framework <code>std/web</code> ofrece una API estilo Flask para construir aplicaciones web. <code>App</code> guarda las rutas y el middleware, <code>app_get</code>/<code>app_post</code> registran los handlers de ruta, y <code>app_use</code> agrega middleware que se ejecuta antes de cada petición. El middleware incluido de fábrica incluye <code>mw_logging</code> y <code>mw_cors</code>.</p>
+</section>
+<section data-part="output">
+app configured with 2 routes and 2 middlewares
+routes: GET / and GET /api/status
+middleware: logging + CORS
+</section>
+<section data-part="explanation">
+<p><code>app_new()</code> crea una aplicación vacía. Los handlers de ruta reciben una struct <code>Request</code> (con los campos: method, path, query, headers_flat, body) y retornan una struct <code>Response</code>. Funciones auxiliares como <code>response_new</code> y <code>response_json</code> crean respuestas con los headers apropiados.</p>
+<p><code>mw_logging</code> registra el método, la ruta, el status y la latencia de cada petición. <code>mw_cors</code> maneja las peticiones OPTIONS de preflight y agrega los headers CORS. Puedes configurar CORS con <code>cors_configure(origin, methods, headers)</code>.</p>
+<p>En producción, pasa la app a <code>serve_app(app, port, workers)</code> de <code>nyx-serve</code> para levantar un servidor HTTP multi-hilo. Así están construidos los cuatro sitios de nyxlang.com.</p>
+</section>

@@ -1,0 +1,19 @@
+<!-- title: Iterator: map and filter | blurb: Lazy transformations with <code>.iter().filter().map().collect()</code>. -->
+<section data-part="intro">
+<p>Nyx iterators are lazy chains of transformations. Calling <code>.iter()</code> on an array creates an iterator, <code>.filter(pred)</code> keeps only elements satisfying a predicate, <code>.map(f)</code> transforms each element, and <code>.collect()</code> materializes the result into a new array.</p>
+</section>
+<section data-part="output">
+pares duplicados: 5 elementos
+primero: 4
+ultimo:  20
+cuadrados: 10 elementos
+1^2 = 1
+10^2 = 100
+top3 pares*2:
+4 8 12
+</section>
+<section data-part="explanation">
+<p>Iterator pipelines in Nyx follow a consistent pattern: start with <code>.iter()</code>, chain zero or more intermediate adapters (<code>filter</code>, <code>map</code>, <code>take</code>, <code>skip</code>, etc.), and terminate with a consumer (<code>collect</code>, <code>fold</code>, <code>for_each</code>). Each adapter is lazy — no element is processed until the consumer drives the pipeline. This avoids allocating intermediate arrays for each step.</p>
+<p>The first pipeline, <code>nums.iter().filter(is_even).map(double).collect()</code>, walks through all 10 numbers: <code>filter</code> passes only the 5 even ones (2, 4, 6, 8, 10), then <code>map</code> doubles each, producing [4, 8, 12, 16, 20]. Functions passed to <code>filter</code> and <code>map</code> are named top-level functions here, but closures work equally well.</p>
+<p>Adding <code>.take(3)</code> to the chain stops the pipeline after the first three results are collected, so the third example yields [4, 8, 12] without processing the remaining elements. This composability — mixing filter, map, take, and other adapters in any order — is the core strength of Nyx's iterator design.</p>
+</section>

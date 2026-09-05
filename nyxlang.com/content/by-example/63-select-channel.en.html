@@ -1,0 +1,14 @@
+<!-- title: Select Channel | blurb: Multiplexing channels with the <code>select</code> statement. -->
+<section data-part="intro">
+<p>The <code>select</code> statement multiplexes multiple channels, waiting for the first one that has data available. Each <code>case</code> names a channel variable. This is similar to Go's select statement.</p>
+</section>
+<section data-part="output">
+from ch1: 42
+from ch2: 99
+both received
+</section>
+<section data-part="explanation">
+<p>The <code>select</code> statement monitors multiple channels simultaneously. When data becomes available on any channel, the corresponding <code>case</code> branch executes. If multiple channels have data, one is chosen.</p>
+<p>Two sender threads send values after different delays (10ms and 20ms). The main thread uses <code>select</code> inside a loop to receive from whichever channel is ready first. Since <code>sender1</code> sleeps less, <code>ch1</code> typically delivers first.</p>
+<p>Channels are declared as <code>Map</code> type -- this is a Nyx-specific detail. The <code>select</code> pattern is essential for building event-driven systems, timeouts, and fan-in multiplexers where you need to react to the first available signal from multiple sources.</p>
+</section>

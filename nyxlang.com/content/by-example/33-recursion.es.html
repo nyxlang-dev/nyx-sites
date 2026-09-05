@@ -1,0 +1,24 @@
+<!-- title: Recursión | blurb: Resolver problemas con funciones que se llaman a sí mismas. -->
+<section data-part="intro">
+<p>Nyx soporta funciones recursivas sin ninguna sintaxis especial. Una función simplemente se llama a sí misma por nombre. La clásica secuencia de Fibonacci es la demostración canónica: los casos base retornan de inmediato, y cualquier otra llamada reduce el problema hacia uno de esos casos base.</p>
+</section>
+<section data-part="output">
+Secuencia fibonacci (0..10):
+fib(0) = 0
+fib(1) = 1
+fib(2) = 1
+fib(3) = 2
+fib(4) = 3
+fib(5) = 5
+fib(6) = 8
+fib(7) = 13
+fib(8) = 21
+fib(9) = 34
+fib(10) = 55
+fib(20) = 6765
+</section>
+<section data-part="explanation">
+<p><code>fib</code> tiene dos casos base: <code>n == 0</code> retorna <code>0</code> y <code>n == 1</code> retorna <code>1</code>. Ambos quedan cubiertos por la única guarda <code>n &lt;= 1</code>. Para cualquier <code>n</code> mayor, la función se llama a sí misma dos veces y suma los resultados. Cada llamada recursiva avanza uno o dos pasos hacia el caso base, así que la recursión siempre termina.</p>
+<p>La implementación ingenua con doble recursión tiene complejidad temporal exponencial — <code>fib(n)</code> recalcula subproblemas muchas veces. Para <code>fib(20)</code> esto sigue siendo instantáneo, pero para entradas grandes (digamos <code>fib(40)</code>) se prefiere una versión con memoización o iterativa. Los benchmarks de Nyx muestran que <code>fib(40)</code> se completa en ~166 ms con el enfoque ingenuo.</p>
+<p>La recursión en Nyx compila directamente a llamadas de función nativas vía LLVM. No hay overhead de intérprete, y el código generado es equivalente al que se escribiría en C.</p>
+</section>

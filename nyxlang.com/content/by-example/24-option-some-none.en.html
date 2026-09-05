@@ -1,0 +1,14 @@
+<!-- title: Option: Some and None | blurb: Handling optional values with <code>Some</code> and <code>None</code>. -->
+<section data-part="intro">
+<p><code>Option&lt;T&gt;</code> is Nyx's way of expressing a value that may or may not be present. Instead of returning a sentinel value like <code>-1</code> or risking a null pointer, functions return <code>Option.Some(value)</code> on success or <code>Option.None</code> when there is nothing to return.</p>
+</section>
+<section data-part="output">
+encontrado: 10
+no encontrado
+if let Some: valor es 7
+</section>
+<section data-part="explanation">
+<p><code>Option&lt;T&gt;</code> is a generic enum with two variants: <code>Option.Some(value)</code> wraps an existing value of type <code>T</code>, and <code>Option.None</code> signals absence. Because it is part of the prelude, you do not need to import it — it is always available. This pattern eliminates an entire class of null-related bugs by making optionality explicit in the type system.</p>
+<p>The <code>describe</code> function shows exhaustive <code>match</code> on an <code>Option</code>. The compiler requires both arms to be handled — forgetting <code>Option.None</code> is a compile-time error. The <code>Some</code> arm uses pattern destructuring to bind the inner value directly to <code>v</code>, which is then available in the arm's expression.</p>
+<p><code>if let Option.Some(v) = c</code> is a concise shorthand for when you only care about the <code>Some</code> case and want to fall through to an <code>else</code> branch for <code>None</code>. It binds <code>v</code> in the if-body without the ceremony of a full match expression.</p>
+</section>

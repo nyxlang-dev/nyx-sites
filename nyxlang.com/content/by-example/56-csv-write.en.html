@@ -1,0 +1,18 @@
+<!-- title: CSV Write | blurb: Creating and serializing CSV documents with <code>std/csv</code>. -->
+<section data-part="intro">
+<p><code>std/csv</code> provides CSV creation and serialization. <code>new_doc</code> creates a document with headers, <code>add_row</code> appends data rows, and <code>stringify</code> serializes to a CSV string. The module handles quoting, escaping, and custom delimiters. See recipe 18 for CSV parsing.</p>
+</section>
+<section data-part="output">
+name,age,city
+Alice,30,Buenos Aires
+Bob,25,New York
+Charlie,35,London
+
+rows: 3
+cols: 3
+first city: Buenos Aires
+</section>
+<section data-part="explanation">
+<p><code>csv.new_doc(headers)</code> creates a <code>CsvDoc</code> struct with the first row set as headers. <code>add_row</code> appends a row (array of strings). <code>stringify</code> serializes the entire document, automatically escaping fields that contain commas, quotes, or newlines.</p>
+<p>The round-trip works: <code>parse</code> reads the CSV string back into a <code>CsvDoc</code>, and <code>get_by_name</code> lets you access fields by column name instead of index. For TSV or other formats, use <code>parse_with_delimiter</code> and <code>stringify_with_delimiter</code>.</p>
+</section>

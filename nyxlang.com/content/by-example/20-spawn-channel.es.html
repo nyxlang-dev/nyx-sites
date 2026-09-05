@@ -1,0 +1,17 @@
+<!-- title: Spawn y Channel | blurb: Crear threads y comunicarse mediante channels. -->
+<section data-part="intro">
+<p>Nyx admite programación concurrente mediante threads y channels. Un channel es una cola tipada y bufferizada que permite a los threads comunicarse de forma segura sin estado mutable compartido. <code>thread_spawn</code> inicia un nuevo thread del sistema operativo ejecutando una closure, mientras que <code>channel_send</code> y <code>channel_recv</code> transfieren valores entre threads.</p>
+</section>
+<section data-part="output">
+received: 0
+received: 10
+received: 20
+received: 30
+received: 40
+total: 100
+</section>
+<section data-part="explanation">
+<p><code>channel_new(capacity)</code> crea un channel bufferizado que puede contener hasta <code>capacity</code> valores antes de que el emisor se bloquee. El channel está tipado como <code>Map</code> en el sistema de tipos de Nyx — esto es un handle opaco a la estructura de channel del runtime subyacente. La capacidad de 5 coincide con la cantidad de valores que enviará el productor, por lo que en este ejemplo no ocurre ningún bloqueo.</p>
+<p>La función <code>producer</code> se define como una closure dentro de <code>main</code>, lo que significa que captura <code>ch</code> del ámbito envolvente. <code>thread_spawn(producer)</code> inicia un nuevo thread del sistema operativo que ejecuta <code>producer</code> de forma concurrente con el resto de <code>main</code>. El channel actúa como punto de sincronización: <code>channel_recv</code> en el thread principal se bloqueará hasta que haya un valor disponible.</p>
+<p>Este patrón productor-consumidor es fundamental en los programas concurrentes de Nyx. Para coordinación más compleja — múltiples productores, fan-out o timeouts — Nyx también ofrece bloques <code>select</code> (al estilo Go), <code>Mutex</code>, <code>WaitGroup</code>, y el scheduler M:N de work-stealing. Los channels siguen siendo la forma preferida de pasar datos entre threads porque eliminan la necesidad de locks sobre estado compartido.</p>
+</section>

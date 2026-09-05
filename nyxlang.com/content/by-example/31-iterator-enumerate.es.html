@@ -1,0 +1,17 @@
+<!-- title: Iterador: enumerate() | blurb: Obtener pares índice-valor durante la iteración. -->
+<section data-part="intro">
+<p><code>enumerate()</code> transforma cualquier iterador en uno que produce pares <code>[índice, valor]</code>. Es la forma idiomática de llevar la posición de cada elemento sin manejar a mano una variable contador.</p>
+</section>
+<section data-part="output">
+[0] = 10
+[1] = 20
+[2] = 30
+[3] = 40
+[4] = 50
+primeros 3 enumerados: 3
+</section>
+<section data-part="explanation">
+<p>Llamar a <code>.iter()</code> sobre un array produce un iterador perezoso. Encadenar <code>.enumerate()</code> envuelve cada elemento en un array de dos posiciones <code>[índice, valor]</code>, y <code>.collect()</code> materializa todo el pipeline en un <code>Array</code> concreto. Cada elemento del resultado es a su vez un array, así que <code>par[0]</code> da el índice y <code>par[1]</code> da el valor original.</p>
+<p>Como <code>enumerate()</code> es solo otro adaptador de iterador, se compone libremente con el resto de la API de iteradores. El segundo pipeline de este ejemplo agrega <code>.take(3)</code> después de <code>.enumerate()</code> para recolectar solo los primeros tres pares indexados — lo que demuestra que los adaptadores se pueden apilar en cualquier orden.</p>
+<p>Este patrón elimina el patrón propenso a errores de mantener una variable contador separada junto a un loop, y deja claro de inmediato el propósito del código para cualquier lector.</p>
+</section>

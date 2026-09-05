@@ -1,0 +1,20 @@
+<!-- title: Maps | blurb: Almacenamiento clave-valor con <code>Map.new()</code>, insert, get, has e iteración de claves. -->
+<section data-part="intro">
+<p>Un <code>Map</code> almacena pares clave-valor con búsqueda rápida por clave. Los maps se crean con <code>Map.new()</code> y soportan inserción, recuperación, prueba de pertenencia y enumeración de claves.</p>
+</section>
+<section data-part="output">
+paises: 3
+Capital de Francia: Paris
+tiene Argentina: 1
+tiene Brasil: 0
+claves (3):
+  Argentina
+  Francia
+  Japon
+</section>
+<section data-part="explanation">
+<p>Los maps en Nyx se crean con <code>Map.new()</code> — no existe una sintaxis de map literal (sería ambigua con las expresiones de bloque). Los maps deben declararse con <code>var</code> si se pretende insertar o modificar entradas después de la creación.</p>
+<p>El método <code>.insert(key, value)</code> agrega o actualiza un par clave-valor. <code>.get(key)</code> obtiene el valor de una clave, devolviendo el valor almacenado como <code>String</code> (o el tipo correspondiente). Si la clave no existe, el comportamiento es indefinido — use <code>.has(key)</code> primero para verificar la pertenencia.</p>
+<p><code>.has(key)</code> devuelve un <code>int</code>: <code>1</code> significa que la clave existe, <code>0</code> que no existe. Este patrón de entero como booleano es común en las funciones de salida de bajo nivel de Nyx. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
+<p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map. El orden de iteración sobre los hash maps no está garantizado que sea el orden de inserción, por lo que el orden de las claves en la salida puede variar entre ejecuciones.</p>
+</section>

@@ -1,0 +1,14 @@
+<!-- title: Script Shebang | blurb: Ejecutar archivos Nyx como scripts ejecutables con <code>#!/usr/bin/env nyx</code>. -->
+<section data-part="intro">
+<p>Los scripts de Nyx se pueden ejecutar directamente desde la línea de comandos usando una línea shebang (<code>#!/usr/bin/env nyx</code>). El lexer del compilador reconoce <code>#!</code> al inicio de un archivo y se salta toda la línea como comentario. <code>get_args()</code> da acceso a los argumentos de línea de comandos.</p>
+</section>
+<section data-part="output">
+Hello, World!
+running as a script
+args: 1
+</section>
+<section data-part="explanation">
+<p>Una línea shebang (<code>#!/usr/bin/env nyx</code>) al comienzo de un archivo <code>.nx</code> le indica al sistema operativo que lo ejecute con el comando <code>nyx</code>. El lexer del compilador reconoce <code>#!</code> al inicio de un token y se salta toda la línea como comentario, de modo que el shebang no interfiere con la compilación.</p>
+<p><code>get_args()</code> devuelve los argumentos de línea de comandos como un array de strings. El primer elemento (<code>args[0]</code>) es el nombre del programa. Cualquier argumento adicional es accesible por índice.</p>
+<p>Para hacer un script ejecutable: crear el archivo con la línea shebang, ejecutar <code>chmod +x script.nx</code>, y luego ejecutarlo directamente con <code>./script.nx</code>. Esto hace que Nyx sea apto para scripting de shell, scripts de build y utilidades rápidas.</p>
+</section>

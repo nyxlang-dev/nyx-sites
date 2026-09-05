@@ -1,0 +1,20 @@
+<!-- title: Pool de Workers | blurb: Despachar tareas a N threads mediante channels compartidos. -->
+<section data-part="intro">
+<p>Un pool de workers despacha tareas a un número fijo de hilos a través de un canal compartido. Los workers extraen tareas, las procesan, y envían resultados a un canal de resultados. Este patrón es el que usa <code>http_serve_mt</code> para implementar su pool de hilos internamente.</p>
+</section>
+<section data-part="output">
+result: 1
+result: 4
+result: 9
+result: 16
+result: 25
+result: 36
+result: 49
+result: 64
+all tasks completed
+</section>
+<section data-part="explanation">
+<p>Dos canales coordinan el pool: <code>work_ch</code> distribuye tareas y <code>done_ch</code> recolecta resultados. Ambos se declaran como <code>Map</code> -- el tipo de canal estándar en Nyx.</p>
+<p>Cuatro hilos worker recorren en bucle <code>channel_recv(work_ch)</code>, calculando el cuadrado de cada valor recibido y enviando resultados a <code>done_ch</code>. Un valor de tarea negativo funciona como píldora envenenada, haciendo que el worker termine.</p>
+<p>El hilo principal envía 8 tareas (valores 1-8), recolecta los 8 resultados, y luego envía 4 señales de detención (una por worker). El orden de los resultados puede variar entre ejecuciones porque los workers se ejecutan concurrentemente, pero los 8 cuadrados siempre aparecerán. Este es el mismo patrón que usa internamente <code>http_serve_mt</code> para manejar solicitudes HTTP a través de un pool de hilos.</p>
+</section>

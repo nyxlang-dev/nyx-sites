@@ -1,0 +1,19 @@
+<!-- title: Iterator: take() and skip() | blurb: Slicing sequences with <code>take</code> and <code>skip</code>. -->
+<section data-part="intro">
+<p><code>take(n)</code> limits an iterator to its first <code>n</code> elements, while <code>skip(n)</code> discards the first <code>n</code> and yields the rest. Together they form the building blocks of windowing, slicing, and pagination over any sequence.</p>
+</section>
+<section data-part="output">
+skip(2): 8 elementos
+take(3): 3 elementos
+  [0]=1 [2]=3
+skip(2).take(3): 3 elementos
+  3
+  4
+  5
+pagina 2 (skip 3, take 3): 3 elementos
+</section>
+<section data-part="explanation">
+<p><code>skip(2)</code> on a 10-element array yields elements at positions 2 through 9, giving 8 items. <code>take(3)</code> stops the iterator after the first 3 elements, producing <code>[1, 2, 3]</code> — so <code>[0]</code> is <code>1</code> and <code>[2]</code> is <code>3</code>.</p>
+<p>Chaining <code>skip(2).take(3)</code> first discards two elements, then limits the remainder to three — yielding <code>[3, 4, 5]</code>. This is the classic sliding window pattern. The order matters: <code>take(3).skip(2)</code> would instead give a single element.</p>
+<p>The pagination example at the end shows a direct real-world use: to fetch page <em>P</em> of size <em>N</em>, write <code>.skip((P-1) * N).take(N)</code>. Both adapters are lazy — no elements are allocated until <code>.collect()</code> is called.</p>
+</section>

@@ -1,0 +1,13 @@
+<!-- title: Traits | blurb: Definir comportamiento compartido con <code>trait</code> e <code>impl ... for</code>. -->
+<section data-part="intro">
+<p>Los traits definen comportamiento compartido que múltiples tipos pueden implementar. Son el mecanismo de abstracción principal de Nyx — similar a las interfaces en Go o a las clases de tipos en Haskell — pero con cuerpos de método completos y soporte de despacho genérico.</p>
+</section>
+<section data-part="output">
+Punto: (3, 4)
+Color: rgb(255, 128, 0)
+</section>
+<section data-part="explanation">
+<p>Un bloque <code>trait</code> declara un conjunto de firmas de método que cualquier tipo que lo implemente debe proveer. Aquí <code>Display</code> requiere un único método <code>to_string</code> que toma el receptor por valor y retorna un <code>String</code>. El trait en sí mismo no contiene datos — es puramente un contrato de comportamiento.</p>
+<p>Cada bloque <code>impl Display for T</code> provee el cuerpo concreto para cada método que exige el trait. <code>Point</code> formatea sus campos como un par de coordenadas, mientras que <code>Color</code> usa la notación CSS <code>rgb()</code>. Ambos structs son por lo demás completamente independientes; lo único que comparten es la adhesión al trait <code>Display</code>.</p>
+<p>Una vez que un struct implementa un trait, sus métodos se llaman con la sintaxis de punto habitual — <code>p.to_string()</code> despacha a la implementación de <code>Point</code> en tiempo de compilación (despacho estático). Esto te da polimorfismo sin sobrecarga en tiempo de ejecución.</p>
+</section>

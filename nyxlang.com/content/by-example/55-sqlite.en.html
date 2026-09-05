@@ -1,0 +1,14 @@
+<!-- title: SQLite | blurb: In-memory SQL database with <code>sqlite_open</code> and <code>sqlite_query</code>. -->
+<section data-part="intro">
+<p><code>std/sqlite</code> provides SQLite3 bindings loaded at runtime via <code>dlopen</code>. <code>sqlite_open(":memory:")</code> creates an in-memory database, <code>sqlite_exec</code> runs DDL/DML statements, and <code>sqlite_query</code> returns rows as arrays of strings. No external dependencies are needed — SQLite is bundled with most operating systems.</p>
+</section>
+<section data-part="output">
+Bob is 25 years old
+Alice is 30 years old
+Charlie is 35 years old
+users 30+: 2
+</section>
+<section data-part="explanation">
+<p><code>sqlite_open</code> returns an opaque database handle (<code>*int</code>, NULL on failure). The special path <code>":memory:"</code> creates a temporary in-memory database that is discarded when the handle is closed. For persistent storage, pass a file path like <code>"data.db"</code>.</p>
+<p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values (SQLite stores all values as text internally). Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p>
+</section>

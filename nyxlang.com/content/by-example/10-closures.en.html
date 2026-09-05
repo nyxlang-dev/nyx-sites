@@ -1,0 +1,20 @@
+<!-- title: Closures | blurb: First-class functions that capture their enclosing environment. -->
+<section data-part="intro">
+<p>Closures are functions that capture variables from their enclosing scope. In Nyx, functions are first-class values of type <code>Fn</code> — they can be returned from functions, stored in variables, and passed as arguments.</p>
+</section>
+<section data-part="output">
+counter: 1
+counter: 2
+counter: 3
+c2: 11
+c2: 12
+add5(3) = 8
+add5(10) = 15
+apply(add100, 7) = 107
+</section>
+<section data-part="explanation">
+<p>A closure is a nested function that references variables from its enclosing function. In <code>make_counter</code>, the inner function <code>increment</code> captures the <code>count</code> variable declared in the outer scope. Each time <code>increment</code> is called, it reads and modifies its own copy of <code>count</code> — this is called a shared environment.</p>
+<p>The return type <code>-> Fn</code> indicates that a function returns another function. The <code>Fn</code> type is the generic function type in Nyx; it represents any callable value, regardless of its specific parameter and return types.</p>
+<p>Each call to <code>make_counter</code> creates an independent closure with its own private <code>count</code>. The two counters <code>counter</code> and <code>c2</code> do not interfere with each other — they start at different values and advance independently.</p>
+<p>The <code>apply</code> function demonstrates higher-order functions: it receives a <code>Fn</code> and an <code>int</code>, and calls the function with the value. This pattern is the foundation of functional programming styles — mapping, filtering, and composing behavior by passing functions as data.</p>
+</section>

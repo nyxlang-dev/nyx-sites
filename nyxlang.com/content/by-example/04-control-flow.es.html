@@ -1,0 +1,30 @@
+<!-- title: Control Flow | blurb: if/else, bucles while, for-range, for-in, break y continue. -->
+<section data-part="intro">
+<p>Nyx ofrece el conjunto estándar de construcciones de control de flujo: ramas condicionales con <code>if/else if/else</code>, bucles de contador con <code>while</code>, e iteración con <code>for</code> sobre rangos y colecciones. El control de bucles usa <code>break</code> y <code>continue</code>.</p>
+</section>
+<section data-part="output">
+entre 5 y 10
+while: 1
+while: 2
+while: 3
+while: 4
+while: 5
+range: 0
+range: 1
+range: 2
+range: 3
+range: 4
+color: rojo
+color: verde
+color: azul
+k = 1
+k = 2
+k = 4
+k = 5
+</section>
+<section data-part="explanation">
+<p>La sentencia <code>if</code> evalúa una condición booleana sin paréntesis. Se pueden encadenar condiciones con <code>else if</code> y proveer un caso alternativo con <code>else</code>. Todos los cuerpos de las ramas deben ir entre llaves — no hay atajos de una sola línea.</p>
+<p>El bucle <code>while</code> ejecuta su cuerpo mientras la condición sea verdadera. Como Nyx no tiene una forma incorporada <code>for (int i = 0; i &lt; n; i++)</code>, <code>while</code> cumple ese rol cuando se necesita un contador manual.</p>
+<p>La forma <code>for x in start..end</code> itera sobre un rango semiabierto: <code>0..5</code> produce <code>0, 1, 2, 3, 4</code> (el 5 queda excluido). La forma <code>for x in collection</code> itera sobre cualquier array o valor iterable.</p>
+<p><code>continue</code> salta el resto de la iteración actual del bucle y pasa a la siguiente. <code>break</code> sale del bucle de inmediato. En el ejemplo, <code>k = 3</code> se salta con <code>continue</code>, y el bucle se detiene cuando <code>k</code> llega a <code>6</code>.</p>
+</section>

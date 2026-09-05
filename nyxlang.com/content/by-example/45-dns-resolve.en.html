@@ -1,0 +1,14 @@
+<!-- title: DNS Resolve | blurb: Converting hostnames to IP addresses with <code>resolve</code>. -->
+<section data-part="intro">
+<p><code>resolve(hostname)</code> is a built-in function that performs DNS resolution, converting a hostname to an IP address string. This is the first step in any network connection — before you can <code>tcp_connect</code> to a host, you need its IP.</p>
+</section>
+<section data-part="output">
+localhost -> 127.0.0.1
+nyxlang.com -> 52.207.231.44
+resolution successful
+</section>
+<section data-part="explanation">
+<p><code>resolve</code> calls the system's DNS resolver (via <code>getaddrinfo</code> in the runtime) and returns the first IPv4 address as a dotted-decimal string. If resolution fails, it returns an empty string.</p>
+<p>For <code>localhost</code>, the result typically comes from <code>/etc/hosts</code> rather than a DNS query. For public domains like <code>nyxlang.com</code>, the runtime performs a full DNS lookup through the configured nameservers.</p>
+<p>This is a synchronous, blocking call. For high-performance servers that need non-blocking resolution, consider running the resolve in a separate thread with <code>thread_spawn</code>.</p>
+</section>

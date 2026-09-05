@@ -1,0 +1,13 @@
+<!-- title: Traits | blurb: Defining shared behavior with <code>trait</code> and <code>impl ... for</code>. -->
+<section data-part="intro">
+<p>Traits define shared behavior that multiple types can implement. They are Nyx's primary abstraction mechanism — similar to interfaces in Go or type classes in Haskell — but with full method bodies and generic dispatch support.</p>
+</section>
+<section data-part="output">
+Punto: (3, 4)
+Color: rgb(255, 128, 0)
+</section>
+<section data-part="explanation">
+<p>A <code>trait</code> block declares a set of method signatures that any implementing type must provide. Here <code>Display</code> requires a single method <code>to_string</code> that takes the receiver by value and returns a <code>String</code>. The trait itself contains no data — it is purely a behavioral contract.</p>
+<p>Each <code>impl Display for T</code> block supplies the concrete body for every method the trait demands. <code>Point</code> formats its fields as a coordinate pair while <code>Color</code> uses CSS <code>rgb()</code> notation. Both structs are otherwise completely independent; the only thing they share is adherence to the <code>Display</code> trait.</p>
+<p>Once a struct implements a trait, its methods are called with ordinary dot syntax — <code>p.to_string()</code> dispatches to <code>Point</code>'s implementation at compile time (static dispatch). This gives you polymorphism without runtime overhead.</p>
+</section>

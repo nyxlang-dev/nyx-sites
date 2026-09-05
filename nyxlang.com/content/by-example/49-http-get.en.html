@@ -1,0 +1,13 @@
+<!-- title: HTTP GET | blurb: High-level HTTP client requests with <code>std/http</code>. -->
+<section data-part="intro">
+<p><code>std/http</code> provides high-level HTTP client functions built on top of TCP primitives. <code>http_get(url)</code> handles DNS resolution, connection, request formatting, and response parsing in a single call. The response is returned as an array: <code>["response", status, headers, body]</code>.</p>
+</section>
+<section data-part="output">
+status: 200
+body (first 100 chars): &lt;!doctype html&gt;...
+header count: 10
+</section>
+<section data-part="explanation">
+<p><code>http_get</code> parses the URL to extract host, port, and path, then opens a TCP connection, sends an HTTP/1.1 GET request, and reads the response. Helper functions <code>http_status</code>, <code>http_body</code>, and <code>http_headers</code> extract fields from the response array.</p>
+<p>If the connection fails, the status code is <code>-1</code> and the body contains the error message. For HTTPS, use <code>https_get</code> which adds TLS via OpenSSL.</p>
+</section>

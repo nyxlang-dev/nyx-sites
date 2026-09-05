@@ -1,0 +1,15 @@
+<!-- title: Result: Ok y Err | blurb: Manejo de errores con <code>Ok</code> y <code>Err</code>. -->
+<section data-part="intro">
+<p><code>Result</code> es el tipo idiomático de Nyx para operaciones que pueden fallar con un mensaje de error. Una función retorna <code>Result.Ok(value)</code> cuando tiene éxito y <code>Result.Err(message)</code> cuando algo sale mal — lo cual hace que el manejo de errores sea explícito e imposible de ignorar por accidente.</p>
+</section>
+<section data-part="output">
+ok: 25
+error: division por cero
+ok: 4
+error: raiz de negativo
+</section>
+<section data-part="explanation">
+<p><code>Result</code> es un enum común con dos variantes. En este ejemplo se define localmente con <code>Ok(int)</code> y <code>Err(String)</code>, pero en programas Nyx reales normalmente usás el <code>Result&lt;T, E&gt;</code> genérico del prelude. De cualquier forma el patrón es idéntico: retornar una variante en caso de éxito, la otra en caso de fallo, y dejar que quien llama decida qué hacer.</p>
+<p><code>safe_divide</code> se protege contra la división por cero antes de realizar la operación. <code>safe_sqrt</code> usa un bucle entero manual para calcular raíces cuadradas por defecto (floor) sin aritmética de punto flotante, retornando un error para entradas negativas. Ambas funciones comunican el fallo a través del sistema de tipos en lugar de excepciones o códigos de error fuera de banda.</p>
+<p>El helper <code>describe</code> hace match exhaustivo sobre ambas variantes. El compilador exige que se maneje cada variante — si más adelante agregás una tercera variante al enum, cada sitio de match existente se convierte en un error de compilación hasta que manejes el nuevo caso. Esta verificación de exhaustividad es una de las propiedades de seguridad más poderosas de los tipos algebraicos.</p>
+</section>

@@ -1,0 +1,18 @@
+<!-- title: Functions | blurb: Definir funciones con parámetros, tipos de retorno y argumentos por defecto. -->
+<section data-part="intro">
+<p>Las funciones en Nyx se definen con <code>fn</code>, reciben parámetros tipados y declaran su tipo de retorno después de <code>-&gt;</code>. Admiten valores de parámetro por defecto, lo que hace más limpios los sitios de llamada cuando existe un valor por defecto razonable.</p>
+</section>
+<section data-part="output">
+3 + 4 = 7
+Hola, Mundo!
+Buenos dias, Nyx!
+42 es positivo
+-5 es negativo
+0 es cero
+</section>
+<section data-part="explanation">
+<p>Las funciones se declaran con la palabra clave <code>fn</code> seguida del nombre de la función, una lista de parámetros entre paréntesis y el tipo de retorno. Cada parámetro tiene un nombre y un tipo separados por dos puntos. El cuerpo de la función es un bloque encerrado entre <code>{ }</code>.</p>
+<p>Los valores de parámetro por defecto se escriben como <code>param: Type = value</code>. Cuando quien llama omite ese argumento, se usa el valor por defecto automáticamente. En <code>saludar</code>, llamar a <code>saludar("Mundo")</code> usa el saludo por defecto <code>"Hola"</code>, mientras que <code>saludar("Nyx", "Buenos dias")</code> lo reemplaza.</p>
+<p>La función incorporada <code>int_to_string</code> convierte un entero a su representación en cadena. Nyx no coacciona tipos de forma implícita, así que hay que convertir explícitamente al construir cadenas a partir de valores que no son strings.</p>
+<p>Las funciones pueden tener múltiples sentencias <code>return</code>. El compilador exige que todos los caminos devuelvan un valor del tipo declarado — cualquier rama que termine sin devolver un valor produce un error de compilación.</p>
+</section>

@@ -1,0 +1,12 @@
+<!-- title: HTTP Server | blurb: Minimal server with <code>http_serve</code> and request routing. -->
+<section data-part="intro">
+<p>A minimal HTTP server using <code>http_serve</code> from <code>std/http</code>. The handler function receives a parsed request array <code>[type, method, path, headers, body]</code> and returns an HTTP response string built with <code>http_response</code>. The server blocks in an accept loop, handling one request at a time.</p>
+</section>
+<section data-part="output">
+listening on :8080
+</section>
+<section data-part="explanation">
+<p><code>http_serve(port, handler)</code> listens on the given port and enters an infinite accept loop. For each connection, it parses the HTTP request into an array, calls the handler function, sends the response, and closes the connection.</p>
+<p><code>http_response(status, body)</code> builds a properly formatted HTTP/1.1 response with Content-Length and Connection: close headers. For custom headers (like Content-Type: application/json), use <code>http_response_with_headers</code>.</p>
+<p>For multi-threaded serving, use <code>http_serve_mt(port, num_workers, handler)</code> which dispatches connections to a thread pool via channels — this is how nyx-serve achieves 73K req/s.</p>
+</section>

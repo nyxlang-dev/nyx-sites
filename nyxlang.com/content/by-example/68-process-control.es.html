@@ -1,0 +1,17 @@
+<!-- title: Control de Procesos | blurb: PID, directorio de trabajo, detección de terminal y stat de archivos. -->
+<section data-part="intro">
+<p>Nyx provee builtins POSIX de procesos: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. Estos son los bloques de construcción para herramientas como nyx-shell.</p>
+</section>
+<section data-part="output">
+my pid: 12345
+cwd: /home/admin/NyxLang
+stdout is not a terminal (piped)
+/tmp is a directory
+changed to: /tmp
+back to: /home/admin/NyxLang
+</section>
+<section data-part="explanation">
+<p><code>getpid()</code> devuelve el ID del proceso actual. <code>getcwd()</code> devuelve el directorio de trabajo actual como string. <code>chdir(path)</code> cambia el directorio de trabajo.</p>
+<p><code>isatty(fd)</code> verifica si un descriptor de archivo corresponde a un terminal. El descriptor de archivo 0 es stdin, 1 es stdout, 2 es stderr. Esto es útil para decidir si emitir códigos de color o prompts interactivos.</p>
+<p><code>stat(path)</code> devuelve metadatos de un archivo o directorio como <code>[size, mode, mtime, is_dir, is_regular]</code>. La bandera <code>is_dir</code> (índice 3) es 1 para directorios, 0 en caso contrario. Estos primitivos son la base de los comandos incorporados de nyx-shell.</p>
+</section>

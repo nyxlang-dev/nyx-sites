@@ -1,0 +1,17 @@
+<!-- title: Iterator: enumerate() | blurb: Getting index and value pairs during iteration. -->
+<section data-part="intro">
+<p><code>enumerate()</code> transforms any iterator into one that yields pairs of <code>[index, value]</code>. It is the idiomatic way to track the position of each element without managing a counter variable by hand.</p>
+</section>
+<section data-part="output">
+[0] = 10
+[1] = 20
+[2] = 30
+[3] = 40
+[4] = 50
+primeros 3 enumerados: 3
+</section>
+<section data-part="explanation">
+<p>Calling <code>.iter()</code> on an array produces a lazy iterator. Chaining <code>.enumerate()</code> wraps each item into a two-element array <code>[index, value]</code>, and <code>.collect()</code> materializes the whole pipeline into a concrete <code>Array</code>. Each element of the result is itself an array, so <code>par[0]</code> gives the index and <code>par[1]</code> gives the original value.</p>
+<p>Because <code>enumerate()</code> is just another iterator adapter, it composes freely with the rest of the iterator API. The second pipeline in this example adds <code>.take(3)</code> after <code>.enumerate()</code> to collect only the first three indexed pairs — demonstrating that adapters can be stacked in any order.</p>
+<p>This pattern eliminates the error-prone pattern of maintaining a separate counter variable alongside a loop, and makes the intent of the code immediately clear to any reader.</p>
+</section>

@@ -1,0 +1,15 @@
+<!-- title: URL Encode | blurb: Percent-encoding, query strings y escape de entidades HTML. -->
+<section data-part="intro">
+<p><code>std/url</code> provee percent-encoding para URLs (RFC 3986), construcción de query strings y escapado de entidades HTML. Esto es fundamental para construir clientes y servidores web que manejen la entrada del usuario de forma segura.</p>
+</section>
+<section data-part="output">
+encoded: hello%20world%20%26%20foo%3Dbar
+decoded: hello world & foo=bar
+query:   name=Nyx%20Lang&lang=es&version=0.12
+escaped: &amp;lt;script&amp;gt;alert(&#x27;xss&#x27;)&amp;lt;/script&amp;gt;
+</section>
+<section data-part="explanation">
+<p><code>url_encode</code> codifica con percent-encoding todos los caracteres excepto los caracteres no reservados de RFC 3986 (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>-._~</code>). Los espacios se convierten en <code>%20</code>, los ampersands en <code>%26</code>, etc. <code>url_decode</code> revierte el proceso y también decodifica <code>+</code> como espacio.</p>
+<p><code>build_query_string</code> toma arrays paralelos de claves y valores, codifica cada par y los une con <code>&amp;</code>. Este es el formato estándar para parámetros de query en URLs y envíos de formularios HTML.</p>
+<p><code>html_escape</code> convierte los cinco caracteres sensibles de HTML (<code>&amp; &lt; &gt; " '</code>) en sus equivalentes de entidad. Siempre hay que escapar la entrada del usuario antes de insertarla en HTML para prevenir ataques XSS.</p>
+</section>

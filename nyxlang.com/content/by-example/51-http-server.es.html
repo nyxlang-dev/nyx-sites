@@ -1,0 +1,12 @@
+<!-- title: Servidor HTTP | blurb: Servidor mínimo con <code>http_serve</code> y enrutamiento de peticiones. -->
+<section data-part="intro">
+<p>Un servidor HTTP mínimo usando <code>http_serve</code> de <code>std/http</code>. La función handler recibe un array de request ya parseado <code>[type, method, path, headers, body]</code> y retorna un string de respuesta HTTP construido con <code>http_response</code>. El servidor se bloquea en un bucle de accept, manejando una petición a la vez.</p>
+</section>
+<section data-part="output">
+listening on :8080
+</section>
+<section data-part="explanation">
+<p><code>http_serve(port, handler)</code> escucha en el puerto indicado y entra en un bucle de accept infinito. Para cada conexión, parsea la petición HTTP en un array, llama a la función handler, envía la respuesta y cierra la conexión.</p>
+<p><code>http_response(status, body)</code> construye una respuesta HTTP/1.1 correctamente formateada con los headers Content-Length y Connection: close. Para headers personalizados (como Content-Type: application/json), usa <code>http_response_with_headers</code>.</p>
+<p>Para servir con múltiples hilos, usa <code>http_serve_mt(port, num_workers, handler)</code>, que despacha las conexiones a un pool de hilos mediante channels — así es como nyx-serve logra 73K req/s.</p>
+</section>

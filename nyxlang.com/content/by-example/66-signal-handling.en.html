@@ -1,0 +1,15 @@
+<!-- title: Signal Handling | blurb: Registering signal callbacks with <code>signal_handle</code>. -->
+<section data-part="intro">
+<p><code>signal_handle(signum, fn)</code> registers a callback for an OS signal. <code>signal_reset</code> restores the default behavior. This recipe sends SIGUSR1 to itself and catches it.</p>
+</section>
+<section data-part="output">
+handler registered for SIGUSR1
+my pid: 12345
+signal received!
+handler reset to default
+</section>
+<section data-part="explanation">
+<p><code>signal_handle(signum, fn)</code> installs a callback function for the given signal number. SIGUSR1 is signal 10 on Linux. The handler function must have the signature <code>fn() -> int</code>.</p>
+<p>The program uses <code>kill_process(pid, signal)</code> to send SIGUSR1 to itself. After a brief <code>sleep</code> to allow delivery, it checks the global flag that the handler set.</p>
+<p><code>signal_reset(signum)</code> restores the default OS behavior for the signal. For SIGUSR1, the default action is to terminate the process, so you would not want to send it again after resetting.</p>
+</section>

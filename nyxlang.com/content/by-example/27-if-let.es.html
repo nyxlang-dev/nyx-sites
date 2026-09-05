@@ -1,0 +1,14 @@
+<!-- title: if let | blurb: Desestructurar enums en condiciones con <code>if let</code>. -->
+<section data-part="intro">
+<p><code>if let</code> es una construcción compacta de pattern matching que combina una verificación condicional y un binding en una sola expresión. Es especialmente útil cuando solo importa una variante de un enum y se quiere evitar la verbosidad de un <code>match</code> completo.</p>
+</section>
+<section data-part="output">
+primer par desde 0: 4
+primer par desde 4: 8
+no hay pares en odds
+</section>
+<section data-part="explanation">
+<p><code>find_even</code> recorre un array a partir de un índice dado y retorna el primer número par envuelto en <code>Option.Some</code>, o <code>Option.None</code> si no se encuentra ninguno. Este es un patrón típico para funciones de búsqueda: el tipo de retorno comunica "encontrado o no encontrado" a través del sistema de tipos en lugar de un valor centinela mágico.</p>
+<p>La sintaxis <code>if let Option.Some(v) = a</code> evalúa el patrón <code>Option.Some(v)</code> contra el valor <code>a</code>. Si coincide, el valor interno se asigna a <code>v</code> y el cuerpo del if se ejecuta con <code>v</code> en scope. Si el patrón no coincide (es decir, el valor es <code>Option.None</code>), se ejecuta en cambio la rama <code>else</code>. Esto es exactamente equivalente a un <code>match</code> de dos brazos pero encaja de forma más natural en código de estilo imperativo.</p>
+<p>La tercera llamada usa un array puramente impar para demostrar que se toma la rama <code>else</code>. Nótese que cada bloque <code>if let</code> introduce un binding <code>v</code> nuevo cuyo scope está limitado a ese bloque — no hay riesgo de que el binding del primer bloque se filtre al segundo o al tercero.</p>
+</section>

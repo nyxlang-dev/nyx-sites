@@ -1,0 +1,15 @@
+<!-- title: Manejo de Señales | blurb: Registrar callbacks de señales con <code>signal_handle</code>. -->
+<section data-part="intro">
+<p><code>signal_handle(signum, fn)</code> registra un callback para una señal del sistema operativo. <code>signal_reset</code> restaura el comportamiento por defecto. Esta receta envía SIGUSR1 a sí mismo y la captura.</p>
+</section>
+<section data-part="output">
+handler registered for SIGUSR1
+my pid: 12345
+signal received!
+handler reset to default
+</section>
+<section data-part="explanation">
+<p><code>signal_handle(signum, fn)</code> instala una función callback para el número de señal dado. SIGUSR1 es la señal 10 en Linux. La función manejadora debe tener la firma <code>fn() -> int</code>.</p>
+<p>El programa usa <code>kill_process(pid, signal)</code> para enviarse SIGUSR1 a sí mismo. Tras un breve <code>sleep</code> para permitir la entrega, verifica la bandera global que estableció el manejador.</p>
+<p><code>signal_reset(signum)</code> restaura el comportamiento por defecto del sistema operativo para la señal. Para SIGUSR1, la acción por defecto es terminar el proceso, así que no conviene enviarla de nuevo después de restablecerla.</p>
+</section>

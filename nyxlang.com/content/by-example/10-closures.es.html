@@ -1,0 +1,20 @@
+<!-- title: Closures | blurb: Funciones de primera clase que capturan su entorno circundante. -->
+<section data-part="intro">
+<p>Los closures son funciones que capturan variables de su ámbito envolvente. En Nyx, las funciones son valores de primera clase de tipo <code>Fn</code> — pueden retornarse desde funciones, almacenarse en variables y pasarse como argumentos.</p>
+</section>
+<section data-part="output">
+counter: 1
+counter: 2
+counter: 3
+c2: 11
+c2: 12
+add5(3) = 8
+add5(10) = 15
+apply(add100, 7) = 107
+</section>
+<section data-part="explanation">
+<p>Un closure es una función anidada que hace referencia a variables de su función envolvente. En <code>make_counter</code>, la función interna <code>increment</code> captura la variable <code>count</code> declarada en el ámbito externo. Cada vez que se llama a <code>increment</code>, lee y modifica su propia copia de <code>count</code> — esto se llama un entorno compartido.</p>
+<p>El tipo de retorno <code>-> Fn</code> indica que una función retorna otra función. El tipo <code>Fn</code> es el tipo de función genérico en Nyx; representa cualquier valor invocable, sin importar sus tipos específicos de parámetros y retorno.</p>
+<p>Cada llamada a <code>make_counter</code> crea un closure independiente con su propio <code>count</code> privado. Los dos contadores <code>counter</code> y <code>c2</code> no interfieren entre sí — comienzan en valores distintos y avanzan de forma independiente.</p>
+<p>La función <code>apply</code> demuestra las funciones de orden superior: recibe un <code>Fn</code> y un <code>int</code>, y llama a la función con el valor. Este patrón es la base de los estilos de programación funcional — mapear, filtrar y componer comportamiento pasando funciones como datos.</p>
+</section>

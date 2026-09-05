@@ -1,0 +1,16 @@
+<!-- title: Vigilante de Archivos | blurb: Detectar cambios en archivos mediante polling con <code>stat</code>. -->
+<section data-part="intro">
+<p>Sin inotify/kqueue, la vigilancia de archivos usa polling: llamar a <code>stat()</code> periódicamente y comparar el mtime. <code>stat</code> devuelve <code>[size, mode, mtime, is_dir, is_regular]</code>.</p>
+</section>
+<section data-part="output">
+watching: /tmp/nyx_watch_test.txt
+initial mtime: ...
+file size: 15 bytes
+file changed! new mtime: ...
+new size: 17 bytes
+</section>
+<section data-part="explanation">
+<p><code>stat(path)</code> devuelve un array con cinco elementos: <code>[size, mode, mtime, is_dir, is_regular]</code>. El campo <code>mtime</code> es la última hora de modificación del archivo como timestamp Unix.</p>
+<p>Esta receta crea un archivo, registra su mtime inicial, espera poco más de un segundo (para asegurar que el timestamp del sistema de archivos cambie), modifica el archivo y verifica el mtime de nuevo. Si el nuevo mtime es mayor, el archivo cambió.</p>
+<p>Este enfoque de polling funciona en cualquier sistema de archivos, pero no es eficiente para vigilar muchos archivos. Para uso en producción, convendría usar bindings de inotify (Linux) o kqueue (macOS), a los que Nyx puede acceder vía FFI.</p>
+</section>

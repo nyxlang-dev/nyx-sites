@@ -1,0 +1,17 @@
+<!-- title: Patrones de Canales | blurb: Paso de mensajes con channels con buffer y centinelas. -->
+<section data-part="intro">
+<p>Los canales son el mecanismo principal de paso de mensajes en Nyx. <code>channel_new(capacity)</code> crea un canal con buffer, <code>channel_send</code> envía un valor, y <code>channel_recv</code> bloquea hasta que un valor esté disponible. Los canales se declaran con el tipo <code>Map</code>.</p>
+</section>
+<section data-part="output">
+received: 0
+received: 1
+received: 2
+received: 3
+received: 4
+done
+</section>
+<section data-part="explanation">
+<p>Los canales en Nyx usan el tipo <code>Map</code> como tipo de declaración -- este es un detalle clave a recordar. <code>channel_new(10)</code> crea un canal con buffer que puede contener hasta 10 valores antes de que un emisor se bloquee.</p>
+<p>El productor envía los enteros del 0 al 4, y luego envía <code>-1</code> como valor centinela para señalar la finalización. El hilo principal recorre llamando a <code>channel_recv</code>, que bloquea hasta que hay datos disponibles, y se detiene cuando recibe el centinela.</p>
+<p>Siempre llama a <code>channel_destroy</code> después de que tanto el emisor como el receptor terminaron, para liberar los recursos subyacentes. La llamada a <code>thread_join</code> asegura que el productor haya terminado antes de la limpieza.</p>
+</section>

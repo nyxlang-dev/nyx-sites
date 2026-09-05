@@ -1,0 +1,17 @@
+<!-- title: Expresiones Regulares | blurb: Match, extracción y reemplazo con regex POSIX. -->
+<section data-part="intro">
+<p>El módulo <code>std/regex</code> envuelve expresiones regulares extendidas POSIX. Tres funciones cubren las operaciones más comunes: probar si un patrón coincide, extraer la primera coincidencia y reemplazar coincidencias en una cadena. Los patrones siguen la sintaxis estándar POSIX ERE.</p>
+</section>
+<section data-part="output">
+Email: alice@example.com -> 1
+Email: no-es-email -> 0
+Email: bob.dev@nyx-lang.org -> 1
+Version encontrada: 0.12.0
+Sin espacios dobles: Hola mundo Nyx
+Sin HTML: nyx es rapido
+</section>
+<section data-part="explanation">
+<p><code>regex_is_match(str, pattern)</code> devuelve un <code>bool</code> (representado como <code>1</code>/<code>0</code> al imprimirse vía <code>int_to_string</code>) que indica si el patrón coincide en algún punto de la cadena. Anclar con <code>^</code> y <code>$</code> obliga a que la coincidencia sea sobre la cadena completa, algo esencial para validar entradas como en el ejemplo del email.</p>
+<p><code>regex_match(str, pattern)</code> devuelve la primera subcadena que coincide con el patrón, o una cadena vacía si no hay coincidencia. Es útil para tareas de extracción, como parsear números de versión, fechas o identificadores dentro de un texto más grande.</p>
+<p><code>regex_replace</code> sustituye la primera coincidencia por una cadena de reemplazo, mientras que <code>regex_replace_all</code> reemplaza todas las coincidencias no solapadas. El ejemplo que elimina etiquetas HTML usa el patrón <code>&lt;[^&gt;]+&gt;</code> para hacer coincidir cualquier etiqueta HTML completa y la reemplaza por una cadena vacía, dejando solo el contenido de texto.</p>
+</section>

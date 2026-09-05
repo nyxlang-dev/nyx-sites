@@ -1,0 +1,18 @@
+<!-- title: WaitGroup | blurb: Waiting for multiple threads with <code>wg_add</code>/<code>wg_done</code>/<code>wg_wait</code>. -->
+<section data-part="intro">
+<p><code>WaitGroup</code> from <code>std/sync</code> coordinates multiple threads. <code>wg_add</code> sets the expected count, each thread calls <code>wg_done</code> when finished, and <code>wg_wait</code> blocks until the count reaches zero.</p>
+</section>
+<section data-part="output">
+task C running
+task C done
+task A running
+task A done
+task B running
+task B done
+all tasks completed
+</section>
+<section data-part="explanation">
+<p><code>WaitGroup</code> is imported from <code>std/sync</code>. It maintains an internal counter: <code>wg_add(wg, 3)</code> sets it to 3, each <code>wg_done</code> call decrements it by 1, and <code>wg_wait</code> blocks until the counter reaches zero.</p>
+<p>Three tasks run concurrently with different sleep durations (5ms, 10ms, 20ms). Task C finishes first because it sleeps the least. The exact ordering of output depends on thread scheduling, but "all tasks completed" always prints last because <code>wg_wait</code> guarantees all threads have called <code>wg_done</code>.</p>
+<p>This pattern is ideal when you need to fan out work to multiple threads and wait for all of them to complete before proceeding. Unlike <code>thread_join</code>, you don't need to track individual thread handles.</p>
+</section>

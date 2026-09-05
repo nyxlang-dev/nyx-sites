@@ -1,0 +1,15 @@
+<!-- title: Variables de Entorno | blurb: Leer variables de entorno con <code>getenv</code> y <code>getenv_default</code>. -->
+<section data-part="intro">
+<p>Nyx expone el entorno del proceso mediante dos funciones integradas: <code>getenv</code> devuelve el valor de una variable o un string vacío si no está definida, mientras que <code>getenv_default</code> te permite proveer un valor por defecto, haciendo que el código de configuración sea más seguro y legible.</p>
+</section>
+<section data-part="output">
+HOME=/home/alice
+PATH=/usr/local/bin:/usr/bin:/bin...
+MI_VAR_NX=valor_por_defecto
+USER=alice
+</section>
+<section data-part="explanation">
+<p><code>getenv(name)</code> envuelve la llamada POSIX <code>getenv(3)</code> y convierte el resultado a un <code>String</code> de Nyx. Si la variable no está definida en el entorno del proceso, devuelve un string vacío <code>""</code> en lugar de fallar — esto hace que sea seguro llamarla incondicionalmente.</p>
+<p><code>getenv_default(name, fallback)</code> es un envoltorio de conveniencia que devuelve el valor de la variable cuando existe, o <code>fallback</code> en caso contrario. Este patrón es común en aplicaciones "twelve-factor" donde cada valor de configuración debería tener un valor por defecto documentado.</p>
+<p>La variable <code>PATH</code> suele ser muy larga, así que el ejemplo la recorta a 40 caracteres usando <code>.substring(0, 40)</code> para mantener la salida legible. La verificación de <code>.length()</code> antes de recortar evita un error de fuera de rango cuando <code>PATH</code> resulta ser más corta de lo esperado.</p>
+</section>

@@ -1,0 +1,15 @@
+<!-- title: Fecha y Hora | blurb: Timestamps, fechas formateadas y medición de tiempo. -->
+<section data-part="intro">
+<p>Nyx ofrece funciones de tiempo incorporadas para las necesidades más comunes: timestamps Unix en segundos y milisegundos, una cadena formateada con la fecha y hora actual, y conversión de un valor epoch de vuelta a una fecha legible. No se necesita ningún import para estos primitivos.</p>
+</section>
+<section data-part="output">
+Unix timestamp: 1744761600
+Milliseconds: 1744761600123
+Current datetime: 2026-04-15 12:00:00
+From epoch: 2026-04-15 12:00:00
+</section>
+<section data-part="explanation">
+<p><code>time()</code> devuelve el timestamp Unix actual como un <code>int</code> — el número de segundos desde el epoch Unix (1970-01-01 00:00:00 UTC). Esta es la forma estándar de registrar el momento de un evento, medir duraciones restando dos timestamps, o establecer tiempos de expiración para cachés y tokens.</p>
+<p><code>time_ms()</code> devuelve el mismo valor pero con precisión de milisegundos, útil para medir el rendimiento de operaciones cortas o generar IDs monótonamente crecientes. <code>datetime_now()</code> devuelve la hora local formateada como una cadena legible en estilo ISO-8601.</p>
+<p><code>datetime_from_epoch(ts)</code> convierte cualquier timestamp Unix de vuelta al mismo formato legible. Esto resulta útil cuando guardas timestamps crudos en una base de datos o archivo de log y quieres mostrarlos más tarde. Para aritmética de fechas más avanzada — sumar días, parsear formatos arbitrarios o trabajar con zonas horarias — consulta <code>std/datetime</code>.</p>
+</section>

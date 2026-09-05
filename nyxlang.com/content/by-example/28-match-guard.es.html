@@ -1,0 +1,21 @@
+<!-- title: Guardas de Match | blurb: Agregar condiciones a los brazos de match con guardas <code>if</code>. -->
+<section data-part="intro">
+<p>Las guardas de match agregan una condición booleana adicional a un brazo de match usando la palabra clave <code>if</code>. Un brazo solo se dispara cuando tanto su patrón coincide como su guarda evalúa a verdadero, permitiendo ramificaciones finas que de otro modo requerirían cadenas anidadas de if-else.</p>
+</section>
+<section data-part="output">
+muy grande (200)
+grande (50)
+positivo (5)
+cero
+negativo pequeno (-3)
+muy negativo (-99)
+nota 95: A
+nota 82: B
+nota 71: C
+nota 55: F
+</section>
+<section data-part="explanation">
+<p>Cada brazo del match en <code>classify</code> usa el patrón comodín <code>x</code> para vincular el valor evaluado, y luego aplica una guarda <code>if</code> para restringir cuándo se dispara el brazo. Los brazos se evalúan de arriba hacia abajo, así que el orden importa: <code>x &gt; 100</code> debe aparecer antes que <code>x &gt; 10</code>, de lo contrario valores como 200 serían capturados primero por la guarda menos específica. El último brazo no tiene guarda, lo que lo convierte en un catch-all incondicional que garantiza la exhaustividad.</p>
+<p>La función <code>grade</code> muestra la misma técnica aplicada a una escala de calificación académica. El comodín <code>_</code> en el último brazo es equivalente a un patrón de variable catch-all pero descarta el valor, señalando a quien lea el código que el valor vinculado se ignora a propósito. Ambas funciones retornan una expresión <code>String</code> directamente desde el match, por lo que no se necesita ninguna variable intermedia.</p>
+<p>Las guardas de match son especialmente poderosas cuando se combinan con variantes de enum que llevan datos — primero se puede verificar qué variante se tiene, y luego aplicar una condición numérica o de string sobre su contenido, todo dentro de un único bloque match conciso.</p>
+</section>

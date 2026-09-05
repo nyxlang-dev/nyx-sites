@@ -1,0 +1,23 @@
+<!-- title: Arrays | blurb: Creating, indexing, pushing, and iterating over dynamic arrays. -->
+<section data-part="intro">
+<p>Arrays in Nyx are dynamic, ordered collections that grow automatically. You can create them with a literal syntax, access elements by index, append with <code>push</code>, and iterate with <code>for-in</code>.</p>
+</section>
+<section data-part="output">
+primer: 10
+ultimo: 30
+longitud: 3
+tras push, longitud: 5
+elementos:
+  1
+  2
+  3
+  4
+  5
+lista[0] tras modificar: 99
+</section>
+<section data-part="explanation">
+<p>Array literals use square brackets: <code>[10, 20, 30]</code>. Elements are zero-indexed, so <code>arr[0]</code> is the first element and <code>arr[arr.length() - 1]</code> is the last. Accessing an out-of-bounds index is a runtime error.</p>
+<p>The <code>.length()</code> method returns the number of elements currently in the array as an <code>int</code>. The <code>.push(value)</code> method appends a new element to the end, growing the array automatically — no manual resizing needed.</p>
+<p>When iterating with <code>for n: int in lista</code>, the type annotation <code>: int</code> tells the compiler what type to expect for each element. This is optional when the compiler can infer it, but being explicit avoids ambiguity with heterogeneous arrays.</p>
+<p>Element assignment (<code>lista[0] = 99</code>) requires the array to be declared with <code>var</code>, not <code>let</code>. A <code>let</code> array cannot be mutated after creation.</p>
+</section>

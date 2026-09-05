@@ -1,0 +1,12 @@
+<!-- title: TCP Client | blurb: Connecting, writing, and reading over raw TCP sockets. -->
+<section data-part="intro">
+<p>Nyx provides built-in TCP primitives: <code>tcp_connect</code>, <code>tcp_write</code>, <code>tcp_read</code>, <code>tcp_read_line</code>, and <code>tcp_close</code>. This example connects to a web server and manually sends an HTTP/1.0 request over a raw TCP socket.</p>
+</section>
+<section data-part="output">
+status: HTTP/1.0 200 OK
+body (first 256 bytes): &lt;!doctype html&gt;...
+</section>
+<section data-part="explanation">
+<p><code>tcp_connect(host, port)</code> resolves the hostname and creates a TCP connection, returning a file descriptor. <code>tcp_write</code> sends data, <code>tcp_read_line</code> reads until <code>\n</code>, and <code>tcp_read(fd, n)</code> reads up to <code>n</code> bytes. Always close connections with <code>tcp_close</code>.</p>
+<p>This is the lowest level of networking in Nyx. For HTTP, use <code>std/http</code> which wraps these primitives with request/response parsing (see recipe 49).</p>
+</section>

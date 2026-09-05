@@ -1,0 +1,14 @@
+<!-- title: Servidor TCP | blurb: Escuchar, aceptar y hacer eco con <code>tcp_listen</code>. -->
+<section data-part="intro">
+<p>Un servidor eco TCP mínimo usando primitivas integradas. <code>tcp_listen</code> se enlaza a un puerto, <code>tcp_accept</code> espera una conexión de cliente y luego se lee y escribe datos en el socket del cliente. Esta es la base de todos los servidores de red de Nyx.</p>
+</section>
+<section data-part="output">
+echo server listening on :9000
+client connected
+received: hello
+done
+</section>
+<section data-part="explanation">
+<p><code>tcp_listen("0.0.0.0", port)</code> crea un socket de escucha en todas las interfaces. <code>tcp_accept</code> bloquea hasta que un cliente se conecta y devuelve un nuevo descriptor de archivo para esa conexión. El servidor lee una línea, la devuelve como eco con el prefijo "echo: " y cierra ambos sockets.</p>
+<p>Para un servidor de producción, se envolvería el accept en un bucle <code>while</code> y se generaría un hilo por cliente, o se usaría <code>http_serve_mt</code>, que maneja el pool de hilos automáticamente.</p>
+</section>

@@ -1,0 +1,13 @@
+<!-- title: Pipes | blurb: Connecting processes with <code>pipe_new</code> and <code>dup2</code>. -->
+<section data-part="intro">
+<p><code>pipe_new()</code> creates a unidirectional pipe returning <code>[read_fd, write_fd]</code>. Combined with <code>fork</code>, <code>dup2</code>, and <code>execvp</code>, this lets you capture the output of an external command — the same mechanism Unix shells use for <code>|</code> (pipe).</p>
+</section>
+<section data-part="output">
+ls output (first 200 chars):
+...
+</section>
+<section data-part="explanation">
+<p><code>pipe_new()</code> creates a unidirectional byte stream and returns an array of two file descriptors: <code>[read_fd, write_fd]</code>. Data written to <code>write_fd</code> can be read from <code>read_fd</code>.</p>
+<p>After <code>fork()</code>, the child closes the read end, uses <code>dup2(write_fd, 1)</code> to redirect its stdout to the pipe's write end, then calls <code>execvp</code> to run <code>ls</code>. The child's output flows through the pipe instead of the terminal.</p>
+<p>The parent closes the write end (so reads will see EOF when the child exits), reads the pipe contents with <code>tcp_read</code>, and waits for the child with <code>waitpid</code>. This is exactly how Unix shells implement the <code>|</code> operator.</p>
+</section>

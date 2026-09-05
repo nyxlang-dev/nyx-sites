@@ -1,0 +1,22 @@
+<!-- title: Semáforo | blurb: Limitar el acceso concurrente con <code>sem_acquire</code>/<code>sem_release</code>. -->
+<section data-part="intro">
+<p>Un <code>Semaphore</code> de <code>std/sync</code> limita el número de accesos concurrentes a un recurso. <code>sem_new(n)</code> crea un semáforo con n permisos, <code>sem_acquire</code> toma un permiso (bloqueando si no hay ninguno disponible), y <code>sem_release</code> devuelve uno.</p>
+</section>
+<section data-part="output">
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+acquired (count: 0)
+released
+released
+acquired (count: 1)
+released
+all done
+</section>
+<section data-part="explanation">
+<p><code>sem_new(2)</code> crea un semáforo con 2 permisos. Como máximo 2 hilos pueden tener un permiso al mismo tiempo. Cuando un tercer hilo llama a <code>sem_acquire</code>, se bloquea hasta que uno de los dos primeros llame a <code>sem_release</code>.</p>
+<p>Cinco hilos compiten por el semáforo. <code>sem_count</code> devuelve el número de permisos restantes, que cae a 0 cuando ambos están tomados. Después de dormir 50ms (simulando trabajo), cada hilo libera su permiso y avisa al WaitGroup.</p>
+<p>Este patrón es útil para limitar la velocidad de acceso a recursos externos como conexiones de base de datos, descriptores de archivo o endpoints de API, donde se desea concurrencia controlada en lugar de exclusión mutua total.</p>
+</section>

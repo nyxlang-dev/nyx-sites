@@ -1,0 +1,18 @@
+<!-- title: Variables | blurb: Immutable <code>let</code>, mutable <code>var</code>, basic types, and string interpolation. -->
+<section data-part="intro">
+<p>Nyx distinguishes between immutable bindings (<code>let</code>) and mutable variables (<code>var</code>). Types are written explicitly after a colon, and string interpolation with <code>${...}</code> makes it easy to embed values inside strings.</p>
+</section>
+<section data-part="output">
+Nombre: Nyx
+Version: 12
+Activo: true
+Contador: 2
+Doble: 4
+Hola, Nyx!
+</section>
+<section data-part="explanation">
+<p><code>let</code> declares an immutable binding. Once assigned, you cannot reassign it — any attempt to do so is a compile-time error. This is the default and preferred form in Nyx, since most values do not need to change.</p>
+<p><code>var</code> declares a mutable variable. You can reassign it freely after its initial declaration. Use <code>var</code> only when mutation is genuinely needed — counters, accumulators, and loop variables are good candidates.</p>
+<p>The four basic scalar types shown here are <code>String</code> (UTF-8 text), <code>int</code> (64-bit signed integer), <code>bool</code> (<code>true</code> or <code>false</code>), and <code>float</code> (64-bit double-precision floating point).</p>
+<p>String interpolation uses the <code>${expr}</code> syntax inside a double-quoted string. Any expression can appear inside the braces, and its value is automatically converted to a string. You can also concatenate strings with the <code>+</code> operator.</p>
+</section>

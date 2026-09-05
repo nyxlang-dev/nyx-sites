@@ -1,0 +1,15 @@
+<!-- title: Base64 | blurb: RFC 4648 encoding/decoding — standard and URL-safe variants. -->
+<section data-part="intro">
+<p><code>std/base64</code> provides RFC 4648 encoding and decoding for both standard Base64 (with <code>+/</code> and padding) and URL-safe Base64 (with <code>-_</code> and no padding). This is essential for encoding binary data in text-based protocols like HTTP headers, JWT tokens, and data URIs.</p>
+</section>
+<section data-part="output">
+original: Hello, Nyx!
+encoded:  SGVsbG8sIE55eCE=
+decoded:  Hello, Nyx!
+url-safe: aHR0cHM6Ly9ueXhsYW5nLmNvbS8_cT1oZWxsbyB3b3JsZA
+url-dec:  https://nyxlang.com/?q=hello world
+</section>
+<section data-part="explanation">
+<p><code>base64_encode</code> and <code>base64_decode</code> use the standard Base64 alphabet (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>+</code>, <code>/</code>) with <code>=</code> padding. This is the format used in MIME, PEM certificates, and most APIs.</p>
+<p><code>base64url_encode</code> and <code>base64url_decode</code> use the URL-safe variant: <code>-</code> replaces <code>+</code>, <code>_</code> replaces <code>/</code>, and padding is omitted. This is the format required by JWT (JSON Web Tokens) and safe for use in URLs and filenames.</p>
+</section>

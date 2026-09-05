@@ -1,0 +1,17 @@
+<!-- title: Spawn &amp; Channel | blurb: Spawning threads and communicating via channels. -->
+<section data-part="intro">
+<p>Nyx supports concurrent programming through threads and channels. A channel is a typed, buffered queue that lets threads communicate safely without shared mutable state. <code>thread_spawn</code> starts a new OS thread running a closure, while <code>channel_send</code> and <code>channel_recv</code> transfer values between threads.</p>
+</section>
+<section data-part="output">
+received: 0
+received: 10
+received: 20
+received: 30
+received: 40
+total: 100
+</section>
+<section data-part="explanation">
+<p><code>channel_new(capacity)</code> creates a buffered channel that can hold up to <code>capacity</code> values before the sender blocks. The channel is typed as <code>Map</code> in the Nyx type system — this is an opaque handle to the underlying runtime channel struct. The capacity of 5 matches the number of values the producer will send, so no blocking occurs in this example.</p>
+<p>The <code>producer</code> function is defined as a closure inside <code>main</code>, which means it captures <code>ch</code> from the enclosing scope. <code>thread_spawn(producer)</code> starts a new OS thread that runs <code>producer</code> concurrently with the rest of <code>main</code>. The channel acts as the synchronization point: <code>channel_recv</code> in the main thread will block until a value is available.</p>
+<p>This producer-consumer pattern is fundamental to concurrent Nyx programs. For more complex coordination — multiple producers, fan-out, or timeouts — Nyx also provides <code>select</code> blocks (Go-style), <code>Mutex</code>, <code>WaitGroup</code>, and the M:N work-stealing scheduler. Channels remain the preferred way to pass data across thread boundaries because they eliminate the need for locks on shared state.</p>
+</section>

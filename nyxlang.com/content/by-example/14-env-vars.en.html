@@ -1,0 +1,15 @@
+<!-- title: Environment Variables | blurb: Reading env vars with <code>getenv</code> and <code>getenv_default</code>. -->
+<section data-part="intro">
+<p>Nyx exposes the process environment through two built-in functions: <code>getenv</code> returns a variable's value or an empty string if it is not set, while <code>getenv_default</code> lets you supply a fallback value, making configuration code safer and more readable.</p>
+</section>
+<section data-part="output">
+HOME=/home/alice
+PATH=/usr/local/bin:/usr/bin:/bin...
+MI_VAR_NX=valor_por_defecto
+USER=alice
+</section>
+<section data-part="explanation">
+<p><code>getenv(name)</code> wraps the POSIX <code>getenv(3)</code> call and converts the result to a Nyx <code>String</code>. If the variable is not set in the process environment, it returns an empty string <code>""</code> rather than crashing — this makes it safe to call unconditionally.</p>
+<p><code>getenv_default(name, fallback)</code> is a convenience wrapper that returns the variable's value when it exists, or <code>fallback</code> otherwise. This pattern is common in twelve-factor applications where every configuration value should have a documented default.</p>
+<p>The <code>PATH</code> variable is often very long, so the example trims it to 40 characters using <code>.substring(0, 40)</code> to keep the output readable. The <code>.length()</code> check before slicing avoids an out-of-bounds error when <code>PATH</code> happens to be shorter than expected.</p>
+</section>

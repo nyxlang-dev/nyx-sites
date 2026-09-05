@@ -1,0 +1,23 @@
+<!-- title: Arrays | blurb: Crear, indexar, agregar elementos e iterar sobre arrays dinámicos. -->
+<section data-part="intro">
+<p>Los arrays en Nyx son colecciones dinámicas y ordenadas que crecen automáticamente. Se pueden crear con una sintaxis literal, acceder a los elementos por índice, agregar elementos con <code>push</code> e iterar con <code>for-in</code>.</p>
+</section>
+<section data-part="output">
+primer: 10
+ultimo: 30
+longitud: 3
+tras push, longitud: 5
+elementos:
+  1
+  2
+  3
+  4
+  5
+lista[0] tras modificar: 99
+</section>
+<section data-part="explanation">
+<p>Los arrays literales usan corchetes: <code>[10, 20, 30]</code>. Los elementos se indexan desde cero, así que <code>arr[0]</code> es el primer elemento y <code>arr[arr.length() - 1]</code> es el último. Acceder a un índice fuera de rango es un error en tiempo de ejecución.</p>
+<p>El método <code>.length()</code> devuelve la cantidad de elementos que tiene el array actualmente como un <code>int</code>. El método <code>.push(value)</code> agrega un nuevo elemento al final, haciendo crecer el array automáticamente — no hace falta redimensionar manualmente.</p>
+<p>Al iterar con <code>for n: int in lista</code>, la anotación de tipo <code>: int</code> le indica al compilador qué tipo esperar para cada elemento. Esto es opcional cuando el compilador puede inferirlo, pero ser explícito evita ambigüedades con arrays heterogéneos.</p>
+<p>La asignación de elementos (<code>lista[0] = 99</code>) requiere que el array esté declarado con <code>var</code>, no con <code>let</code>. Un array declarado con <code>let</code> no se puede mutar después de creado.</p>
+</section>

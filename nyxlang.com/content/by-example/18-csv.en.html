@@ -1,0 +1,14 @@
+<!-- title: CSV Parsing | blurb: Splitting lines and fields to process tabular data. -->
+<section data-part="intro">
+<p>Comma-separated values are one of the most common data exchange formats. Nyx makes parsing them straightforward: split the text into lines with <code>.split("\n")</code>, then split each line into fields with <code>.split(",")</code>. The <code>std/csv</code> import provides additional utilities for quoted fields and edge cases.</p>
+</section>
+<section data-part="output">
+Alice is 30 from NYC
+Bob is 25 from LA
+Charlie is 35 from SF
+</section>
+<section data-part="explanation">
+<p><code>.split(delimiter)</code> is a built-in <code>String</code> method that splits a string at every occurrence of the given delimiter and returns an <code>Array</code> of <code>String</code>. Splitting on <code>"\n"</code> gives one element per CSV row; splitting each row on <code>","</code> gives one element per field.</p>
+<p>The loop starts at index <code>1</code> to skip the header row. This is a common idiom for CSV files where the first line contains column names rather than data. If you need to process the header (for example, to build a map of column name to index), you would read <code>rows[0]</code> separately before the loop.</p>
+<p>This approach works well for simple CSV without quoted fields. For production CSV that may contain commas inside quoted strings or newlines inside fields, use the full parser from <code>std/csv</code>, which handles RFC 4180 quoting rules correctly.</p>
+</section>

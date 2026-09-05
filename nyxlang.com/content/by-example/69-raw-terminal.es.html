@@ -1,0 +1,13 @@
+<!-- title: Terminal Raw | blurb: Entrada carácter por carácter con <code>raw_mode_enter</code>. -->
+<section data-part="intro">
+<p><code>raw_mode_enter()</code> desactiva el buffering de línea y el echo, permitiendo entrada carácter por carácter. <code>read_byte()</code> lee un solo byte. Siempre hay que llamar a <code>raw_mode_exit()</code> para restaurar el terminal. Así es como nyx-edit implementa su editor de texto.</p>
+</section>
+<section data-part="output">
+not a terminal — skipping raw mode demo
+run interactively to see keypress reading
+</section>
+<section data-part="explanation">
+<p><code>raw_mode_enter()</code> pone el terminal en modo raw desactivando la entrada canónica (con buffer de línea) y el echo. En este modo, cada pulsación de tecla está disponible de inmediato vía <code>read_byte()</code> sin esperar Enter.</p>
+<p><code>read_byte()</code> lee un solo byte de stdin, devolviendo su valor entero. El ASCII 113 es el carácter 'q'. Teclas especiales como las flechas producen secuencias de escape (múltiples bytes que comienzan con 27).</p>
+<p><code>raw_mode_exit()</code> restaura el terminal a su estado previo. Siempre hay que llamar a esto antes de salir, incluso ante un error — de lo contrario el terminal quedará en modo raw y se volverá inutilizable. <code>term_cols()</code> y <code>term_rows()</code> devuelven las dimensiones actuales del terminal.</p>
+</section>

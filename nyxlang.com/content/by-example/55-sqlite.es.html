@@ -1,0 +1,14 @@
+<!-- title: SQLite | blurb: Base de datos SQL en memoria con <code>sqlite_open</code> y <code>sqlite_query</code>. -->
+<section data-part="intro">
+<p><code>std/sqlite</code> ofrece bindings de SQLite3 cargados en tiempo de ejecución vía <code>dlopen</code>. <code>sqlite_open(":memory:")</code> crea una base de datos en memoria, <code>sqlite_exec</code> ejecuta sentencias DDL/DML, y <code>sqlite_query</code> devuelve filas como arreglos de strings. No se necesitan dependencias externas — SQLite viene incluido en la mayoría de los sistemas operativos.</p>
+</section>
+<section data-part="output">
+Bob is 25 years old
+Alice is 30 years old
+Charlie is 35 years old
+users 30+: 2
+</section>
+<section data-part="explanation">
+<p><code>sqlite_open</code> devuelve un handle opaco de base de datos (<code>*int</code>, NULL en caso de fallo). La ruta especial <code>":memory:"</code> crea una base de datos temporal en memoria que se descarta al cerrar el handle. Para almacenamiento persistente, pasar una ruta de archivo como <code>"data.db"</code>.</p>
+<p><code>sqlite_query</code> devuelve un arreglo de filas, donde cada fila es un arreglo de valores string (SQLite almacena internamente todos los valores como texto). El orden de las columnas coincide con la cláusula SELECT. <code>sqlite_exec</code> se usa para sentencias que no devuelven datos (CREATE, INSERT, UPDATE, DELETE).</p>
+</section>

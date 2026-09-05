@@ -1,0 +1,22 @@
+<!-- title: Productor-Consumidor | blurb: Pipeline desacoplado con contrapresión de channel acotado. -->
+<section data-part="intro">
+<p>El patrón productor-consumidor desacopla la generación de datos de su procesamiento. El canal acotado (capacidad 3) provee contrapresión natural: el productor se bloquea cuando el buffer está lleno.</p>
+</section>
+<section data-part="output">
+produced: 10
+produced: 20
+produced: 30
+produced: 40
+produced: 50
+consumed: 10
+consumed: 20
+consumed: 30
+consumed: 40
+consumed: 50
+pipeline complete
+</section>
+<section data-part="explanation">
+<p>El canal <code>items_ch</code> tiene una capacidad de 3, lo que significa que el productor puede enviar como máximo 3 elementos antes de bloquearse. Esto provee contrapresión natural -- si el consumidor es lento, el productor automáticamente se ralentiza para ajustarse.</p>
+<p>El productor genera los valores 10, 20, 30, 40, 50 y los envía a través del canal, seguidos de un centinela <code>-1</code> para señalar la finalización. El consumidor recorre en bucle <code>channel_recv</code>, procesando cada elemento hasta que ve el centinela.</p>
+<p>El entrelazado exacto de los mensajes "produced" y "consumed" depende de la planificación del sistema, pero el orden dentro de cada flujo siempre se preserva. El buffer acotado evita que el productor sature al consumidor con datos.</p>
+</section>

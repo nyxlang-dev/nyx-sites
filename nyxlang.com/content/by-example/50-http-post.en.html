@@ -1,0 +1,13 @@
+<!-- title: HTTP POST | blurb: POST requests and custom methods with <code>http_request</code>. -->
+<section data-part="intro">
+<p><code>http_post(url, body)</code> sends a POST request with <code>Content-Type: text/plain</code>. For custom headers and methods, use <code>http_request(method, url, headers, body)</code> which gives full control over the request.</p>
+</section>
+<section data-part="output">
+status: 200
+body (first 200 chars): { "args": {}, "data": "hello from Nyx", ...}
+PUT status: 200
+</section>
+<section data-part="explanation">
+<p><code>http_post</code> is a convenience wrapper that sets <code>Content-Type: text/plain</code>. For JSON APIs, use <code>http_request</code> with explicit headers — the headers array uses a flat key-value format: <code>["Header-Name", "value", "Another", "value"]</code>.</p>
+<p><code>http_request</code> supports any HTTP method (GET, POST, PUT, DELETE, PATCH, etc.) and gives full control over headers and body content.</p>
+</section>

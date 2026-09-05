@@ -1,0 +1,20 @@
+<!-- title: Worker Pool | blurb: Dispatching tasks to N threads via shared channels. -->
+<section data-part="intro">
+<p>A worker pool dispatches tasks to a fixed number of threads through a shared channel. Workers pull tasks, process them, and push results to a results channel. This pattern is how <code>http_serve_mt</code> implements its thread pool internally.</p>
+</section>
+<section data-part="output">
+result: 1
+result: 4
+result: 9
+result: 16
+result: 25
+result: 36
+result: 49
+result: 64
+all tasks completed
+</section>
+<section data-part="explanation">
+<p>Two channels coordinate the pool: <code>work_ch</code> distributes tasks and <code>done_ch</code> collects results. Both are declared as <code>Map</code> -- the standard channel type in Nyx.</p>
+<p>Four worker threads loop on <code>channel_recv(work_ch)</code>, computing the square of each received value and sending results to <code>done_ch</code>. A negative task value serves as a poison pill, causing the worker to exit.</p>
+<p>The main thread sends 8 tasks (values 1-8), collects all 8 results, then sends 4 stop signals (one per worker). The order of results may vary between runs because workers execute concurrently, but all 8 squares will appear. This is the same pattern used internally by <code>http_serve_mt</code> to handle HTTP requests across a thread pool.</p>
+</section>
