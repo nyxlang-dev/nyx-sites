@@ -1,88 +1,102 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Variables — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variables — Nyx por ejemplo</title>
+<meta name="description" content="let inmutable, var mutable, tipos básicos e interpolación de strings.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/02-variables.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/02-variables.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/02-variables.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/02-variables.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/02-variables.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">02</span> / Fundamentos</span></p>
+<h1 class="doc-title">Variables</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx distingue entre bindings inmutables (<code>let</code>) y variables mutables (<code>var</code>). Los tipos se escriben explícitamente después de dos puntos, y la interpolación de strings con <code>${...}</code> facilita incrustar valores dentro de las cadenas.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">02-variables.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/02-variables.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Variables: let (inmutable), var (mutable), tipos básicos e interpolación</span>
 
-    <h1>Variables</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// let es inmutable</span>
+    <span class="kw">let</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx&quot;</span>
+    <span class="kw">let</span> version<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">12</span>
+    <span class="kw">let</span> activo<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> precio<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">3.14</span>
 
-    <p>Nyx distingue entre bindings inmutables (<code>let</code>) y variables mutables (<code>var</code>). Los tipos se escriben explícitamente después de dos puntos, y la interpolación de strings con <code>${...}</code> facilita incrustar valores dentro de las cadenas.</p>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Nombre: ${nombre}&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Version: ${version}&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Activo: ${activo}&quot;</span><span class="op">)</span>
 
-    <h2>Código</h2>
-    <pre><code>// Variables: let (inmutable), var (mutable), tipos básicos e interpolación
+    <span class="cm">// var es mutable — se puede reasignar</span>
+    <span class="kw">var</span> contador<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    contador <span class="op">=</span> contador <span class="op">+</span> <span class="num">1</span>
+    contador <span class="op">=</span> contador <span class="op">+</span> <span class="num">1</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Contador: ${contador}&quot;</span><span class="op">)</span>
 
-fn main() -> int {
-    // let es inmutable
-    let nombre: String = "Nyx"
-    let version: int = 12
-    let activo: bool = true
-    let precio: float = 3.14
+    <span class="cm">// Interpolación con expresión</span>
+    <span class="kw">let</span> doble<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> contador <span class="op">*</span> <span class="num">2</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Doble: ${doble}&quot;</span><span class="op">)</span>
 
-    print("Nombre: ${nombre}")
-    print("Version: ${version}")
-    print("Activo: ${activo}")
+    <span class="cm">// Concatenación de strings</span>
+    <span class="kw">let</span> saludo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola, &quot;</span> <span class="op">+</span> nombre <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+    <span class="fn">print</span><span class="op">(</span>saludo<span class="op">)</span>
 
-    // var es mutable — se puede reasignar
-    var contador: int = 0
-    contador = contador + 1
-    contador = contador + 1
-    print("Contador: ${contador}")
-
-    // Interpolación con expresión
-    let doble: int = contador * 2
-    print("Doble: ${doble}")
-
-    // Concatenación de strings
-    let saludo: String = "Hola, " + nombre + "!"
-    print(saludo)
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Nombre: Nyx
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Nombre: Nyx
 Version: 12
 Activo: true
 Contador: 2
 Doble: 4
-Hola, Nyx!</pre>
-
-    <h2>Explicación</h2>
-    <p><code>let</code> declara un binding inmutable. Una vez asignado, no se puede reasignar — cualquier intento de hacerlo es un error de compilación. Esta es la forma predeterminada y preferida en Nyx, ya que la mayoría de los valores no necesitan cambiar.</p>
-    <p><code>var</code> declara una variable mutable. Se puede reasignar libremente después de su declaración inicial. Usa <code>var</code> solo cuando la mutación es realmente necesaria — contadores, acumuladores y variables de bucle son buenos candidatos.</p>
-    <p>Los cuatro tipos escalares básicos que se muestran acá son <code>String</code> (texto UTF-8), <code>int</code> (entero con signo de 64 bits), <code>bool</code> (<code>true</code> o <code>false</code>) y <code>float</code> (número de punto flotante de doble precisión de 64 bits).</p>
-    <p>La interpolación de strings usa la sintaxis <code>${expr}</code> dentro de una cadena entre comillas dobles. Cualquier expresión puede aparecer dentro de las llaves, y su valor se convierte automáticamente a cadena. También se pueden concatenar cadenas con el operador <code>+</code>.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/01-hello-world.html">← Anterior</a>
-        <a href="/es/by-example/03-functions.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/02-variables.nx">examples/by-example/02-variables.nx</a></small></p>
+Hola, Nyx!</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>let</code> declara un binding inmutable. Una vez asignado, no se puede reasignar — cualquier intento de hacerlo es un error de compilación. Esta es la forma predeterminada y preferida en Nyx, ya que la mayoría de los valores no necesitan cambiar.</p>
+<p><code>var</code> declara una variable mutable. Se puede reasignar libremente después de su declaración inicial. Usa <code>var</code> solo cuando la mutación es realmente necesaria — contadores, acumuladores y variables de bucle son buenos candidatos.</p>
+<p>Los cuatro tipos escalares básicos que se muestran acá son <code>String</code> (texto UTF-8), <code>int</code> (entero con signo de 64 bits), <code>bool</code> (<code>true</code> o <code>false</code>) y <code>float</code> (número de punto flotante de doble precisión de 64 bits).</p>
+<p>La interpolación de strings usa la sintaxis <code>${expr}</code> dentro de una cadena entre comillas dobles. Cualquier expresión puede aparecer dentro de las llaves, y su valor se convierte automáticamente a cadena. También se pueden concatenar cadenas con el operador <code>+</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/01-hello-world.html"><span class="label">← Anterior</span><span class="doc-nav-name">Hello World</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/03-functions.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Functions</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

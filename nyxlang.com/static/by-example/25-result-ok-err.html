@@ -1,103 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Result: Ok and Err — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Result: Ok and Err — Nyx by example</title>
+<meta name="description" content="Error handling with Ok and Err.">
+<link rel="canonical" href="https://nyxlang.com/by-example/25-result-ok-err.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/25-result-ok-err.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/25-result-ok-err.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/25-result-ok-err.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/25-result-ok-err.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">25</span> / Types and patterns</span></p>
+<h1 class="doc-title">Result: Ok and Err</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>Result</code> is Nyx's idiomatic type for operations that can fail with an error message. A function returns <code>Result.Ok(value)</code> when it succeeds and <code>Result.Err(message)</code> when something goes wrong — making error handling explicit and impossible to accidentally ignore.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">25-result-ok-err.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/25-result-ok-err.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Result: función que retorna Ok o Err, match exhaustivo para manejar ambos</span>
 
-    <h1>Result: Ok and Err</h1>
+<span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="ty">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span>
+<span class="op">}</span>
 
-    <p><code>Result</code> is Nyx's idiomatic type for operations that can fail with an error message. A function returns <code>Result.Ok(value)</code> when it succeeds and <code>Result.Err(message)</code> when something goes wrong — making error handling explicit and impossible to accidentally ignore.</p>
+<span class="kw">fn</span> <span class="fn">safe_divide</span><span class="op">(</span>a<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> b<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;division por cero&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>a <span class="op">/</span> b<span class="op">)</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Result: función que retorna Ok o Err, match exhaustivo para manejar ambos
+<span class="kw">fn</span> <span class="fn">safe_sqrt</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">if</span> n <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;raiz de negativo&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">*</span> i <span class="op">&lt;=</span> n <span class="op">{</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>i <span class="op">-</span> <span class="num">1</span><span class="op">)</span>
+<span class="op">}</span>
 
-enum Result {
-    Ok(int),
-    Err(String)
-}
+<span class="kw">fn</span> <span class="fn">describe</span><span class="op">(</span>r<span class="op">:</span> <span class="ty">Result</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span>  <span class="op">=&gt;</span> <span class="str">&quot;ok: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">),</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="str">&quot;error: &quot;</span> <span class="op">+</span> e
+    <span class="op">}</span>
+<span class="op">}</span>
 
-fn safe_divide(a: int, b: int) -> Result {
-    if b == 0 {
-        return Result.Err("division por cero")
-    }
-    return Result.Ok(a / b)
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> r1<span class="op">:</span> <span class="ty">Result</span> <span class="op">=</span> <span class="fn">safe_divide</span><span class="op">(</span><span class="num">100</span><span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>r1<span class="op">))</span>
 
-fn safe_sqrt(n: int) -> Result {
-    if n &lt; 0 {
-        return Result.Err("raiz de negativo")
-    }
-    var i: int = 0
-    while i * i &lt;= n {
-        i = i + 1
-    }
-    return Result.Ok(i - 1)
-}
+    <span class="kw">let</span> r2<span class="op">:</span> <span class="ty">Result</span> <span class="op">=</span> <span class="fn">safe_divide</span><span class="op">(</span><span class="num">10</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>r2<span class="op">))</span>
 
-fn describe(r: Result) -> String {
-    return match r {
-        Result.Ok(v)  =&gt; "ok: " + int_to_string(v),
-        Result.Err(e) =&gt; "error: " + e
-    }
-}
+    <span class="kw">let</span> r3<span class="op">:</span> <span class="ty">Result</span> <span class="op">=</span> <span class="fn">safe_sqrt</span><span class="op">(</span><span class="num">16</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>r3<span class="op">))</span>
 
-fn main() -> int {
-    let r1: Result = safe_divide(100, 4)
-    print(describe(r1))
+    <span class="kw">let</span> r4<span class="op">:</span> <span class="ty">Result</span> <span class="op">=</span> <span class="fn">safe_sqrt</span><span class="op">(-</span><span class="num">5</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>r4<span class="op">))</span>
 
-    let r2: Result = safe_divide(10, 0)
-    print(describe(r2))
-
-    let r3: Result = safe_sqrt(16)
-    print(describe(r3))
-
-    let r4: Result = safe_sqrt(-5)
-    print(describe(r4))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">ok: 25
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok: 25
 error: division por cero
 ok: 4
-error: raiz de negativo</pre>
-
-    <h2>Explanation</h2>
-    <p><code>Result</code> is a regular enum with two variants. In this example it is defined locally with <code>Ok(int)</code> and <code>Err(String)</code>, but in real Nyx programs you typically use the generic <code>Result&lt;T, E&gt;</code> from the prelude. Either way the pattern is identical: return one variant on success, the other on failure, and let the caller decide what to do.</p>
-    <p><code>safe_divide</code> guards against division by zero before performing the operation. <code>safe_sqrt</code> uses a manual integer loop to compute floor square roots without floating-point arithmetic, returning an error for negative inputs. Both functions communicate failure through the type system rather than exceptions or out-of-band error codes.</p>
-    <p>The <code>describe</code> helper matches exhaustively on both variants. The compiler enforces that every variant is handled — if you add a third variant to the enum later, every existing match site becomes a compile error until you handle the new case. This exhaustiveness check is one of the most powerful safety properties of algebraic types.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/24-option-some-none.html">← Previous</a>
-        <a href="/by-example/26-try-operator.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/25-result-ok-err.nx">examples/by-example/25-result-ok-err.nx</a></small></p>
+error: raiz de negativo</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>Result</code> is a regular enum with two variants. In this example it is defined locally with <code>Ok(int)</code> and <code>Err(String)</code>, but in real Nyx programs you typically use the generic <code>Result&lt;T, E&gt;</code> from the prelude. Either way the pattern is identical: return one variant on success, the other on failure, and let the caller decide what to do.</p>
+<p><code>safe_divide</code> guards against division by zero before performing the operation. <code>safe_sqrt</code> uses a manual integer loop to compute floor square roots without floating-point arithmetic, returning an error for negative inputs. Both functions communicate failure through the type system rather than exceptions or out-of-band error codes.</p>
+<p>The <code>describe</code> helper matches exhaustively on both variants. The compiler enforces that every variant is handled — if you add a third variant to the enum later, every existing match site becomes a compile error until you handle the new case. This exhaustiveness check is one of the most powerful safety properties of algebraic types.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/24-option-some-none.html"><span class="label">← Previous</span><span class="doc-nav-name">Option: Some and None</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/26-try-operator.html"><span class="label">Next →</span><span class="doc-nav-name">Try Operator</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

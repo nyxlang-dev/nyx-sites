@@ -1,108 +1,82 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Control de Procesos — Nyx por ejemplo</title>
-<meta name="description" content="PID, directorio de trabajo, detección de terminal y stat de archivos.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/68-process-control.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/68-process-control.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/68-process-control.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/68-process-control.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Procesos — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/68-process-control.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
-
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">68</span> / Sistemas</span></p>
-<h1 class="doc-title">Control de Procesos</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>Nyx provee builtins POSIX de procesos: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. Estos son los bloques de construcción de las herramientas de línea de comandos y de los shells.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">68-process-control.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/68-process-control.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Process control — pid, working directory, environment</span>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Control de Procesos</h1>
+    <p>Nyx provee builtins POSIX de procesos: <code>getpid</code>, <code>getcwd</code>, <code>chdir</code>, <code>isatty</code>, <code>stat</code>. Estos son los bloques de construcción para herramientas como nyx-shell.</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Process control — pid, working directory, environment</span>
 <span class="cm">// Control de procesos — pid, directorio de trabajo, entorno</span>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
     <span class="cm">// Get current process ID</span>
-    <span class="kw">let</span> pid<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">getpid</span><span class="op">()</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;my pid: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pid<span class="op">))</span>
+    <span class="kw">let</span> pid: <span class="ty">int</span> = getpid()
+    print(<span class="str">"my pid: "</span> + int_to_string(pid))
 
     <span class="cm">// Get current working directory</span>
-    <span class="kw">let</span> cwd<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getcwd</span><span class="op">()</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;cwd: &quot;</span> <span class="op">+</span> cwd<span class="op">)</span>
+    <span class="kw">let</span> cwd: <span class="ty">String</span> = getcwd()
+    print(<span class="str">"cwd: "</span> + cwd)
 
     <span class="cm">// Check if stdout is a terminal</span>
-    <span class="kw">let</span> is_tty<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="fn">isatty</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
-    <span class="kw">if</span> is_tty <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;stdout is a terminal&quot;</span><span class="op">)</span>
-    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;stdout is not a terminal (piped)&quot;</span><span class="op">)</span>
-    <span class="op">}</span>
+    <span class="kw">let</span> is_tty: <span class="ty">bool</span> = isatty(<span class="num">1</span>)
+    <span class="kw">if</span> is_tty {
+        print(<span class="str">"stdout is a terminal"</span>)
+    } <span class="kw">else</span> {
+        print(<span class="str">"stdout is not a terminal (piped)"</span>)
+    }
 
     <span class="cm">// File stat</span>
-    <span class="kw">let</span> info<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">stat</span><span class="op">(</span><span class="str">&quot;/tmp&quot;</span><span class="op">)</span>
-    <span class="kw">let</span> is_dir<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> info<span class="op">[</span><span class="num">3</span><span class="op">]</span>
-    <span class="kw">if</span> is_dir <span class="op">==</span> <span class="num">1</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;/tmp is a directory&quot;</span><span class="op">)</span>
-    <span class="op">}</span>
+    <span class="kw">let</span> info: <span class="ty">Array</span> = stat(<span class="str">"/tmp"</span>)
+    <span class="kw">let</span> is_dir: <span class="ty">int</span> = info[<span class="num">3</span>]
+    <span class="kw">if</span> is_dir == <span class="num">1</span> {
+        print(<span class="str">"/tmp is a directory"</span>)
+    }
 
     <span class="cm">// Change directory and back</span>
-    <span class="kw">let</span> original<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getcwd</span><span class="op">()</span>
-    <span class="fn">chdir</span><span class="op">(</span><span class="str">&quot;/tmp&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;changed to: &quot;</span> <span class="op">+</span> <span class="fn">getcwd</span><span class="op">())</span>
-    <span class="fn">chdir</span><span class="op">(</span>original<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;back to: &quot;</span> <span class="op">+</span> <span class="fn">getcwd</span><span class="op">())</span>
+    <span class="kw">let</span> original: <span class="ty">String</span> = getcwd()
+    chdir(<span class="str">"/tmp"</span>)
+    print(<span class="str">"changed to: "</span> + getcwd())
+    chdir(original)
+    print(<span class="str">"back to: "</span> + getcwd())
 
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">my pid: 1501659
-cwd: /tmp/demo
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">my pid: 12345
+cwd: /home/admin/NyxLang
 stdout is not a terminal (piped)
 /tmp is a directory
 changed to: /tmp
-back to: /tmp/demo</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>getpid()</code> devuelve el ID del proceso actual. <code>getcwd()</code> devuelve el directorio de trabajo actual como string. <code>chdir(path)</code> cambia el directorio de trabajo.</p>
-<p><code>isatty(fd)</code> verifica si un descriptor de archivo corresponde a un terminal. El descriptor de archivo 0 es stdin, 1 es stdout, 2 es stderr. Esto es útil para decidir si emitir códigos de color o prompts interactivos.</p>
-<p><code>stat(path)</code> devuelve metadatos de un archivo o directorio como <code>[size, mode, mtime, is_dir, is_regular]</code>. La bandera <code>is_dir</code> (índice 3) es 1 para directorios, 0 en caso contrario. Estos primitivos son los que usa un shell escrito en Nyx para sus comandos incorporados.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/67-file-watcher.html"><span class="label">← Anterior</span><span class="doc-nav-name">Vigilante de Archivos</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/69-raw-terminal.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Terminal Raw</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
+back to: /home/admin/NyxLang</pre>
+    <h2>Explicación</h2>
+    <p><code>getpid()</code> devuelve el ID del proceso actual. <code>getcwd()</code> devuelve el directorio de trabajo actual como string. <code>chdir(path)</code> cambia el directorio de trabajo.</p>
+    <p><code>isatty(fd)</code> verifica si un descriptor de archivo corresponde a un terminal. El descriptor de archivo 0 es stdin, 1 es stdout, 2 es stderr. Esto es útil para decidir si emitir códigos de color o prompts interactivos.</p>
+    <p><code>stat(path)</code> devuelve metadatos de un archivo o directorio como <code>[size, mode, mtime, is_dir, is_regular]</code>. La bandera <code>is_dir</code> (índice 3) es 1 para directorios, 0 en caso contrario. Estos primitivos son la base de los comandos incorporados de nyx-shell.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/67-file-watcher.html">&larr; Anterior</a>
+        <a href="/es/by-example/69-raw-terminal.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/68-process-control.nx">examples/by-example/68-process-control.nx</a></small></p>
 </main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
-
-<script src="/shared/copy.js" defer></script>
 </body>
 </html>

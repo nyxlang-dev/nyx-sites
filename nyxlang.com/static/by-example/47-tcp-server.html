@@ -1,81 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCP Server — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCP Server — Nyx by example</title>
+<meta name="description" content="Listening, accepting, and echoing with tcp_listen.">
+<link rel="canonical" href="https://nyxlang.com/by-example/47-tcp-server.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/47-tcp-server.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/47-tcp-server.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/47-tcp-server.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/47-tcp-server.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">47</span> / Networking</span></p>
+<h1 class="doc-title">TCP Server</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A minimal TCP echo server using built-in primitives. <code>tcp_listen</code> binds to a port, <code>tcp_accept</code> waits for a client connection, then you read and write data on the client socket. This is the foundation for all Nyx network servers.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">47-tcp-server.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/47-tcp-server.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// TCP echo server — listen, accept, echo back</span>
+<span class="cm">// Servidor TCP echo — escuchar, aceptar, devolver eco</span>
 
-    <h1>TCP Server</h1>
-
-    <p>A minimal TCP echo server using built-in primitives. <code>tcp_listen</code> binds to a port, <code>tcp_accept</code> waits for a client connection, then you read and write data on the client socket. This is the foundation for all Nyx network servers.</p>
-
-    <h2>Code</h2>
-    <pre><code><span class="cm">// TCP echo server — listen, accept, echo back</span>
-
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="kw">let</span> server: <span class="ty">int</span> = tcp_listen(<span class="str">"0.0.0.0"</span>, <span class="num">9000</span>)
-    <span class="kw">if</span> server &lt; <span class="num">0</span> {
-        print(<span class="str">"failed to listen on port 9000"</span>)
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> server<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;0.0.0.0&quot;</span><span class="op">,</span> <span class="num">9000</span><span class="op">)</span>
+    <span class="kw">if</span> server <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;failed to listen on port 9000&quot;</span><span class="op">)</span>
         <span class="kw">return</span> <span class="num">1</span>
-    }
-    print(<span class="str">"echo server listening on :9000"</span>)
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;echo server listening on :9000&quot;</span><span class="op">)</span>
 
-    <span class="kw">let</span> client: <span class="ty">int</span> = tcp_accept(server)
-    <span class="kw">if</span> client &lt; <span class="num">0</span> {
-        print(<span class="str">"accept failed"</span>)
+    <span class="cm">// Accept one client for demonstration</span>
+    <span class="kw">let</span> client<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>server<span class="op">)</span>
+    <span class="kw">if</span> client <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;accept failed&quot;</span><span class="op">)</span>
         <span class="kw">return</span> <span class="num">1</span>
-    }
-    print(<span class="str">"client connected"</span>)
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;client connected&quot;</span><span class="op">)</span>
 
-    <span class="kw">let</span> msg: <span class="ty">String</span> = tcp_read_line(client)
-    print(<span class="str">"received: "</span> + msg)
-    tcp_write(client, <span class="str">"echo: "</span> + msg + <span class="str">"\n"</span>)
+    <span class="cm">// Read a line and echo it back</span>
+    <span class="kw">let</span> msg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>client<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;received: &quot;</span> <span class="op">+</span> msg<span class="op">)</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>client<span class="op">,</span> <span class="str">&quot;echo: &quot;</span> <span class="op">+</span> msg <span class="op">+</span> <span class="str">&quot;\n&quot;</span><span class="op">)</span>
 
-    tcp_close(client)
-    tcp_close(server)
-    print(<span class="str">"done"</span>)
+    <span class="fn">tcp_close</span><span class="op">(</span>client<span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>server<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;done&quot;</span><span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">echo server listening on :9000
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">echo server listening on :9000
 client connected
 received: hello
-done</pre>
-
-    <h2>Explanation</h2>
-    <p><code>tcp_listen("0.0.0.0", port)</code> creates a listening socket on all interfaces. <code>tcp_accept</code> blocks until a client connects and returns a new file descriptor for that connection. The server reads one line, echoes it back prefixed with "echo: ", and closes both sockets.</p>
-    <p>For a production server, you would wrap the accept in a <code>while</code> loop and spawn a thread per client, or use <code>http_serve_mt</code> which handles the thread pool automatically.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/46-tcp-client.html">← Previous</a>
-        <a href="/by-example/48-udp-socket.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/47-tcp-server.nx">examples/by-example/47-tcp-server.nx</a></small></p>
+done</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>tcp_listen("0.0.0.0", port)</code> creates a listening socket on all interfaces. <code>tcp_accept</code> blocks until a client connects and returns a new file descriptor for that connection. The server reads one line, echoes it back prefixed with "echo: ", and closes both sockets.</p>
+<p>For a production server, you would wrap the accept in a <code>while</code> loop and spawn a thread per client, or use <code>http_serve_mt</code> which handles the thread pool automatically.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/46-tcp-client.html"><span class="label">← Previous</span><span class="doc-nav-name">TCP Client</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/48-udp-socket.html"><span class="label">Next →</span><span class="doc-nav-name">UDP Socket</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

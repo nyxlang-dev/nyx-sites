@@ -1,105 +1,79 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pipes — Nyx por ejemplo</title>
-<meta name="description" content="Conectar procesos con pipe_new y dup2.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/65-pipes.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/65-pipes.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/65-pipes.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/65-pipes.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipes — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/65-pipes.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
-
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">65</span> / Sistemas</span></p>
-<h1 class="doc-title">Pipes</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>pipe_new()</code> crea una tubería (pipe) unidireccional que devuelve <code>[read_fd, write_fd]</code>. Combinado con <code>fork</code>, <code>dup2</code> y <code>execvp</code>, esto permite capturar la salida de un comando externo — el mismo mecanismo que usan las shells de Unix para el operador <code>|</code> (pipe).</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">65-pipes.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/65-pipes.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Pipes — connecting two processes via pipe</span>
+<main class="book-content">
+    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
+    <h1>Pipes</h1>
+    <p><code>pipe_new()</code> crea una tubería (pipe) unidireccional que devuelve <code>[read_fd, write_fd]</code>. Combinado con <code>fork</code>, <code>dup2</code> y <code>execvp</code>, esto permite capturar la salida de un comando externo — el mismo mecanismo que usan las shells de Unix para el operador <code>|</code> (pipe).</p>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Pipes — connecting two processes via pipe</span>
 <span class="cm">// Pipes — conectar dos procesos via pipe</span>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
     <span class="cm">// pipe_new() returns [read_fd, write_fd]</span>
-    <span class="kw">let</span> fds<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">pipe_new</span><span class="op">()</span>
-    <span class="kw">let</span> read_fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fds<span class="op">[</span><span class="num">0</span><span class="op">]</span>
-    <span class="kw">let</span> write_fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fds<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+    <span class="kw">let</span> fds: <span class="ty">Array</span> = pipe_new()
+    <span class="kw">let</span> read_fd: <span class="ty">int</span> = fds[<span class="num">0</span>]
+    <span class="kw">let</span> write_fd: <span class="ty">int</span> = fds[<span class="num">1</span>]
 
-    <span class="kw">let</span> pid<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">fork</span><span class="op">()</span>
+    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
 
-    <span class="kw">if</span> pid <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+    <span class="kw">if</span> pid == <span class="num">0</span> {
         <span class="cm">// Child: redirect stdout to write end of pipe</span>
-        <span class="fn">close_fd</span><span class="op">(</span>read_fd<span class="op">)</span>
-        <span class="fn">dup2</span><span class="op">(</span>write_fd<span class="op">,</span> <span class="num">1</span><span class="op">)</span>
-        <span class="fn">close_fd</span><span class="op">(</span>write_fd<span class="op">)</span>
+        close_fd(read_fd)
+        dup2(write_fd, <span class="num">1</span>)
+        close_fd(write_fd)
         <span class="cm">// exec ls — output goes into pipe</span>
-        <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;ls&quot;</span><span class="op">,</span> <span class="str">&quot;/tmp&quot;</span><span class="op">]</span>
-        <span class="fn">execvp</span><span class="op">(</span><span class="str">&quot;ls&quot;</span><span class="op">,</span> args<span class="op">)</span>
+        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"ls"</span>, <span class="str">"/tmp"</span>]
+        execvp(<span class="str">"ls"</span>, args)
         <span class="kw">return</span> <span class="num">1</span>
-    <span class="op">}</span>
+    }
 
     <span class="cm">// Parent: read from pipe</span>
-    <span class="fn">close_fd</span><span class="op">(</span>write_fd<span class="op">)</span>
-    <span class="kw">let</span> output<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read</span><span class="op">(</span>read_fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
-    <span class="fn">close_fd</span><span class="op">(</span>read_fd<span class="op">)</span>
+    close_fd(write_fd)
+    <span class="kw">let</span> output: <span class="ty">String</span> = tcp_read(read_fd, <span class="num">4096</span>)
+    close_fd(read_fd)
 
-    <span class="fn">waitpid</span><span class="op">(</span>pid<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ls output (first 200 chars):&quot;</span><span class="op">)</span>
-    <span class="kw">if</span> output<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">200</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span>output<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">200</span><span class="op">))</span>
-    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span>output<span class="op">)</span>
-    <span class="op">}</span>
+    waitpid(pid, <span class="num">0</span>)
+    print(<span class="str">"ls output (first 200 chars):"</span>)
+    <span class="kw">if</span> output.length() > <span class="num">200</span> {
+        print(output.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(output)
+    }
 
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">ls output (first 200 chars):
-...</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>pipe_new()</code> crea un flujo de bytes unidireccional y devuelve un arreglo de dos descriptores de archivo: <code>[read_fd, write_fd]</code>. Los datos escritos en <code>write_fd</code> se pueden leer desde <code>read_fd</code>.</p>
-<p>Después de <code>fork()</code>, el hijo cierra el extremo de lectura, usa <code>dup2(write_fd, 1)</code> para redirigir su stdout al extremo de escritura del pipe, y luego llama a <code>execvp</code> para ejecutar <code>ls</code>. La salida del hijo fluye a través del pipe en lugar de la terminal.</p>
-<p>El padre cierra el extremo de escritura (para que las lecturas vean EOF cuando el hijo termine), lee el contenido del pipe con <code>tcp_read</code>, y espera al hijo con <code>waitpid</code>. Así es exactamente como las shells de Unix implementan el operador <code>|</code>.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/64-fork-exec.html"><span class="label">← Anterior</span><span class="doc-nav-name">Fork &amp; Exec</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/66-signal-handling.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Manejo de Señales</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
+}</code></pre>
+    <h2>Salida</h2>
+    <pre class="output">ls output (first 200 chars):
+...</pre>
+    <h2>Explicación</h2>
+    <p><code>pipe_new()</code> crea un flujo de bytes unidireccional y devuelve un arreglo de dos descriptores de archivo: <code>[read_fd, write_fd]</code>. Los datos escritos en <code>write_fd</code> se pueden leer desde <code>read_fd</code>.</p>
+    <p>Después de <code>fork()</code>, el hijo cierra el extremo de lectura, usa <code>dup2(write_fd, 1)</code> para redirigir su stdout al extremo de escritura del pipe, y luego llama a <code>execvp</code> para ejecutar <code>ls</code>. La salida del hijo fluye a través del pipe en lugar de la terminal.</p>
+    <p>El padre cierra el extremo de escritura (para que las lecturas vean EOF cuando el hijo termine), lee el contenido del pipe con <code>tcp_read</code>, y espera al hijo con <code>waitpid</code>. Así es exactamente como las shells de Unix implementan el operador <code>|</code>.</p>
+    <div class="book-nav">
+        <a href="/es/by-example/64-fork-exec.html">&larr; Anterior</a>
+        <a href="/es/by-example/66-signal-handling.html">Siguiente &rarr;</a>
+    </div>
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/65-pipes.nx">examples/by-example/65-pipes.nx</a></small></p>
 </main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
-
-<script src="/shared/copy.js" defer></script>
 </body>
 </html>

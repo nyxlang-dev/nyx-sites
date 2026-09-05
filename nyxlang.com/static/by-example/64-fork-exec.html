@@ -1,68 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fork &amp; Exec — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fork &amp; Exec — Nyx by example</title>
+<meta name="description" content="Running external commands with fork, execvp, and waitpid.">
+<link rel="canonical" href="https://nyxlang.com/by-example/64-fork-exec.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/64-fork-exec.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/64-fork-exec.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/64-fork-exec.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/64-fork-exec.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
-<main class="book-content">
-    <div class="book-breadcrumb"><a href="/by-example/">Nyx by Example</a></div>
-    <h1>Fork &amp; Exec</h1>
-    <p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p>
-    <h2>Code</h2>
-    <pre><code><span class="cm">// Fork and exec — running external commands</span>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">64</span> / Systems</span></p>
+<h1 class="doc-title">Fork &amp; Exec</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">64-fork-exec.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/64-fork-exec.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Fork and exec — running external commands</span>
 <span class="cm">// Fork y exec — ejecutar comandos externos</span>
 
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="kw">let</span> pid: <span class="ty">int</span> = fork()
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> pid<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">fork</span><span class="op">()</span>
 
-    <span class="kw">if</span> pid == <span class="num">0</span> {
+    <span class="kw">if</span> pid <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
         <span class="cm">// Child process: exec immediately (GC requirement)</span>
-        <span class="kw">let</span> args: <span class="ty">Array</span> = [<span class="str">"echo"</span>, <span class="str">"hello from child"</span>]
-        execvp(<span class="str">"echo"</span>, args)
+        <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;echo&quot;</span><span class="op">,</span> <span class="str">&quot;hello from child&quot;</span><span class="op">]</span>
+        <span class="fn">execvp</span><span class="op">(</span><span class="str">&quot;echo&quot;</span><span class="op">,</span> args<span class="op">)</span>
         <span class="cm">// execvp replaces the process — this line never runs</span>
         <span class="kw">return</span> <span class="num">1</span>
-    }
+    <span class="op">}</span>
 
-    <span class="kw">if</span> pid > <span class="num">0</span> {
+    <span class="kw">if</span> pid <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
         <span class="cm">// Parent: wait for child to finish</span>
-        print(<span class="str">"parent: spawned child "</span> + int_to_string(pid))
-        <span class="kw">let</span> status: <span class="ty">int</span> = waitpid(pid, <span class="num">0</span>)
-        print(<span class="str">"parent: child exited with "</span> + int_to_string(status))
-    } <span class="kw">else</span> {
-        print(<span class="str">"fork failed"</span>)
-    }
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;parent: spawned child &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pid<span class="op">))</span>
+        <span class="kw">let</span> status<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">waitpid</span><span class="op">(</span>pid<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;parent: child exited with &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>status<span class="op">))</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;fork failed&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
 
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-    <h2>Output</h2>
-    <pre class="output">parent: spawned child 12345
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">parent: spawned child 12345
 hello from child
-parent: child exited with 0</pre>
-    <h2>Explanation</h2>
-    <p><code>fork()</code> duplicates the current process. It returns 0 in the child and the child's PID in the parent. Because Nyx uses the Boehm garbage collector, the child process must <strong>not</strong> allocate GC-managed memory — it must call <code>execvp()</code> immediately to replace its process image with a new program.</p>
-    <p><code>execvp(command, args)</code> replaces the current process with the given command. The first element of <code>args</code> is conventionally the program name. If <code>execvp</code> succeeds, it never returns.</p>
-    <p><code>waitpid(pid, 0)</code> blocks the parent until the child exits and returns the exit status. This is the standard Unix pattern for spawning subprocesses.</p>
-    <div class="book-nav">
-        <a href="/by-example/63-select-channel.html">&larr; Previous</a>
-        <a href="/by-example/65-pipes.html">Next &rarr;</a>
-    </div>
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/64-fork-exec.nx">examples/by-example/64-fork-exec.nx</a></small></p>
+parent: child exited with 0</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>fork()</code> duplicates the current process. It returns 0 in the child and the child's PID in the parent. Because Nyx uses the Boehm garbage collector, the child process must <strong>not</strong> allocate GC-managed memory — it must call <code>execvp()</code> immediately to replace its process image with a new program.</p>
+<p><code>execvp(command, args)</code> replaces the current process with the given command. The first element of <code>args</code> is conventionally the program name. If <code>execvp</code> succeeds, it never returns.</p>
+<p><code>waitpid(pid, 0)</code> blocks the parent until the child exits and returns the exit status. This is the standard Unix pattern for spawning subprocesses.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/62-semaphore.html"><span class="label">← Previous</span><span class="doc-nav-name">Semaphore</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/65-pipes.html"><span class="label">Next →</span><span class="doc-nav-name">Pipes</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

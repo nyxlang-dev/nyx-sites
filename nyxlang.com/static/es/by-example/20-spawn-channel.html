@@ -1,85 +1,99 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spawn y Channel — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spawn y Channel — Nyx por ejemplo</title>
+<meta name="description" content="Crear threads y comunicarse mediante channels.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/20-spawn-channel.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/20-spawn-channel.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/20-spawn-channel.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/20-spawn-channel.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/20-spawn-channel.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">20</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Spawn y Channel</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx admite programación concurrente mediante threads y channels. Un channel es una cola tipada y bufferizada que permite a los threads comunicarse de forma segura sin estado mutable compartido. <code>thread_spawn</code> inicia un nuevo thread del sistema operativo ejecutando una closure, mientras que <code>channel_send</code> y <code>channel_recv</code> transfieren valores entre threads.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">20-spawn-channel.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/20-spawn-channel.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 20: Concurrency — spawn thread + channel communication</span>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> ch<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">5</span><span class="op">)</span>
 
-    <h1>Spawn y Channel</h1>
+    <span class="kw">fn</span> <span class="fn">producer</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> <span class="op">{</span>
+            <span class="fn">channel_send</span><span class="op">(</span>ch<span class="op">,</span> i <span class="op">*</span> <span class="num">10</span><span class="op">)</span>
+            i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
 
-    <p>Nyx admite programación concurrente mediante threads y channels. Un channel es una cola tipada y bufferizada que permite a los threads comunicarse de forma segura sin estado mutable compartido. <code>thread_spawn</code> inicia un nuevo thread del sistema operativo ejecutando una closure, mientras que <code>channel_send</code> y <code>channel_recv</code> transfieren valores entre threads.</p>
+    <span class="fn">thread_spawn</span><span class="op">(</span>producer<span class="op">)</span>
 
-    <h2>Código</h2>
-    <pre><code>// 20: Concurrency — spawn thread + channel communication
-fn main() -> int {
-    let ch: Map = channel_new(5)
+    <span class="cm">// Receive 5 values from the channel</span>
+    <span class="kw">var</span> total<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> n <span class="op">&lt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="kw">let</span> val<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>ch<span class="op">)</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;received: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>val<span class="op">))</span>
+        total <span class="op">=</span> total <span class="op">+</span> val
+        n <span class="op">=</span> n <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;total: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>total<span class="op">))</span>
 
-    fn producer() {
-        var i: int = 0
-        while i < 5 {
-            channel_send(ch, i * 10)
-            i = i + 1
-        }
-    }
-
-    thread_spawn(producer)
-
-    // Receive 5 values from the channel
-    var total: int = 0
-    var n: int = 0
-    while n < 5 {
-        let val: int = channel_recv(ch)
-        print("received: " + int_to_string(val))
-        total = total + val
-        n = n + 1
-    }
-    print("total: " + int_to_string(total))
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">received: 0
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">received: 0
 received: 10
 received: 20
 received: 30
 received: 40
-total: 100</pre>
-
-    <h2>Explicación</h2>
-    <p><code>channel_new(capacity)</code> crea un channel bufferizado que puede contener hasta <code>capacity</code> valores antes de que el emisor se bloquee. El channel está tipado como <code>Map</code> en el sistema de tipos de Nyx — esto es un handle opaco a la estructura de channel del runtime subyacente. La capacidad de 5 coincide con la cantidad de valores que enviará el productor, por lo que en este ejemplo no ocurre ningún bloqueo.</p>
-    <p>La función <code>producer</code> se define como una closure dentro de <code>main</code>, lo que significa que captura <code>ch</code> del ámbito envolvente. <code>thread_spawn(producer)</code> inicia un nuevo thread del sistema operativo que ejecuta <code>producer</code> de forma concurrente con el resto de <code>main</code>. El channel actúa como punto de sincronización: <code>channel_recv</code> en el thread principal se bloqueará hasta que haya un valor disponible.</p>
-    <p>Este patrón productor-consumidor es fundamental en los programas concurrentes de Nyx. Para coordinación más compleja — múltiples productores, fan-out o timeouts — Nyx también ofrece bloques <code>select</code> (al estilo Go), <code>Mutex</code>, <code>WaitGroup</code>, y el scheduler M:N de work-stealing. Los channels siguen siendo la forma preferida de pasar datos entre threads porque eliminan la necesidad de locks sobre estado compartido.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/19-datetime.html">← Anterior</a>
-        <a href="/es/by-example/21-traits.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/20-spawn-channel.nx">examples/by-example/20-spawn-channel.nx</a></small></p>
+total: 100</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>channel_new(capacity)</code> crea un channel bufferizado que puede contener hasta <code>capacity</code> valores antes de que el emisor se bloquee. El channel está tipado como <code>Map</code> en el sistema de tipos de Nyx — esto es un handle opaco a la estructura de channel del runtime subyacente. La capacidad de 5 coincide con la cantidad de valores que enviará el productor, por lo que en este ejemplo no ocurre ningún bloqueo.</p>
+<p>La función <code>producer</code> se define como una closure dentro de <code>main</code>, lo que significa que captura <code>ch</code> del ámbito envolvente. <code>thread_spawn(producer)</code> inicia un nuevo thread del sistema operativo que ejecuta <code>producer</code> de forma concurrente con el resto de <code>main</code>. El channel actúa como punto de sincronización: <code>channel_recv</code> en el thread principal se bloqueará hasta que haya un valor disponible.</p>
+<p>Este patrón productor-consumidor es fundamental en los programas concurrentes de Nyx. Para coordinación más compleja — múltiples productores, fan-out o timeouts — Nyx también ofrece bloques <code>select</code> (al estilo Go), <code>Mutex</code>, <code>WaitGroup</code>, y el scheduler M:N de work-stealing. Los channels siguen siendo la forma preferida de pasar datos entre threads porque eliminan la necesidad de locks sobre estado compartido.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/19-datetime.html"><span class="label">← Anterior</span><span class="doc-nav-name">Fecha y Hora</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/21-traits.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Traits</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

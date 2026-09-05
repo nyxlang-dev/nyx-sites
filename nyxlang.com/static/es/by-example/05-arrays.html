@@ -1,71 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arrays — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arrays — Nyx por ejemplo</title>
+<meta name="description" content="Crear, indexar, agregar elementos e iterar sobre arrays dinámicos.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/05-arrays.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/05-arrays.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/05-arrays.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/05-arrays.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/05-arrays.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">05</span> / Fundamentos</span></p>
+<h1 class="doc-title">Arrays</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Los arrays en Nyx son colecciones dinámicas y ordenadas que crecen automáticamente. Se pueden crear con una sintaxis literal, acceder a los elementos por índice, agregar elementos con <code>push</code> e iterar con <code>for-in</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">05-arrays.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/05-arrays.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Arrays: crear, push, length, acceso por índice, iterar</span>
 
-    <h1>Arrays</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Crear array literal</span>
+    <span class="kw">let</span> numeros<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">10</span><span class="op">,</span> <span class="num">20</span><span class="op">,</span> <span class="num">30</span><span class="op">]</span>
 
-    <p>Los arrays en Nyx son colecciones dinámicas y ordenadas que crecen automáticamente. Se pueden crear con una sintaxis literal, acceder a los elementos por índice, agregar elementos con <code>push</code> e iterar con <code>for-in</code>.</p>
+    <span class="cm">// Acceso por índice</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;primer: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>numeros<span class="op">[</span><span class="num">0</span><span class="op">]))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ultimo: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>numeros<span class="op">[</span><span class="num">2</span><span class="op">]))</span>
 
-    <h2>Código</h2>
-    <pre><code>// Arrays: crear, push, length, acceso por índice, iterar
+    <span class="cm">// length</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;longitud: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>numeros<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-fn main() -> int {
-    // Crear array literal
-    let numeros: Array = [10, 20, 30]
+    <span class="cm">// Array mutable con push</span>
+    <span class="kw">var</span> lista<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">]</span>
+    lista<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">4</span><span class="op">)</span>
+    lista<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">5</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tras push, longitud: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>lista<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-    // Acceso por índice
-    print("primer: " + int_to_string(numeros[0]))
-    print("ultimo: " + int_to_string(numeros[2]))
+    <span class="cm">// Iterar con for-in</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;elementos:&quot;</span><span class="op">)</span>
+    <span class="kw">for</span> n<span class="op">:</span> <span class="ty">int</span> <span class="kw">in</span> lista <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span>
+    <span class="op">}</span>
 
-    // length
-    print("longitud: " + int_to_string(numeros.length()))
+    <span class="cm">// Modificar elemento</span>
+    lista<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">=</span> <span class="num">99</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;lista[0] tras modificar: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>lista<span class="op">[</span><span class="num">0</span><span class="op">]))</span>
 
-    // Array mutable con push
-    var lista: Array = [1, 2, 3]
-    lista.push(4)
-    lista.push(5)
-    print("tras push, longitud: " + int_to_string(lista.length()))
-
-    // Iterar con for-in
-    print("elementos:")
-    for n: int in lista {
-        print("  " + int_to_string(n))
-    }
-
-    // Modificar elemento
-    lista[0] = 99
-    print("lista[0] tras modificar: " + int_to_string(lista[0]))
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">primer: 10
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">primer: 10
 ultimo: 30
 longitud: 3
 tras push, longitud: 5
@@ -75,21 +81,29 @@ elementos:
   3
   4
   5
-lista[0] tras modificar: 99</pre>
-
-    <h2>Explicación</h2>
-    <p>Los arrays literales usan corchetes: <code>[10, 20, 30]</code>. Los elementos se indexan desde cero, así que <code>arr[0]</code> es el primer elemento y <code>arr[arr.length() - 1]</code> es el último. Acceder a un índice fuera de rango es un error en tiempo de ejecución.</p>
-    <p>El método <code>.length()</code> devuelve la cantidad de elementos que tiene el array actualmente como un <code>int</code>. El método <code>.push(value)</code> agrega un nuevo elemento al final, haciendo crecer el array automáticamente — no hace falta redimensionar manualmente.</p>
-    <p>Al iterar con <code>for n: int in lista</code>, la anotación de tipo <code>: int</code> le indica al compilador qué tipo esperar para cada elemento. Esto es opcional cuando el compilador puede inferirlo, pero ser explícito evita ambigüedades con arrays heterogéneos.</p>
-    <p>La asignación de elementos (<code>lista[0] = 99</code>) requiere que el array esté declarado con <code>var</code>, no con <code>let</code>. Un array declarado con <code>let</code> no se puede mutar después de creado.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/04-control-flow.html">← Anterior</a>
-        <a href="/es/by-example/06-maps.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/05-arrays.nx">examples/by-example/05-arrays.nx</a></small></p>
+lista[0] tras modificar: 99</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Los arrays literales usan corchetes: <code>[10, 20, 30]</code>. Los elementos se indexan desde cero, así que <code>arr[0]</code> es el primer elemento y <code>arr[arr.length() - 1]</code> es el último. Acceder a un índice fuera de rango es un error en tiempo de ejecución.</p>
+<p>El método <code>.length()</code> devuelve la cantidad de elementos que tiene el array actualmente como un <code>int</code>. El método <code>.push(value)</code> agrega un nuevo elemento al final, haciendo crecer el array automáticamente — no hace falta redimensionar manualmente.</p>
+<p>Al iterar con <code>for n: int in lista</code>, la anotación de tipo <code>: int</code> le indica al compilador qué tipo esperar para cada elemento. Esto es opcional cuando el compilador puede inferirlo, pero ser explícito evita ambigüedades con arrays heterogéneos.</p>
+<p>La asignación de elementos (<code>lista[0] = 99</code>) requiere que el array esté declarado con <code>var</code>, no con <code>let</code>. Un array declarado con <code>let</code> no se puede mutar después de creado.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/04-control-flow.html"><span class="label">← Anterior</span><span class="doc-nav-name">Control Flow</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/06-maps.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Maps</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

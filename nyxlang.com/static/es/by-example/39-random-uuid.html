@@ -1,101 +1,122 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Números Aleatorios y UUID — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Números Aleatorios y UUID — Nyx por ejemplo</title>
+<meta name="description" content="Generar números aleatorios e identificadores únicos.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/39-random-uuid.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/39-random-uuid.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/39-random-uuid.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/39-random-uuid.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/39-random-uuid.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">39</span> / Avanzado</span></p>
+<h1 class="doc-title">Números Aleatorios y UUID</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>El módulo <code>std/random</code> provee un generador de números pseudoaleatorios xorshift64 rápido, y <code>std/uuid</code> genera UUID versión 4 según RFC 4122. Ambas son utilidades comúnmente necesarias para pruebas, simulaciones e identificadores de sistemas distribuidos.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">39-random-uuid.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/39-random-uuid.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Números aleatorios y UUID v4</span>
+<span class="kw">import</span> <span class="str">&quot;std/random&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/uuid&quot;</span>
 
-    <h1>Números Aleatorios y UUID</h1>
+<span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
+<span class="cm">// así que la conversión se escribe explícita.</span>
+<span class="kw">fn</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;si&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
 
-    <p>El módulo <code>std/random</code> provee un generador de números pseudoaleatorios xorshift64 rápido, y <code>std/uuid</code> genera UUID versión 4 según RFC 4122. Ambas son utilidades comúnmente necesarias para pruebas, simulaciones e identificadores de sistemas distribuidos.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Generar 3 números aleatorios entre 1 y 100</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Numeros aleatorios (1-100):&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> r1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">random_range</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">100</span><span class="op">)</span>
+    <span class="kw">let</span> r2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">random_range</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">100</span><span class="op">)</span>
+    <span class="kw">let</span> r3<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">random_range</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">100</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r1<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r2<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r3<span class="op">))</span>
 
-    <h2>Código</h2>
-    <pre><code>// Números aleatorios y UUID v4
-import "std/random"
-import "std/uuid"
+    <span class="cm">// random_bool</span>
+    <span class="kw">let</span> b<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="fn">random_bool</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;random_bool: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">))</span>
 
-fn main() -> int {
-    // Generar 3 números aleatorios entre 1 y 100
-    print("Numeros aleatorios (1-100):")
-    let r1: int = random_range(1, 100)
-    let r2: int = random_range(1, 100)
-    let r3: int = random_range(1, 100)
-    print("  " + int_to_string(r1))
-    print("  " + int_to_string(r2))
-    print("  " + int_to_string(r3))
+    <span class="cm">// random_float en [0.0, 1.0)</span>
+    <span class="kw">let</span> f<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="fn">random_float</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;random_float: (generado)&quot;</span><span class="op">)</span>
 
-    // random_bool
-    let b: bool = random_bool()
-    print("random_bool: " + int_to_string(b))
+    <span class="cm">// Generar un UUID v4</span>
+    <span class="kw">let</span> id<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">uuid_v4</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;uuid_v4: &quot;</span> <span class="op">+</span> id<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;longitud uuid: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>id<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-    // random_float en [0.0, 1.0)
-    let f: float = random_float()
-    print("random_float: (generado)")
+    <span class="cm">// Validar que el UUID es valido</span>
+    <span class="kw">let</span> valido<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="fn">uuid_is_valid</span><span class="op">(</span>id<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;uuid valido: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>valido<span class="op">))</span>
 
-    // Generar un UUID v4
-    let id: String = uuid_v4()
-    print("uuid_v4: " + id)
-    print("longitud uuid: " + int_to_string(id.length()))
+    <span class="cm">// Generar otro UUID — debe ser diferente</span>
+    <span class="kw">let</span> id2<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">uuid_v4</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;segundo uuid: &quot;</span> <span class="op">+</span> id2<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;son distintos: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>id <span class="op">!=</span> id2<span class="op">))</span>
 
-    // Validar que el UUID es valido
-    let valido: bool = uuid_is_valid(id)
-    print("uuid valido: " + int_to_string(valido))
-
-    // Generar otro UUID — debe ser diferente
-    let id2: String = uuid_v4()
-    print("segundo uuid: " + id2)
-    print("son distintos: " + int_to_string(id != id2))
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Numeros aleatorios (1-100):
-  42
-  7
-  83
-random_bool: 1
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Numeros aleatorios (1-100):
+  9
+  5
+  35
+random_bool: si
 random_float: (generado)
-uuid_v4: f47ac10b-58cc-4372-a567-0e02b2c3d479
+uuid_v4: 3d0702c0-6c28-4ecf-b36c-0281c464bea4
 longitud uuid: 36
-uuid valido: 1
-segundo uuid: 550e8400-e29b-41d4-a716-446655440000
-son distintos: 1</pre>
-
-    <h2>Explicación</h2>
-    <p><code>random_range(lo, hi)</code> retorna un entero uniformemente distribuido en el rango inclusivo <code>[lo, hi]</code>. <code>random_bool()</code> retorna <code>true</code> o <code>false</code> con igual probabilidad, y <code>random_float()</code> retorna un <code>float</code> en <code>[0.0, 1.0)</code>. Los tres se apoyan en el generador xorshift64 sembrado a partir del reloj del sistema al iniciar el programa.</p>
-    <p><code>uuid_v4()</code> genera un string de 36 caracteres en el formato canónico de UUID <code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code>. El <code>4</code> en el tercer grupo codifica la versión, y los bits altos del cuarto grupo codifican la variante. Cada llamada produce un nuevo UUID aleatorio; la probabilidad de que dos UUID colisionen es astronómicamente pequeña.</p>
-    <p><code>uuid_is_valid(s)</code> valida que un string se ajusta al formato UUID — útil para sanear entradas de usuario o valores de configuración antes de tratarlos como identificadores. La aserción final confirma que dos UUID generados por separado siempre son distintos.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/38-crypto-hash.html">← Anterior</a>
-        <a href="/es/by-example/40-thread-spawn.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/39-random-uuid.nx">examples/by-example/39-random-uuid.nx</a></small></p>
+uuid valido: si
+segundo uuid: 6b14c32d-27b3-4c1a-83e8-d6a093a5f501
+son distintos: si</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>random_range(lo, hi)</code> retorna un entero uniformemente distribuido en el rango inclusivo <code>[lo, hi]</code>. <code>random_bool()</code> retorna <code>true</code> o <code>false</code> con igual probabilidad, y <code>random_float()</code> retorna un <code>float</code> en <code>[0.0, 1.0)</code>. Los tres se apoyan en el generador xorshift64 sembrado a partir del reloj del sistema al iniciar el programa.</p>
+<p><code>uuid_v4()</code> genera un string de 36 caracteres en el formato canónico de UUID <code>xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx</code>. El <code>4</code> en el tercer grupo codifica la versión, y los bits altos del cuarto grupo codifican la variante. Cada llamada produce un nuevo UUID aleatorio; la probabilidad de que dos UUID colisionen es astronómicamente pequeña.</p>
+<p><code>uuid_is_valid(s)</code> valida que un string se ajusta al formato UUID — útil para sanear entradas de usuario o valores de configuración antes de tratarlos como identificadores. La aserción final confirma que dos UUID generados por separado siempre son distintos.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/38-crypto-hash.html"><span class="label">← Anterior</span><span class="doc-nav-name">Hashing Criptográfico</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/40-thread-spawn.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Creación de Threads</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

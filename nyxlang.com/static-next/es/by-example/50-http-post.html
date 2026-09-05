@@ -1,95 +1,79 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HTTP POST — Nyx por ejemplo</title>
-<meta name="description" content="Peticiones POST y métodos personalizados con http_request.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/50-http-post.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/50-http-post.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/50-http-post.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/50-http-post.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP POST — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/50-http-post.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">50</span> / Redes</span></p>
-<h1 class="doc-title">HTTP POST</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>http_post(url, body)</code> envía una solicitud POST con <code>Content-Type: text/plain</code>. Para encabezados y métodos personalizados, usa <code>http_request(method, url, headers, body)</code>, que da control total sobre la solicitud.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">50-http-post.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/50-http-post.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// HTTP POST request with a body</span>
-<span class="cm">// Solicitud HTTP POST con cuerpo</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+    <h1>HTTP POST</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// http_post sends a POST with Content-Type: text/plain</span>
-    <span class="kw">let</span> resp<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">http_post</span><span class="op">(</span><span class="str">&quot;http://httpbin.org/post&quot;</span><span class="op">,</span> <span class="str">&quot;hello from Nyx&quot;</span><span class="op">)</span>
+    <p><code>http_post(url, body)</code> envía una solicitud POST con <code>Content-Type: text/plain</code>. Para encabezados y métodos personalizados, usa <code>http_request(method, url, headers, body)</code>, que da control total sobre la solicitud.</p>
 
-    <span class="kw">let</span> status<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">http_status</span><span class="op">(</span>resp<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;status: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>status<span class="op">))</span>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// HTTP POST request with a body</span>
 
-    <span class="kw">let</span> body<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">http_body</span><span class="op">(</span>resp<span class="op">)</span>
-    <span class="kw">if</span> body<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">200</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;body (first 200 chars): &quot;</span> <span class="op">+</span> body<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">200</span><span class="op">))</span>
-    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;body: &quot;</span> <span class="op">+</span> body<span class="op">)</span>
-    <span class="op">}</span>
+<span class="kw">import</span> <span class="str">"std/http"</span>
 
-    <span class="cm">// For custom headers and methods, use http_request:</span>
-    <span class="kw">let</span> headers<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Content-Type&quot;</span><span class="op">,</span> <span class="str">&quot;application/json&quot;</span><span class="op">]</span>
-    <span class="kw">let</span> json_body<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;{\&quot;key\&quot;: \&quot;value\&quot;}&quot;</span>
-    <span class="kw">let</span> resp2<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">http_request</span><span class="op">(</span><span class="str">&quot;PUT&quot;</span><span class="op">,</span> <span class="str">&quot;http://httpbin.org/put&quot;</span><span class="op">,</span> headers<span class="op">,</span> json_body<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;PUT status: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">http_status</span><span class="op">(</span>resp2<span class="op">)))</span>
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> resp: <span class="ty">Array</span> = http_post(<span class="str">"http://httpbin.org/post"</span>, <span class="str">"hello from Nyx"</span>)
+
+    <span class="kw">let</span> status: <span class="ty">int</span> = http_status(resp)
+    print(<span class="str">"status: "</span> + int_to_string(status))
+
+    <span class="kw">let</span> body: <span class="ty">String</span> = http_body(resp)
+    <span class="kw">if</span> body.length() > <span class="num">200</span> {
+        print(<span class="str">"body (first 200 chars): "</span> + body.substring(<span class="num">0</span>, <span class="num">200</span>))
+    } <span class="kw">else</span> {
+        print(<span class="str">"body: "</span> + body)
+    }
+
+    <span class="cm">// Custom headers and methods with http_request</span>
+    <span class="kw">let</span> headers: <span class="ty">Array</span> = [<span class="str">"Content-Type"</span>, <span class="str">"application/json"</span>]
+    <span class="kw">let</span> json_body: <span class="ty">String</span> = <span class="str">"{\"key\": \"value\"}"</span>
+    <span class="kw">let</span> resp2: <span class="ty">Array</span> = http_request(<span class="str">"PUT"</span>, <span class="str">"http://httpbin.org/put"</span>, headers, json_body)
+    print(<span class="str">"PUT status: "</span> + int_to_string(http_status(resp2)))
 
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">status: 200
-body (first 200 chars): { "args": {}, "data": "hello from Nyx", ...}
-PUT status: 200</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>http_post</code> es un envoltorio de conveniencia que fija <code>Content-Type: text/plain</code>. Para APIs JSON, usa <code>http_request</code> con encabezados explícitos — el array de encabezados usa un formato plano clave-valor: <code>["Header-Name", "value", "Another", "value"]</code>.</p>
-<p><code>http_request</code> admite cualquier método HTTP (GET, POST, PUT, DELETE, PATCH, etc.) y da control total sobre los encabezados y el contenido del cuerpo.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/49-http-get.html"><span class="label">← Anterior</span><span class="doc-nav-name">HTTP GET</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/51-http-server.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Servidor HTTP</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+}</code></pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Salida</h2>
+    <pre class="output">status: 200
+body (first 200 chars): { "args": {}, "data": "hello from Nyx", ...}
+PUT status: 200</pre>
+
+    <h2>Explicación</h2>
+    <p><code>http_post</code> es un envoltorio de conveniencia que fija <code>Content-Type: text/plain</code>. Para APIs JSON, usa <code>http_request</code> con encabezados explícitos — el array de encabezados usa un formato plano clave-valor: <code>["Header-Name", "value", "Another", "value"]</code>.</p>
+    <p><code>http_request</code> admite cualquier método HTTP (GET, POST, PUT, DELETE, PATCH, etc.) y da control total sobre los encabezados y el contenido del cuerpo.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/49-http-get.html">← Anterior</a>
+        <a href="/es/by-example/51-http-server.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/50-http-post.nx">examples/by-example/50-http-post.nx</a></small></p>
+</main>
+
 </body>
 </html>

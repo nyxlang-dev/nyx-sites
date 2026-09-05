@@ -11,8 +11,7 @@
 
    Bloques: 1 tokens · 2 reset · 3 tipografía · 4 retícula/bandas · 5 nav
    6 hero + comando de instalación · 7 tabla clave/valor · 8 paneles de código
-   9 listas numeradas · 10 botones · 11 footer · 12 responsive · 13 motion
-   14 guía /docs · 15 recetario /by-example. */
+   9 listas numeradas · 10 botones · 11 footer · 12 responsive · 13 motion. */
 
 /* ── 1. Tokens ─────────────────────────────────────────────────────────────
    Contraste verificado sobre --paper (#ececea): --ink 15:1, --steel 5.1:1.
@@ -649,61 +648,3 @@ code:not([class]) {
     border-left: 0;
   }
 }
-
-/* ── 15. Recetario /by-example ─────────────────────────────────────────────
-   Bloque agregado por la fase 2. Ningún ladrillo nuevo: el índice reusa la
-   retícula de `.steps` de la guía con una etiqueta de categoría encima, y una
-   receta reusa la cabecera de `.doc-head`, los paneles grafito de `.panel` y
-   la barra anterior/siguiente de `.doc-nav`. Lo único propio es el ritmo
-   vertical de la ficha y el color de la salida, que va un punto por debajo del
-   código: lo que el programa IMPRIME no compite con lo que el programa DICE. */
-.ex-cat + .ex-cat { margin-top: 38px; }
-.ex-cat-name {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--steel);
-  margin-bottom: 10px;
-}
-
-.recipe > * + * { margin-top: 26px; }
-.recipe-lede { max-width: 68ch; }
-.recipe-lede p + p { margin-top: 14px; }
-
-/* El enlace al fuente vive en la cabecera del panel, con el resto de las
-   versalitas; se subraya al pasar por encima y no antes. */
-.panel-head a:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-/* La salida: mismo panel, texto un tono más apagado que el código. */
-.recipe-output { color: #b9c0c7; }
-
-/* «Cómo funciona»: el mismo corte de sección que un <h2> de la guía. */
-.recipe-head {
-  margin-top: 40px;
-  padding-top: 15px;
-  border-top: 1px solid var(--line);
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-.recipe-prose p {
-  font-family: var(--sans);
-  font-size: 1rem;
-  line-height: 1.62;
-  max-width: 68ch;
-}
-.recipe-prose p + p { margin-top: 14px; }
-
-/* Las dos salidas de la página: al índice y a la guía. Misma voz que el nav. */
-.recipe-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
-  margin-top: 22px;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--steel);
-}
-.recipe-links a { color: var(--steel); }
-.recipe-links a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }

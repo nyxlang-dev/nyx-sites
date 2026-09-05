@@ -1,133 +1,101 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ordenamiento — Nyx por ejemplo</title>
-<meta name="description" content="Ordenar arrays de enteros y strings.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/34-sorting.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/34-sorting.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/34-sorting.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/34-sorting.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordenamiento — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/34-sorting.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">34</span> / Avanzado</span></p>
-<h1 class="doc-title">Ordenamiento</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>El módulo <code>std/array</code> provee <code>sort_int</code> y <code>sort_str</code> para ordenar in-place arrays numéricos y de strings respectivamente. Ambas funciones ordenan de forma ascendente y retornan el mismo array que mutaron.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">34-sorting.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/34-sorting.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Ordenamiento: sort_int() de std/array + bubble sort manual</span>
-<span class="kw">import</span> <span class="str">&quot;std/array&quot;</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">fn</span> <span class="fn">print_array</span><span class="op">(</span>arr<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">{</span>
-    <span class="kw">var</span> s<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;[&quot;</span>
-    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
-    <span class="kw">while</span> i <span class="op">&lt;</span> arr<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
-        <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> arr<span class="op">[</span>i<span class="op">]</span>
-        s <span class="op">=</span> s <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">)</span>
-        <span class="kw">if</span> i <span class="op">&lt;</span> arr<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">1</span> <span class="op">{</span>
-            s <span class="op">=</span> s <span class="op">+</span> <span class="str">&quot;, &quot;</span>
-        <span class="op">}</span>
-        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
-    <span class="op">}</span>
-    s <span class="op">=</span> s <span class="op">+</span> <span class="str">&quot;]&quot;</span>
-    <span class="fn">print</span><span class="op">(</span>s<span class="op">)</span>
-<span class="op">}</span>
+    <h1>Ordenamiento</h1>
 
-<span class="cm">// El mismo recorrido para arrays de String: el tipo del elemento se declara</span>
-<span class="cm">// al leerlo (`let v: String`), porque un Array no lo lleva consigo: anotar</span>
-<span class="cm">// `int` acá imprimiría la dirección de cada string en vez del texto.</span>
-<span class="kw">fn</span> <span class="fn">print_array_str</span><span class="op">(</span>arr<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">{</span>
-    <span class="kw">var</span> s<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;[&quot;</span>
-    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
-    <span class="kw">while</span> i <span class="op">&lt;</span> arr<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
-        <span class="kw">let</span> v<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> arr<span class="op">[</span>i<span class="op">]</span>
-        s <span class="op">=</span> s <span class="op">+</span> v
-        <span class="kw">if</span> i <span class="op">&lt;</span> arr<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">1</span> <span class="op">{</span>
-            s <span class="op">=</span> s <span class="op">+</span> <span class="str">&quot;, &quot;</span>
-        <span class="op">}</span>
-        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
-    <span class="op">}</span>
-    s <span class="op">=</span> s <span class="op">+</span> <span class="str">&quot;]&quot;</span>
-    <span class="fn">print</span><span class="op">(</span>s<span class="op">)</span>
-<span class="op">}</span>
+    <p>El módulo <code>std/array</code> provee <code>sort_int</code> y <code>sort_str</code> para ordenar in-place arrays numéricos y de strings respectivamente. Ambas funciones ordenan de forma ascendente y retornan el mismo array que mutaron.</p>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">var</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">64</span><span class="op">,</span> <span class="num">25</span><span class="op">,</span> <span class="num">12</span><span class="op">,</span> <span class="num">22</span><span class="op">,</span> <span class="num">11</span><span class="op">,</span> <span class="num">90</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">47</span><span class="op">,</span> <span class="num">8</span><span class="op">,</span> <span class="num">55</span><span class="op">]</span>
+    <h2>Código</h2>
+    <pre><code>// Ordenamiento: sort_int() de std/array + bubble sort manual
+import "std/array"
 
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Antes de ordenar:&quot;</span><span class="op">)</span>
-    <span class="fn">print_array</span><span class="op">(</span>nums<span class="op">)</span>
+fn print_array(arr: Array) {
+    var s: String = "["
+    var i: int = 0
+    while i < arr.length() {
+        let v: int = arr[i]
+        s = s + int_to_string(v)
+        if i < arr.length() - 1 {
+            s = s + ", "
+        }
+        i = i + 1
+    }
+    s = s + "]"
+    print(s)
+}
 
-    <span class="cm">// sort_int ordena in-place y retorna el array</span>
-    <span class="kw">let</span> ordenado<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sort_int</span><span class="op">(</span>nums<span class="op">)</span>
+fn main() -> int {
+    var nums: Array = [64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
 
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Despues de ordenar:&quot;</span><span class="op">)</span>
-    <span class="fn">print_array</span><span class="op">(</span>ordenado<span class="op">)</span>
+    print("Antes de ordenar:")
+    print_array(nums)
 
-    <span class="cm">// Otro ejemplo: strings</span>
-    <span class="kw">var</span> palabras<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;manzana&quot;</span><span class="op">,</span> <span class="str">&quot;banana&quot;</span><span class="op">,</span> <span class="str">&quot;cereza&quot;</span><span class="op">,</span> <span class="str">&quot;aguacate&quot;</span><span class="op">]</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Strings antes:&quot;</span><span class="op">)</span>
-    <span class="fn">print_array_str</span><span class="op">(</span>palabras<span class="op">)</span>
+    // sort_int ordena in-place y retorna el array
+    let ordenado: Array = sort_int(nums)
 
-    <span class="kw">let</span> ord_str<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sort_str</span><span class="op">(</span>palabras<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Strings despues:&quot;</span><span class="op">)</span>
-    <span class="fn">print_array_str</span><span class="op">(</span>ord_str<span class="op">)</span>
+    print("Despues de ordenar:")
+    print_array(ordenado)
 
-    <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">Antes de ordenar:
+    // Otro ejemplo: strings
+    var palabras: Array = ["manzana", "banana", "cereza", "aguacate"]
+    print("Strings antes:")
+    print_array(palabras)
+
+    let ord_str: Array = sort_str(palabras)
+    print("Strings despues:")
+    print_array(ord_str)
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Antes de ordenar:
 [64, 25, 12, 22, 11, 90, 3, 47, 8, 55]
 Despues de ordenar:
 [3, 8, 11, 12, 22, 25, 47, 55, 64, 90]
 Strings antes:
 [manzana, banana, cereza, aguacate]
 Strings despues:
-[aguacate, banana, cereza, manzana]</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>sort_int(nums)</code> ordena el array in-place y lo retorna, así que el valor de retorno y la variable original referencian la misma secuencia ya ordenada. Se puede usar el valor de retorno o seguir usando la variable original — ambos apuntan a los datos ya ordenados.</p>
-<p><code>sort_str</code> funciona de forma idéntica para arrays de strings, ordenando los elementos lexicográficamente (byte por byte, de forma ascendente). En el ejemplo, <code>"aguacate"</code> se ordena primero porque <code>'a'</code> precede a <code>'b'</code>, <code>'c'</code> y <code>'m'</code>.</p>
-<p>Las funciones auxiliares <code>print_array</code> y <code>print_array_str</code> demuestran el recorrido manual de un array con un loop <code>while</code> y una variable índice — el patrón estándar de Nyx cuando se necesita acceso por índice en lugar de un pipeline de iteradores. Son dos porque un <code>Array</code> no lleva consigo el tipo de sus elementos: el recorrido lo declara al leer, y leer un array de strings como <code>int</code> imprimiría la dirección de cada string en vez de su texto.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/33-recursion.html"><span class="label">← Anterior</span><span class="doc-nav-name">Recursión</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/35-error-handling.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Manejo de Errores</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+[aguacate, banana, cereza, manzana]</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explicación</h2>
+    <p><code>sort_int(nums)</code> ordena el array in-place y lo retorna, así que el valor de retorno y la variable original referencian la misma secuencia ya ordenada. Se puede usar el valor de retorno o seguir usando la variable original — ambos apuntan a los datos ya ordenados.</p>
+    <p><code>sort_str</code> funciona de forma idéntica para arrays de strings, ordenando los elementos lexicográficamente (byte por byte, de forma ascendente). En el ejemplo, <code>"aguacate"</code> se ordena primero porque <code>'a'</code> precede a <code>'b'</code>, <code>'c'</code> y <code>'m'</code>.</p>
+    <p>La función auxiliar <code>print_array</code> demuestra el recorrido manual de un array usando un loop <code>while</code> con una variable índice — el patrón estándar de Nyx cuando se necesita acceso por índice en lugar de un pipeline de iteradores.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/33-recursion.html">← Anterior</a>
+        <a href="/es/by-example/35-error-handling.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/34-sorting.nx">examples/by-example/34-sorting.nx</a></small></p>
+</main>
+
 </body>
 </html>

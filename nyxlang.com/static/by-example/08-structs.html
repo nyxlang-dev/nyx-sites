@@ -1,109 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Structs — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structs — Nyx by example</title>
+<meta name="description" content="Defining data types with fields and attaching methods via impl.">
+<link rel="canonical" href="https://nyxlang.com/by-example/08-structs.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/08-structs.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/08-structs.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/08-structs.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/08-structs.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">08</span> / Fundamentals</span></p>
+<h1 class="doc-title">Structs</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Structs let you group related data under a named type. You attach behavior to a struct with an <code>impl</code> block, giving it methods that operate on its fields through a <code>self</code> parameter.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">08-structs.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/08-structs.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Structs: definición, campos, impl con métodos, instanciación</span>
 
-    <h1>Structs</h1>
+<span class="kw">struct</span> <span class="ty">Point</span> <span class="op">{</span>
+    x<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    y<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-    <p>Structs let you group related data under a named type. You attach behavior to a struct with an <code>impl</code> block, giving it methods that operate on its fields through a <code>self</code> parameter.</p>
+<span class="kw">impl</span> <span class="ty">Point</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">distance_from_origin</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+        <span class="cm">// distancia Manhattan: |x| + |y|</span>
+        <span class="kw">var</span> ax<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>x
+        <span class="kw">if</span> ax <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+            ax <span class="op">=</span> ax <span class="op">*</span> <span class="op">-</span><span class="num">1</span>
+        <span class="op">}</span>
+        <span class="kw">var</span> ay<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="kw">self</span><span class="op">.</span>y
+        <span class="kw">if</span> ay <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+            ay <span class="op">=</span> ay <span class="op">*</span> <span class="op">-</span><span class="num">1</span>
+        <span class="op">}</span>
+        <span class="kw">return</span> ax <span class="op">+</span> ay
+    <span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Structs: definición, campos, impl con métodos, instanciación
+    <span class="kw">fn</span> <span class="fn">to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="str">&quot;(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>y<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-struct Point {
-    x: int,
-    y: int
-}
+<span class="kw">struct</span> <span class="ty">Rectangle</span> <span class="op">{</span>
+    width<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    height<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-impl Point {
-    fn distance_from_origin(self) -> int {
-        // distancia Manhattan: |x| + |y|
-        var ax: int = self.x
-        if ax < 0 {
-            ax = ax * -1
-        }
-        var ay: int = self.y
-        if ay < 0 {
-            ay = ay * -1
-        }
-        return ax + ay
-    }
+<span class="kw">impl</span> <span class="ty">Rectangle</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="kw">self</span><span class="op">.</span>width <span class="op">*</span> <span class="kw">self</span><span class="op">.</span>height
+    <span class="op">}</span>
+<span class="op">}</span>
 
-    fn to_string(self) -> String {
-        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
-    }
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> p1<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> <span class="ty">Point</span> <span class="op">{</span> x<span class="op">:</span> <span class="num">3</span><span class="op">,</span> y<span class="op">:</span> <span class="num">4</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Punto: &quot;</span> <span class="op">+</span> p1<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Distancia al origen: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p1<span class="op">.</span><span class="fn">distance_from_origin</span><span class="op">()))</span>
 
-struct Rectangle {
-    width: int,
-    height: int
-}
+    <span class="kw">let</span> p2<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> <span class="ty">Point</span> <span class="op">{</span> x<span class="op">:</span> <span class="op">-</span><span class="num">2</span><span class="op">,</span> y<span class="op">:</span> <span class="num">5</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Punto: &quot;</span> <span class="op">+</span> p2<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Distancia al origen: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p2<span class="op">.</span><span class="fn">distance_from_origin</span><span class="op">()))</span>
 
-impl Rectangle {
-    fn area(self) -> int {
-        return self.width * self.height
-    }
-}
+    <span class="kw">let</span> rect<span class="op">:</span> <span class="ty">Rectangle</span> <span class="op">=</span> <span class="ty">Rectangle</span> <span class="op">{</span> width<span class="op">:</span> <span class="num">6</span><span class="op">,</span> height<span class="op">:</span> <span class="num">7</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Area del rectangulo: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>rect<span class="op">.</span><span class="fn">area</span><span class="op">()))</span>
 
-fn main() -> int {
-    let p1: Point = Point { x: 3, y: 4 }
-    print("Punto: " + p1.to_string())
-    print("Distancia al origen: " + int_to_string(p1.distance_from_origin()))
-
-    let p2: Point = Point { x: -2, y: 5 }
-    print("Punto: " + p2.to_string())
-    print("Distancia al origen: " + int_to_string(p2.distance_from_origin()))
-
-    let rect: Rectangle = Rectangle { width: 6, height: 7 }
-    print("Area del rectangulo: " + int_to_string(rect.area()))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">Punto: (3, 4)
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Punto: (3, 4)
 Distancia al origen: 7
 Punto: (-2, 5)
 Distancia al origen: 7
-Area del rectangulo: 42</pre>
-
-    <h2>Explanation</h2>
-    <p>A struct is defined with the <code>struct</code> keyword, a name, and a comma-separated list of typed fields inside curly braces. Struct names follow PascalCase by convention. Fields are accessed with dot notation: <code>instance.field</code>.</p>
-    <p>Methods are defined in an <code>impl</code> block for the struct. The first parameter <code>self</code> refers to the instance the method is called on — it is similar to <code>this</code> in other languages. Methods can access any field of the struct through <code>self.field_name</code>.</p>
-    <p>Struct instantiation uses the field-initialization syntax: <code>TypeName { field: value, ... }</code>. Every field must be provided; there are no default values unless you write a constructor method explicitly.</p>
-    <p>The Manhattan distance example shows how methods can contain arbitrary logic, local variables, and control flow — they are just functions scoped to a type. Multiple <code>impl</code> blocks can exist for the same struct, and each struct can have its own independent <code>impl</code>.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/07-strings.html">← Previous</a>
-        <a href="/by-example/09-enums.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/08-structs.nx">examples/by-example/08-structs.nx</a></small></p>
+Area del rectangulo: 42</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>A struct is defined with the <code>struct</code> keyword, a name, and a comma-separated list of typed fields inside curly braces. Struct names follow PascalCase by convention. Fields are accessed with dot notation: <code>instance.field</code>.</p>
+<p>Methods are defined in an <code>impl</code> block for the struct. The first parameter <code>self</code> refers to the instance the method is called on — it is similar to <code>this</code> in other languages. Methods can access any field of the struct through <code>self.field_name</code>.</p>
+<p>Struct instantiation uses the field-initialization syntax: <code>TypeName { field: value, ... }</code>. Every field must be provided; there are no default values unless you write a constructor method explicitly.</p>
+<p>The Manhattan distance example shows how methods can contain arbitrary logic, local variables, and control flow — they are just functions scoped to a type. Multiple <code>impl</code> blocks can exist for the same struct, and each struct can have its own independent <code>impl</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/07-strings.html"><span class="label">← Previous</span><span class="doc-nav-name">Strings</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/09-enums.html"><span class="label">Next →</span><span class="doc-nav-name">Enums</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

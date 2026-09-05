@@ -1,98 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Try Operator — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try Operator — Nyx by example</title>
+<meta name="description" content="Short-circuit error propagation with ?.">
+<link rel="canonical" href="https://nyxlang.com/by-example/26-try-operator.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/26-try-operator.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/26-try-operator.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/26-try-operator.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/26-try-operator.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">26</span> / Types and patterns</span></p>
+<h1 class="doc-title">Try Operator</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>The <code>?</code> operator is syntactic sugar for propagating errors. Appending <code>?</code> to a <code>Result</code>-returning expression either unwraps the <code>Ok</code> value or immediately returns the <code>Err</code> to the caller — without requiring an explicit match.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">26-try-operator.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/26-try-operator.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Try operator (?): encadenar operaciones que pueden fallar, short-circuit en Err</span>
 
-    <h1>Try Operator</h1>
+<span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="ty">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span>
+<span class="op">}</span>
 
-    <p>The <code>?</code> operator is syntactic sugar for propagating errors. Appending <code>?</code> to a <code>Result</code>-returning expression either unwraps the <code>Ok</code> value or immediately returns the <code>Err</code> to the caller — without requiring an explicit match.</p>
+<span class="kw">fn</span> <span class="fn">parse_positive</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>s<span class="op">)</span>
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;no es positivo: &quot;</span> <span class="op">+</span> s<span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n<span class="op">)</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Try operator (?): encadenar operaciones que pueden fallar, short-circuit en Err
+<span class="kw">fn</span> <span class="fn">double_it</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">if</span> n <span class="op">&gt;</span> <span class="num">1000</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;numero demasiado grande&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n <span class="op">*</span> <span class="num">2</span><span class="op">)</span>
+<span class="op">}</span>
 
-enum Result {
-    Ok(int),
-    Err(String)
-}
+<span class="cm">// ? propaga el Err automáticamente sin match explícito</span>
+<span class="kw">fn</span> <span class="fn">pipeline</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">parse_positive</span><span class="op">(</span>s<span class="op">)?</span>
+    <span class="kw">let</span> d<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">double_it</span><span class="op">(</span>n<span class="op">)?</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>d <span class="op">+</span> <span class="num">1</span><span class="op">)</span>
+<span class="op">}</span>
 
-fn parse_positive(s: String) -> Result {
-    let n: int = string_to_int(s)
-    if n &lt;= 0 {
-        return Result.Err("no es positivo: " + s)
-    }
-    return Result.Ok(n)
-}
+<span class="kw">fn</span> <span class="fn">show</span><span class="op">(</span>r<span class="op">:</span> <span class="ty">Result</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span>  <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">)),</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;err: &quot;</span> <span class="op">+</span> e<span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-fn double_it(n: int) -> Result {
-    if n &gt; 1000 {
-        return Result.Err("numero demasiado grande")
-    }
-    return Result.Ok(n * 2)
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;42&quot;</span><span class="op">))</span>     <span class="cm">// ok: 85  (42*2+1)</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;-5&quot;</span><span class="op">))</span>     <span class="cm">// err: no es positivo</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;2000&quot;</span><span class="op">))</span>   <span class="cm">// err: numero demasiado grande</span>
 
-// ? propaga el Err automáticamente sin match explícito
-fn pipeline(s: String) -> Result {
-    let n: int = parse_positive(s)?
-    let d: int = double_it(n)?
-    return Result.Ok(d + 1)
-}
-
-fn show(r: Result) {
-    match r {
-        Result.Ok(v)  =&gt; print("ok: " + int_to_string(v)),
-        Result.Err(e) =&gt; print("err: " + e)
-    }
-}
-
-fn main() -> int {
-    show(pipeline("42"))     // ok: 85  (42*2+1)
-    show(pipeline("-5"))     // err: no es positivo
-    show(pipeline("2000"))   // err: numero demasiado grande
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">ok: 85
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok: 85
 err: no es positivo: -5
-err: numero demasiado grande</pre>
-
-    <h2>Explanation</h2>
-    <p>Without <code>?</code>, every fallible call would require a <code>match</code> expression to check for errors before proceeding. The <code>?</code> operator automates this: if the result is <code>Ok(v)</code>, it unwraps <code>v</code> and continues; if it is <code>Err(e)</code>, it immediately returns <code>Err(e)</code> from the enclosing function. The function signature must also return a <code>Result</code> for this to work.</p>
-    <p>The <code>pipeline</code> function chains two fallible steps: parsing a positive integer and doubling it within a limit. Both lines use <code>?</code>, so the first error encountered short-circuits the rest of the function. When <code>"-5"</code> is passed, <code>parse_positive</code> returns <code>Err</code> immediately and <code>double_it</code> is never called.</p>
-    <p>This pattern keeps the happy-path logic clean and readable — <code>pipeline</code> reads almost like sequential imperative code — while preserving complete, explicit error handling. It is the preferred style for multi-step operations in Nyx over deeply nested match expressions.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/25-result-ok-err.html">← Previous</a>
-        <a href="/by-example/27-if-let.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/26-try-operator.nx">examples/by-example/26-try-operator.nx</a></small></p>
+err: numero demasiado grande</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Without <code>?</code>, every fallible call would require a <code>match</code> expression to check for errors before proceeding. The <code>?</code> operator automates this: if the result is <code>Ok(v)</code>, it unwraps <code>v</code> and continues; if it is <code>Err(e)</code>, it immediately returns <code>Err(e)</code> from the enclosing function. The function signature must also return a <code>Result</code> for this to work.</p>
+<p>The <code>pipeline</code> function chains two fallible steps: parsing a positive integer and doubling it within a limit. Both lines use <code>?</code>, so the first error encountered short-circuits the rest of the function. When <code>"-5"</code> is passed, <code>parse_positive</code> returns <code>Err</code> immediately and <code>double_it</code> is never called.</p>
+<p>This pattern keeps the happy-path logic clean and readable — <code>pipeline</code> reads almost like sequential imperative code — while preserving complete, explicit error handling. It is the preferred style for multi-step operations in Nyx over deeply nested match expressions.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/25-result-ok-err.html"><span class="label">← Previous</span><span class="doc-nav-name">Result: Ok and Err</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/27-if-let.html"><span class="label">Next →</span><span class="doc-nav-name">if let</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

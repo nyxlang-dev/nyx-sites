@@ -1,92 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Traits — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traits — Nyx by example</title>
+<meta name="description" content="Defining shared behavior with trait and impl ... for.">
+<link rel="canonical" href="https://nyxlang.com/by-example/21-traits.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/21-traits.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/21-traits.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/21-traits.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/21-traits.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">21</span> / Types and patterns</span></p>
+<h1 class="doc-title">Traits</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Traits define shared behavior that multiple types can implement. They are Nyx's primary abstraction mechanism — similar to interfaces in Go or type classes in Haskell — but with full method bodies and generic dispatch support.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">21-traits.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/21-traits.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Traits: definir Display, implementar para struct, llamar método</span>
 
-    <h1>Traits</h1>
+<span class="kw">trait</span> <span class="ty">Display</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span>
+<span class="op">}</span>
 
-    <p>Traits define shared behavior that multiple types can implement. They are Nyx's primary abstraction mechanism — similar to interfaces in Go or type classes in Haskell — but with full method bodies and generic dispatch support.</p>
+<span class="kw">struct</span> <span class="ty">Point</span> <span class="op">{</span>
+    x<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    y<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Traits: definir Display, implementar para struct, llamar método
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> <span class="ty">Point</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="str">&quot;(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>y<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-trait Display {
-    fn to_string(self) -> String
-}
+<span class="kw">struct</span> <span class="ty">Color</span> <span class="op">{</span>
+    r<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    g<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    b<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-struct Point {
-    x: int,
-    y: int
-}
+<span class="kw">impl</span> <span class="ty">Display</span> <span class="kw">for</span> <span class="ty">Color</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="str">&quot;rgb(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>r<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>g<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="kw">self</span><span class="op">.</span>b<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-impl Display for Point {
-    fn to_string(self) -> String {
-        return "(" + int_to_string(self.x) + ", " + int_to_string(self.y) + ")"
-    }
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> p<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> <span class="ty">Point</span> <span class="op">{</span> x<span class="op">:</span> <span class="num">3</span><span class="op">,</span> y<span class="op">:</span> <span class="num">4</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Punto: &quot;</span> <span class="op">+</span> p<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
 
-struct Color {
-    r: int,
-    g: int,
-    b: int
-}
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Color</span> <span class="op">=</span> <span class="ty">Color</span> <span class="op">{</span> r<span class="op">:</span> <span class="num">255</span><span class="op">,</span> g<span class="op">:</span> <span class="num">128</span><span class="op">,</span> b<span class="op">:</span> <span class="num">0</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Color: &quot;</span> <span class="op">+</span> c<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
 
-impl Display for Color {
-    fn to_string(self) -> String {
-        return "rgb(" + int_to_string(self.r) + ", " + int_to_string(self.g) + ", " + int_to_string(self.b) + ")"
-    }
-}
-
-fn main() -> int {
-    let p: Point = Point { x: 3, y: 4 }
-    print("Punto: " + p.to_string())
-
-    let c: Color = Color { r: 255, g: 128, b: 0 }
-    print("Color: " + c.to_string())
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">Punto: (3, 4)
-Color: rgb(255, 128, 0)</pre>
-
-    <h2>Explanation</h2>
-    <p>A <code>trait</code> block declares a set of method signatures that any implementing type must provide. Here <code>Display</code> requires a single method <code>to_string</code> that takes the receiver by value and returns a <code>String</code>. The trait itself contains no data — it is purely a behavioral contract.</p>
-    <p>Each <code>impl Display for T</code> block supplies the concrete body for every method the trait demands. <code>Point</code> formats its fields as a coordinate pair while <code>Color</code> uses CSS <code>rgb()</code> notation. Both structs are otherwise completely independent; the only thing they share is adherence to the <code>Display</code> trait.</p>
-    <p>Once a struct implements a trait, its methods are called with ordinary dot syntax — <code>p.to_string()</code> dispatches to <code>Point</code>'s implementation at compile time (static dispatch). This gives you polymorphism without runtime overhead.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/20-spawn-channel.html">← Previous</a>
-        <a href="/by-example/22-trait-bounds.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/21-traits.nx">examples/by-example/21-traits.nx</a></small></p>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Punto: (3, 4)
+Color: rgb(255, 128, 0)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>A <code>trait</code> block declares a set of method signatures that any implementing type must provide. Here <code>Display</code> requires a single method <code>to_string</code> that takes the receiver by value and returns a <code>String</code>. The trait itself contains no data — it is purely a behavioral contract.</p>
+<p>Each <code>impl Display for T</code> block supplies the concrete body for every method the trait demands. <code>Point</code> formats its fields as a coordinate pair while <code>Color</code> uses CSS <code>rgb()</code> notation. Both structs are otherwise completely independent; the only thing they share is adherence to the <code>Display</code> trait.</p>
+<p>Once a struct implements a trait, its methods are called with ordinary dot syntax — <code>p.to_string()</code> dispatches to <code>Point</code>'s implementation at compile time (static dispatch). This gives you polymorphism without runtime overhead.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/20-spawn-channel.html"><span class="label">← Previous</span><span class="doc-nav-name">Spawn &amp; Channel</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/22-trait-bounds.html"><span class="label">Next →</span><span class="doc-nav-name">Trait Bounds</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

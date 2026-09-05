@@ -1,71 +1,65 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recursión — Nyx por ejemplo</title>
-<meta name="description" content="Resolver problemas con funciones que se llaman a sí mismas.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/33-recursion.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/33-recursion.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/33-recursion.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/33-recursion.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursión — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/33-recursion.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">33</span> / Avanzado</span></p>
-<h1 class="doc-title">Recursión</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>Nyx soporta funciones recursivas sin ninguna sintaxis especial. Una función simplemente se llama a sí misma por nombre. La clásica secuencia de Fibonacci es la demostración canónica: los casos base retornan de inmediato, y cualquier otra llamada reduce el problema hacia uno de esos casos base.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">33-recursion.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/33-recursion.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Recursión: fibonacci recursivo clásico</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">fn</span> <span class="fn">fib</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">1</span> <span class="op">{</span>
-        <span class="kw">return</span> n
-    <span class="op">}</span>
-    <span class="kw">return</span> <span class="fn">fib</span><span class="op">(</span>n <span class="op">-</span> <span class="num">1</span><span class="op">)</span> <span class="op">+</span> <span class="fn">fib</span><span class="op">(</span>n <span class="op">-</span> <span class="num">2</span><span class="op">)</span>
-<span class="op">}</span>
+    <h1>Recursión</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Imprimir la secuencia de fibonacci del 0 al 10</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Secuencia fibonacci (0..10):&quot;</span><span class="op">)</span>
-    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
-    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">10</span> <span class="op">{</span>
-        <span class="kw">let</span> resultado<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">fib</span><span class="op">(</span>i<span class="op">)</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;fib(&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>resultado<span class="op">))</span>
-        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
-    <span class="op">}</span>
+    <p>Nyx soporta funciones recursivas sin ninguna sintaxis especial. Una función simplemente se llama a sí misma por nombre. La clásica secuencia de Fibonacci es la demostración canónica: los casos base retornan de inmediato, y cualquier otra llamada reduce el problema hacia uno de esos casos base.</p>
 
-    <span class="cm">// Calcular fib(20)</span>
-    <span class="kw">let</span> f20<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">fib</span><span class="op">(</span><span class="num">20</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;fib(20) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>f20<span class="op">))</span>
+    <h2>Código</h2>
+    <pre><code>// Recursión: fibonacci recursivo clásico
 
-    <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">Secuencia fibonacci (0..10):
+fn fib(n: int) -> int {
+    if n <= 1 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+fn main() -> int {
+    // Imprimir la secuencia de fibonacci del 0 al 10
+    print("Secuencia fibonacci (0..10):")
+    var i: int = 0
+    while i <= 10 {
+        let resultado: int = fib(i)
+        print("fib(" + int_to_string(i) + ") = " + int_to_string(resultado))
+        i = i + 1
+    }
+
+    // Calcular fib(20)
+    let f20: int = fib(20)
+    print("fib(20) = " + int_to_string(f20))
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Secuencia fibonacci (0..10):
 fib(0) = 0
 fib(1) = 1
 fib(2) = 1
@@ -77,28 +71,20 @@ fib(7) = 13
 fib(8) = 21
 fib(9) = 34
 fib(10) = 55
-fib(20) = 6765</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>fib</code> tiene dos casos base: <code>n == 0</code> retorna <code>0</code> y <code>n == 1</code> retorna <code>1</code>. Ambos quedan cubiertos por la única guarda <code>n &lt;= 1</code>. Para cualquier <code>n</code> mayor, la función se llama a sí misma dos veces y suma los resultados. Cada llamada recursiva avanza uno o dos pasos hacia el caso base, así que la recursión siempre termina.</p>
-<p>La implementación ingenua con doble recursión tiene complejidad temporal exponencial — <code>fib(n)</code> recalcula subproblemas muchas veces. Para <code>fib(20)</code> esto sigue siendo instantáneo, pero para entradas grandes (digamos <code>fib(40)</code>) se prefiere una versión con memoización o iterativa.</p>
-<p>La recursión en Nyx compila directamente a llamadas de función nativas vía LLVM; no hay overhead de intérprete.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/32-iterator-take-skip.html"><span class="label">← Anterior</span><span class="doc-nav-name">Iterador: take() y skip()</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/34-sorting.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Ordenamiento</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+fib(20) = 6765</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explicación</h2>
+    <p><code>fib</code> tiene dos casos base: <code>n == 0</code> retorna <code>0</code> y <code>n == 1</code> retorna <code>1</code>. Ambos quedan cubiertos por la única guarda <code>n &lt;= 1</code>. Para cualquier <code>n</code> mayor, la función se llama a sí misma dos veces y suma los resultados. Cada llamada recursiva avanza uno o dos pasos hacia el caso base, así que la recursión siempre termina.</p>
+    <p>La implementación ingenua con doble recursión tiene complejidad temporal exponencial — <code>fib(n)</code> recalcula subproblemas muchas veces. Para <code>fib(20)</code> esto sigue siendo instantáneo, pero para entradas grandes (digamos <code>fib(40)</code>) se prefiere una versión con memoización o iterativa. Los benchmarks de Nyx muestran que <code>fib(40)</code> se completa en ~166 ms con el enfoque ingenuo.</p>
+    <p>La recursión en Nyx compila directamente a llamadas de función nativas vía LLVM. No hay overhead de intérprete, y el código generado es equivalente al que se escribiría en C.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/32-iterator-take-skip.html">← Anterior</a>
+        <a href="/es/by-example/34-sorting.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/33-recursion.nx">examples/by-example/33-recursion.nx</a></small></p>
+</main>
+
 </body>
 </html>

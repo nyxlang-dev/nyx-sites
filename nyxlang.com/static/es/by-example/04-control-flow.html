@@ -1,86 +1,92 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Flow — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Flow — Nyx por ejemplo</title>
+<meta name="description" content="if/else, bucles while, for-range, for-in, break y continue.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/04-control-flow.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/04-control-flow.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/04-control-flow.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/04-control-flow.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/04-control-flow.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">04</span> / Fundamentos</span></p>
+<h1 class="doc-title">Control Flow</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx ofrece el conjunto estándar de construcciones de control de flujo: ramas condicionales con <code>if/else if/else</code>, bucles de contador con <code>while</code>, e iteración con <code>for</code> sobre rangos y colecciones. El control de bucles usa <code>break</code> y <code>continue</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">04-control-flow.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/04-control-flow.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Control de flujo: if/else, while, for con range, break y continue</span>
 
-    <h1>Control Flow</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// if / else if / else</span>
+    <span class="kw">let</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">7</span>
+    <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">10</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;mayor que 10&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;entre 5 y 10&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;5 o menos&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
 
-    <p>Nyx ofrece el conjunto estándar de construcciones de control de flujo: ramas condicionales con <code>if/else if/else</code>, bucles de contador con <code>while</code>, e iteración con <code>for</code> sobre rangos y colecciones. El control de bucles usa <code>break</code> y <code>continue</code>.</p>
+    <span class="cm">// while que cuenta del 1 al 5</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;while: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
 
-    <h2>Código</h2>
-    <pre><code>// Control de flujo: if/else, while, for con range, break y continue
+    <span class="cm">// for con range (0..5 excluye el 5)</span>
+    <span class="kw">for</span> n <span class="kw">in</span> <span class="num">0</span><span class="op">..</span><span class="num">5</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;range: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span>
+    <span class="op">}</span>
 
-fn main() -> int {
-    // if / else if / else
-    let x: int = 7
-    if x > 10 {
-        print("mayor que 10")
-    } else if x > 5 {
-        print("entre 5 y 10")
-    } else {
-        print("5 o menos")
-    }
+    <span class="cm">// for con array</span>
+    <span class="kw">let</span> colores<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;rojo&quot;</span><span class="op">,</span> <span class="str">&quot;verde&quot;</span><span class="op">,</span> <span class="str">&quot;azul&quot;</span><span class="op">]</span>
+    <span class="kw">for</span> c <span class="kw">in</span> colores <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;color: &quot;</span> <span class="op">+</span> c<span class="op">)</span>
+    <span class="op">}</span>
 
-    // while que cuenta del 1 al 5
-    var i: int = 1
-    while i <= 5 {
-        print("while: " + int_to_string(i))
-        i = i + 1
-    }
+    <span class="cm">// break y continue</span>
+    <span class="kw">var</span> k<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> k <span class="op">&lt;</span> <span class="num">10</span> <span class="op">{</span>
+        k <span class="op">=</span> k <span class="op">+</span> <span class="num">1</span>
+        <span class="kw">if</span> k <span class="op">==</span> <span class="num">3</span> <span class="op">{</span>
+            <span class="kw">continue</span>
+        <span class="op">}</span>
+        <span class="kw">if</span> k <span class="op">==</span> <span class="num">6</span> <span class="op">{</span>
+            <span class="kw">break</span>
+        <span class="op">}</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;k = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>k<span class="op">))</span>
+    <span class="op">}</span>
 
-    // for con range (0..5 excluye el 5)
-    for n in 0..5 {
-        print("range: " + int_to_string(n))
-    }
-
-    // for con array
-    let colores: Array = ["rojo", "verde", "azul"]
-    for c in colores {
-        print("color: " + c)
-    }
-
-    // break y continue
-    var k: int = 0
-    while k < 10 {
-        k = k + 1
-        if k == 3 {
-            continue
-        }
-        if k == 6 {
-            break
-        }
-        print("k = " + int_to_string(k))
-    }
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">entre 5 y 10
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">entre 5 y 10
 while: 1
 while: 2
 while: 3
@@ -97,21 +103,29 @@ color: azul
 k = 1
 k = 2
 k = 4
-k = 5</pre>
-
-    <h2>Explicación</h2>
-    <p>La sentencia <code>if</code> evalúa una condición booleana sin paréntesis. Se pueden encadenar condiciones con <code>else if</code> y proveer un caso alternativo con <code>else</code>. Todos los cuerpos de las ramas deben ir entre llaves — no hay atajos de una sola línea.</p>
-    <p>El bucle <code>while</code> ejecuta su cuerpo mientras la condición sea verdadera. Como Nyx no tiene una forma incorporada <code>for (int i = 0; i &lt; n; i++)</code>, <code>while</code> cumple ese rol cuando se necesita un contador manual.</p>
-    <p>La forma <code>for x in start..end</code> itera sobre un rango semiabierto: <code>0..5</code> produce <code>0, 1, 2, 3, 4</code> (el 5 queda excluido). La forma <code>for x in collection</code> itera sobre cualquier array o valor iterable.</p>
-    <p><code>continue</code> salta el resto de la iteración actual del bucle y pasa a la siguiente. <code>break</code> sale del bucle de inmediato. En el ejemplo, <code>k = 3</code> se salta con <code>continue</code>, y el bucle se detiene cuando <code>k</code> llega a <code>6</code>.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/03-functions.html">← Anterior</a>
-        <a href="/es/by-example/05-arrays.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/04-control-flow.nx">examples/by-example/04-control-flow.nx</a></small></p>
+k = 5</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La sentencia <code>if</code> evalúa una condición booleana sin paréntesis. Se pueden encadenar condiciones con <code>else if</code> y proveer un caso alternativo con <code>else</code>. Todos los cuerpos de las ramas deben ir entre llaves — no hay atajos de una sola línea.</p>
+<p>El bucle <code>while</code> ejecuta su cuerpo mientras la condición sea verdadera. Como Nyx no tiene una forma incorporada <code>for (int i = 0; i &lt; n; i++)</code>, <code>while</code> cumple ese rol cuando se necesita un contador manual.</p>
+<p>La forma <code>for x in start..end</code> itera sobre un rango semiabierto: <code>0..5</code> produce <code>0, 1, 2, 3, 4</code> (el 5 queda excluido). La forma <code>for x in collection</code> itera sobre cualquier array o valor iterable.</p>
+<p><code>continue</code> salta el resto de la iteración actual del bucle y pasa a la siguiente. <code>break</code> sale del bucle de inmediato. En el ejemplo, <code>k = 3</code> se salta con <code>continue</code>, y el bucle se detiene cuando <code>k</code> llega a <code>6</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/03-functions.html"><span class="label">← Anterior</span><span class="doc-nav-name">Functions</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/05-arrays.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Arrays</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

@@ -1,107 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JSON Parse — Nyx by example</title>
-<meta name="description" content="Parsing JSON strings into Maps and Arrays.">
-<link rel="canonical" href="https://nyxlang.com/by-example/15-json-parse.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/15-json-parse.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/15-json-parse.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/15-json-parse.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Parse — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Main">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/">NYX</a>
-<ul class="nav-links">
-<li><a href="/#install">Install</a></li>
-<li><a href="/docs/">Docs</a></li>
-<li><a href="/by-example/">By example</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/es/by-example/15-json-parse.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
-</div>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/docs/">Docs</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">15</span> / Input, output and data</span></p>
-<h1 class="doc-title">JSON Parse</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>The <code>std/json</code> module provides a complete JSON parser and builder. JSON values are represented as tagged <code>Array</code> nodes — the first element is the type tag and the second is the value — making it easy to inspect and traverse any JSON document.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">15-json-parse.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/15-json-parse.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// JSON con std/json: construir objetos, arrays y serializar/parsear números</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+    <h1>JSON Parse</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Construir un objeto JSON programáticamente</span>
-    <span class="kw">let</span> keys<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;name&quot;</span><span class="op">,</span> <span class="str">&quot;age&quot;</span><span class="op">,</span> <span class="str">&quot;activo&quot;</span><span class="op">]</span>
-    <span class="kw">let</span> vals<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
-    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_string</span><span class="op">(</span><span class="str">&quot;Alice&quot;</span><span class="op">))</span>
-    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">30</span><span class="op">))</span>
-    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_bool</span><span class="op">(</span><span class="kw">true</span><span class="op">))</span>
+    <p>The <code>std/json</code> module provides a complete JSON parser and builder. JSON values are represented as tagged <code>Array</code> nodes — the first element is the type tag and the second is the value — making it easy to inspect and traverse any JSON document.</p>
 
-    <span class="kw">let</span> obj<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_object</span><span class="op">(</span>keys<span class="op">,</span> vals<span class="op">)</span>
-    <span class="kw">let</span> serializado<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">json_stringify</span><span class="op">(</span>obj<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Objeto: &quot;</span> <span class="op">+</span> serializado<span class="op">)</span>
+    <h2>Code</h2>
+    <pre><code>// JSON con std/json: construir objetos, arrays y serializar/parsear números
 
-    <span class="cm">// Construir un array JSON</span>
-    <span class="kw">let</span> items<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
-    items<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">10</span><span class="op">))</span>
-    items<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">20</span><span class="op">))</span>
-    items<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">30</span><span class="op">))</span>
-    <span class="kw">let</span> arr<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_array</span><span class="op">(</span>items<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Array:  &quot;</span> <span class="op">+</span> <span class="fn">json_stringify</span><span class="op">(</span>arr<span class="op">))</span>
+import "std/json"
 
-    <span class="cm">// Parsear un número</span>
-    <span class="kw">let</span> parsed<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_parse</span><span class="op">(</span><span class="str">&quot;42&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Tipo: &quot;</span> <span class="op">+</span> <span class="fn">json_type</span><span class="op">(</span>parsed<span class="op">))</span>
-    <span class="kw">let</span> val<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> parsed<span class="op">[</span><span class="num">1</span><span class="op">]</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Valor: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>val<span class="op">))</span>
+fn main() -> int {
+    // Construir un objeto JSON programáticamente
+    let keys: Array = ["name", "age", "activo"]
+    let vals: Array = []
+    vals.push(json_string("Alice"))
+    vals.push(json_number(30))
+    vals.push(json_bool(true))
 
-    <span class="cm">// Parsear un array de números</span>
-    <span class="kw">let</span> parsed2<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_parse</span><span class="op">(</span><span class="str">&quot;[1,2,3]&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Array parseado: &quot;</span> <span class="op">+</span> <span class="fn">json_stringify</span><span class="op">(</span>parsed2<span class="op">))</span>
+    let obj: Array = json_object(keys, vals)
+    let serializado: String = json_stringify(obj)
+    print("Objeto: " + serializado)
 
-    <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">Objeto: {"name":"Alice","age":30,"activo":true}
+    // Construir un array JSON
+    let items: Array = []
+    items.push(json_number(10))
+    items.push(json_number(20))
+    items.push(json_number(30))
+    let arr: Array = json_array(items)
+    print("Array:  " + json_stringify(arr))
+
+    // Parsear un número
+    let parsed: Array = json_parse("42")
+    print("Tipo: " + json_type(parsed))
+    let val: int = parsed[1]
+    print("Valor: " + int_to_string(val))
+
+    // Parsear un array de números
+    let parsed2: Array = json_parse("[1,2,3]")
+    print("Array parseado: " + json_stringify(parsed2))
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Objeto: {"name":"Alice","age":30,"activo":true}
 Array:  [10,20,30]
 Tipo: number
 Valor: 42
-Array parseado: [1,2,3]</pre></div>
-</div>
-<h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p>JSON values are constructed with typed builder functions: <code>json_string</code>, <code>json_number</code>, <code>json_bool</code>, <code>json_object</code>, and <code>json_array</code>. Each returns a tagged <code>Array</code> where <code>node[0]</code> is the type string (e.g. <code>"number"</code>) and <code>node[1]</code> is the payload. This uniform representation makes recursive traversal straightforward.</p>
-<p><code>json_stringify</code> serializes any JSON node back to a compact string. <code>json_parse</code> does the reverse — it accepts a JSON string and returns the same tagged-array structure, which you can then inspect with <code>json_type</code> or index directly.</p>
-<p>For reading nested fields, you would chain array indexing: <code>obj[1][1]</code> reaches the first value in a JSON object node. The next example (16) focuses on building complex nested structures for serialization.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/14-env-vars.html"><span class="label">← Previous</span><span class="doc-nav-name">Environment Variables</span></a>
-<a class="doc-nav-link doc-nav-next" href="/by-example/16-json-serialize.html"><span class="label">Next →</span><span class="doc-nav-name">JSON Serialize</span></a>
-</nav>
-<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+Array parseado: [1,2,3]</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explanation</h2>
+    <p>JSON values are constructed with typed builder functions: <code>json_string</code>, <code>json_number</code>, <code>json_bool</code>, <code>json_object</code>, and <code>json_array</code>. Each returns a tagged <code>Array</code> where <code>node[0]</code> is the type string (e.g. <code>"number"</code>) and <code>node[1]</code> is the payload. This uniform representation makes recursive traversal straightforward.</p>
+    <p><code>json_stringify</code> serializes any JSON node back to a compact string. <code>json_parse</code> does the reverse — it accepts a JSON string and returns the same tagged-array structure, which you can then inspect with <code>json_type</code> or index directly.</p>
+    <p>For reading nested fields, you would chain array indexing: <code>obj[1][1]</code> reaches the first value in a JSON object node. The next example (16) focuses on building complex nested structures for serialization.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/14-env-vars.html">← Previous</a>
+        <a href="/by-example/16-json-serialize.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/15-json-parse.nx">examples/by-example/15-json-parse.nx</a></small></p>
+</main>
+
 </body>
 </html>

@@ -1,80 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Environment Variables — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environment Variables — Nyx by example</title>
+<meta name="description" content="Reading env vars with getenv and getenv_default.">
+<link rel="canonical" href="https://nyxlang.com/by-example/14-env-vars.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/14-env-vars.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/14-env-vars.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/14-env-vars.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/14-env-vars.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">14</span> / Input, output and data</span></p>
+<h1 class="doc-title">Environment Variables</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx exposes the process environment through two built-in functions: <code>getenv</code> returns a variable's value or an empty string if it is not set, while <code>getenv_default</code> lets you supply a fallback value, making configuration code safer and more readable.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">14-env-vars.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/14-env-vars.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Variables de entorno: getenv(), getenv_default()</span>
 
-    <h1>Environment Variables</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// getenv retorna el valor o &quot;&quot; si no existe</span>
+    <span class="kw">let</span> home<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getenv</span><span class="op">(</span><span class="str">&quot;HOME&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;HOME=&quot;</span> <span class="op">+</span> home<span class="op">)</span>
 
-    <p>Nyx exposes the process environment through two built-in functions: <code>getenv</code> returns a variable's value or an empty string if it is not set, while <code>getenv_default</code> lets you supply a fallback value, making configuration code safer and more readable.</p>
+    <span class="kw">let</span> path<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getenv</span><span class="op">(</span><span class="str">&quot;PATH&quot;</span><span class="op">)</span>
+    <span class="cm">// Mostrar solo los primeros 40 chars para no saturar la salida</span>
+    <span class="kw">if</span> path<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">40</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;PATH=&quot;</span> <span class="op">+</span> path<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">40</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;...&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;PATH=&quot;</span> <span class="op">+</span> path<span class="op">)</span>
+    <span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Variables de entorno: getenv(), getenv_default()
+    <span class="cm">// getenv_default: retorna el segundo argumento si la variable no existe</span>
+    <span class="kw">let</span> mi_var<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getenv_default</span><span class="op">(</span><span class="str">&quot;MI_VAR_NX&quot;</span><span class="op">,</span> <span class="str">&quot;valor_por_defecto&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;MI_VAR_NX=&quot;</span> <span class="op">+</span> mi_var<span class="op">)</span>
 
-fn main() -> int {
-    // getenv retorna el valor o "" si no existe
-    let home: String = getenv("HOME")
-    print("HOME=" + home)
+    <span class="kw">let</span> usuario<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getenv_default</span><span class="op">(</span><span class="str">&quot;USER&quot;</span><span class="op">,</span> <span class="str">&quot;desconocido&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;USER=&quot;</span> <span class="op">+</span> usuario<span class="op">)</span>
 
-    let path: String = getenv("PATH")
-    // Mostrar solo los primeros 40 chars para no saturar la salida
-    if path.length() > 40 {
-        print("PATH=" + path.substring(0, 40) + "...")
-    } else {
-        print("PATH=" + path)
-    }
-
-    // getenv_default: retorna el segundo argumento si la variable no existe
-    let mi_var: String = getenv_default("MI_VAR_NX", "valor_por_defecto")
-    print("MI_VAR_NX=" + mi_var)
-
-    let usuario: String = getenv_default("USER", "desconocido")
-    print("USER=" + usuario)
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">HOME=/home/alice
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">HOME=/home/alice
 PATH=/usr/local/bin:/usr/bin:/bin...
 MI_VAR_NX=valor_por_defecto
-USER=alice</pre>
-
-    <h2>Explanation</h2>
-    <p><code>getenv(name)</code> wraps the POSIX <code>getenv(3)</code> call and converts the result to a Nyx <code>String</code>. If the variable is not set in the process environment, it returns an empty string <code>""</code> rather than crashing — this makes it safe to call unconditionally.</p>
-    <p><code>getenv_default(name, fallback)</code> is a convenience wrapper that returns the variable's value when it exists, or <code>fallback</code> otherwise. This pattern is common in twelve-factor applications where every configuration value should have a documented default.</p>
-    <p>The <code>PATH</code> variable is often very long, so the example trims it to 40 characters using <code>.substring(0, 40)</code> to keep the output readable. The <code>.length()</code> check before slicing avoids an out-of-bounds error when <code>PATH</code> happens to be shorter than expected.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/13-cli-args.html">← Previous</a>
-        <a href="/by-example/15-json-parse.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/14-env-vars.nx">examples/by-example/14-env-vars.nx</a></small></p>
+USER=alice</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>getenv(name)</code> wraps the POSIX <code>getenv(3)</code> call and converts the result to a Nyx <code>String</code>. If the variable is not set in the process environment, it returns an empty string <code>""</code> rather than crashing — this makes it safe to call unconditionally.</p>
+<p><code>getenv_default(name, fallback)</code> is a convenience wrapper that returns the variable's value when it exists, or <code>fallback</code> otherwise. This pattern is common in twelve-factor applications where every configuration value should have a documented default.</p>
+<p>The <code>PATH</code> variable is often very long, so the example trims it to 40 characters using <code>.substring(0, 40)</code> to keep the output readable. The <code>.length()</code> check before slicing avoids an out-of-bounds error when <code>PATH</code> happens to be shorter than expected.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/13-cli-args.html"><span class="label">← Previous</span><span class="doc-nav-name">CLI Arguments</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/15-json-parse.html"><span class="label">Next →</span><span class="doc-nav-name">JSON Parse</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

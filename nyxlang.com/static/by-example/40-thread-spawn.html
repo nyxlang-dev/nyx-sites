@@ -1,86 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thread Spawn — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thread Spawn — Nyx by example</title>
+<meta name="description" content="Running functions concurrently with thread_spawn.">
+<link rel="canonical" href="https://nyxlang.com/by-example/40-thread-spawn.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/40-thread-spawn.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/40-thread-spawn.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/40-thread-spawn.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/40-thread-spawn.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">40</span> / Advanced</span></p>
+<h1 class="doc-title">Thread Spawn</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>thread_spawn(fn)</code> starts a new OS thread that runs the given function concurrently. <code>thread_join(handle)</code> blocks the calling thread until the spawned thread finishes and returns its integer result. This is the foundational concurrency primitive in Nyx.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">40-thread-spawn.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/40-thread-spawn.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Threads: thread_spawn() para crear un hilo, thread_join() para esperar</span>
 
-    <h1>Thread Spawn</h1>
+<span class="kw">fn</span> <span class="fn">tarea_hilo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;from thread&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">42</span>
+<span class="op">}</span>
 
-    <p><code>thread_spawn(fn)</code> starts a new OS thread that runs the given function concurrently. <code>thread_join(handle)</code> blocks the calling thread until the spawned thread finishes and returns its integer result. This is the foundational concurrency primitive in Nyx.</p>
+<span class="kw">fn</span> <span class="fn">calcular_cuadrado</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">7</span>
+    <span class="kw">return</span> n <span class="op">*</span> n
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Threads: thread_spawn() para crear un hilo, thread_join() para esperar
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;from main (antes de spawn)&quot;</span><span class="op">)</span>
 
-fn tarea_hilo() -> int {
-    print("from thread")
-    return 42
-}
+    <span class="cm">// Crear un thread y esperar su resultado</span>
+    <span class="kw">let</span> handle<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span><span class="op">(</span>tarea_hilo<span class="op">)</span>
+    <span class="kw">let</span> resultado<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span><span class="op">(</span>handle<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;thread retorno: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>resultado<span class="op">))</span>
 
-fn calcular_cuadrado() -> int {
-    let n: int = 7
-    return n * n
-}
+    <span class="cm">// Segundo thread con cálculo</span>
+    <span class="kw">let</span> h2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span><span class="op">(</span>calcular_cuadrado<span class="op">)</span>
+    <span class="kw">let</span> r2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_join</span><span class="op">(</span>h2<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;7^2 = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r2<span class="op">))</span>
 
-fn main() -> int {
-    print("from main (antes de spawn)")
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;from main (despues de join)&quot;</span><span class="op">)</span>
 
-    // Crear un thread y esperar su resultado
-    let handle: int = thread_spawn(tarea_hilo)
-    let resultado: int = thread_join(handle)
-    print("thread retorno: " + int_to_string(resultado))
-
-    // Segundo thread con cálculo
-    let h2: int = thread_spawn(calcular_cuadrado)
-    let r2: int = thread_join(h2)
-    print("7^2 = " + int_to_string(r2))
-
-    print("from main (despues de join)")
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">from main (antes de spawn)
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">from main (antes de spawn)
 from thread
 thread retorno: 42
 7^2 = 49
-from main (despues de join)</pre>
-
-    <h2>Explanation</h2>
-    <p><code>thread_spawn</code> accepts a function reference (not a closure with captures) and returns an opaque integer handle representing the running thread. The spawned function must have the signature <code>() -> int</code>. Execution of <code>main</code> and the spawned thread proceeds in parallel — in this example the thread prints before <code>thread_join</code> returns, but the exact interleaving is OS-dependent.</p>
-    <p><code>thread_join(handle)</code> waits for the thread to finish and retrieves its return value as an <code>int</code>. This is the standard fork-join pattern: spawn work, do other things (or spawn more threads), then collect results. The return value of <code>tarea_hilo</code> is <code>42</code>, and <code>calcular_cuadrado</code> returns <code>7 * 7 = 49</code>.</p>
-    <p>Threads in Nyx run on the OS thread pool and are integrated with the Boehm garbage collector (<code>GC_THREADS</code> is enabled in the runtime). For higher-level concurrency patterns, see the <code>spawn</code>/<code>select</code> goroutine primitives and the M:N work-stealing scheduler in later recipes.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/39-random-uuid.html">← Previous</a>
-        <a href="/by-example/41-base64.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/40-thread-spawn.nx">examples/by-example/40-thread-spawn.nx</a></small></p>
+from main (despues de join)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>thread_spawn</code> accepts a function reference (not a closure with captures) and returns an opaque integer handle representing the running thread. The spawned function must have the signature <code>() -> int</code>. Execution of <code>main</code> and the spawned thread proceeds in parallel — in this example the thread prints before <code>thread_join</code> returns, but the exact interleaving is OS-dependent.</p>
+<p><code>thread_join(handle)</code> waits for the thread to finish and retrieves its return value as an <code>int</code>. This is the standard fork-join pattern: spawn work, do other things (or spawn more threads), then collect results. The return value of <code>tarea_hilo</code> is <code>42</code>, and <code>calcular_cuadrado</code> returns <code>7 * 7 = 49</code>.</p>
+<p>Threads in Nyx run on the OS thread pool and are integrated with the Boehm garbage collector (<code>GC_THREADS</code> is enabled in the runtime). For higher-level concurrency patterns, see the <code>spawn</code>/<code>select</code> goroutine primitives and the M:N work-stealing scheduler in later recipes.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/39-random-uuid.html"><span class="label">← Previous</span><span class="doc-nav-name">Random Numbers and UUID</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/41-base64.html"><span class="label">Next →</span><span class="doc-nav-name">Base64</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

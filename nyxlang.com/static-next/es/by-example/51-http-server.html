@@ -1,98 +1,76 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Servidor HTTP — Nyx por ejemplo</title>
-<meta name="description" content="Servidor mínimo con http_serve y enrutamiento de peticiones.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/51-http-server.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/51-http-server.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/51-http-server.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/51-http-server.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor HTTP — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/51-http-server.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">51</span> / Redes</span></p>
-<h1 class="doc-title">Servidor HTTP</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>Un servidor HTTP mínimo usando <code>http_serve</code> de <code>std/http</code>. La función handler recibe un array de request ya parseado <code>[type, method, path, headers, body]</code> y retorna un string de respuesta HTTP construido con <code>http_response</code>. El servidor se bloquea en un bucle de accept, manejando una petición a la vez.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">51-http-server.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/51-http-server.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Minimal HTTP server using std/http</span>
-<span class="cm">// Servidor HTTP mínimo usando std/http</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+    <h1>Servidor HTTP</h1>
 
-<span class="kw">fn</span> <span class="fn">on_request</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
-    <span class="kw">let</span> method<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> req<span class="op">[</span><span class="num">1</span><span class="op">]</span>
-    <span class="kw">let</span> path<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> req<span class="op">[</span><span class="num">2</span><span class="op">]</span>
+    <p>Un servidor HTTP mínimo usando <code>http_serve</code> de <code>std/http</code>. La función handler recibe un array de request ya parseado <code>[type, method, path, headers, body]</code> y retorna un string de respuesta HTTP construido con <code>http_response</code>. El servidor se bloquea en un bucle de accept, manejando una petición a la vez.</p>
 
-    <span class="kw">if</span> path <span class="op">==</span> <span class="str">&quot;/&quot;</span> <span class="op">{</span>
-        <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;Hello from Nyx!&quot;</span><span class="op">)</span>
-    <span class="op">}</span>
-    <span class="kw">if</span> path <span class="op">==</span> <span class="str">&quot;/time&quot;</span> <span class="op">{</span>
-        <span class="kw">let</span> t<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time</span><span class="op">()</span>
-        <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;timestamp: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t<span class="op">))</span>
-    <span class="op">}</span>
-    <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">404</span><span class="op">,</span> <span class="str">&quot;not found: &quot;</span> <span class="op">+</span> path<span class="op">)</span>
-<span class="op">}</span>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// Minimal HTTP server using std/http</span>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listening on :8080&quot;</span><span class="op">)</span>
-    <span class="cm">// http_serve blocks, accepting connections in a loop</span>
-    <span class="cm">// Each request calls on_request and sends the response</span>
-    <span class="cm">// Siempre se chequea el retorno del bind: si el puerto esta ocupado,</span>
-    <span class="cm">// http_serve devuelve -1 y el programa seguiria &quot;corriendo&quot; sin servidor.</span>
-    <span class="kw">if</span> <span class="fn">http_serve</span><span class="op">(</span><span class="num">8080</span><span class="op">,</span> on_request<span class="op">)</span> <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo bindear el puerto 8080&quot;</span><span class="op">)</span>
-        <span class="kw">return</span> <span class="num">1</span>
-    <span class="op">}</span>
+<span class="kw">import</span> <span class="str">"std/http"</span>
+
+<span class="kw">fn</span> <span class="fn">on_request</span>(req: <span class="ty">Array</span>) -> <span class="ty">String</span> {
+    <span class="kw">let</span> method: <span class="ty">String</span> = req[<span class="num">1</span>]
+    <span class="kw">let</span> path: <span class="ty">String</span> = req[<span class="num">2</span>]
+
+    <span class="kw">if</span> path == <span class="str">"/"</span> {
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"Hello from Nyx!"</span>)
+    }
+    <span class="kw">if</span> path == <span class="str">"/time"</span> {
+        <span class="kw">let</span> t: <span class="ty">int</span> = time()
+        <span class="kw">return</span> http_response(<span class="num">200</span>, <span class="str">"timestamp: "</span> + int_to_string(t))
+    }
+    <span class="kw">return</span> http_response(<span class="num">404</span>, <span class="str">"not found: "</span> + path)
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    print(<span class="str">"listening on :8080"</span>)
+    http_serve(<span class="num">8080</span>, on_request)
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">listening on :8080</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>http_serve(port, handler)</code> escucha en el puerto indicado y entra en un bucle de accept infinito. Para cada conexión, parsea la petición HTTP en un array, llama a la función handler, envía la respuesta y cierra la conexión. Solo retorna en caso de fallo — un valor negativo cuando el puerto no se puede enlazar —, así que este ejemplo revisa ese retorno y sale con estado 1 en vez de aparentar que está sirviendo.</p>
-<p><code>http_response(status, body)</code> construye una respuesta HTTP/1.1 correctamente formateada con los headers Content-Length y Connection: close. Para headers personalizados (como Content-Type: application/json), usa <code>http_response_with_headers</code>.</p>
-<p>Para servir con múltiples hilos, usa <code>http_serve_mt(port, num_workers, handler)</code>, que despacha las conexiones a un pool de hilos mediante channels — el mismo camino que toma un servidor HTTP de producción escrito en Nyx.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/50-http-post.html"><span class="label">← Anterior</span><span class="doc-nav-name">HTTP POST</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/52-http-middleware.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Middleware HTTP</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+}</code></pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Salida</h2>
+    <pre class="output">listening on :8080</pre>
+
+    <h2>Explicación</h2>
+    <p><code>http_serve(port, handler)</code> escucha en el puerto indicado y entra en un bucle de accept infinito. Para cada conexión, parsea la petición HTTP en un array, llama a la función handler, envía la respuesta y cierra la conexión.</p>
+    <p><code>http_response(status, body)</code> construye una respuesta HTTP/1.1 correctamente formateada con los headers Content-Length y Connection: close. Para headers personalizados (como Content-Type: application/json), usa <code>http_response_with_headers</code>.</p>
+    <p>Para servir con múltiples hilos, usa <code>http_serve_mt(port, num_workers, handler)</code>, que despacha las conexiones a un pool de hilos mediante channels — así es como nyx-serve logra 73K req/s.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/50-http-post.html">← Anterior</a>
+        <a href="/es/by-example/52-http-middleware.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/51-http-server.nx">examples/by-example/51-http-server.nx</a></small></p>
+</main>
+
 </body>
 </html>

@@ -1,90 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CSV Parsing — Nyx by example</title>
-<meta name="description" content="Splitting lines and fields to process tabular data.">
-<link rel="canonical" href="https://nyxlang.com/by-example/18-csv.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/18-csv.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/18-csv.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/18-csv.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Parsing — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Main">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/">NYX</a>
-<ul class="nav-links">
-<li><a href="/#install">Install</a></li>
-<li><a href="/docs/">Docs</a></li>
-<li><a href="/by-example/">By example</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/es/by-example/18-csv.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
-</div>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/docs/">Docs</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">18</span> / Input, output and data</span></p>
-<h1 class="doc-title">CSV Parsing</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p>Comma-separated values are one of the most common data exchange formats. Nyx makes parsing them straightforward: split the text into lines with <code>.split("\n")</code>, then split each line into fields with <code>.split(",")</code>. The <code>std/csv</code> import provides additional utilities for quoted fields and edge cases.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">18-csv.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/18-csv.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// 18: CSV parsing — split lines and fields manually</span>
-<span class="kw">import</span> <span class="str">&quot;std/csv&quot;</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">let</span> data<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;name,age,city\nAlice,30,NYC\nBob,25,LA\nCharlie,35,SF&quot;</span>
-    <span class="kw">let</span> rows<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> data<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">)</span>
+    <h1>CSV Parsing</h1>
 
-    <span class="cm">// Skip header, print each row parsed</span>
-    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
-    <span class="kw">while</span> i <span class="op">&lt;</span> rows<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
-        <span class="kw">let</span> row<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> rows<span class="op">[</span>i<span class="op">]</span>
-        <span class="kw">let</span> fields<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> row<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;,&quot;</span><span class="op">)</span>
-        <span class="kw">let</span> name<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> fields<span class="op">[</span><span class="num">0</span><span class="op">]</span>
-        <span class="kw">let</span> age<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> fields<span class="op">[</span><span class="num">1</span><span class="op">]</span>
-        <span class="kw">let</span> city<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> fields<span class="op">[</span><span class="num">2</span><span class="op">]</span>
-        <span class="fn">print</span><span class="op">(</span>name <span class="op">+</span> <span class="str">&quot; is &quot;</span> <span class="op">+</span> age <span class="op">+</span> <span class="str">&quot; from &quot;</span> <span class="op">+</span> city<span class="op">)</span>
-        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
-    <span class="op">}</span>
+    <p>Comma-separated values are one of the most common data exchange formats. Nyx makes parsing them straightforward: split the text into lines with <code>.split("\n")</code>, then split each line into fields with <code>.split(",")</code>. The <code>std/csv</code> import provides additional utilities for quoted fields and edge cases.</p>
 
-    <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">Alice is 30 from NYC
+    <h2>Code</h2>
+    <pre><code>// 18: CSV parsing — split lines and fields manually
+import "std/csv"
+
+fn main() -> int {
+    let data: String = "name,age,city\nAlice,30,NYC\nBob,25,LA\nCharlie,35,SF"
+    let rows: Array = data.split("\n")
+
+    // Skip header, print each row parsed
+    var i: int = 1
+    while i < rows.length() {
+        let row: String = rows[i]
+        let fields: Array = row.split(",")
+        let name: String = fields[0]
+        let age: String = fields[1]
+        let city: String = fields[2]
+        print(name + " is " + age + " from " + city)
+        i = i + 1
+    }
+
+    return 0
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">Alice is 30 from NYC
 Bob is 25 from LA
-Charlie is 35 from SF</pre></div>
-</div>
-<h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p><code>.split(delimiter)</code> is a built-in <code>String</code> method that splits a string at every occurrence of the given delimiter and returns an <code>Array</code> of <code>String</code>. Splitting on <code>"\n"</code> gives one element per CSV row; splitting each row on <code>","</code> gives one element per field.</p>
-<p>The loop starts at index <code>1</code> to skip the header row. This is a common idiom for CSV files where the first line contains column names rather than data. If you need to process the header (for example, to build a map of column name to index), you would read <code>rows[0]</code> separately before the loop.</p>
-<p>This approach works well for simple CSV without quoted fields. For production CSV that may contain commas inside quoted strings or newlines inside fields, use the full parser from <code>std/csv</code>, which handles RFC 4180 quoting rules correctly.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/17-regex.html"><span class="label">← Previous</span><span class="doc-nav-name">Regular Expressions</span></a>
-<a class="doc-nav-link doc-nav-next" href="/by-example/19-datetime.html"><span class="label">Next →</span><span class="doc-nav-name">Date and Time</span></a>
-</nav>
-<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+Charlie is 35 from SF</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explanation</h2>
+    <p><code>.split(delimiter)</code> is a built-in <code>String</code> method that splits a string at every occurrence of the given delimiter and returns an <code>Array</code> of <code>String</code>. Splitting on <code>"\n"</code> gives one element per CSV row; splitting each row on <code>","</code> gives one element per field.</p>
+    <p>The loop starts at index <code>1</code> to skip the header row. This is a common idiom for CSV files where the first line contains column names rather than data. If you need to process the header (for example, to build a map of column name to index), you would read <code>rows[0]</code> separately before the loop.</p>
+    <p>This approach works well for simple CSV without quoted fields. For production CSV that may contain commas inside quoted strings or newlines inside fields, use the full parser from <code>std/csv</code>, which handles RFC 4180 quoting rules correctly.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/17-regex.html">← Previous</a>
+        <a href="/by-example/19-datetime.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/18-csv.nx">examples/by-example/18-csv.nx</a></small></p>
+</main>
+
 </body>
 </html>

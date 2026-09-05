@@ -1,102 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TOML Config — Nyx by example</title>
-<meta name="description" content="Parsing configuration strings with std/toml.">
-<link rel="canonical" href="https://nyxlang.com/by-example/43-toml-config.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/43-toml-config.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/43-toml-config.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/43-toml-config.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOML Config — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Main">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/">NYX</a>
-<ul class="nav-links">
-<li><a href="/#install">Install</a></li>
-<li><a href="/docs/">Docs</a></li>
-<li><a href="/by-example/">By example</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/es/by-example/43-toml-config.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
-</div>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/docs/">Docs</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">43</span> / Networking</span></p>
-<h1 class="doc-title">TOML Config</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>std/toml</code> parses TOML configuration strings into a flat <code>Map</code> with dot-notation keys. TOML is the configuration format used by <code>nyx.toml</code> (the package manager manifest) and by any service that keeps its settings in a <code>.toml</code> file.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">43-toml-config.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/43-toml-config.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// Parsing TOML configuration strings</span>
-<span class="cm">// Parseo de cadenas de configuración TOML</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/toml&quot;</span>
+    <h1>TOML Config</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">let</span> config<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;[server]\nhost = \&quot;localhost\&quot;\nport = 8080\ndebug = true\n\n[database]\npath = \&quot;/var/data/app.db\&quot;\nmax_connections = 50&quot;</span>
+    <p><code>std/toml</code> parses TOML configuration strings into a flat <code>Map</code> with dot-notation keys. TOML is the configuration format used by <code>nyx.toml</code> (the package manager manifest) and <code>proxy.toml</code> (nyx-proxy configuration).</p>
 
-    <span class="kw">let</span> parsed<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">toml_parse</span><span class="op">(</span>config<span class="op">)</span>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// Parsing TOML configuration strings</span>
 
-    <span class="cm">// Get string values with defaults</span>
-    <span class="kw">let</span> host<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">toml_get</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;server.host&quot;</span><span class="op">,</span> <span class="str">&quot;0.0.0.0&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;host: &quot;</span> <span class="op">+</span> host<span class="op">)</span>
+<span class="kw">import</span> <span class="str">"std/toml"</span>
 
-    <span class="cm">// Get integer values</span>
-    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">toml_get_int</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;server.port&quot;</span><span class="op">,</span> <span class="num">3000</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;port: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>port<span class="op">))</span>
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> config: <span class="ty">String</span> = <span class="str">"[server]\nhost = \"localhost\"\nport = 8080\ndebug = true\n\n[database]\npath = \"/var/data/app.db\"\nmax_connections = 50"</span>
 
-    <span class="cm">// Get boolean values</span>
-    <span class="kw">let</span> debug<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="fn">toml_get_bool</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;server.debug&quot;</span><span class="op">,</span> <span class="kw">false</span><span class="op">)</span>
-    <span class="kw">if</span> debug <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;debug mode enabled&quot;</span><span class="op">)</span>
-    <span class="op">}</span>
+    <span class="kw">let</span> parsed: <span class="ty">Map</span> = toml_parse(config)
 
-    <span class="cm">// Check if a key exists</span>
-    <span class="kw">if</span> <span class="fn">toml_has</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;database.path&quot;</span><span class="op">)</span> <span class="op">{</span>
-        <span class="kw">let</span> db_path<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">toml_get</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;database.path&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span>
-        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;db: &quot;</span> <span class="op">+</span> db_path<span class="op">)</span>
-    <span class="op">}</span>
+    <span class="kw">let</span> host: <span class="ty">String</span> = toml_get(parsed, <span class="str">"server.host"</span>, <span class="str">"0.0.0.0"</span>)
+    print(<span class="str">"host: "</span> + host)
+
+    <span class="kw">let</span> port: <span class="ty">int</span> = toml_get_int(parsed, <span class="str">"server.port"</span>, <span class="num">3000</span>)
+    print(<span class="str">"port: "</span> + int_to_string(port))
+
+    <span class="kw">let</span> debug: <span class="ty">bool</span> = toml_get_bool(parsed, <span class="str">"server.debug"</span>, <span class="kw">false</span>)
+    <span class="kw">if</span> debug {
+        print(<span class="str">"debug mode enabled"</span>)
+    }
+
+    <span class="kw">if</span> toml_has(parsed, <span class="str">"database.path"</span>) {
+        <span class="kw">let</span> db_path: <span class="ty">String</span> = toml_get(parsed, <span class="str">"database.path"</span>, <span class="str">""</span>)
+        print(<span class="str">"db: "</span> + db_path)
+    }
 
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">host: localhost
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">host: localhost
 port: 8080
 debug mode enabled
-db: /var/data/app.db</pre></div>
-</div>
-<h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p><code>toml_parse</code> reads a TOML string and returns a <code>Map&lt;String&gt;</code> where section keys use dot notation: <code>[server]</code> + <code>host = "localhost"</code> becomes <code>"server.host" → "localhost"</code>. All values are stored as strings internally.</p>
-<p>Typed accessors — <code>toml_get</code> (string), <code>toml_get_int</code>, <code>toml_get_bool</code> — convert from the string representation and accept a default value if the key is missing. <code>toml_has</code> checks whether a key exists without reading its value.</p>
-<p>This is the same parser <code>nyx build</code> uses to read <code>nyx.toml</code> project manifests, and the one you reach for when a server has to load its routing table from a <code>.toml</code> file at startup.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/42-url-encode.html"><span class="label">← Previous</span><span class="doc-nav-name">URL Encode</span></a>
-<a class="doc-nav-link doc-nav-next" href="/by-example/44-msgpack.html"><span class="label">Next →</span><span class="doc-nav-name">MessagePack</span></a>
-</nav>
-<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+db: /var/data/app.db</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explanation</h2>
+    <p><code>toml_parse</code> reads a TOML string and returns a <code>Map&lt;String&gt;</code> where section keys use dot notation: <code>[server]</code> + <code>host = "localhost"</code> becomes <code>"server.host" → "localhost"</code>. All values are stored as strings internally.</p>
+    <p>Typed accessors — <code>toml_get</code> (string), <code>toml_get_int</code>, <code>toml_get_bool</code> — convert from the string representation and accept a default value if the key is missing. <code>toml_has</code> checks whether a key exists without reading its value.</p>
+    <p>This is the same parser used by <code>nyx build</code> to read <code>nyx.toml</code> project manifests and by <code>nyx-proxy</code> to read its routing configuration.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/42-url-encode.html">← Previous</a>
+        <a href="/by-example/44-msgpack.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/43-toml-config.nx">examples/by-example/43-toml-config.nx</a></small></p>
+</main>
+
 </body>
 </html>

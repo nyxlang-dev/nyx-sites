@@ -1,76 +1,105 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminal Raw — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminal Raw — Nyx por ejemplo</title>
+<meta name="description" content="Entrada carácter por carácter con raw_mode_enter.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/69-raw-terminal.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/69-raw-terminal.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/69-raw-terminal.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/69-raw-terminal.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/69-raw-terminal.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
-<main class="book-content">
-    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
-    <h1>Terminal Raw</h1>
-    <p><code>raw_mode_enter()</code> desactiva el buffering de línea y el echo, permitiendo entrada carácter por carácter. <code>read_byte()</code> lee un solo byte. Siempre hay que llamar a <code>raw_mode_exit()</code> para restaurar el terminal. Así es como nyx-edit implementa su editor de texto.</p>
-    <h2>Código</h2>
-    <pre><code><span class="cm">// Raw terminal — reading keypresses without line buffering</span>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">69</span> / Sistemas</span></p>
+<h1 class="doc-title">Terminal Raw</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>raw_mode_enter()</code> desactiva el buffering de línea y el echo, permitiendo entrada carácter por carácter. <code>read_byte()</code> lee un solo byte. Siempre hay que llamar a <code>raw_mode_exit()</code> para restaurar el terminal. Así es como un editor de texto de pantalla completa lee la entrada.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">69-raw-terminal.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/69-raw-terminal.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Raw terminal — reading keypresses without line buffering</span>
 <span class="cm">// Terminal raw — leer teclas sin buffer de línea</span>
 
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="cm">// Check if we have a terminal</span>
-    <span class="kw">if</span> <span class="kw">not</span> isatty(<span class="num">0</span>) {
-        print(<span class="str">"not a terminal — skipping raw mode demo"</span>)
-        print(<span class="str">"run interactively to see keypress reading"</span>)
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Check if we have a terminal.</span>
+    <span class="cm">// `not` aplicado directo a la llamada de un builtin genera IR invalido</span>
+    <span class="cm">// (xor i1 sobre un i64): se liga primero a un bool con tipo declarado.</span>
+    <span class="kw">let</span> tty<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="fn">isatty</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+    <span class="kw">if</span> <span class="kw">not</span> tty <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;not a terminal — skipping raw mode demo&quot;</span><span class="op">)</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;run interactively to see keypress reading&quot;</span><span class="op">)</span>
         <span class="kw">return</span> <span class="num">0</span>
-    }
+    <span class="op">}</span>
 
-    print(<span class="str">"terminal size: "</span> + int_to_string(term_cols()) + <span class="str">"x"</span> + int_to_string(term_rows()))
-    print(<span class="str">"press any key (or 'q' to quit):"</span>)
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;terminal size: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">term_cols</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">term_rows</span><span class="op">()))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;press any key (or &#x27;q&#x27; to quit):&quot;</span><span class="op">)</span>
 
     <span class="cm">// Enter raw mode — disables echo and line buffering</span>
-    raw_mode_enter()
+    <span class="fn">raw_mode_enter</span><span class="op">()</span>
 
-    <span class="kw">var</span> running: <span class="ty">bool</span> = <span class="kw">true</span>
-    <span class="kw">while</span> running {
-        <span class="kw">let</span> byte: <span class="ty">int</span> = read_byte()
-        <span class="kw">if</span> byte == <span class="num">113</span> {
-            <span class="cm">// 'q' pressed</span>
-            running = <span class="kw">false</span>
-        } <span class="kw">else</span> {
+    <span class="kw">var</span> running<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">while</span> running <span class="op">{</span>
+        <span class="kw">let</span> byte<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">read_byte</span><span class="op">()</span>
+        <span class="kw">if</span> byte <span class="op">==</span> <span class="num">113</span> <span class="op">{</span>
+            <span class="cm">// &#x27;q&#x27; pressed</span>
+            running <span class="op">=</span> <span class="kw">false</span>
+        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
             <span class="cm">// In raw mode, we need to manually handle output</span>
-            print(<span class="str">"key: "</span> + int_to_string(byte))
-        }
-    }
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;key: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>byte<span class="op">))</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
 
     <span class="cm">// Always restore terminal state</span>
-    raw_mode_exit()
-    print(<span class="str">"raw mode exited"</span>)
+    <span class="fn">raw_mode_exit</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;raw mode exited&quot;</span><span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-    <h2>Salida</h2>
-    <pre class="output">not a terminal — skipping raw mode demo
-run interactively to see keypress reading</pre>
-    <h2>Explicación</h2>
-    <p><code>raw_mode_enter()</code> pone el terminal en modo raw desactivando la entrada canónica (con buffer de línea) y el echo. En este modo, cada pulsación de tecla está disponible de inmediato vía <code>read_byte()</code> sin esperar Enter.</p>
-    <p><code>read_byte()</code> lee un solo byte de stdin, devolviendo su valor entero. El ASCII 113 es el carácter 'q'. Teclas especiales como las flechas producen secuencias de escape (múltiples bytes que comienzan con 27).</p>
-    <p><code>raw_mode_exit()</code> restaura el terminal a su estado previo. Siempre hay que llamar a esto antes de salir, incluso ante un error — de lo contrario el terminal quedará en modo raw y se volverá inutilizable. <code>term_cols()</code> y <code>term_rows()</code> devuelven las dimensiones actuales del terminal.</p>
-    <div class="book-nav">
-        <a href="/es/by-example/68-process-control.html">&larr; Anterior</a>
-        <a href="/es/by-example/70-shebang-script.html">Siguiente &rarr;</a>
-    </div>
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/69-raw-terminal.nx">examples/by-example/69-raw-terminal.nx</a></small></p>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">not a terminal — skipping raw mode demo
+run interactively to see keypress reading</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>raw_mode_enter()</code> pone el terminal en modo raw desactivando la entrada canónica (con buffer de línea) y el echo. En este modo, cada pulsación de tecla está disponible de inmediato vía <code>read_byte()</code> sin esperar Enter.</p>
+<p><code>read_byte()</code> lee un solo byte de stdin, devolviendo su valor entero. El ASCII 113 es el carácter 'q'. Teclas especiales como las flechas producen secuencias de escape (múltiples bytes que comienzan con 27).</p>
+<p><code>raw_mode_exit()</code> restaura el terminal a su estado previo. Siempre hay que llamar a esto antes de salir, incluso ante un error — de lo contrario el terminal quedará en modo raw y se volverá inutilizable. <code>term_cols()</code> y <code>term_rows()</code> devuelven las dimensiones actuales del terminal.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/68-process-control.html"><span class="label">← Anterior</span><span class="doc-nav-name">Control de Procesos</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/70-shebang-script.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Script Shebang</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

@@ -1,97 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WebSocket — Nyx by example</title>
-<meta name="description" content="RFC 6455 framing, parsing, and handshake responses.">
-<link rel="canonical" href="https://nyxlang.com/by-example/53-websocket.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/53-websocket.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/53-websocket.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/53-websocket.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket — Nyx by Example</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Main">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/">NYX</a>
-<ul class="nav-links">
-<li><a href="/#install">Install</a></li>
-<li><a href="/docs/">Docs</a></li>
-<li><a href="/by-example/">By example</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/es/by-example/53-websocket.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
-</div>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/docs/">Docs</a>
+        <a href="/learn/">Learn</a>
+        <a href="/by-example/">By Example</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">53</span> / Networking</span></p>
-<h1 class="doc-title">WebSocket</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>std/websocket</code> implements RFC 6455 WebSocket framing. <code>ws_frame</code> wraps a text payload into a WebSocket frame, <code>ws_parse</code> extracts the payload from a frame, and <code>ws_handshake_response</code> generates the HTTP 101 Upgrade response required to establish a WebSocket connection.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">53-websocket.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/53-websocket.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// WebSocket framing — build and parse frames (RFC 6455)</span>
-<span class="cm">// Framing WebSocket — construir y parsear frames</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/by-example/">Nyx by Example</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/websocket&quot;</span>
+    <h1>WebSocket</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Build a WebSocket text frame</span>
-    <span class="kw">let</span> payload<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hello, WebSocket!&quot;</span>
-    <span class="kw">let</span> frame<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">ws_frame</span><span class="op">(</span>payload<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;frame length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>frame<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;payload length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>payload<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+    <p><code>std/websocket</code> implements RFC 6455 WebSocket framing. <code>ws_frame</code> wraps a text payload into a WebSocket frame, <code>ws_parse</code> extracts the payload from a frame, and <code>ws_handshake_response</code> generates the HTTP 101 Upgrade response required to establish a WebSocket connection.</p>
 
-    <span class="cm">// Parse a frame back to its payload</span>
-    <span class="kw">let</span> parsed<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">ws_parse</span><span class="op">(</span>frame<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;parsed: &quot;</span> <span class="op">+</span> parsed<span class="op">)</span>
+    <h2>Code</h2>
+    <pre><code><span class="cm">// WebSocket framing — build and parse frames (RFC 6455)</span>
 
-    <span class="cm">// Generate a handshake response for a given Sec-WebSocket-Key</span>
-    <span class="kw">let</span> ws_key<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;dGhlIHNhbXBsZSBub25jZQ==&quot;</span>
-    <span class="kw">let</span> handshake<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">ws_handshake_response</span><span class="op">(</span>ws_key<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;handshake response:&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span>handshake<span class="op">)</span>
+<span class="kw">import</span> <span class="str">"std/websocket"</span>
+
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="kw">let</span> payload: <span class="ty">String</span> = <span class="str">"Hello, WebSocket!"</span>
+    <span class="kw">let</span> frame: <span class="ty">String</span> = ws_frame(payload)
+    print(<span class="str">"frame length: "</span> + int_to_string(frame.length()) + <span class="str">" bytes"</span>)
+    print(<span class="str">"payload length: "</span> + int_to_string(payload.length()) + <span class="str">" bytes"</span>)
+
+    <span class="kw">let</span> parsed: <span class="ty">String</span> = ws_parse(frame)
+    print(<span class="str">"parsed: "</span> + parsed)
+
+    <span class="kw">let</span> ws_key: <span class="ty">String</span> = <span class="str">"dGhlIHNhbXBsZSBub25jZQ=="</span>
+    <span class="kw">let</span> handshake: <span class="ty">String</span> = ws_handshake_response(ws_key)
+    print(<span class="str">"handshake response:"</span>)
+    print(handshake)
 
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">frame length: 19 bytes
+}</code></pre>
+
+    <h2>Output</h2>
+    <pre class="output">frame length: 19 bytes
 payload length: 17 bytes
 parsed: Hello, WebSocket!
 handshake response:
 HTTP/1.1 101 Switching Protocols
 Upgrade: websocket
 Connection: Upgrade
-Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</pre></div>
-</div>
-<h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p>A WebSocket frame has a 2-byte header (FIN bit, opcode, payload length) followed by the payload. <code>ws_frame</code> creates a text frame (opcode 0x81) with the correct length encoding. <code>ws_parse</code> reads the header and extracts the payload bytes.</p>
-<p>The handshake response computes the <code>Sec-WebSocket-Accept</code> header by concatenating the client's key with a magic GUID and computing SHA-1. This is handled by <code>runtime/websocket.c</code>.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/52-http-middleware.html"><span class="label">← Previous</span><span class="doc-nav-name">HTTP Middleware</span></a>
-<a class="doc-nav-link doc-nav-next" href="/by-example/55-sqlite.html"><span class="label">Next →</span><span class="doc-nav-name">SQLite</span></a>
-</nav>
-<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explanation</h2>
+    <p>A WebSocket frame has a 2-byte header (FIN bit, opcode, payload length) followed by the payload. <code>ws_frame</code> creates a text frame (opcode 0x81) with the correct length encoding. <code>ws_parse</code> reads the header and extracts the payload bytes.</p>
+    <p>The handshake response computes the <code>Sec-WebSocket-Accept</code> header by concatenating the client's key with a magic GUID and computing SHA-1. This is handled by <code>runtime/websocket.c</code>.</p>
+
+    <div class="book-nav">
+        <a href="/by-example/52-http-middleware.html">← Previous</a>
+        <a href="/by-example/54-resp-protocol.html">Next →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/53-websocket.nx">examples/by-example/53-websocket.nx</a></small></p>
+</main>
+
 </body>
 </html>

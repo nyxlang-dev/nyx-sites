@@ -1,91 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maps — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maps — Nyx por ejemplo</title>
+<meta name="description" content="Almacenamiento clave-valor con Map.new(), insert, get, has e iteración de claves.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/06-maps.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/06-maps.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/06-maps.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/06-maps.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/06-maps.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">06</span> / Fundamentos</span></p>
+<h1 class="doc-title">Maps</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un <code>Map</code> almacena pares clave-valor con búsqueda rápida por clave. Los maps se crean con <code>Map.new()</code> y soportan inserción, recuperación, prueba de pertenencia y enumeración de claves.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">06-maps.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/06-maps.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Maps: Map.new(), insert, get, has, size, iterar con keys()</span>
 
-    <h1>Maps</h1>
+<span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
+<span class="cm">// así que la conversión se escribe explícita.</span>
+<span class="kw">fn</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;si&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
 
-    <p>Un <code>Map</code> almacena pares clave-valor con búsqueda rápida por clave. Los maps se crean con <code>Map.new()</code> y soportan inserción, recuperación, prueba de pertenencia y enumeración de claves.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> capitales<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
 
-    <h2>Código</h2>
-    <pre><code>// Maps: Map.new(), insert, get, has, size, iterar con keys()
+    <span class="cm">// Insertar pares clave-valor</span>
+    capitales<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;Argentina&quot;</span><span class="op">,</span> <span class="str">&quot;Buenos Aires&quot;</span><span class="op">)</span>
+    capitales<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;Francia&quot;</span><span class="op">,</span> <span class="str">&quot;Paris&quot;</span><span class="op">)</span>
+    capitales<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;Japon&quot;</span><span class="op">,</span> <span class="str">&quot;Tokio&quot;</span><span class="op">)</span>
 
-fn main() -> int {
-    var capitales: Map = Map.new()
+    <span class="cm">// size</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;paises: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>capitales<span class="op">.</span><span class="fn">size</span><span class="op">()))</span>
 
-    // Insertar pares clave-valor
-    capitales.insert("Argentina", "Buenos Aires")
-    capitales.insert("Francia", "Paris")
-    capitales.insert("Japon", "Tokio")
+    <span class="cm">// get</span>
+    <span class="kw">let</span> capital<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> capitales<span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="str">&quot;Francia&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Capital de Francia: &quot;</span> <span class="op">+</span> capital<span class="op">)</span>
 
-    // size
-    print("paises: " + int_to_string(capitales.size()))
+    <span class="cm">// has</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tiene Argentina: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>capitales<span class="op">.</span><span class="fn">has</span><span class="op">(</span><span class="str">&quot;Argentina&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tiene Brasil: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>capitales<span class="op">.</span><span class="fn">has</span><span class="op">(</span><span class="str">&quot;Brasil&quot;</span><span class="op">)))</span>
 
-    // get
-    let capital: String = capitales.get("Francia")
-    print("Capital de Francia: " + capital)
+    <span class="cm">// Iterar claves</span>
+    <span class="kw">let</span> ks<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> capitales<span class="op">.</span><span class="fn">keys</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;claves (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>ks<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;):&quot;</span><span class="op">)</span>
+    <span class="kw">for</span> k <span class="kw">in</span> ks <span class="op">{</span>
+        <span class="cm">// El tipo de elemento de un Array que devuelve un builtin no se infiere:</span>
+        <span class="cm">// sin esta anotación, &quot;  &quot; + k concatena el puntero, no el texto.</span>
+        <span class="kw">let</span> clave<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> k
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> clave<span class="op">)</span>
+    <span class="op">}</span>
 
-    // has
-    print("tiene Argentina: " + int_to_string(capitales.has("Argentina")))
-    print("tiene Brasil: " + int_to_string(capitales.has("Brasil")))
-
-    // Iterar claves
-    let ks: Array = capitales.keys()
-    print("claves (" + int_to_string(ks.length()) + "):")
-    for k in ks {
-        print("  " + k)
-    }
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">paises: 3
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">paises: 3
 Capital de Francia: Paris
-tiene Argentina: 1
-tiene Brasil: 0
+tiene Argentina: si
+tiene Brasil: no
 claves (3):
-  Argentina
   Francia
-  Japon</pre>
-
-    <h2>Explicación</h2>
-    <p>Los maps en Nyx se crean con <code>Map.new()</code> — no existe una sintaxis de map literal (sería ambigua con las expresiones de bloque). Los maps deben declararse con <code>var</code> si se pretende insertar o modificar entradas después de la creación.</p>
-    <p>El método <code>.insert(key, value)</code> agrega o actualiza un par clave-valor. <code>.get(key)</code> obtiene el valor de una clave, devolviendo el valor almacenado como <code>String</code> (o el tipo correspondiente). Si la clave no existe, el comportamiento es indefinido — use <code>.has(key)</code> primero para verificar la pertenencia.</p>
-    <p><code>.has(key)</code> devuelve un <code>int</code>: <code>1</code> significa que la clave existe, <code>0</code> que no existe. Este patrón de entero como booleano es común en las funciones de salida de bajo nivel de Nyx. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
-    <p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map. El orden de iteración sobre los hash maps no está garantizado que sea el orden de inserción, por lo que el orden de las claves en la salida puede variar entre ejecuciones.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/05-arrays.html">← Anterior</a>
-        <a href="/es/by-example/07-strings.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/06-maps.nx">examples/by-example/06-maps.nx</a></small></p>
+  Japon
+  Argentina</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Los maps en Nyx se crean con <code>Map.new()</code> — no existe una sintaxis de map literal (sería ambigua con las expresiones de bloque). La receta declara el map con <code>var</code> por convención, pero <code>let</code> sirve igual para insertar: en Nyx <code>let</code> y <code>var</code> gobiernan si el binding puede reasignarse, no si el map al que apunta puede mutarse.</p>
+<p>El método <code>.insert(key, value)</code> agrega o actualiza un par clave-valor. <code>.get(key)</code> obtiene el valor de una clave, devolviendo el valor almacenado como <code>String</code> (o el tipo correspondiente). Si la clave no existe el programa entra en panic nombrando la clave; usa <code>.has(key)</code> para comprobarla antes, o <code>.get_or(key, default)</code> para dar un valor por defecto.</p>
+<p><code>.has(key)</code> devuelve un <code>bool</code>, y en Nyx un bool no es un int: pasarlo directo a <code>int_to_string</code> no compila, así que la receta lo lleva a texto con el pequeño helper <code>si_no</code>. <code>.size()</code> devuelve la cantidad de entradas actualmente en el map.</p>
+<p><code>.keys()</code> devuelve un <code>Array</code> con todas las claves del map, y el orden de iteración de un hash map no es el de inserción. Un <code>Array</code> tampoco lleva consigo el tipo de sus elementos, así que el cuerpo del bucle liga cada clave con <code>let clave: String = k</code> antes de imprimirla — sin esa anotación la concatenación emitiría la dirección de la clave en vez de su texto.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/05-arrays.html"><span class="label">← Anterior</span><span class="doc-nav-name">Arrays</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/07-strings.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Strings</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

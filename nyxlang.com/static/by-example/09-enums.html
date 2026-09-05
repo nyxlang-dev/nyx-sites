@@ -1,91 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enums — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enums — Nyx by example</title>
+<meta name="description" content="Algebraic data types with data-carrying variants and exhaustive match.">
+<link rel="canonical" href="https://nyxlang.com/by-example/09-enums.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/09-enums.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/09-enums.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/09-enums.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/09-enums.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">09</span> / Fundamentals</span></p>
+<h1 class="doc-title">Enums</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx enums are algebraic data types (ADTs): each variant can carry different data, and <code>match</code> expressions destructure them exhaustively. This makes it impossible to forget a case at compile time.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">09-enums.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/09-enums.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Enums: definición, variantes con datos, match exhaustivo</span>
 
-    <h1>Enums</h1>
+<span class="kw">enum</span> <span class="ty">Shape</span> <span class="op">{</span>
+    <span class="ty">Circle</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Square</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Rectangle</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">)</span>
+<span class="op">}</span>
 
-    <p>Nyx enums are algebraic data types (ADTs): each variant can carry different data, and <code>match</code> expressions destructure them exhaustively. This makes it impossible to forget a case at compile time.</p>
+<span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>        <span class="op">=&gt;</span> r <span class="op">*</span> r <span class="op">*</span> <span class="num">3</span><span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span>l<span class="op">)</span>        <span class="op">=&gt;</span> l <span class="op">*</span> l<span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rectangle</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span>  <span class="op">=&gt;</span> w <span class="op">*</span> h
+    <span class="op">}</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Enums: definición, variantes con datos, match exhaustivo
+<span class="kw">fn</span> <span class="fn">describe</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>        <span class="op">=&gt;</span> <span class="str">&quot;circulo de radio &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">),</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span>l<span class="op">)</span>        <span class="op">=&gt;</span> <span class="str">&quot;cuadrado de lado &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>l<span class="op">),</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rectangle</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span>  <span class="op">=&gt;</span> <span class="str">&quot;rectangulo &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>w<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>h<span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-enum Shape {
-    Circle(int),
-    Square(int),
-    Rectangle(int, int)
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span><span class="num">5</span><span class="op">)</span>
+    <span class="kw">let</span> sq<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span><span class="num">4</span><span class="op">)</span>
+    <span class="kw">let</span> rect<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rectangle</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">7</span><span class="op">)</span>
 
-fn area(s: Shape) -> int {
-    return match s {
-        Shape.Circle(r)        => r * r * 3,
-        Shape.Square(l)        => l * l,
-        Shape.Rectangle(w, h)  => w * h
-    }
-}
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>c<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; -&gt; area aprox &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span>c<span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>sq<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; -&gt; area &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span>sq<span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span>rect<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; -&gt; area &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span>rect<span class="op">)))</span>
 
-fn describe(s: Shape) -> String {
-    return match s {
-        Shape.Circle(r)        => "circulo de radio " + int_to_string(r),
-        Shape.Square(l)        => "cuadrado de lado " + int_to_string(l),
-        Shape.Rectangle(w, h)  => "rectangulo " + int_to_string(w) + "x" + int_to_string(h)
-    }
-}
-
-fn main() -> int {
-    let c: Shape = Shape.Circle(5)
-    let sq: Shape = Shape.Square(4)
-    let rect: Shape = Shape.Rectangle(3, 7)
-
-    print(describe(c) + " -> area aprox " + int_to_string(area(c)))
-    print(describe(sq) + " -> area " + int_to_string(area(sq)))
-    print(describe(rect) + " -> area " + int_to_string(area(rect)))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">circulo de radio 5 -> area aprox 75
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">circulo de radio 5 -> area aprox 75
 cuadrado de lado 4 -> area 16
-rectangulo 3x7 -> area 21</pre>
-
-    <h2>Explanation</h2>
-    <p>An enum is declared with the <code>enum</code> keyword followed by a name and a list of variants. Each variant can carry zero or more typed values in parentheses: <code>Circle(int)</code> carries one integer (the radius), <code>Rectangle(int, int)</code> carries two (width and height). Variants without parentheses would be simple tags.</p>
-    <p>Enum values are constructed with dot notation: <code>Shape.Circle(5)</code>. Note that Nyx uses <code>Shape.Circle</code>, not <code>Shape::Circle</code> — the dot is the variant separator throughout the language.</p>
-    <p>The <code>match</code> expression destructures an enum value and binds the inner data to local names. Each arm has the form <code>Pattern => expression</code>. The compiler enforces exhaustiveness: if any variant is missing from a <code>match</code>, the program will not compile.</p>
-    <p>The area formula for the circle uses integer arithmetic (<code>r * r * 3</code> as an approximation of π·r²), which is why the result is labeled "aprox". Real programs would use <code>float</code> and the <code>math</code> standard library for precise results.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/08-structs.html">← Previous</a>
-        <a href="/by-example/10-closures.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/09-enums.nx">examples/by-example/09-enums.nx</a></small></p>
+rectangulo 3x7 -> area 21</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>An enum is declared with the <code>enum</code> keyword followed by a name and a list of variants. Each variant can carry zero or more typed values in parentheses: <code>Circle(int)</code> carries one integer (the radius), <code>Rectangle(int, int)</code> carries two (width and height). Variants without parentheses would be simple tags.</p>
+<p>Enum values are constructed with dot notation: <code>Shape.Circle(5)</code>. Note that Nyx uses <code>Shape.Circle</code>, not <code>Shape::Circle</code> — the dot is the variant separator throughout the language.</p>
+<p>The <code>match</code> expression destructures an enum value and binds the inner data to local names. Each arm has the form <code>Pattern => expression</code>. The compiler enforces exhaustiveness: if any variant is missing from a <code>match</code>, the program will not compile.</p>
+<p>The area formula for the circle uses integer arithmetic (<code>r * r * 3</code> as an approximation of π·r²), which is why the result is labeled "aprox". Real programs would use <code>float</code> and the <code>math</code> standard library for precise results.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/08-structs.html"><span class="label">← Previous</span><span class="doc-nav-name">Structs</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/10-closures.html"><span class="label">Next →</span><span class="doc-nav-name">Closures</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

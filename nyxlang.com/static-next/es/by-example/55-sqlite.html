@@ -1,105 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SQLite — Nyx por ejemplo</title>
-<meta name="description" content="Base de datos SQL en memoria con sqlite_open y sqlite_query.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/55-sqlite.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/55-sqlite.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/55-sqlite.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/55-sqlite.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQLite — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/55-sqlite.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">55</span> / Redes</span></p>
-<h1 class="doc-title">SQLite</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>std/sqlite</code> ofrece bindings de SQLite3 cargados en tiempo de ejecución vía <code>dlopen</code>. <code>sqlite_open(":memory:")</code> crea una base de datos en memoria, <code>sqlite_exec</code> ejecuta sentencias DDL/DML, y <code>sqlite_query</code> devuelve filas como arreglos de strings. No se necesitan dependencias externas — SQLite viene incluido en la mayoría de los sistemas operativos.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">55-sqlite.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/55-sqlite.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// SQLite — in-memory database with SQL queries</span>
-<span class="cm">// SQLite — base de datos en memoria con consultas SQL</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">import</span> <span class="str">&quot;std/sqlite&quot;</span>
+    <h1>SQLite</h1>
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Open an in-memory database. The handle is an opaque pointer (*int);</span>
-    <span class="cm">// sqlite_open returns NULL on failure.</span>
-    <span class="kw">let</span> db <span class="op">=</span> <span class="fn">sqlite_open</span><span class="op">(</span><span class="str">&quot;:memory:&quot;</span><span class="op">)</span>
+    <p><code>std/sqlite</code> ofrece bindings de SQLite3 cargados en tiempo de ejecución vía <code>dlopen</code>. <code>sqlite_open(":memory:")</code> crea una base de datos en memoria, <code>sqlite_exec</code> ejecuta sentencias DDL/DML, y <code>sqlite_query</code> devuelve filas como arreglos de strings. No se necesitan dependencias externas — SQLite viene incluido en la mayoría de los sistemas operativos.</p>
 
-    <span class="cm">// Create a table</span>
-    <span class="fn">sqlite_exec</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)&quot;</span><span class="op">)</span>
+    <h2>Código</h2>
+    <pre><code><span class="cm">// SQLite — in-memory database with SQL queries</span>
 
-    <span class="cm">// Insert rows</span>
-    <span class="fn">sqlite_exec</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;INSERT INTO users (name, age) VALUES (&#x27;Alice&#x27;, 30)&quot;</span><span class="op">)</span>
-    <span class="fn">sqlite_exec</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;INSERT INTO users (name, age) VALUES (&#x27;Bob&#x27;, 25)&quot;</span><span class="op">)</span>
-    <span class="fn">sqlite_exec</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;INSERT INTO users (name, age) VALUES (&#x27;Charlie&#x27;, 35)&quot;</span><span class="op">)</span>
+<span class="kw">import</span> <span class="str">"std/sqlite"</span>
 
-    <span class="cm">// Query all rows</span>
-    <span class="kw">let</span> rows<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sqlite_query</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;SELECT name, age FROM users ORDER BY age&quot;</span><span class="op">)</span>
-    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
-    <span class="kw">while</span> i <span class="op">&lt;</span> rows<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
-        <span class="kw">let</span> row<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> rows<span class="op">[</span>i<span class="op">]</span>
-        <span class="kw">let</span> name<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> row<span class="op">[</span><span class="num">0</span><span class="op">]</span>
-        <span class="kw">let</span> age<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> row<span class="op">[</span><span class="num">1</span><span class="op">]</span>
-        <span class="fn">print</span><span class="op">(</span>name <span class="op">+</span> <span class="str">&quot; is &quot;</span> <span class="op">+</span> age <span class="op">+</span> <span class="str">&quot; years old&quot;</span><span class="op">)</span>
-        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
-    <span class="op">}</span>
+<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+    <span class="cm">// The handle is an opaque pointer (*int); NULL on failure</span>
+    <span class="kw">let</span> db = sqlite_open(<span class="str">":memory:"</span>)
 
-    <span class="cm">// Query with a condition</span>
-    <span class="kw">let</span> seniors<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">sqlite_query</span><span class="op">(</span>db<span class="op">,</span> <span class="str">&quot;SELECT name FROM users WHERE age &gt;= 30&quot;</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;users 30+: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>seniors<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+    sqlite_exec(db, <span class="str">"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)"</span>)
 
-    <span class="fn">sqlite_close</span><span class="op">(</span>db<span class="op">)</span>
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Alice', 30)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Bob', 25)"</span>)
+    sqlite_exec(db, <span class="str">"INSERT INTO users (name, age) VALUES ('Charlie', 35)"</span>)
+
+    <span class="kw">let</span> rows: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name, age FROM users ORDER BY age"</span>)
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; rows.length() {
+        <span class="kw">let</span> row: <span class="ty">Array</span> = rows[i]
+        <span class="kw">let</span> name: <span class="ty">String</span> = row[<span class="num">0</span>]
+        <span class="kw">let</span> age: <span class="ty">String</span> = row[<span class="num">1</span>]
+        print(name + <span class="str">" is "</span> + age + <span class="str">" years old"</span>)
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="kw">let</span> seniors: <span class="ty">Array</span> = sqlite_query(db, <span class="str">"SELECT name FROM users WHERE age >= 30"</span>)
+    print(<span class="str">"users 30+: "</span> + int_to_string(seniors.length()))
+
+    sqlite_close(db)
     <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">Bob is 25 years old
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">Bob is 25 years old
 Alice is 30 years old
 Charlie is 35 years old
-users 30+: 2</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>sqlite_open</code> devuelve un handle opaco de base de datos (<code>*int</code>, NULL en caso de fallo). La ruta especial <code>":memory:"</code> crea una base de datos temporal en memoria que se descarta al cerrar el handle. Para almacenamiento persistente, pasar una ruta de archivo como <code>"data.db"</code>.</p>
-<p><code>sqlite_query</code> devuelve un arreglo de filas, donde cada fila es un arreglo de valores string (SQLite almacena internamente todos los valores como texto). El orden de las columnas coincide con la cláusula SELECT. <code>sqlite_exec</code> se usa para sentencias que no devuelven datos (CREATE, INSERT, UPDATE, DELETE).</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/53-websocket.html"><span class="label">← Anterior</span><span class="doc-nav-name">WebSocket</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/56-csv-write.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Escritura CSV</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+users 30+: 2</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explicación</h2>
+    <p><code>sqlite_open</code> devuelve un handle opaco de base de datos (<code>*int</code>, NULL en caso de fallo). La ruta especial <code>":memory:"</code> crea una base de datos temporal en memoria que se descarta al cerrar el handle. Para almacenamiento persistente, pasar una ruta de archivo como <code>"data.db"</code>.</p>
+    <p><code>sqlite_query</code> devuelve un arreglo de filas, donde cada fila es un arreglo de valores string (SQLite almacena internamente todos los valores como texto). El orden de las columnas coincide con la cláusula SELECT. <code>sqlite_exec</code> se usa para sentencias que no devuelven datos (CREATE, INSERT, UPDATE, DELETE).</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/54-resp-protocol.html">← Anterior</a>
+        <a href="/es/by-example/56-csv-write.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/55-sqlite.nx">examples/by-example/55-sqlite.nx</a></small></p>
+</main>
+
 </body>
 </html>

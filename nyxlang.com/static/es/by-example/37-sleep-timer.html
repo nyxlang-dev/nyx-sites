@@ -1,88 +1,102 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sleep y Temporizadores — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleep y Temporizadores — Nyx por ejemplo</title>
+<meta name="description" content="Pausar la ejecución y medir tiempo transcurrido.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/37-sleep-timer.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/37-sleep-timer.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/37-sleep-timer.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/37-sleep-timer.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/docs/">Docs</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/37-sleep-timer.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">37</span> / Avanzado</span></p>
+<h1 class="doc-title">Sleep y Temporizadores</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>time_ms()</code> retorna una marca de tiempo monotónica en milisegundos como <code>int</code>. Restar dos lecturas da una duración transcurrida. <code>sleep(ms)</code> suspende el hilo actual por la cantidad de milisegundos especificada.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">37-sleep-timer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/37-sleep-timer.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Timer y sleep: medir tiempo transcurrido con time_ms() y pausar con sleep()</span>
 
-    <h1>Sleep y Temporizadores</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;start&quot;</span><span class="op">)</span>
 
-    <p><code>time_ms()</code> retorna la hora actual del reloj de pared en milisegundos como <code>int</code>. Restar dos lecturas da una duración transcurrida. <code>sleep(ms)</code> suspende el hilo actual por la cantidad de milisegundos especificada.</p>
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
 
-    <h2>Código</h2>
-    <pre><code>// Timer y sleep: medir tiempo transcurrido con time_ms() y pausar con sleep()
+    <span class="cm">// Pausar 500 milisegundos</span>
+    <span class="fn">sleep</span><span class="op">(</span><span class="num">500</span><span class="op">)</span>
 
-fn main() -> int {
-    print("start")
+    <span class="kw">let</span> t1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> elapsed<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> t1 <span class="op">-</span> t0
 
-    let t0: int = time_ms()
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;500ms passed&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tiempo real: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>elapsed<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;ms&quot;</span><span class="op">)</span>
 
-    // Pausar 500 milisegundos
-    sleep(500)
+    <span class="cm">// Medir una operacion costosa</span>
+    <span class="kw">let</span> t2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">var</span> suma<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> <span class="op">{</span>
+        suma <span class="op">=</span> suma <span class="op">+</span> i
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> t3<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> dur<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> t3 <span class="op">-</span> t2
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma de 0..1M = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>suma<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;duracion loop: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>dur<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;ms&quot;</span><span class="op">)</span>
 
-    let t1: int = time_ms()
-    let elapsed: int = t1 - t0
-
-    print("500ms passed")
-    print("tiempo real: " + int_to_string(elapsed) + "ms")
-
-    // Medir una operacion costosa
-    let t2: int = time_ms()
-    var suma: int = 0
-    var i: int = 0
-    while i < 1000000 {
-        suma = suma + i
-        i = i + 1
-    }
-    let t3: int = time_ms()
-    let dur: int = t3 - t2
-    print("suma de 0..1M = " + int_to_string(suma))
-    print("duracion loop: " + int_to_string(dur) + "ms")
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">start
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">start
 500ms passed
 tiempo real: 500ms
 suma de 0..1M = 499999500000
-duracion loop: 0ms</pre>
-
-    <h2>Explicación</h2>
-    <p><code>time_ms()</code> es un envoltorio liviano sobre el reloj del sistema, que retorna una marca de tiempo monotónica en milisegundos adecuada para medir duraciones. Tomar la diferencia <code>t1 - t0</code> después de un <code>sleep(500)</code> debería producir un valor igual o apenas por encima de 500, dependiendo de la precisión del planificador del sistema operativo.</p>
-    <p>La segunda medición envuelve un loop ajustado que suma enteros de 0 a 999 999. El resultado — 499 999 500 000 — es la suma estándar de la serie aritmética <code>n*(n-1)/2</code> para <code>n = 1 000 000</code>. La duración se redondea a <code>0ms</code> porque LLVM optimiza el loop de forma agresiva al momento de generar código nativo.</p>
-    <p>Tanto <code>time_ms</code> como <code>sleep</code> son funciones integradas disponibles sin necesidad de ningún import. Están implementadas en el módulo <code>time.c</code> del runtime y se mapean directamente a <code>clock_gettime(CLOCK_MONOTONIC)</code> y <code>nanosleep</code> en Linux.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/36-defer-cleanup.html">← Anterior</a>
-        <a href="/es/by-example/38-crypto-hash.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/37-sleep-timer.nx">examples/by-example/37-sleep-timer.nx</a></small></p>
+duracion loop: 0ms</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>time_ms()</code> es un envoltorio liviano sobre el reloj del sistema, que retorna una marca de tiempo monotónica en milisegundos adecuada para medir duraciones. Tomar la diferencia <code>t1 - t0</code> después de un <code>sleep(500)</code> debería producir un valor igual o apenas por encima de 500, dependiendo de la precisión del planificador del sistema operativo.</p>
+<p>La segunda medición envuelve un loop ajustado que suma enteros de 0 a 999 999. El resultado — 499 999 500 000 — es la suma estándar de la serie aritmética <code>n*(n-1)/2</code> para <code>n = 1 000 000</code>. La duración se redondea a cero porque LLVM optimiza el loop de forma agresiva al momento de generar código nativo.</p>
+<p>Tanto <code>time_ms</code> como <code>sleep</code> son funciones integradas disponibles sin necesidad de ningún import. Están implementadas en el runtime y se mapean directamente a <code>clock_gettime(CLOCK_MONOTONIC)</code> y <code>nanosleep</code> en Linux.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/36-defer-cleanup.html"><span class="label">← Anterior</span><span class="doc-nav-name">Defer y Cleanup</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/38-crypto-hash.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Hashing Criptográfico</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

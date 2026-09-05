@@ -1,119 +1,105 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Iterator: fold — Nyx por ejemplo</title>
-<meta name="description" content="Reducir una secuencia a un único valor con fold.">
-<link rel="canonical" href="https://nyxlang.com/es/by-example/30-iterator-fold.html">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/30-iterator-fold.html">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/30-iterator-fold.html">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/30-iterator-fold.html">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterator: fold — Nyx con Ejemplos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
+    <link rel="stylesheet" href="/learn/book.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/by-example/30-iterator-fold.html" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/es/" class="nav-logo">Nyx</a>
+    <div class="nav-right">
+        <a href="/es/docs/">Docs</a>
+        <a href="/es/learn/">Aprender</a>
+        <a href="/es/by-example/">Ejemplos</a>
+        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+    </div>
 </nav>
 
-<main>
-<section class="band">
-<div class="wrap band-inner">
-<header class="doc-head">
-<p><span class="stamp stamp-accent"><span class="stamp-num">30</span> / Tipos y patrones</span></p>
-<h1 class="doc-title">Iterator: fold</h1>
-</header>
-<article class="recipe">
-<div class="recipe-lede prose"><p><code>fold</code> es el consumidor de iteradores de propósito general que reduce una secuencia a un único valor. Toma un acumulador inicial y una función de dos argumentos, aplica la función a cada elemento y al acumulador en curso, y retorna el resultado acumulado final.</p></div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">30-iterator-fold.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/30-iterator-fold.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// fold: reducir un iterator a un valor acumulando con una función</span>
+<main class="book-content">
+    <div class="book-breadcrumb">
+        <a href="/es/by-example/">Nyx con Ejemplos</a>
+    </div>
 
-<span class="kw">fn</span> <span class="fn">add</span><span class="op">(</span>acc<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">return</span> acc <span class="op">+</span> x
-<span class="op">}</span>
+    <h1>Iterator: fold</h1>
 
-<span class="kw">fn</span> <span class="fn">multiply</span><span class="op">(</span>acc<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">return</span> acc <span class="op">*</span> x
-<span class="op">}</span>
+    <p><code>fold</code> es el consumidor de iteradores de propósito general que reduce una secuencia a un único valor. Toma un acumulador inicial y una función de dos argumentos, aplica la función a cada elemento y al acumulador en curso, y retorna el resultado acumulado final.</p>
 
-<span class="kw">fn</span> <span class="fn">max_val</span><span class="op">(</span>acc<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">if</span> x <span class="op">&gt;</span> acc <span class="op">{</span>
-        <span class="kw">return</span> x
-    <span class="op">}</span>
-    <span class="kw">return</span> acc
-<span class="op">}</span>
+    <h2>Código</h2>
+    <pre><code>// fold: reducir un iterator a un valor acumulando con una función
 
-<span class="kw">fn</span> <span class="fn">is_even</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
-    <span class="kw">return</span> x <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span>
-<span class="op">}</span>
+fn add(acc: int, x: int) -> int {
+    return acc + x
+}
 
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">let</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">]</span>
+fn multiply(acc: int, x: int) -> int {
+    return acc * x
+}
 
-    <span class="cm">// Suma con fold — equivale a un loop manual con acumulador</span>
-    <span class="kw">let</span> suma<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">fold</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> add<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma(1..5) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>suma<span class="op">))</span>         <span class="cm">// 15</span>
+fn max_val(acc: int, x: int) -> int {
+    if x &gt; acc {
+        return x
+    }
+    return acc
+}
 
-    <span class="cm">// Producto con fold</span>
-    <span class="kw">let</span> producto<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">fold</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> multiply<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;producto(1..5) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>producto<span class="op">))</span> <span class="cm">// 120</span>
+fn is_even(x: int) -> bool {
+    return x % 2 == 0
+}
 
-    <span class="cm">// Máximo con fold</span>
-    <span class="kw">let</span> maximo<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">fold</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> max_val<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;max(1..5) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>maximo<span class="op">))</span>        <span class="cm">// 5</span>
+fn main() -> int {
+    let nums: Array = [1, 2, 3, 4, 5]
 
-    <span class="cm">// Sumar solo los pares con filter + fold</span>
-    <span class="kw">let</span> nums2<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">10</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">8</span><span class="op">,</span> <span class="num">7</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">6</span><span class="op">]</span>
-    <span class="kw">let</span> suma_pares<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums2<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">filter</span><span class="op">(</span>is_even<span class="op">).</span><span class="fn">fold</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> add<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma pares = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>suma_pares<span class="op">))</span>   <span class="cm">// 26 (10+8+2+6)</span>
+    // Suma con fold — equivale a un loop manual con acumulador
+    let suma: int = nums.iter().fold(0, add)
+    print("suma(1..5) = " + int_to_string(suma))         // 15
 
-    <span class="cm">// fold con valor inicial distinto de cero</span>
-    <span class="kw">let</span> nums3<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">]</span>
-    <span class="kw">let</span> con_offset<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums3<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">fold</span><span class="op">(</span><span class="num">100</span><span class="op">,</span> add<span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;100 + sum(1,2,3) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>con_offset<span class="op">))</span> <span class="cm">// 106</span>
+    // Producto con fold
+    let producto: int = nums.iter().fold(1, multiply)
+    print("producto(1..5) = " + int_to_string(producto)) // 120
 
-    <span class="kw">return</span> <span class="num">0</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-<div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">suma(1..5) = 15
+    // Máximo con fold
+    let maximo: int = nums.iter().fold(0, max_val)
+    print("max(1..5) = " + int_to_string(maximo))        // 5
+
+    // Sumar solo los pares con filter + fold
+    let nums2: Array = [10, 3, 8, 7, 2, 6]
+    let suma_pares: int = nums2.iter().filter(is_even).fold(0, add)
+    print("suma pares = " + int_to_string(suma_pares))   // 26 (10+8+2+6)
+
+    // fold con valor inicial distinto de cero
+    let nums3: Array = [1, 2, 3]
+    let con_offset: int = nums3.iter().fold(100, add)
+    print("100 + sum(1,2,3) = " + int_to_string(con_offset)) // 106
+
+    return 0
+}</code></pre>
+
+    <h2>Salida</h2>
+    <pre class="output">suma(1..5) = 15
 producto(1..5) = 120
 max(1..5) = 5
 suma pares = 26
-100 + sum(1,2,3) = 106</pre></div>
-</div>
-<h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>fold(init, f)</code> es equivalente a escribir manualmente un loop con una variable acumuladora: comienza con <code>acc = init</code> y para cada elemento <code>x</code> calcula <code>acc = f(acc, x)</code>, retornando el <code>acc</code> final. La elección del valor inicial es importante: <code>0</code> es el elemento neutro para la suma (sumar cero no cambia nada), mientras que <code>1</code> es el elemento neutro para la multiplicación. Elegir el valor inicial incorrecto da resultados incorrectos.</p>
-<p>La función acumuladora <code>max_val</code> selecciona el mayor entre el acumulador actual y el elemento entrante, así que hacer fold sobre un array con <code>0</code> como inicio encuentra el máximo. Esto funciona correctamente aquí porque todos los valores son positivos; para arrays que puedan contener negativos, el valor inicial debería fijarse al entero mínimo posible.</p>
-<p>Combinar <code>filter</code> y <code>fold</code> en un solo pipeline — como en el ejemplo de suma de pares — es idiomático en Nyx: filter reduce el flujo, y luego fold lo reduce a un valor, sin alocar ningún array intermedio. Muchas operaciones clásicas (<code>sum</code>, <code>product</code>, <code>count</code>, <code>any</code>, <code>all</code>) son casos especiales de fold y pueden expresarse de esta manera.</p></div>
-</article>
-<nav class="doc-nav" aria-label="Receta anterior y siguiente">
-<a class="doc-nav-link doc-nav-prev" href="/es/by-example/29-iterator-map-filter.html"><span class="label">← Anterior</span><span class="doc-nav-name">Iterator: map y filter</span></a>
-<a class="doc-nav-link doc-nav-next" href="/es/by-example/32-iterator-take-skip.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Iterador: take() y skip()</span></a>
-</nav>
-<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
-</div>
-</section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
-</footer>
+100 + sum(1,2,3) = 106</pre>
 
-<script src="/shared/copy.js" defer></script>
+    <h2>Explicación</h2>
+    <p><code>fold(init, f)</code> es equivalente a escribir manualmente un loop con una variable acumuladora: comienza con <code>acc = init</code> y para cada elemento <code>x</code> calcula <code>acc = f(acc, x)</code>, retornando el <code>acc</code> final. La elección del valor inicial es importante: <code>0</code> es el elemento neutro para la suma (sumar cero no cambia nada), mientras que <code>1</code> es el elemento neutro para la multiplicación. Elegir el valor inicial incorrecto da resultados incorrectos.</p>
+    <p>La función acumuladora <code>max_val</code> selecciona el mayor entre el acumulador actual y el elemento entrante, así que hacer fold sobre un array con <code>0</code> como inicio encuentra el máximo. Esto funciona correctamente aquí porque todos los valores son positivos; para arrays que puedan contener negativos, el valor inicial debería fijarse al entero mínimo posible.</p>
+    <p>Combinar <code>filter</code> y <code>fold</code> en un solo pipeline — como en el ejemplo de suma de pares — es idiomático en Nyx: filter reduce el flujo, y luego fold lo reduce a un valor, sin alocar ningún array intermedio. Muchas operaciones clásicas (<code>sum</code>, <code>product</code>, <code>count</code>, <code>any</code>, <code>all</code>) son casos especiales de fold y pueden expresarse de esta manera.</p>
+
+    <div class="book-nav">
+        <a href="/es/by-example/29-iterator-map-filter.html">← Anterior</a>
+        <a href="/es/by-example/31-iterator-enumerate.html">Siguiente →</a>
+    </div>
+
+    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/30-iterator-fold.nx">examples/by-example/30-iterator-fold.nx</a></small></p>
+</main>
+
 </body>
 </html>

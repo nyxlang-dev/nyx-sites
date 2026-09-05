@@ -1,79 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCP Client — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCP Client — Nyx by example</title>
+<meta name="description" content="Connecting, writing, and reading over raw TCP sockets.">
+<link rel="canonical" href="https://nyxlang.com/by-example/46-tcp-client.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/46-tcp-client.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/46-tcp-client.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/46-tcp-client.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/46-tcp-client.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">46</span> / Networking</span></p>
+<h1 class="doc-title">TCP Client</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx provides built-in TCP primitives: <code>tcp_connect</code>, <code>tcp_write</code>, <code>tcp_read</code>, <code>tcp_read_line</code>, and <code>tcp_close</code>. This example connects to a web server and manually sends an HTTP/1.0 request over a raw TCP socket.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">46-tcp-client.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/46-tcp-client.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// TCP client — connect, send a request, read a response</span>
+<span class="cm">// Cliente TCP — conectar, enviar una solicitud, leer una respuesta</span>
 
-    <h1>TCP Client</h1>
-
-    <p>Nyx provides built-in TCP primitives: <code>tcp_connect</code>, <code>tcp_write</code>, <code>tcp_read</code>, <code>tcp_read_line</code>, and <code>tcp_close</code>. This example connects to a web server and manually sends an HTTP/1.0 request over a raw TCP socket.</p>
-
-    <h2>Code</h2>
-    <pre><code><span class="cm">// TCP client — connect, send a request, read a response</span>
-
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="kw">let</span> fd: <span class="ty">int</span> = tcp_connect(<span class="str">"example.com"</span>, <span class="num">80</span>)
-    <span class="kw">if</span> fd &lt; <span class="num">0</span> {
-        print(<span class="str">"connection failed"</span>)
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Connect to a TCP server</span>
+    <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;example.com&quot;</span><span class="op">,</span> <span class="num">80</span><span class="op">)</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;connection failed&quot;</span><span class="op">)</span>
         <span class="kw">return</span> <span class="num">1</span>
-    }
+    <span class="op">}</span>
 
-    <span class="kw">let</span> req: <span class="ty">String</span> = <span class="str">"GET / HTTP/1.0\r\nHost: example.com\r\n\r\n"</span>
-    tcp_write(fd, req)
+    <span class="cm">// Send an HTTP request manually over TCP</span>
+    <span class="kw">let</span> req<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;GET / HTTP/1.0\r\nHost: example.com\r\n\r\n&quot;</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> req<span class="op">)</span>
 
-    <span class="kw">let</span> status_line: <span class="ty">String</span> = tcp_read_line(fd)
-    print(<span class="str">"status: "</span> + status_line)
+    <span class="cm">// Read the response line by line</span>
+    <span class="kw">let</span> status_line<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;status: &quot;</span> <span class="op">+</span> status_line<span class="op">)</span>
 
-    <span class="kw">var</span> line: <span class="ty">String</span> = tcp_read_line(fd)
-    <span class="kw">while</span> line.length() > <span class="num">0</span> <span class="kw">and</span> line != <span class="str">"\r"</span> {
-        line = tcp_read_line(fd)
-    }
+    <span class="cm">// Read headers until empty line</span>
+    <span class="kw">var</span> line<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">while</span> line<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="kw">and</span> line <span class="op">!=</span> <span class="str">&quot;\r&quot;</span> <span class="op">{</span>
+        line <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="op">}</span>
 
-    <span class="kw">let</span> body: <span class="ty">String</span> = tcp_read(fd, <span class="num">256</span>)
-    print(<span class="str">"body (first 256 bytes): "</span> + body.substring(<span class="num">0</span>, <span class="num">100</span>))
+    <span class="cm">// Read body</span>
+    <span class="kw">let</span> body<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">256</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;body (first 256 bytes): &quot;</span> <span class="op">+</span> body<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">100</span><span class="op">))</span>
 
-    tcp_close(fd)
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">status: HTTP/1.0 200 OK
-body (first 256 bytes): &lt;!doctype html&gt;...</pre>
-
-    <h2>Explanation</h2>
-    <p><code>tcp_connect(host, port)</code> resolves the hostname and creates a TCP connection, returning a file descriptor. <code>tcp_write</code> sends data, <code>tcp_read_line</code> reads until <code>\n</code>, and <code>tcp_read(fd, n)</code> reads up to <code>n</code> bytes. Always close connections with <code>tcp_close</code>.</p>
-    <p>This is the lowest level of networking in Nyx. For HTTP, use <code>std/http</code> which wraps these primitives with request/response parsing (see recipe 49).</p>
-
-    <div class="book-nav">
-        <a href="/by-example/45-dns-resolve.html">← Previous</a>
-        <a href="/by-example/47-tcp-server.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/46-tcp-client.nx">examples/by-example/46-tcp-client.nx</a></small></p>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">status: HTTP/1.0 200 OK
+body (first 256 bytes): &lt;!doctype html&gt;...</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>tcp_connect(host, port)</code> resolves the hostname and creates a TCP connection, returning a file descriptor. <code>tcp_write</code> sends data, <code>tcp_read_line</code> reads until <code>\n</code>, and <code>tcp_read(fd, n)</code> reads up to <code>n</code> bytes. Always close connections with <code>tcp_close</code>.</p>
+<p>This is the lowest level of networking in Nyx. For HTTP, use <code>std/http</code> which wraps these primitives with request/response parsing (see recipe 49).</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/45-dns-resolve.html"><span class="label">← Previous</span><span class="doc-nav-name">DNS Resolve</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/47-tcp-server.html"><span class="label">Next →</span><span class="doc-nav-name">TCP Server</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>
