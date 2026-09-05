@@ -16,8 +16,11 @@ SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 # recién al final se intercambian.
 PORT ?= 13191
 
+# gen.nx genera el sitio NUEVO; gen-site.sh además copia y parchea el
+# LEGADO (learn/, by-example/, install.sh) que static-next tiene que seguir
+# sirviendo mientras dure la fase 1 (T7, docs/design/...).
 gen:
-	cd nyxlang.com && nyx gen.nx --out static-next
+	bash scripts/gen-site.sh
 
 # Suite del generador: los tests del tokenizador (src/gen/highlight.nx) + la
 # muestra de la landing compilada y EJECUTADA de verdad.
