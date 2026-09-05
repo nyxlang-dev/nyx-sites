@@ -19,26 +19,29 @@
 # Checks (cada uno imprime ✓/✗ por hallazgo + un resumen con contador; sale 1
 # si hubo algún ✗ en el árbol real):
 #
-#   A. Denylist de productos (case-insensitive) sobre ROOT menos learn/ y
-#      es/learn/ (legado no enlazado, documentado como excepción). Incluye
-#      además los nombres de herramientas de IA (claude/cursor/copilot) FUERA
-#      del literal `--agent=claude,cursor,copilot`, que es la única excepción.
-#   B. Métricas/benchmarks inventados. Solo sobre *.html (una cifra de
-#      rendimiento es copy, no CSS/JS) y con el contenido de <pre>...</pre>
-#      quitado antes de buscar — una transcripción real de `nyx test` dice
-#      «(2 tests)» y una transición CSS dice «120ms»; ninguna de las dos es
-#      la clase de afirmación de marketing que este check persigue. Ver
-#      nota en `strip_pre()`.
-#   C. Plataformas no soportadas, excepto dentro de learn/ y es/learn/.
-#   D. Identidad vieja / recursos externos de la landing anterior.
-#   E. Anclas muertas (#products) en TODO ROOT, learn/ incluido — la T7 las
+#   A. Denylist de productos (case-insensitive) sobre ROOT menos el LEGADO
+#      (ver `is_legacy_path()` más abajo). Incluye además los nombres de
+#      herramientas de IA (claude/cursor/copilot) FUERA del literal
+#      `--agent=claude,cursor,copilot`, que es la única excepción — esta
+#      segunda parte, sólo sobre .html del legado excluido.
+#   B. Métricas/benchmarks inventados. Solo sobre *.html fuera del LEGADO
+#      (una cifra de rendimiento es copy, no CSS/JS) y con el contenido de
+#      <pre>...</pre> quitado antes de buscar — una transcripción real de
+#      `nyx test` dice «(2 tests)» y una transición CSS dice «120ms»;
+#      ninguna de las dos es la clase de afirmación de marketing que este
+#      check persigue. Ver nota en `strip_pre()`.
+#   C. Plataformas no soportadas, excepto dentro del LEGADO.
+#   D. Identidad vieja / recursos externos de la landing anterior, excepto
+#      dentro del LEGADO.
+#   E. Anclas muertas (#products) en TODO ROOT, LEGADO incluido — la T7 las
 #      parchea; hasta entonces cualquier aparición es una regresión real.
-#   F. Enlaces internos: cada href="/…" y src="/…" de los .html fuera de
-#      learn/ tiene que resolver a un archivo bajo ROOT (directorio →
-#      index.html); cada href="#…" tiene que tener su id en la MISMA página.
-#      Los https:// no se verifican (sin red).
+#   F. Enlaces internos: cada href="/…" y src="/…" de TODOS los .html de
+#      ROOT (LEGADO incluido — la T7 parchea sus anclas) tiene que resolver
+#      a un archivo bajo ROOT (directorio → index.html); cada href="#…"
+#      tiene que tener su id en la MISMA página. Los https:// no se
+#      verifican (sin red).
 #   G. Paridad EN/ES: mismo conjunto de rutas relativas bajo ROOT/ y
-#      ROOT/es/ (excluyendo learn/, shared/ e install.sh); por cada par
+#      ROOT/es/ (excluyendo el LEGADO, shared/ e install.sh); por cada par
 #      presente en los dos lados, misma cantidad de <pre y de <h2; mismas
 #      claves en content/i18n/{en,es}.toml; por cada content/**/*.en.html
 #      existe el .es.html.
@@ -60,6 +63,22 @@
 #      alguno de los cinco no lo detecta, el script se declara ROTO y sale 2
 #      antes de tocar el árbol real — un guardia que no ve sus propios
 #      controles positivos no prueba nada estando en verde.
+#
+# LEGADO (TRANSITORIO — fix round 1, ruling del coordinador): en la fase 1
+# del rediseño, static-next/ tiene que seguir sirviendo el by-example VIEJO
+# — los AGENTS.md que siembra `nyx init` enlazan a mano
+# https://nyxlang.com/by-example/, así que la T7 va a copiar tal cual a
+# static-next/ los directorios learn/, es/learn/, by-example/, es/by-example/
+# y el archivo shared/nyx-design-system.css (las páginas legado lo
+# necesitan). Mientras ese contenido no se vuelva a generar (fase 2:
+# by-example regenerado por gen.nx), A/B/C/D no lo escanean — sería puro
+# ruido sobre contenido que nadie tocó. E (anclas muertas) y F (enlaces
+# internos) SÍ lo escanean completo: son regresiones reales incluso en
+# contenido legado, y la T7 es quien parchea sus anclas. G lo excluye igual
+# que a `shared/`: no es contenido que declare paridad EN/ES bajo este
+# esquema. Cuando by-example/ se regenere, `by-example/` y `es/by-example/`
+# salen de esta lista (learn/es/learn y shared/nyx-design-system.css se
+# quedan: son legado permanente, no de la fase 1 nada más).
 #
 # set -u sin pipefail (grep sin coincidencias sale 1, y con -e o pipefail
 # eso mataría el script en la primera búsqueda vacía — la misma regla que
@@ -102,6 +121,22 @@ print_warn() { printf '  \xe2\x9a\xa0 %s\n' "$1"; }
 banner() { printf -- '\n── %s ──\n' "$1"; }
 
 CHECK_LAST_FAILS=0
+
+# Lista archivos bajo $1=root con los predicados -name que sigan ($2, $3…),
+# excluyendo el LEGADO (ver comentario arriba de `set -u`). Usada por A, B,
+# C y D — no por E/F (que sí escanean el legado) ni por G (que tiene su
+# propia lista de exclusiones, learn/shared/install.sh/by-example, porque
+# compara EN contra ES en vez de listar un solo lado).
+find_nolegacy() {
+    local root="$1"; shift
+    find "$root" -type f "$@" \
+        -not -path "$root/learn/*" \
+        -not -path "$root/es/learn/*" \
+        -not -path "$root/by-example/*" \
+        -not -path "$root/es/by-example/*" \
+        -not -path "$root/shared/nyx-design-system.css" \
+        2>/dev/null | sort
+}
 
 # Escanea $files (lista separada por líneas) con el regex $2 y reporta cada
 # coincidencia como ✗ etiquetada $1. $files vacío = 0 archivos, 0 hallazgos.
@@ -158,8 +193,7 @@ strip_pre() {
 check_a() {
     local root="$1"
     local files html_files n1 n2
-    files=$(find "$root" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
-        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | sort)
+    files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
 
     scan_denylist "A" "$DENY_PRODUCTS_RE" "$files"
     n1=$CHECK_LAST_FAILS
@@ -168,8 +202,7 @@ check_a() {
     # escanear .css/.js ahí da falsos positivos que nada tienen que ver con
     # la herramienta de IA. El nombre de una herramienta es texto de página,
     # no sintaxis de estilos.
-    html_files=$(find "$root" -type f -name '*.html' \
-        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | sort)
+    html_files=$(find_nolegacy "$root" -name '*.html')
     n2=0
     if [ -n "$html_files" ]; then
         while IFS= read -r hit; do
@@ -196,7 +229,7 @@ check_a() {
 check_b() {
     local root="$1"
     local files n=0
-    files=$(find "$root" -type f -name '*.html' 2>/dev/null | sort)
+    files=$(find_nolegacy "$root" -name '*.html')
     if [ -n "$files" ]; then
         while IFS= read -r f; do
             [ -z "$f" ] && continue
@@ -217,18 +250,17 @@ EOF
     CHECK_LAST_FAILS=$n
 }
 
-# ── C. Plataformas no soportadas (excepto learn/) ────────────────────────
+# ── C. Plataformas no soportadas (excepto el LEGADO) ─────────────────────
 check_c() {
     local root="$1" files
-    files=$(find "$root" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
-        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | sort)
+    files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
     scan_denylist "C" "$PLATFORMS_RE" "$files"
 }
 
-# ── D. Identidad vieja / recursos externos ───────────────────────────────
+# ── D. Identidad vieja / recursos externos (excepto el LEGADO) ──────────
 check_d() {
     local root="$1" files
-    files=$(find "$root" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) 2>/dev/null | sort)
+    files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
     scan_denylist "D" "$IDENTITY_RE" "$files"
 }
 
@@ -239,12 +271,11 @@ check_e() {
     scan_denylist "E" '#products' "$files"
 }
 
-# ── F. Enlaces internos (fuera de learn/) ────────────────────────────────
+# ── F. Enlaces internos (TODO ROOT, LEGADO incluido) ─────────────────────
 check_f() {
     local root="$1"
     local files n=0
-    files=$(find "$root" -type f -name '*.html' \
-        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | sort)
+    files=$(find "$root" -type f -name '*.html' 2>/dev/null | sort)
     [ -z "$files" ] && { print_ok "[F] 0 archivos que revisar"; CHECK_LAST_FAILS=0; return; }
 
     while IFS= read -r f; do
@@ -298,9 +329,11 @@ check_g() {
         local en_files es_files only_en only_es common
         en_files=$(find "$root" -type f \
             -not -path "$root/es/*" -not -path "$root/learn/*" \
+            -not -path "$root/by-example/*" \
             -not -path "$root/shared/*" -not -name "install.sh" 2>/dev/null \
             | sed "s#^$root/##" | sort)
-        es_files=$(find "$root/es" -type f -not -path "$root/es/learn/*" 2>/dev/null \
+        es_files=$(find "$root/es" -type f \
+            -not -path "$root/es/learn/*" -not -path "$root/es/by-example/*" 2>/dev/null \
             | sed "s#^$root/es/##" | sort)
 
         only_en=$(comm -23 <(printf '%s\n' "$en_files") <(printf '%s\n' "$es_files"))

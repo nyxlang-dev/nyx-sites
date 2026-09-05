@@ -25,8 +25,20 @@ make build-all
 # voseo/salida al día. Corre sobre el árbol que se va a SERVIR (static, no
 # static-next: eso es lo que este deploy realmente publica). `set -e`
 # arriba hace que un rc=1 acá aborte el deploy antes de tocar systemd.
-echo "[1.5] Guardias de contenido publicado..."
-bash scripts/check-content.sh nyxlang.com/static
+#
+# Condicionada a la marca del sitio NUEVO (nyxlang.com/static/shared/spec.css,
+# que solo existe después del cutover de la T7): antes de eso, static/ es
+# todavía el sitio viejo, y ese árbol da rojo por diseño (es lo que este
+# mismo guardia está para reemplazar) — bloquear el deploy del binario v2
+# con ESE contenido de por medio rompería cualquier release anterior al
+# cutover (T13). Sin variables de entorno para saltarla: el único gate es
+# la marca del árbol.
+if [ -f "nyxlang.com/static/shared/spec.css" ]; then
+    echo "[1.5] Guardias de contenido publicado..."
+    bash scripts/check-content.sh nyxlang.com/static
+else
+    echo "[1.5] static/ es el sitio viejo: guardia de contenido omitida hasta el cutover"
+fi
 
 echo "[2/4] Smoke efímero..."
 bash scripts/smoke.sh
