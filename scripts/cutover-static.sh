@@ -289,7 +289,7 @@ $dirty"
     echo "hecho: static/ y static-next/ se intercambiaron (una sola syscall, atómica)."
 
     # rc≠0 si la verificación falló: el intercambio YA se aplicó (es atómico),
-    # así que el código de salida es la única señal de «andá a mirar». Sin
+    # así que el código de salida es la única señal de «hay que ir a mirar». Sin
     # esto, `cutover-static.sh swap … && echo ok` daba verde falso con seis
     # links de la nav nueva en 404 (binario v1 todavía en producción).
     local verify_ok=0

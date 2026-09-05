@@ -81,8 +81,8 @@ instalado a una página que no existe.
 El paso 2 va antes del 5 y no al revés: el binario v1 no tiene la ruta
 `/docs/`, así que un swap con v1 todavía en producción deja seis links de la
 nav nueva en 404. Desde la review final eso además hace salir a `swap` con
-rc=2 (el intercambio ya se aplicó — es atómico — y el rc es la señal de «andá
-a mirar»), así que `cutover-static.sh swap … && …` no puede encadenar sobre
+rc=2 (el intercambio ya se aplicó — es atómico — y el rc es la señal de «hay
+que ir a mirar»), así que `cutover-static.sh swap … && …` no puede encadenar sobre
 un cutover a medio verificar.
 
 ### Los tres subcomandos

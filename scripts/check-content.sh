@@ -53,7 +53,11 @@
 #      claves) solo se exige sobre lo que ya existe en los dos lados — así
 #      el check no bloquea un rollout incremental, solo lo hace visible.
 #   H. Español neutro: denylist de voseo/vosotros sobre ROOT/es/ (excepto
-#      learn/) y sobre content/**/*.es.*.
+#      learn/), sobre content/**/*.es.* y sobre los mensajes de OPERADOR del
+#      repo (gen.nx, src/gen/*.nx, scripts/*.sh y README.md) — lo que el
+#      generador le dice a quien lo corre es prosa nuestra igual que la de una
+#      página. `scripts/check-content.sh` queda fuera por construcción: define
+#      la denylist y por lo tanto contiene todas sus palabras.
 #   I. Salida al día: `nyx gen.nx --out <basename de ROOT> --check` (compara
 #      byte a byte lo que gen.nx SABE que produce) + comparación del LISTADO
 #      de archivos entre ROOT y una generación fresca en un temporal (caza
@@ -608,6 +612,26 @@ check_h() {
         files="$files
 $content_es"
     fi
+
+    # Mensajes de OPERADOR: gen.nx, src/gen/*.nx, scripts/*.sh y README.md.
+    # El voseo de gen.nx («corré `bash scripts/sync-recipes.sh`») volvió a
+    # entrar en la fase 2 porque H sólo miraba $root/es y content/**.es.*,
+    # nunca un .nx, un .sh ni un .md — y lo que le dice el generador al que lo
+    # corre es prosa nuestra igual que la de una página publicada. No son
+    # archivos de $root: son del repo, y por eso salen de $REPO_ROOT y de
+    # $site_dir, no del árbol que se esté evaluando.
+    # scripts/check-content.sh se excluye por construcción: DEFINE VOSEO_RE, o
+    # sea que contiene todas sus palabras y siempre se cazaría a sí mismo.
+    local ops
+    ops="$( { [ -f "$site_dir/gen.nx" ] && echo "$site_dir/gen.nx"
+              find "$site_dir/src/gen" -type f -name '*.nx' 2>/dev/null
+              find "$REPO_ROOT/scripts" -maxdepth 1 -type f -name '*.sh' \
+                   -not -name 'check-content.sh' 2>/dev/null
+              [ -f "$REPO_ROOT/README.md" ] && echo "$REPO_ROOT/README.md"
+              true; } | sort )"
+    files="$files
+$ops"
+
     scan_denylist "H" "$VOSEO_RE" "$files"
 }
 

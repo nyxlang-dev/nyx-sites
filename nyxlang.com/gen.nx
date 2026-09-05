@@ -264,7 +264,7 @@ fn cat_key(id: String) -> String {
 // o sin uno de sus dos sidecars sería una página muda. Falla ruidoso.
 fn require_recipe_piece(path: String, slug: String, what: String) {
     if file_exists(path) == false {
-        print("error: la receta « " + slug + "  » está en `order` de recipes.toml pero le falta " + what + ": " + path)
+        print("error: la receta « " + slug + " » está en `order` de recipes.toml pero le falta " + what + ": " + path)
         exit(1)
     }
 }
@@ -286,7 +286,7 @@ fn check_orphan_sources(cat: Map, order: Array) {
                 let path: String = recipe_src_path(slug)
                 if file_exists(path) {
                     print("error: « " + path + " » sobra: la receta " + slug + " no está en `order` de recipes.toml")
-                    print("       (corré `bash scripts/sync-recipes.sh` para borrar las copias huérfanas)")
+                    print("       (ejecuta `bash scripts/sync-recipes.sh` para borrar las copias huérfanas)")
                     exit(1)
                 }
             }
