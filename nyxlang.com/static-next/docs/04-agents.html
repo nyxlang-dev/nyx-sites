@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents — Nyx docs</title>
+<meta name="description" content="What `nyx init` seeds so an assistant can write Nyx here: AGENTS.md, CAPABILITIES.md, docs/nyx/, the vet warnings and the optional spec-driven scaffolding.">
+<link rel="canonical" href="https://nyxlang.com/docs/04-agents.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/04-agents.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/04-agents.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/04-agents.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/docs/04-agents.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">04</span> / 04</span></p>
+<h1 class="doc-title">Agents</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Steps">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/docs/">Nyx, step by step</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/01-install.html"><span class="doc-toc-num">01</span><span class="doc-toc-name">Install</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/02-first-program.html"><span class="doc-toc-num">02</span><span class="doc-toc-name">First program</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/03-project.html"><span class="doc-toc-num">03</span><span class="doc-toc-name">Projects</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/docs/04-agents.html" aria-current="page"><span class="doc-toc-num">04</span><span class="doc-toc-name">Agents</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">An assistant writing Nyx has a specific problem: it does not know what already exists, and it does not know which traps this language has. Left to itself it reinvents a standard library function, or invents syntax that looks right, or reads the compiler source to "understand how it works" and gets lost. So <code>nyx init</code> seeds the answer to both questions inside the project, in plain files any assistant can read.</p>
+
+<h2>What gets seeded, and what each file is for</h2>
+<table class="kv kv-wide">
+<tr><th>AGENTS.md</th><td>The playbook: how a program is built here, the decision procedure, the hard rails, and the traps that ruin a first attempt. Provider-neutral, following the <code>agents.md</code> convention, so any assistant reads the same file.</td></tr>
+<tr><th>CAPABILITIES.md</th><td>A generated index of the standard library — what already exists, so nothing gets rewritten. It is regenerated from the installed toolchain on every <code>nyx build</code>, so it cannot drift.</td></tr>
+<tr><th>docs/nyx/LLM.md</th><td>The dense reference: builtins, methods, types, the traps in long form, idiomatic patterns.</td></tr>
+<tr><th>docs/nyx/guides/</th><td>Three guides — write a program, fix a compile error, report friction.</td></tr>
+</table>
+<p>Nothing here mentions a particular assistant. That is deliberate: the context belongs to the project, not to whoever happens to open it.</p>
+
+<h2>The rule that saves the most time</h2>
+<p>The first thing <code>AGENTS.md</code> says, verbatim:</p>
+<pre>&gt; **GOLDEN RULE — do NOT read the compiler or stdlib source** (`std/`, `compiler/`, or
+&gt; anything under your Nyx install) "to understand how it works". You don't need to and
+&gt; you WILL get lost. If you want a function, look it up in `CAPABILITIES.md`. If you want
+&gt; an idiom, look it up at &lt;https://nyxlang.com/by-example/&gt;. **No network access?**
+&gt; `CAPABILITIES.md` alone is enough to find the right function — skip the idiom lookup
+&gt; and write it directly. That's it.</pre>
+<p>The rest of the file is a nine-step procedure — state the task, check <code>CAPABILITIES.md</code>, find the idiom, write the smallest thing that works, self-check with <code>nyx check</code> and <code>nyx vet</code>, run it, test it, read the error if it does not compile, and stop if you hit a real wall — followed by five hard rails: do not invent syntax, do not reinvent the standard library, do not wander into the compiler source, do not hack around a limitation, do not leave the project directory.</p>
+
+<h2>vet names the trap instead of leaving a parser error</h2>
+<p>Some mistakes are grep-able: they have a shape. <code>nyx vet</code> matches those shapes and reports each one with a stable code, the file and the line, so an assistant gets the trap by name instead of a confusing error three steps later:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx vet shapes.nx</span>
+warning[W101] shapes.nx:2: Enum variants use `.`, not `::`: `Shape.Circle(5)`, never `Shape::Circle(5)`.
+warning[W102] shapes.nx:3: Map literal keys must be STRINGS: `{&quot;k&quot;: 1}` and `{}` work (v0.16), but `{ident: 1}` is NOT a map literal and fails loudly with `NYX0106`.
+warning[W104] shapes.nx:4: Channels must be Map, not int: `let ch: Map = channel_new(10)`, never `let ch: int`.
+warning[W103] shapes.nx:5: `charAt()` returns int (ASCII/codepoint), NOT String — compare with numbers: `if c == 65`.
+warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bind`: a failed bind (port taken) returns `-1` — `if http_serve(8080, handler) &lt; 0 { return 1 }`.</pre>
+<p>Those five are the codes that exist today. Each one also carries the identifier of its entry in the reference, so the warning and the long explanation cannot say different things: they are generated from the same table.</p>
+
+<h2>Adapters, if your tool wants its own file</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx init my-app --agent=claude,cursor,copilot</span></pre>
+<p>That seeds, on top of the neutral scaffold, one small file per named tool, in the location each of them looks at. Each is three lines long and says the same thing: read <code>AGENTS.md</code> first, the guides are in <code>docs/nyx/guides/</code>, the standard library index is <code>CAPABILITIES.md</code>. They are pointers, not a second copy — there is exactly one source of truth, and duplicating it is how the two versions start disagreeing.</p>
+<p class="doc-note">The flag is also the only place on this site where those names appear. The scaffold itself does not care which assistant reads it.</p>
+
+<h2>Spec first, when the project deserves it</h2>
+<p>For anything bigger than a script, the expensive failure is not bad code — it is code that confidently solves the wrong problem. <code>nyx init my-app --sdd</code> (or <code>nyx sdd init</code> on a project you already have) seeds seven pieces that make an assistant ask instead of assume:</p>
+<pre data-lang="sh">docs/constitution.md          what the project is for, and how decisions are made
+docs/glossary.md              the words this project uses, defined once
+docs/adr/0000-template.md     the template for a decision that outlives a feature
+docs/sdd/onboarding.md        how to complete the constitution: 7 questions, one at a time
+specs/README.md               the cycle, and the spec template
+docs/evidence/nyx-0.31.0.md   generated: the traps that are live in this toolchain
+tests/constitution_test.nx    generated: greps src/ for the traps the compiler cannot catch</pre>
+<p>The constitution arrives empty, and says so:</p>
+<pre>**SDD_INCOMPLETE** — this constitution is still empty. An agent that reads this marker
+**offers** the user to fill it in (`docs/sdd/onboarding.md`: one question per section, in
+order) and removes this paragraph ONLY when the seven sections below have at least one
+TRUE line each. Nobody invents content to get rid of the marker — three true lines are
+worth more than twelve plausible ones.</pre>
+<p>That marker is the whole mechanism. An assistant that reads it offers seven questions — purpose, users, scope and non-goals, invariants, definition of done, technical constraints, how we decide — one at a time, writes the answers down in the user's own words, and removes the marker only when every section has a true line. "Not applicable" is a valid answer; a plausible default is not. Declining is also fine: <code>--sdd</code> is an offer, and the whole scaffold is reversible by deleting the files it created.</p>
+<p>From there the cycle is constitution first, then <code>specs/NNN-feature/spec.md</code> (what and why, with anything unanswerable listed under <em>Open questions</em> rather than guessed), then <code>plan.md</code> (how), then <code>tasks.md</code> (cut small enough to verify one at a time). A spec that contradicts the constitution is wrong, not the constitution.</p>
+<p>Two of those seven files are generated rather than written, and that is the point: <code>docs/evidence/</code> lists the traps that are actually live in the toolchain that seeded the project, with the test that proves each one — if a manual contradicts it, the manual is stale. <code>tests/constitution_test.nx</code> turns the same table into a test that greps your own <code>src/</code>. Both are regenerated by <code>nyx update</code>, so neither can quietly describe an older version.</p>
+
+<h2>When it genuinely cannot be done</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx report</span></pre>
+<p>Step nine of the procedure is to stop. If the language or the standard library genuinely cannot do something, or there is a bug, or the documents were wrong, <code>nyx report</code> creates a <code>FRICTION.md</code> in the project with the sections to fill in: what you were trying to do, the smallest code that reproduces it, and the literal error. Nothing is sent anywhere — the file is local, the user reads it, and sending it to the maintainers is a separate, explicit <code>--send</code>. A clean report is worth more than a hack.</p>
+
+<h2>Keeping it current</h2>
+<p>Every seeded file ends with a stamp naming the version and the language that produced it. When the toolchain moves ahead of a project, the wrapper notices the mismatch and warns — once, on stderr, without touching the file, because it may well have your edits in it. Refreshing is your decision:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx update --sync-docs</span></pre>
+<p>Run inside the project, it re-seeds <code>AGENTS.md</code>, the reference and the guides from the installed toolchain, regenerates <code>CAPABILITIES.md</code>, and leaves a <code>.bak</code> of anything that differed. Per-tool adapters are never overwritten: they are opt-in and usually edited.</p>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Steps">
+<a class="doc-nav-link doc-nav-prev" href="/docs/03-project.html"><span class="label">← Previous</span><span class="doc-nav-name">Projects</span></a>
+
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
