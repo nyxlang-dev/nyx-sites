@@ -44,7 +44,9 @@
 #      ROOT/es/ (excluyendo el LEGADO, shared/ e install.sh); por cada par
 #      presente en los dos lados, misma cantidad de <pre y de <h2; mismas
 #      claves en content/i18n/{en,es}.toml; por cada content/**/*.en.html
-#      existe el .es.html.
+#      existe el .es.html; y ningún content/**/*.html tiene prosa pendiente
+#      (la palabra TODO, que es lo que siembran los STUB de sidecar de
+#      scripts/sync-recipes.sh) — nada se publica con prosa inventada ni muda.
 #      Un archivo que existe en UN SOLO lado (p.ej. mientras static/docs/
 #      todavía no tiene su par en static/es/docs/, antes del cutover) se
 #      reporta como ⚠ aviso, no como ✗: la paridad ESTRUCTURAL (<pre>/<h2>/
@@ -499,6 +501,17 @@ EOF2
                 fails=$((fails + 1))
             fi
         done < <(find "$content_dir" -type f -name '*.en.html' 2>/dev/null | sort)
+
+        # Prosa pendiente. `scripts/sync-recipes.sh` siembra un STUB de sidecar
+        # para cada receta nueva del monorepo que no tiene prosa heredada, y ese
+        # stub queda lleno de TODO A PROPÓSITO: es preferible que la guardia se
+        # ponga en rojo a publicar una receta muda o, peor, con prosa inventada.
+        # El rojo se apaga escribiendo la prosa, no borrando la palabra.
+        while IFS= read -r todof; do
+            [ -z "$todof" ] && continue
+            print_bad "[G] content: prosa pendiente (TODO) en ${todof#$SITE_DIR/}"
+            fails=$((fails + 1))
+        done < <(grep -rl 'TODO' "$content_dir" --include='*.html' 2>/dev/null | sort)
     fi
 
     if [ "$fails" -eq 0 ]; then
