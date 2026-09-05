@@ -113,12 +113,16 @@ fn compare_tree(tmp_dir: String, out_dir: String, rels: Array) -> int {
 }
 
 fn run_check(out_dir: String, only: String) -> int {
+    // Único lugar del generador que sale a shell: no hay borrado recursivo
+    // nativo (mkdir sí es builtin, rmdir/unlink recursivo no), y el temporal
+    // tiene que arrancar y quedar vacío para que la comparación signifique
+    // algo. Todo lo demás — leer, crear directorios, escribir — usa builtins.
     exec_code("rm -rf '" + CHECK_TMP_DIR + "'")
     let rels: Array = generate(CHECK_TMP_DIR, only)
     let stale: int = compare_tree(CHECK_TMP_DIR, out_dir, rels)
     exec_code("rm -rf '" + CHECK_TMP_DIR + "'")
     if stale > 0 {
-        print("gen: " + int_to_string(stale) + " archivo(s) desactualizado(s) en " + out_dir + " — corré `make gen`")
+        print("gen: " + int_to_string(stale) + " archivo(s) desactualizado(s) en " + out_dir + " — hay que correr `make gen`")
         return 1
     }
     return 0
