@@ -13,3 +13,8 @@ __pycache__/
 
 # El vendoring de nyx-serve murió con la absorción al core (2026-08-31):
 # los sites importan `std/serve` de la toolchain y no tienen packages/.
+
+# Rediseño de nyxlang.com: scratch de `nyx gen.nx --check` y PID del preview
+# (static-next/ SÍ se commitea — es la salida que reemplaza a static/).
+nyxlang.com/static-next.tmp/
+nyxlang.com/.preview.pid
