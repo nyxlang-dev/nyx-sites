@@ -1,202 +1,266 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nyx — un lenguaje de tipado gradual que compila a código nativo</title>
-<meta name="description" content="Nyx es un lenguaje de tipado gradual que compila a código nativo con LLVM. Un comando lo instala en Linux, y cada proyecto que crea lleva el contexto que un agente de IA necesita para escribirlo bien.">
-<link rel="canonical" href="https://nyxlang.com/es/">
-<link rel="alternate" hreflang="en" href="https://nyxlang.com/">
-<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/">
-<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/">
-<link rel="stylesheet" href="/shared/spec.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nyx — un lenguaje nativo, self-hosting y legible para la IA</title>
+    <meta name="description" content="Nyx es un lenguaje compilado con rendimiento nativo vía LLVM, un compilador self-hosting y diagnósticos machine-readable hechos para agentes de IA. Todo lo que sirve este sitio está escrito en Nyx.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/shared/nyx-design-system.css">
 </head>
 <body>
-<nav class="nav" aria-label="Principal">
-<div class="nav-inner wrap">
-<a class="nav-wordmark" href="/es/">NYX</a>
-<ul class="nav-links">
-<li><a href="/es/#install">Instalar</a></li>
-<li><a href="/es/docs/">Documentación</a></li>
-<li><a href="/es/by-example/">Por ejemplo</a></li>
-<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
-</ul>
-<a class="nav-lang" href="/" hreflang="en" lang="en" title="View this page in English">English</a>
-</div>
+
+<nav>
+    <a href="/" class="nav-logo">Nyx<span class="greek">Νύξ</span></a>
+    <div class="nav-right">
+        <a href="#code" class="hide-mobile">Código</a>
+        <a href="/es/learn/" class="hide-mobile">Aprender</a>
+        <a href="/es/by-example/" class="hide-mobile">Ejemplos</a>
+        <a href="/playground/" class="hide-mobile">Playground</a>
+        <a href="https://github.com/nyxlang-dev/nyx" class="hide-mobile">GitHub</a>
+        <span class="nav-lang"><a href="/">EN</a> / <a href="/es/" class="active">ES</a></span>
+        <a href="#empezar" class="btn btn-accent">Empezar</a>
+    </div>
 </nav>
 
-<main>
-
+<!-- HERO -->
 <section class="hero">
-<div class="wrap hero-inner">
-<p class="hero-meta"><span class="stamp stamp-accent">Ficha técnica <span class="stamp-num stamp-num-end">v0.31.0</span></span><span class="hero-rule"></span></p>
-<h1 class="hero-title">Software nativo, documentado para agentes.</h1>
-<p class="hero-lede prose">Nyx compila a código nativo con LLVM, hospeda su propio compilador y entrega cada proyecto con lo que un agente de IA necesita para escribirlo bien.</p>
-
-<div class="cmd" id="install">
-<div class="cmd-head"><span class="label">Instalación</span><button class="btn" type="button" data-copy="curl -sSf https://nyxlang.com/install.sh | sh" data-copy-label="Copiar" data-copied-label="Copiado">Copiar</button></div>
-<div class="cmd-body"><span class="cmd-prompt">$</span><span class="cmd-text">curl -sSf https://nyxlang.com/install.sh | sh</span></div>
-</div>
-<p class="cmd-foot"><span class="tick">Linux</span> · x86_64 / aarch64 / armv7l · Termux</p>
-</div>
+    <span class="hero-label"><span class="glyph">✦</span> NATIVO · SELF-HOSTING · LEGIBLE PARA LA IA</span>
+    <h1>Un lenguaje para software <em>robusto</em> y nativo.</h1>
+    <p class="subtitle">
+        Nyx compila a código nativo a través de LLVM, hospeda su propio compilador y habla
+        un dialecto machine-readable que los agentes de IA pueden escribir, leer y arreglar.
+        Confiable por diseño &mdash; no por convención.
+    </p>
+    <div class="hero-buttons">
+        <a href="#empezar" class="btn btn-accent">Empezar</a>
+        <span class="inline-cmd">curl -sSf nyxlang.com/install.sh <span class="op">|</span> sh</span>
+    </div>
+    <div class="ephemeris" aria-hidden="true">
+        <div class="rule"></div>
+        <div class="ticks"></div>
+        <div class="star"><span class="dot"></span><span class="label">v0.22.0</span></div>
+    </div>
 </section>
 
-<section class="band">
-<div class="wrap band-inner">
-<header class="band-head">
-<p><span class="stamp"><span class="stamp-num">01</span> Instalación</span></p>
-<div><h2 class="band-title">Un comando para instalarlo. Uno para empezar un proyecto.</h2></div>
-</header>
-<div class="cols cols-58">
-<div>
-<table class="kv">
-<tr><th>Requisitos</th><td>clang, make y git, más las cabeceras de desarrollo de libgc, OpenSSL y zlib. El instalador instala lo que falte con el gestor de paquetes que encuentre: apt, dnf, pacman, apk, xbps, o pkg en Termux.</td></tr>
-<tr><th>Instala en</th><td>~/.nyx, con un enlace en ~/.local/bin/nyx (en Termux, $PREFIX/bin/nyx). Si ese directorio no está en tu PATH, el instalador lo agrega a tu perfil de shell y te avisa.</td></tr>
-<tr><th>Verificar</th><td><code>nyx --version</code> — imprime la versión instalada.</td></tr>
-<tr><th>Actualizar</th><td><code>nyx update</code> — trae la versión más reciente, la recompila e imprime qué cambió.</td></tr>
-<tr><th>Desinstalar</th><td><code>nyx uninstall</code> — borra la toolchain y el enlace que creó.</td></tr>
-</table>
-</div>
-<div>
-<div class="panel">
-<div class="panel-head"><span class="panel-name">Primer proyecto</span><span>terminal</span></div>
-<div class="panel-body"><pre><span class="term-line"><span class="term-prompt">$</span> nyx init my-app</span><span class="term-note">  crea nyx.toml, src/main.nx, AGENTS.md y docs/nyx/</span><span class="term-line"><span class="term-prompt">$</span> cd my-app</span><span class="term-line"><span class="term-prompt">$</span> nyx run</span><span class="term-note">  compila el proyecto y lo ejecuta</span></pre></div>
-</div>
-</div>
-</div>
-</div>
+<!-- CÓDIGO CENTRAL — la tesis -->
+<section id="code" style="padding-top:1rem">
+    <div class="codewrap">
+        <div class="cap">src/main.nx</div>
+<pre><span class="cm">// Una muestra de Nyx — enums con datos, pattern matching exhaustivo,</span>
+<span class="cm">// compilado a un binario nativo vía LLVM.</span>
+
+<span class="kw">enum</span> <span class="ty">Shape</span> {
+    <span class="ty">Rect</span>(<span class="ty">int</span>, <span class="ty">int</span>),
+    <span class="ty">Circle</span>(<span class="ty">int</span>)
+}
+
+<span class="kw">fn</span> <span class="fn">area</span>(s: <span class="ty">Shape</span>) -&gt; <span class="ty">int</span> {
+    <span class="kw">return</span> <span class="kw">match</span> s {
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(w, h) =&gt; w * h,
+        <span class="ty">Shape</span>.<span class="ty">Circle</span>(r)  =&gt; <span class="num">3</span> * r * r
+    }
+}
+
+<span class="kw">fn</span> <span class="fn">main</span>() {
+    <span class="kw">let</span> shapes: <span class="ty">Array</span>&lt;<span class="ty">Shape</span>&gt; = [
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(<span class="num">3</span>, <span class="num">4</span>),
+        <span class="ty">Shape</span>.<span class="ty">Circle</span>(<span class="num">5</span>),
+        <span class="ty">Shape</span>.<span class="ty">Rect</span>(<span class="num">6</span>, <span class="num">2</span>)
+    ]
+
+    <span class="kw">var</span> total: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
+    <span class="kw">while</span> i &lt; shapes.<span class="fn">length</span>() {
+        total = total + <span class="fn">area</span>(shapes[i])
+        i = i + <span class="num">1</span>
+    }
+
+    <span class="fn">print</span>(<span class="str">"figuras:    "</span> + <span class="fn">int_to_string</span>(shapes.<span class="fn">length</span>()))
+    <span class="fn">print</span>(<span class="str">"área total: "</span> + <span class="fn">int_to_string</span>(total))
+}</pre>
+    </div>
+    <div class="terminal">
+        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
+<pre><span class="prompt">$</span> <span class="cmd">nyx run</span>
+<span class="comment">-&gt; building hero v0.1.0</span>
+<span class="comment">   compiling src/main.nx</span>
+<span class="result">figuras:    3</span>
+<span class="result">área total: 99</span></pre>
+    </div>
 </section>
 
-<section class="band">
-<div class="wrap band-inner">
-<header class="band-head">
-<p><span class="stamp">Muestra</span></p>
-<div><h2 class="band-title">Cómo se lee el lenguaje.</h2></div>
-</header>
-<div class="cols cols-64">
-<div>
-<div class="panel">
-<div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
-<div class="panel-body"><pre><span class="kw">enum</span> <span class="ty">Shape</span> <span class="op">{</span>
-    <span class="ty">Circle</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
-    <span class="ty">Square</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
-    <span class="ty">Rect</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">)</span>
-<span class="op">}</span>
-
-<span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>            <span class="cm">// exhaustive: every variant must be covered</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>  <span class="op">=&gt;</span> <span class="num">3</span> <span class="op">*</span> r <span class="op">*</span> r<span class="op">,</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span>l<span class="op">)</span>  <span class="op">=&gt;</span> l <span class="op">*</span> l<span class="op">,</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span> <span class="op">=&gt;</span> w <span class="op">*</span> h
-    <span class="op">}</span>
-<span class="op">}</span>
-
-<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
-    <span class="kw">let</span> rect<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">7</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;area = ${area(rect)}&quot;</span><span class="op">)</span>
-<span class="op">}</span>
-</pre></div>
-</div>
-</div>
-<div>
-<table class="kv kv-wide">
-<tr><th>Muestra</th><td>Un enum con match exhaustivo sobre cada variante, interpolación de strings y tipos explícitos en cada binding.</td></tr>
-<tr><th>Verificado con</th><td><code>nyx check</code> — analiza y chequea tipos, sin linkear y sin ejecutar.</td></tr>
-<tr><th>Ejecútalo</th><td><code>nyx sample.nx</code></td></tr>
-</table>
-</div>
-</div>
-</div>
+<!-- TRES PILARES -->
+<section id="why">
+    <div class="section-label">Por qué Nyx</div>
+    <h2 class="section-title">Tres cosas que hace bien</h2>
+    <div class="pillars">
+        <div class="pillar">
+            <div class="k">✦ nativo</div>
+            <h3>Self-hosting y rápido</h3>
+            <p>El compilador está escrito en Nyx y se compila a sí mismo &mdash; recompilar produce IR byte-idéntico, verificado en cada release. La salida es código nativo vía LLVM, a la par o mejor que C en cómputo.</p>
+        </div>
+        <div class="pillar">
+            <div class="k">✦ ai-first</div>
+            <h3>Legible para agentes</h3>
+            <p>Diagnósticos machine-readable (<code>NYX_DIAG=json</code>, códigos estables, line:column, sugerencias de arreglo), <code>AGENTS.md</code> / <code>CAPABILITIES.md</code> autogenerados, e inferencia LLM on-device vía <code>std/llm</code>.</p>
+        </div>
+        <div class="pillar">
+            <div class="k">✦ completo</div>
+            <h3>Un ecosistema entero</h3>
+            <p>Un framework web, un almacén compatible con Redis, un reverse proxy, un editor de terminal &mdash; todos escritos en Nyx. Todo lo que sirve este sitio es uno de ellos.</p>
+        </div>
+    </div>
 </section>
 
-<section class="band">
-<div class="wrap band-inner">
-<header class="band-head">
-<p><span class="stamp"><span class="stamp-num">02</span> Documentación</span></p>
-<div><h2 class="band-title">La guía, paso a paso.</h2></div>
-</header>
-<ol class="steps">
-<li class="step"><a class="step-link" href="/es/docs/01-install.html"><span class="step-num">01</span><span><span class="step-name">Instalación</span><span class="step-note note">requisitos, qué queda dónde, cómo actualizar y cómo desinstalar.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/docs/02-first-program.html"><span class="step-num">02</span><span><span class="step-name">Primer programa</span><span class="step-note note">de un solo archivo .nx a un binario nativo que puedes distribuir.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/docs/03-project.html"><span class="step-num">03</span><span><span class="step-name">Proyectos</span><span class="step-note note">nyx.toml, src/, tests/ y dependencias.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/docs/04-agents.html"><span class="step-num">04</span><span><span class="step-name">Agentes</span><span class="step-note note">AGENTS.md, CAPABILITIES.md y docs/nyx/: el contexto que lee un asistente.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/docs/05-cli.html"><span class="step-num">05</span><span><span class="step-name">Línea de comandos</span><span class="step-note note">cada subcomando: build, run, check, vet, fmt, test, add, update.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/docs/06-syntax.html"><span class="step-num">06</span><span><span class="step-name">Sintaxis</span><span class="step-note note">tipos, enums, match exhaustivo, Result y el operador ?.</span></span></a></li>
-</ol>
-<a class="callout" href="/es/by-example/"><span><span class="callout-name">Nyx por ejemplo</span><span class="step-note note">Recetas resueltas, desde el hola mundo hasta un servidor HTTP. Lee una, cópiala, cámbiala.</span></span><span class="callout-go">Abrir →</span></a>
-</div>
+<!-- AI-FIRST DETALLE (evidencia compacta) -->
+<section id="ai-first" style="padding-top:1rem">
+    <div class="section-label">AI-first, en concreto</div>
+    <h2 class="section-title">Errores sobre los que un modelo puede actuar</h2>
+    <p class="section-subtitle">Cada diagnóstico es una línea de JSON con un código estable, ubicación exacta y una sugerencia de arreglo &mdash; en las fases de parse <em>y</em> semantic, bilingüe. Sin scrapear stderr, sin adivinar.</p>
+    <div class="terminal">
+        <div class="terminal-bar"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span></div>
+<pre><span class="prompt">$</span> <span class="cmd">NYX_DIAG=json nyx build</span>
+<span class="result">{"phase":"semantic","code":"NYX1005","line":12,"col":18,</span>
+<span class="result"> "message":"argument 2 of 'indexOf' must be int, got String",</span>
+<span class="result"> "hint":"pass a byte offset, e.g. s.indexOf(needle, 0)"}</span></pre>
+    </div>
 </section>
 
-<section class="band">
-<div class="wrap band-inner">
-<header class="band-head">
-<p><span class="stamp"><span class="stamp-num">03</span> Desarrolla con agentes</span></p>
-<div><h2 class="band-title">Cada proyecto lleva el contexto que un agente necesita para escribirlo.</h2></div>
-</header>
-<div class="cols">
-<div class="stack">
-<div>
-<p class="label kv-title">Lo que siembra nyx init</p>
-<table class="kv kv-wide">
-<tr><th>AGENTS.md</th><td>El manual de campo: cómo se construye un programa acá, los rieles duros y las trampas que arruinan un primer intento. Neutral respecto del proveedor, según la convención agents.md.</td></tr>
-<tr><th>CAPABILITIES.md</th><td>Índice generado de la biblioteca estándar — lo que ya existe, para que nadie lo reinvente. Se regenera en cada build.</td></tr>
-<tr><th>docs/nyx/</th><td>La referencia densa más tres guías: escribir un programa, arreglar un error de compilación y reportar fricción.</td></tr>
-</table>
-</div>
-<div>
-<p class="label kv-title">Herramientas</p>
-<ul class="tools">
-<li class="tool"><span class="tool-cmd">nyx vet</span><span class="note">Nombra las trampas grep-ables en lugar de dejar un error del parser: <code>warning[W101] src/main.nx:12</code></span></li>
-<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">Un archivo adaptador corto y opcional por herramienta. AGENTS.md sigue siendo la única fuente de verdad; el adaptador solo apunta ahí.</span></li>
-<li class="tool"><span class="tool-cmd">nyx init --sdd</span><span class="note">Siembra el andamiaje orientado a especificación: constitución, glosario, plantilla de ADR y specs/ — así el agente pregunta en vez de inventar.</span></li>
-<li class="tool"><span class="tool-cmd">nyx report</span><span class="note">Deja un FRICTION.md en el proyecto. No se envía nada por su cuenta.</span></li>
-</ul>
-</div>
-</div>
-<div>
-<div class="panel">
-<div class="panel-head"><span class="panel-name">AGENTS.md — sembrado por nyx init</span><span>extracto</span></div>
-<div class="panel-body"><pre><span class="cm">&gt;</span> <span class="cm">**</span><span class="kw">REGLA DE ORO — NO leas el fuente del compilador ni de la biblioteca estándar</span><span class="cm">**</span>
-<span class="cm">&gt;</span> (<span class="str">`std/`</span>, <span class="str">`compiler/`</span>, ni nada bajo tu instalación de Nyx) «para entender cómo funciona».
-<span class="cm">&gt;</span> No hace falta y te vas a perder. Si buscas una función, búscala en <span class="str">`CAPABILITIES.md`</span>. <span class="cm">…</span>
-
-<span class="cm">##</span> <span class="kw">Rieles duros (NO hagas esto)</span>
-
-<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO inventes sintaxis.</span><span class="cm">**</span> Si dudas de que una palabra clave o una feature exista,
-  probablemente no exista — revisa <span class="str">`CAPABILITIES.md`</span> (o <span class="ty">&lt;https://nyxlang.com/by-example/&gt;</span>)
-  en vez de adivinar.
-<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO reinventes lo que ya hace la stdlib.</span><span class="cm">**</span> Si <span class="str">`CAPABILITIES.md`</span> lo lista, úsalo.
-<span class="cm">-</span> <span class="cm">**</span><span class="kw">NO parches una limitación.</span><span class="cm">**</span> Repórtala con <span class="str">`nyx report`</span> y detente.
-<span class="cm">…</span>
-</pre></div>
-</div>
-</div>
-</div>
-</div>
+<!-- CONSTRUILO EN NYX -->
+<section id="ecosystem">
+    <div class="section-label">Constrúyelo en Nyx</div>
+    <h2 class="section-title">Un lenguaje, un stack completo</h2>
+    <p class="section-subtitle">Cada uno de estos es un producto separado, escrito enteramente en Nyx, corriendo en producción detrás de este dominio.</p>
+    <div class="card-grid cols-2" style="margin-top:1.5rem">
+        <a href="https://serve.nyxlang.com" class="card">
+            <div class="card-title">nyx-serve</div>
+            <div class="card-desc">Framework web — rutas, JSON, WebSockets, plantillas, multipart, sesiones. Un binario estático.</div>
+        </a>
+        <a href="https://nyxkv.com" class="card">
+            <div class="card-title">nyx-kv</div>
+            <div class="card-desc">Almacén clave-valor compatible con Redis — 64 comandos, Pub/Sub, SCAN estable ante resize, TLS, multi-tenant.</div>
+        </a>
+        <a href="https://proxy.nyxlang.com" class="card">
+            <div class="card-title">nyx-proxy</div>
+            <div class="card-desc">Reverse proxy HTTPS — TLS con SNI, health checks, cache LRU, Prometheus /metrics, rate limiting.</div>
+        </a>
+        <a href="https://edit.nyxlang.com" class="card">
+            <div class="card-title">nyx-edit</div>
+            <div class="card-desc">Editor de texto para terminal en un archivo Nyx — resize en vivo, UTF-8, mouse, undo de 1000 niveles, sin parpadeo.</div>
+        </a>
+    </div>
+    <p style="margin-top:1.25rem"><a href="/playground/">Prueba Nyx en el playground del navegador &rarr;</a></p>
 </section>
 
-<section class="band">
-<div class="wrap band-inner">
-<header class="band-head">
-<p><span class="stamp"><span class="stamp-num">04</span> Fuente</span></p>
-<div><h2 class="band-title">Abierto, versionado y honesto sobre ser 0.x.</h2></div>
-</header>
-<table class="kv kv-wide">
-<tr><th>Licencia</th><td>Apache-2.0</td></tr>
-<tr><th>Repositorio</th><td><a href="https://github.com/nyxlang-dev/nyx">https://github.com/nyxlang-dev/nyx</a></td></tr>
-<tr><th>Changelog</th><td><a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">CHANGELOG.md</a> — cada versión, con qué cambió y por qué.</td></tr>
-<tr><th>Estado</th><td>0.x: en desarrollo activo. La API puede cambiar y no se garantiza la compatibilidad entre versiones minor.</td></tr>
-</table>
-</div>
+<!-- EMPEZAR -->
+<section id="empezar">
+    <div class="section-label">Empezar</div>
+    <h2 class="section-title">De cero a ejecutar en 30 segundos</h2>
+    <p class="section-subtitle">Instala el toolchain, crea un proyecto, ejecútalo. Sin runtime que instalar en tus servidores &mdash; el compilador produce un binario estático.</p>
+
+    <div class="gs-install">
+        <code>$ curl -sSf https://nyxlang.com/install.sh | sh</code>
+        <button class="btn-copy" onclick="copyInstall(this)">Copiar</button>
+    </div>
+    <p class="gs-note">Linux (x86_64, ARM64) &middot; requiere Clang &middot; verificar: nyx --version &rarr; nyx 0.22.0</p>
+
+<pre class="term" style="margin-top:1.5rem"><span class="prompt">$</span> nyx init mi-app
+<span class="prompt">$</span> cd mi-app &amp;&amp; nyx run
+<span class="comment">mi-app arrancando…</span></pre>
+
+    <div class="gs-learn">
+        <a href="/es/learn/" class="btn btn-outline">Lee el Libro de Nyx</a>
+        <a href="/es/by-example/" class="btn btn-outline">Nyx con Ejemplos</a>
+    </div>
+    <p class="gs-learn-note">El Libro cubre el lenguaje de punta a punta; Por Ejemplo tiene 100 recetas ejecutables. El gestor de paquetes, las dependencias y la referencia completa de comandos viven ahí.</p>
 </section>
-</main>
-<footer class="footer">
-<div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
-<p class="mono">nyxlang.com</p>
-</div>
+
+<!-- OPEN SOURCE -->
+<section id="open-source">
+    <div class="section-label">Open source</div>
+    <h2 class="section-title">Construido en abierto</h2>
+    <p class="section-subtitle">Nyx es Apache 2.0. El compilador, el runtime, la librería estándar y cada producto de arriba están en GitHub &mdash; lee el código, abre un issue, envía un patch.</p>
+    <div class="hero-buttons" style="justify-content:flex-start;margin-top:1.5rem">
+        <a href="https://github.com/nyxlang-dev/nyx" class="btn btn-accent">Código en GitHub</a>
+        <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md" class="btn btn-outline">Changelog</a>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-grid">
+        <div class="footer-col">
+            <h4>Lenguaje</h4>
+            <a href="/es/learn/">El Libro de Nyx</a>
+            <a href="/es/by-example/">Por Ejemplo</a>
+            <a href="/playground/">Playground</a>
+            <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
+        </div>
+        <div class="footer-col">
+            <h4>Productos</h4>
+            <a href="https://serve.nyxlang.com">nyx-serve</a>
+            <a href="https://nyxkv.com">nyx-kv</a>
+            <a href="https://proxy.nyxlang.com">nyx-proxy</a>
+            <a href="https://edit.nyxlang.com">nyx-edit</a>
+        </div>
+        <div class="footer-col">
+            <h4>Referencia</h4>
+            <a href="#ai-first">Diagnósticos AI-first</a>
+            <a href="#code">Sintaxis</a>
+            <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
+        <div class="footer-col">
+            <h4>Comunidad</h4>
+            <a href="https://github.com/nyxlang-dev">GitHub Org</a>
+            <a href="https://github.com/nyxlang-dev/nyx/issues">Issues</a>
+        </div>
+    </div>
+    <div class="footer-bottom">Nyx &mdash; un lenguaje self-hosting · Apache 2.0 · construido con Nyx</div>
 </footer>
 
-<script src="/shared/copy.js" defer></script>
+<script>
+function copyInstall(btn) {
+    navigator.clipboard.writeText('curl -sSf https://nyxlang.com/install.sh | sh');
+    btn.textContent = '¡Copiado!';
+    setTimeout(function() { btn.textContent = 'Copiar'; }, 2000);
+}
+/* Botón copiar en cada bloque de código — auto-contenido. */
+(function () {
+  var css = document.createElement("style");
+  css.textContent =
+    ".nyx-pre{position:relative}" +
+    ".nyx-copy{position:absolute;top:.55rem;right:.55rem;z-index:2;font:500 .68rem/1 var(--font-mono),ui-monospace,monospace;" +
+    "letter-spacing:.06em;text-transform:uppercase;color:#a3a3a3;background:rgba(128,128,128,.16);" +
+    "border:1px solid rgba(150,160,220,.28);border-radius:5px;padding:.32rem .55rem;cursor:pointer;" +
+    "opacity:0;transition:opacity .15s ease,color .15s ease,border-color .15s ease}" +
+    ".nyx-pre:hover .nyx-copy,.nyx-copy:focus{opacity:1}" +
+    ".nyx-copy:hover{color:var(--nyx-violet,#c2c2c2);border-color:#ffffff}" +
+    ".nyx-copy.ok{color:var(--nyx-violet,#c2c2c2);border-color:#ffffff}";
+  document.head.appendChild(css);
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("pre").forEach(function (pre) {
+      if (pre.closest(".nyx-pre")) return;
+      var wrap = document.createElement("div");
+      wrap.className = "nyx-pre";
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement("button");
+      btn.className = "nyx-copy"; btn.type = "button";
+      btn.textContent = "Copiar"; btn.setAttribute("aria-label", "Copiar código");
+      wrap.appendChild(btn);
+      btn.addEventListener("click", function () {
+        var text = pre.innerText.replace(/\n$/, "");
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = "Copiado"; btn.classList.add("ok");
+          setTimeout(function () { btn.textContent = "Copiar"; btn.classList.remove("ok"); }, 1600);
+        });
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>
