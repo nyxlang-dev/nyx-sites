@@ -31,7 +31,7 @@ warning[W107] shapes.nx:6: Check the return of `http_serve`/`tcp_listen`/`udp_bi
 
 <h2>Adapters, if your tool wants its own file</h2>
 <pre data-lang="sh">$ nyx init my-app --agent=claude,cursor,copilot</pre>
-<p>That seeds, on top of the neutral scaffold, one small file per named tool, in the location each of them looks at. Each is three lines long and says the same thing: read <code>AGENTS.md</code> first, the guides are in <code>docs/nyx/guides/</code>, the standard library index is <code>CAPABILITIES.md</code>. They are pointers, not a second copy — there is exactly one source of truth, and duplicating it is how the two versions start disagreeing.</p>
+<p>That seeds, on top of the neutral scaffold, one small file per named tool, in the location each of them looks at. Each is a short file that says the same thing: read <code>AGENTS.md</code> first, the guides are in <code>docs/nyx/guides/</code>, the standard library index is <code>CAPABILITIES.md</code>. They are pointers, not a second copy — there is exactly one source of truth, and duplicating it is how the two versions start disagreeing.</p>
 <p class="doc-note">The flag is also the only place on this site where those names appear. The scaffold itself does not care which assistant reads it.</p>
 
 <h2>Spec first, when the project deserves it</h2>

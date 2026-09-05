@@ -147,7 +147,7 @@
 <p class="label kv-title">Herramientas</p>
 <ul class="tools">
 <li class="tool"><span class="tool-cmd">nyx vet</span><span class="note">Nombra las trampas grep-ables en lugar de dejar un error del parser: <code>warning[W101] src/main.nx:12</code></span></li>
-<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">Adaptadores opcionales de tres líneas, uno por herramienta. AGENTS.md sigue siendo la única fuente de verdad; el adaptador solo apunta ahí.</span></li>
+<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">Un archivo adaptador corto y opcional por herramienta. AGENTS.md sigue siendo la única fuente de verdad; el adaptador solo apunta ahí.</span></li>
 <li class="tool"><span class="tool-cmd">nyx init --sdd</span><span class="note">Siembra el andamiaje orientado a especificación: constitución, glosario, plantilla de ADR y specs/ — así el agente pregunta en vez de inventar.</span></li>
 <li class="tool"><span class="tool-cmd">nyx report</span><span class="note">Deja un FRICTION.md en el proyecto. No se envía nada por su cuenta.</span></li>
 </ul>
@@ -167,6 +167,7 @@
   en vez de adivinar.
 <span class="cm">-</span> <span class="cm">**</span><span class="kw">NO reinventes lo que ya hace la stdlib.</span><span class="cm">**</span> Si <span class="str">`CAPABILITIES.md`</span> lo lista, úsalo.
 <span class="cm">-</span> <span class="cm">**</span><span class="kw">NO parches una limitación.</span><span class="cm">**</span> Repórtala con <span class="str">`nyx report`</span> y detente.
+<span class="cm">…</span>
 </pre></div>
 </div>
 </div>

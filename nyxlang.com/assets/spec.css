@@ -279,6 +279,20 @@ div.cmd .btn { color: var(--panel-ink); background: transparent; border-color: #
 .kv-wide th { width: 26%; }
 .kv-title { margin-bottom: 14px; }
 
+/* Un enlace INLINE dentro de una celda kv tiene que distinguirse del texto
+   sin depender del hover: con el `a { color: inherit; text-decoration: none }`
+   global, los dos enlaces de la tabla «Source» de la landing eran
+   indistinguibles del resto de la fila. Subrayado ámbar y no texto ámbar:
+   --accent no llega a 4.5:1 sobre papel (ver tokens), así que el texto se
+   queda en --ink (15:1) y el acento hace de filete. */
+.kv a {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.kv a:hover { text-decoration-thickness: 2px; }
+
 /* `code` suelto dentro del texto: ficha, no bloque. */
 code:not([class]) {
   font-family: var(--mono);

@@ -147,7 +147,7 @@
 <p class="label kv-title">Tooling</p>
 <ul class="tools">
 <li class="tool"><span class="tool-cmd">nyx vet</span><span class="note">Names the grep-able traps instead of leaving a parser error: <code>warning[W101] src/main.nx:12</code></span></li>
-<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">Optional three-line adapters, one per tool. AGENTS.md stays the single source of truth; the adapter only points at it.</span></li>
+<li class="tool"><span class="tool-cmd">nyx init --agent=claude,cursor,copilot</span><span class="note">An optional short adapter file per tool. AGENTS.md stays the single source of truth; the adapter only points at it.</span></li>
 <li class="tool"><span class="tool-cmd">nyx init --sdd</span><span class="note">Seeds the spec-driven scaffolding: constitution, glossary, ADR template and specs/ — so the agent asks instead of inventing.</span></li>
 <li class="tool"><span class="tool-cmd">nyx report</span><span class="note">Leaves a FRICTION.md in the project. Nothing is sent on its own.</span></li>
 </ul>
@@ -166,6 +166,7 @@
   check <span class="str">`CAPABILITIES.md`</span> (or <span class="ty">&lt;https://nyxlang.com/by-example/&gt;</span>) instead of guessing.
 <span class="cm">-</span> <span class="cm">**</span><span class="kw">Do NOT reinvent stdlib functionality.</span><span class="cm">**</span> If <span class="str">`CAPABILITIES.md`</span> lists it, use it.
 <span class="cm">-</span> <span class="cm">**</span><span class="kw">Do NOT hack around a limitation.</span><span class="cm">**</span> Report it with <span class="str">`nyx report`</span> and stop.
+<span class="cm">…</span>
 </pre></div>
 </div>
 </div>

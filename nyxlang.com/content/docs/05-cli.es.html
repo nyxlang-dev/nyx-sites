@@ -8,7 +8,7 @@
 <table class="kv kv-wide">
 <tr><th>nyx init [nombre]</th><td>Crea un proyecto: <code>nyx.toml</code>, <code>src/main.nx</code>, <code>.gitignore</code>, <code>AGENTS.md</code>, <code>CAPABILITIES.md</code> y <code>docs/nyx/</code>.</td></tr>
 <tr><th class="kv-cmd">&nbsp;&nbsp;--lang en|es</th><td>Idioma de los documentos sembrados. Por defecto toma <code>NYX_LANG</code>, y <code>en</code> si esa variable no está.</td></tr>
-<tr><th class="kv-cmd">&nbsp;&nbsp;--agent=…</th><td><code>--agent=claude,cursor,copilot</code> — siembra además el adaptador de tres líneas de cada herramienta nombrada.</td></tr>
+<tr><th class="kv-cmd">&nbsp;&nbsp;--agent=…</th><td><code>--agent=claude,cursor,copilot</code> — siembra además un archivo adaptador corto por cada herramienta nombrada.</td></tr>
 <tr><th class="kv-cmd">&nbsp;&nbsp;--sdd</th><td>Siembra además el andamiaje orientado a especificación que describe el paso 04.</td></tr>
 <tr><th>nyx sdd init</th><td>Siembra ese mismo andamiaje en un proyecto que ya existe: constitución, glosario, evidencia, plantilla de ADR, <code>specs/</code>, el test de constitución y la guía.</td></tr>
 <tr><th>nyx sdd evidence</th><td>Regenera <code>docs/evidence/</code> para la toolchain instalada en este momento.</td></tr>
