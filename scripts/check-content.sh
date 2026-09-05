@@ -111,12 +111,15 @@
 #
 #   Autotest (control positivo): corre PRIMERO, siempre. Crea un SITIO
 #      temporal (content/ + static-next/) con errores plantados a propósito
-#      que disparan A, B, C, E, F, G, J y K; si alguno no lo detecta, el
-#      script se declara ROTO y sale 2 antes de tocar el árbol real — un
-#      guardia que no ve sus propios controles positivos no prueba nada
-#      estando en verde. D y H comparten scan_denylist con A y C (cobertura
-#      indirecta); I queda sin control positivo (ficha [BAJA] en el
-#      TASKS.md del monorepo).
+#      que disparan A, B, C, E, F, G, J, K y L (L con su propio catálogo, su
+#      copia de receta y un "monorepo" falso cuyo .nx difiere en un byte); si
+#      alguno no lo detecta, el script se declara ROTO y sale 2 antes de tocar
+#      el árbol real — un guardia que no ve sus propios controles positivos no
+#      prueba nada estando en verde. B, J, K y L exigen un número EXACTO de
+#      hallazgos, no «≥1»: así el control no lo puede dar por bueno un error de
+#      otra clase plantado en la misma página. D y H comparten scan_denylist
+#      con A y C (cobertura indirecta); I queda sin control positivo (ficha
+#      [BAJA] en el TASKS.md del monorepo).
 #
 #   Piso mínimo (corre después del autotest, antes de evaluar A-I sobre
 #   ROOT, sin depender de `nyx` ni de `gen.nx`): ROOT/index.html y
@@ -203,6 +206,12 @@ CHECK_LAST_FAILS=0
 # Los ⚠ de G (rollout incremental) no son fallos, pero el control positivo
 # del autotest necesita poder verlos: check_g los deja acá.
 CHECK_LAST_WARNS=0
+# Salida cruda del último check que delega en otro script (hoy sólo L). El
+# control positivo de L no puede conformarse con «hubo ≥1 hallazgo»: eso lo
+# cumple también un L que ignore el $root recibido y evalúe el content/ real
+# contra el monorepo falso. Mirando el TEXTO se comprueba que evaluó el
+# sitio-fixture y no otro.
+CHECK_LAST_LOG=""
 
 # Lista archivos bajo $1=root con los predicados -name que sigan ($2, $3…),
 # excluyendo el LEGADO (ver comentario arriba de `set -u`). Usada por A, B,
@@ -578,8 +587,12 @@ EOF2
 }
 
 # ── H. Español neutro (excepto learn/) ───────────────────────────────────
+# site_dir se deriva de $root (como check_g, check_j y check_l), no de la
+# global SITE_DIR: las cuatro funciones que miran content/ tienen ahora la
+# misma forma, y ninguna evalúa un sitio distinto del que le pasaron.
 check_h() {
     local root="$1"
+    local site_dir; site_dir="$(dirname "$root")"
     local files n=0
     # LEGADO: mismo criterio que A-D — es/learn/ es contenido preexistente
     # que gen-site.sh copia tal cual de static/ y que nadie reescribe; el
@@ -589,9 +602,9 @@ check_h() {
     legacy_prune_args "$root"
     files=$(find "$root/es" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
         "${LEGACY_PRUNE[@]}" 2>/dev/null | sort)
-    if [ -d "$SITE_DIR/content" ]; then
+    if [ -d "$site_dir/content" ]; then
         local content_es
-        content_es=$(find "$SITE_DIR/content" -type f -name '*.es.*' 2>/dev/null | sort)
+        content_es=$(find "$site_dir/content" -type f -name '*.es.*' 2>/dev/null | sort)
         files="$files
 $content_es"
     fi
@@ -861,6 +874,7 @@ check_l() {
     local root="$1"
     local site_dir; site_dir="$(dirname "$root")"
 
+    CHECK_LAST_LOG=""
     if [ ! -f "$site_dir/content/by-example/recipes.toml" ]; then
         print_warn "[L] $site_dir/content/by-example/recipes.toml no existe — se salta (root sin recetario al lado)"
         CHECK_LAST_FAILS=0
@@ -894,6 +908,7 @@ check_l() {
         sed 's/^/      /' "$log"
         CHECK_LAST_FAILS=1
     fi
+    CHECK_LAST_LOG="$(cat "$log")"
     rm -f "$log"
 
     # Mirror público (AVISO, nunca ✗): los enlaces «Source →» de las 69 páginas
@@ -940,6 +955,8 @@ run_autotest() {
 <a href="/no-existe.html">enlace roto</a>
 <a href="/es/#products">ancla muerta</a>
 <p>{{clave_que_no_existe}}</p>
+<pre>{{ok_en_pre}}</pre>
+<p>La receta 102 escribe <code>{{ok_en_code}}</code> como tema, no como interpolación.</p>
 </body>
 </html>
 HTML
@@ -974,7 +991,13 @@ HTML
     check_e "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: E no detectó el control positivo"; broken=1; }
     check_f "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: F no detectó el control positivo"; broken=1; }
     check_g "$aroot"; [ "$CHECK_LAST_WARNS" -ge 1 ] || { print_bad "AUTOTEST ROTO: G no vio la página EN sin gemela ES"; broken=1; }
-    check_k "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: K no detectó el control positivo"; broken=1; }
+    # Exactamente 4: <title> vacío + el {{ de un <p>, por las dos copias del
+    # fixture. Ni 2 (el sub-check de `{{` fuera de <pre>/<code> —lo único que
+    # la fase 2 le cambió a K— se quedó ciego) ni 6 u 8 (strip_pre/strip_code
+    # dejaron de proteger el `{{ok_en_pre}}` y el `{{ok_en_code}}`, que son
+    # control NEGATIVO: la receta 102 publica esa sintaxis como tema de la
+    # página). Con «≥1» el <title> vacío solo daba el autotest por bueno.
+    check_k "$aroot"; [ "$CHECK_LAST_FAILS" -eq 4 ] || { print_bad "AUTOTEST ROTO: K vio $CHECK_LAST_FAILS hallazgo(s), esperaba 4 (<title> vacío + {{ en un <p>, en index.html y en es/index.html; los {{ de <pre> y <code> no cuentan)"; broken=1; }
 
     check_j "$aroot"
     if command -v nyx >/dev/null 2>&1; then
@@ -985,6 +1008,46 @@ HTML
         [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: J no detectó el control positivo"; broken=1; }
     fi
 
+    # L: control positivo propio (era el único check que no se medía a sí
+    # mismo). Se planta un sitio-fixture con su catálogo y su copia de receta,
+    # y un "monorepo" de mentira cuyo .nx del mismo slug tiene un byte
+    # distinto: L tiene que ver EXACTAMENTE 1 hallazgo (el drift). La versión
+    # del VERSION falso se hace coincidir con el site.toml del fixture para
+    # que el desajuste de versión —que L también reporta— no enmascare al
+    # drift ni sume un segundo hallazgo.
+    local fmono="$tmp/mono"
+    mkdir -p "$fmono/examples/by-example" "$site/content/by-example/src"
+    printf '0.0.1\n' > "$fmono/VERSION"
+    cat > "$site/content/by-example/recipes.toml" <<'TOML'
+order = "01-fixture"
+
+[r01]
+slug = "01-fixture"
+num = "01"
+category = "fundamentals"
+excluded = "0"
+sidecar = "1"
+TOML
+    printf 'fn main() -> int { return 0 }\n' > "$site/content/by-example/src/01-fixture.nx"
+    printf 'fn main() -> int { return 1 }\n' > "$fmono/examples/by-example/01-fixture.nx"
+
+    # Las asignaciones delante de la llamada a una FUNCIÓN persisten en bash
+    # después de que la función vuelve, así que no se usa esa forma: se
+    # exporta, se llama y se restaura el entorno del que corre el script.
+    local prev_mono="${NYX_MONOREPO:-}" prev_mirror="${NYX_MIRROR:-}"
+    export NYX_MONOREPO="$fmono"
+    export NYX_MIRROR="$tmp/sin-mirror-a-proposito"
+    check_l "$aroot"
+    [ "$CHECK_LAST_FAILS" -eq 1 ] || { print_bad "AUTOTEST ROTO: L vio $CHECK_LAST_FAILS hallazgo(s), esperaba 1 (el .nx del fixture difiere del monorepo falso)"; broken=1; }
+    # Y que el hallazgo sea EL del fixture: si L ignorara el $root recibido y
+    # evaluara el content/ real contra el monorepo falso, también saldría 1.
+    case "$CHECK_LAST_LOG" in
+        *01-fixture*) ;;
+        *) print_bad "AUTOTEST ROTO: L no nombró la receta del sitio-fixture — evaluó otro content/ (¿se perdió NYX_SITE_DIR?)"; broken=1 ;;
+    esac
+    if [ -n "$prev_mono" ]; then export NYX_MONOREPO="$prev_mono"; else unset NYX_MONOREPO; fi
+    if [ -n "$prev_mirror" ]; then export NYX_MIRROR="$prev_mirror"; else unset NYX_MIRROR; fi
+
     rm -rf "$tmp"
 
     if [ "$broken" -eq 1 ]; then
@@ -992,7 +1055,7 @@ HTML
         printf 'Abortando antes de evaluar el árbol real.\n'
         exit 2
     fi
-    print_ok "autotest: A, B, C, E, F, G, J y K detectan el control positivo — el instrumento sirve"
+    print_ok "autotest: A, B, C, E, F, G, J, K y L detectan el control positivo — el instrumento sirve"
 }
 
 # ── Piso mínimo (fix round 2) ─────────────────────────────────────────────
