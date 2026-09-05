@@ -24,6 +24,23 @@ El rediseño genera el sitio nuevo al lado del viejo (`static-next/` junto a
 `static/`, ver `make gen`); el intercambio final es atómico, una sola
 syscall (`mv --exchange`, coreutils ≥ 9.7), sin restart y sin ventana.
 
+**El swap de la fase 2 usa EXACTAMENTE el mismo procedimiento.** No hay un
+runbook aparte: la fase 2 (el recetario `/by-example` generado, en vez de la
+copia parcheada del recetario viejo) deja `static-next/` como el sitio COMPLETO
+v2 — landing + guía + recetario + «The Nyx Book» legado + `shared/` con las dos
+hojas + `install.sh` + `logo.png` — y se publica con los mismos siete pasos de
+abajo. `cutover-static.sh` razona por GENERACIÓN de sitio (fase 2 > fase 1 >
+sitio viejo), así que `swap` exige que `static-next/` sea más nuevo que lo
+publicado y `rollback` que sea más viejo: correr cualquiera de los dos en el
+estado equivocado aborta sin tocar nada.
+
+Después del swap de la fase 2, `static-next/` queda con **el sitio de la fase
+1** — ese es el rollback disponible, y por eso la limpieza (borrar el recetario
+legado, `DRIFT.md`, el modo `--drift` de `sync-recipes.sh`) NO se hace en el
+mismo paso: se hace cuando el sitio v2 ya demostró estar bien, aceptando que
+hasta entonces el rollback vuelve a un sitio que todavía nombra productos en
+`/by-example/`.
+
 ### Runbook, en orden
 
 ```
@@ -31,8 +48,9 @@ syscall (`mv --exchange`, coreutils ≥ 9.7), sin restart y sin ventana.
    make gen-test                                #   tests del generador + la muestra de la landing
 2. make deploy                                  # binario v2 (T5, NYX_STATIC_ROOT) con la raíz por default
    curl -s -o /dev/null -w '%{http_code}' localhost:3001/docs/   # 404 limpio, / sin cambios
-3. git merge --ff-only redesign/spec-sheet      # 0 archivos tocados bajo static/
-4. make cutover-status                          # static=VIEJO, static-next=NUEVO
+3. git merge --ff-only <rama>                   # 0 archivos tocados bajo static/
+                                                #   fase 1: redesign/spec-sheet · fase 2: redesign/by-example
+4. make cutover-status                          # static = generación publicada, static-next = la nueva
 5. bash scripts/cutover-static.sh swap nyxlang.com
 6. curls contra https://nyxlang.com             # el gateway drena keep-alives stale (~15 requests)
 7. commit — y RECIÉN ACÁ el release del monorepo / el sync del mirror público
@@ -61,12 +79,12 @@ bash scripts/cutover-static.sh swap nyxlang.com               # precondiciones +
 bash scripts/cutover-static.sh rollback nyxlang.com           # revierte (el mismo mv --exchange, es su propio inverso)
 ```
 
-`swap` aborta sin tocar nada si falta algo en `static-next/`, si hay
-cambios sin commitear en `static/`/`static-next/`, o si
-`scripts/check-content.sh static-next` no da verde. `rollback` aborta si
-`static-next/` no tiene la marca del sitio VIEJO **y** sí la del nuevo — o
-sea, antes del swap no hace nada (correrlo por error ahí no publica el sitio
-nuevo). `PORT` (default 3001) y `BASE_URL` controlan contra qué servidor se
+`swap` aborta sin tocar nada si falta algo en `static-next/`, si su
+generación no es más nueva que la publicada, si hay cambios sin commitear en
+`static/`/`static-next/`, o si `scripts/check-content.sh static-next` no da
+verde. `rollback` aborta si la generación de `static-next/` no es ANTERIOR a
+la de `static/` — o sea, antes del swap no hace nada (correrlo por error ahí
+no publica el sitio nuevo). `PORT` (default 3001) y `BASE_URL` controlan contra qué servidor se
 verifica después del intercambio; sin servidor escuchando, el script lo avisa
 y omite los curls (no es un fallo, y sale 0). Si hay servidor y alguna
 verificación falla, sale 2. No hay target de Makefile para `swap`/`rollback`

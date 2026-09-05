@@ -10,12 +10,13 @@
 #   BASE_URL (default http://127.0.0.1:$PORT)  base de las verificaciones curl
 #
 # Contrato completo: docs/design (T12) — resumen:
-#   status   — imprime qué hay en static/ y static-next/ (marca del sitio
-#              nuevo = shared/spec.css + docs/index.html; marca del viejo =
-#              shared/nyx-design-system.css) y si el servidor responde. Sale 0.
+#   status   — imprime la GENERACIÓN de static/ y static-next/ (fase 2, fase 1
+#              o sitio viejo — ver site_generation) y si el servidor
+#              responde. Sale 0.
 #   swap     — precondiciones (TODAS o aborta sin tocar nada): mv soporta
 #              --exchange; static/ y static-next/ existen y son directorios;
-#              static-next/ tiene los archivos mínimos del sitio nuevo; sin
+#              static-next/ tiene los archivos mínimos del sitio nuevo y una
+#              generación MÁS NUEVA que la publicada en static/; sin
 #              cambios sin commitear en esos dos árboles; check-content.sh
 #              verde sobre static-next/. Luego `mv --exchange` (una sola
 #              llamada) y una verificación curl best-effort (si no hay
@@ -25,9 +26,9 @@
 #              (es atómico) y el rc distinto de cero es la única señal —
 #              `cutover-static.sh swap … && echo ok` no puede dar verde falso.
 #   rollback — el mismo `mv --exchange` en sentido inverso (es su propio
-#              inverso), con la precondición de que static-next/ tenga la
-#              marca del sitio VIEJO **y no la del nuevo** (si no, ya se hizo
-#              el swap o nunca se hizo — no hay nada que revertir). Mismo
+#              inverso), con la precondición de que static-next/ tenga una
+#              generación ANTERIOR a la de static/ (si no, ya se revirtió o
+#              nunca se hizo el swap — no hay nada que revertir). Mismo
 #              rc=2 que swap si la verificación posterior falla.
 #
 # El `mv --exchange` es atómico: o se aplicó entero o no se aplicó. El único
@@ -89,24 +90,48 @@ site_relpath() {
     esac
 }
 
-is_new_mark() { [ -f "$1/shared/spec.css" ] && [ -f "$1/docs/index.html" ]; }
-# OJO — la marca del sitio viejo NO puede ser sólo shared/nyx-design-system.css:
-# static-next/ (el sitio NUEVO) también lo lleva, porque gen-site.sh lo copia
-# para que las páginas LEGADO (learn/, by-example/) sigan teniendo su hoja de
-# estilos. Sin el `! is_new_mark` de adelante, la única precondición de
-# `rollback` era verdadera en los DOS estados y correr `rollback` ANTES del
-# swap hacía el cutover — salteándose check-content.sh, el chequeo de árbol
-# commiteado y la lista de archivos mínimos que sí exige `swap`.
-# Post-swap static-next/ es el sitio viejo (sin spec.css ni docs/index.html),
-# así que sigue dando verdadero y el rollback real no cambia.
-is_old_mark() { ! is_new_mark "$1" && [ -f "$1/shared/nyx-design-system.css" ]; }
+# GENERACIÓN del sitio que vive en un directorio. Un número, no un par de
+# marcas booleanas, porque el rediseño tiene más de dos estados y las
+# precondiciones de swap/rollback son de ORDEN, no de identidad:
+#
+#   2  fase 2: landing + guía + RECETARIO generados
+#   1  fase 1: landing + guía generados, recetario todavía legado (copiado)
+#   0  sitio viejo, escrito a mano
+#  -1  no se reconoce
+#
+# La marca de la fase 2 es que el índice del recetario cargue la hoja NUEVA:
+# el recetario legado carga shared/nyx-design-system.css, que el sitio
+# generado también copia (las páginas de «The Nyx Book» la necesitan), así
+# que la presencia del archivo NO distingue nada — hay que mirar quién lo usa.
+site_generation() {
+    local d="$1"
+    if [ -f "$d/shared/spec.css" ] && [ -f "$d/docs/index.html" ]; then
+        if [ -f "$d/by-example/index.html" ] && grep -q '/shared/spec.css' "$d/by-example/index.html"; then
+            echo 2
+        else
+            echo 1
+        fi
+        return
+    fi
+    if [ -f "$d/shared/nyx-design-system.css" ]; then echo 0; return; fi
+    echo -1
+}
+
+site_generation_label() {
+    case "$1" in
+        2) echo "sitio de la FASE 2 (landing + guía + recetario generados)" ;;
+        1) echo "sitio de la FASE 1 (landing + guía generados, recetario legado)" ;;
+        0) echo "sitio VIEJO (shared/nyx-design-system.css)" ;;
+        *) echo "marca desconocida" ;;
+    esac
+}
 
 mv_exchange_supported() {
     mv --help 2>/dev/null | grep -q -- '--exchange'
 }
 
-# Verificación curl best-effort tras un intercambio. $1 = "nuevo" | "viejo"
-# según qué contenido debería estar viviendo en static/ después de la
+# Verificación curl best-effort tras un intercambio. $1 = "nuevo" | "anterior"
+# según qué generación debería estar viviendo en static/ después de la
 # operación. Si el servidor no responde en $PORT (caso normal del ensayo,
 # sin servidor levantado), lo dice y omite los curls — eso NO es un fallo.
 #
@@ -137,6 +162,9 @@ verify_site() {
         "/docs/:docs/index.html" \
         "/es/docs/01-install.html:es/docs/01-install.html" \
         "/by-example/:by-example/index.html" \
+        "/es/by-example/:es/by-example/index.html" \
+        "/by-example/24-option-some-none.html:by-example/24-option-some-none.html" \
+        "/by-example/71-kv-basic.html:by-example/71-kv-basic.html" \
         "/learn/01.html:learn/01.html" \
         "/install.sh:install.sh" \
         "/shared/spec.css:shared/spec.css"
@@ -154,10 +182,10 @@ verify_site() {
         fi
     done
 
-    if [ "$expect" = "viejo" ]; then
+    if [ "$expect" = "anterior" ]; then
         got="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$BASE_URL/shared/nyx-design-system.css" 2>/dev/null || true)"
         if [ "$got" = "200" ]; then
-            echo "  OK   /shared/nyx-design-system.css -> 200 (marca del sitio viejo)"
+            echo "  OK   /shared/nyx-design-system.css -> 200 (la hoja del legado sigue servida)"
         else
             echo "  MAL  /shared/nyx-design-system.css -> ${got:-sin respuesta} (esperaba 200)"
             checks_ok=0
@@ -187,7 +215,7 @@ verify_site() {
 }
 
 cmd_status() {
-    local site_abs="$1" d dir mark
+    local site_abs="$1" d dir
     echo "== status: $SITE_ARG =="
     for d in static static-next; do
         dir="$site_abs/$d"
@@ -199,13 +227,7 @@ cmd_status() {
             echo "  $d/: existe pero NO es un directorio"
             continue
         fi
-        mark="marca desconocida"
-        if is_new_mark "$dir"; then
-            mark="sitio NUEVO (shared/spec.css + docs/index.html)"
-        elif is_old_mark "$dir"; then
-            mark="sitio VIEJO (shared/nyx-design-system.css)"
-        fi
-        echo "  $d/: directorio, $mark"
+        echo "  $d/: directorio, $(site_generation_label "$(site_generation "$dir")")"
     done
     local code
     code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$BASE_URL/" 2>/dev/null || true)"
@@ -229,10 +251,18 @@ cmd_swap() {
     [ -d "$staticn" ] || abort "$staticn no existe o no es un directorio."
 
     local required rel
-    required="index.html es/index.html docs/index.html es/docs/index.html shared/spec.css learn/index.html install.sh"
+    required="index.html es/index.html docs/index.html es/docs/index.html by-example/index.html es/by-example/index.html shared/spec.css learn/index.html install.sh"
     for rel in $required; do
         [ -f "$staticn/$rel" ] || abort "falta $staticn/$rel — static-next/ no está completo."
     done
+
+    # El swap PUBLICA lo que está en static-next/: sólo tiene sentido si esa es
+    # una generación MÁS NUEVA que la publicada. Sin esta comparación, correr
+    # `swap` dos veces seguidas despublicaba el sitio nuevo sin decir nada.
+    local gen_now gen_next
+    gen_now="$(site_generation "$static")"
+    gen_next="$(site_generation "$staticn")"
+    [ "$gen_next" -gt "$gen_now" ] || abort "static-next/ es $(site_generation_label "$gen_next") y static/ ya es $(site_generation_label "$gen_now") — el swap publicaría algo que no es más nuevo. ¿Querías « rollback »?"
 
     local site_rel dirty
     site_rel="$(site_relpath "$site_abs")"
@@ -280,7 +310,15 @@ cmd_rollback() {
     [ -d "$static" ]  || abort "$static no existe o no es un directorio."
     [ -d "$staticn" ] || abort "$staticn no existe o no es un directorio."
 
-    is_old_mark "$staticn" || abort "$staticn no tiene la marca del sitio viejo (shared/nyx-design-system.css) — ¿ya se hizo el swap, o nunca se hizo? No hay nada que revertir."
+    # Espejo de la precondición del swap: revertir sólo tiene sentido si lo
+    # guardado en static-next/ es una generación ANTERIOR a la publicada. Antes
+    # de un swap la desigualdad va al revés, así que correr `rollback` por error
+    # ahí no publica nada (que es lo que se busca: el rollback no puede
+    # saltearse check-content.sh ni el chequeo de árbol commiteado del swap).
+    local gen_now gen_prev
+    gen_now="$(site_generation "$static")"
+    gen_prev="$(site_generation "$staticn")"
+    [ "$gen_prev" -lt "$gen_now" ] || abort "static-next/ es $(site_generation_label "$gen_prev") y static/ es $(site_generation_label "$gen_now") — no hay nada anterior que restaurar. ¿Ya se hizo el rollback, o nunca se hizo el swap?"
 
     echo "precondiciones OK — revirtiendo static/ <-> static-next/ ..."
     if ! (cd "$site_abs" && mv --exchange -T static static-next); then
@@ -290,7 +328,7 @@ cmd_rollback() {
     echo "hecho: static/ y static-next/ volvieron a intercambiarse."
 
     local verify_ok=0
-    verify_site "viejo" "$site_abs" || verify_ok=1
+    verify_site "anterior" "$site_abs" || verify_ok=1
 
     echo
     echo "para reintentar el swap: bash $SELF swap $SITE_ARG"
