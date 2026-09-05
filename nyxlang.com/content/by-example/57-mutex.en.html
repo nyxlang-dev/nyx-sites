@@ -6,7 +6,7 @@
 counter: 2000
 </section>
 <section data-part="explanation">
-<p><code>mutex_new()</code> allocates a new mutex and returns an opaque handle. Before accessing the shared <code>counter</code> variable, each thread calls <code>mutex_lock(m)</code> to acquire exclusive access, then <code>mutex_unlock(m)</code> to release it.</p>
+<p><code>mutex_new()</code> allocates a new mutex and returns an opaque handle, annotated <code>Map</code> — the ecosystem convention for opaque handles, since typing it <code>int</code> truncates the pointer and is now a checker error. Before accessing the shared <code>counter</code> variable, each thread calls <code>mutex_lock(m)</code> to acquire exclusive access, then <code>mutex_unlock(m)</code> to release it.</p>
 <p>Two threads each increment the counter 1000 times. Without the mutex, some increments would be lost because both threads could read the same value simultaneously. With the mutex, the final count is always exactly 2000.</p>
 <p>Always call <code>mutex_destroy(m)</code> when the mutex is no longer needed to free system resources. In production code, consider wrapping critical sections in helper functions to ensure unlock is never forgotten.</p>
 </section>

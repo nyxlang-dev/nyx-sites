@@ -3,16 +3,16 @@
 <p><code>std/msgpack</code> provides binary serialization that is roughly 30% smaller than JSON for typical data. Each value is packed into a compact binary string that preserves its type. This is used internally by nyx-kv for its <code>.ndb</code> persistence format.</p>
 </section>
 <section data-part="output">
-int type:  positive_int
+int type:  int
 str type:  str
 bool type: bool_true
 nil type:  nil
 unpacked int: 42
 unpacked str: hello
-array type: array
+array type: int
 </section>
 <section data-part="explanation">
 <p>MessagePack encodes each value into a compact binary representation. Small integers (0-127) fit in a single byte, short strings use a 1-byte header, and booleans/nil are always 1 byte. The <code>msgpack_type</code> function inspects the first byte to determine what kind of value is stored.</p>
-<p><code>msgpack_array</code> takes an array of already-packed values and prepends an array header. This lets you build arbitrarily nested structures: pack individual values first, then compose them into arrays.</p>
+<p><code>msgpack_array</code> takes an array of already-packed values and prepends an array header. This lets you build arbitrarily nested structures: pack individual values first, then compose them into arrays. The header byte is emitted through the integer packer, so <code>msgpack_type</code> reports <code>int</code> for the composed array instead of <code>array</code> — read the length prefix yourself if you need to tell them apart.</p>
 <p>The pack/unpack functions operate on Nyx strings (which are byte sequences), making them compatible with network transmission and file storage without additional encoding.</p>
 </section>

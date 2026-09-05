@@ -6,7 +6,7 @@
 encoded: hello%20world%20%26%20foo%3Dbar
 decoded: hello world & foo=bar
 query:   name=Nyx%20Lang&lang=es&version=0.12
-escaped: &amp;lt;script&amp;gt;alert(&#x27;xss&#x27;)&amp;lt;/script&amp;gt;
+escaped: &amp;lt;script&amp;gt;alert(&amp;#x27;xss&amp;#x27;)&amp;lt;/script&amp;gt;
 </section>
 <section data-part="explanation">
 <p><code>url_encode</code> codifica con percent-encoding todos los caracteres excepto los caracteres no reservados de RFC 3986 (<code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>-._~</code>). Los espacios se convierten en <code>%20</code>, los ampersands en <code>%26</code>, etc. <code>url_decode</code> revierte el proceso y también decodifica <code>+</code> como espacio.</p>
