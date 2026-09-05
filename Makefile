@@ -8,7 +8,7 @@ export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com
 
-.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks check-content preview preview-stop cutover-status
+.PHONY: build-all smoke deploy status clean gen gen-test gen-check gen-docblocks check-content verify preview preview-stop cutover-status
 
 # ── Rediseño de nyxlang.com (rama redesign/spec-sheet) ──────────────────────
 # El sitio se GENERA: gen.nx lee content/ + templates/ y escribe static-next/.
@@ -51,6 +51,19 @@ gen-docblocks: gen
 ROOT ?= nyxlang.com/static-next
 check-content:
 	bash scripts/check-content.sh $(ROOT)
+
+# Las dos redes juntas, en el único orden que tiene sentido: primero
+# gen-docblocks (que regenera y COMPILA cada bloque de Nyx de la guía),
+# después check-content (que juzga el contenido publicado). Sin este target,
+# check-doc-blocks.sh no tenía disparador automático — deploy.sh corre sólo
+# check-content, que por diseño no compila nada, así que un ejemplo de la
+# guía que dejara de compilar se publicaba sin que nada chillara.
+#
+# NO se mete adentro de deploy.sh a propósito: gen-docblocks es caro
+# (invoca al compilador una vez por bloque) y depende de `gen`, que ESCRIBE
+# en el repo. Es un paso del runbook del cutover (ver README.md), no del
+# deploy de rutina.
+verify: gen-docblocks check-content
 
 # Preview local en background (nunca en foreground: bloquea la sesión).
 # NYX_STATIC_ROOT lo implementa la T5; hasta entonces el binario sirve

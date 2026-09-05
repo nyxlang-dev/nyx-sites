@@ -14,14 +14,46 @@ make smoke      # verificación efímera sin tocar producción
 make deploy     # deploy completo con restart verificado (sudo)
 ```
 
-Requiere el toolchain Nyx (`NYX_HOME`, default `/home/admin/NyxLang`).
+Requiere el toolchain Nyx (`NYX_HOME`, default `/home/admin/nyx/lang` — el
+mismo que usa el `Makefile`).
 Ver `CLAUDE.md` para reglas operativas.
 
 ## Cutover de nyxlang.com
 
 El rediseño genera el sitio nuevo al lado del viejo (`static-next/` junto a
 `static/`, ver `make gen`); el intercambio final es atómico, una sola
-syscall (`mv --exchange`, coreutils ≥ 9.7), sin restart y sin ventana:
+syscall (`mv --exchange`, coreutils ≥ 9.7), sin restart y sin ventana.
+
+### Runbook, en orden
+
+```
+1. make verify                                  # gen + los 32 bloques de la guía compilan + check-content
+   make gen-test                                #   tests del generador + la muestra de la landing
+2. make deploy                                  # binario v2 (T5, NYX_STATIC_ROOT) con la raíz por default
+   curl -s -o /dev/null -w '%{http_code}' localhost:3001/docs/   # 404 limpio, / sin cambios
+3. git merge --ff-only redesign/spec-sheet      # 0 archivos tocados bajo static/
+4. make cutover-status                          # static=VIEJO, static-next=NUEVO
+5. bash scripts/cutover-static.sh swap nyxlang.com
+6. curls contra https://nyxlang.com             # el gateway drena keep-alives stale (~15 requests)
+7. commit — y RECIÉN ACÁ el release del monorepo / el sync del mirror público
+```
+
+**Gate del paso 7 (no es una recomendación, es el orden):** ningún release
+del monorepo ni sync del mirror público antes del swap. `scripts/install.sh`,
+`LLM.md`, `scripts/build-release.sh`, `README.md` y `docs/GETTING_STARTED.md`
+del monorepo del lenguaje ya apuntan a `https://nyxlang.com/docs/` en `main`
+(T8, mergeado) y no queda ninguna referencia a `/learn/`. Hasta que el swap
+esté hecho, esa URL da 404: publicar un release antes manda al usuario recién
+instalado a una página que no existe.
+
+El paso 2 va antes del 5 y no al revés: el binario v1 no tiene la ruta
+`/docs/`, así que un swap con v1 todavía en producción deja seis links de la
+nav nueva en 404. Desde la review final eso además hace salir a `swap` con
+rc=2 (el intercambio ya se aplicó — es atómico — y el rc es la señal de «andá
+a mirar»), así que `cutover-static.sh swap … && …` no puede encadenar sobre
+un cutover a medio verificar.
+
+### Los tres subcomandos
 
 ```bash
 make cutover-status                                          # solo lectura, no toca nada
@@ -31,9 +63,12 @@ bash scripts/cutover-static.sh rollback nyxlang.com           # revierte (el mis
 
 `swap` aborta sin tocar nada si falta algo en `static-next/`, si hay
 cambios sin commitear en `static/`/`static-next/`, o si
-`scripts/check-content.sh static-next` no da verde. `PORT` (default 3001)
-y `BASE_URL` controlan contra qué servidor se verifica después del
-intercambio; sin servidor escuchando, el script lo avisa y omite los curls
-(no es un fallo). No hay target de Makefile para `swap`/`rollback` — se
-invocan a mano con la ruta del sitio explícita para que nadie los dispare
-sin querer.
+`scripts/check-content.sh static-next` no da verde. `rollback` aborta si
+`static-next/` no tiene la marca del sitio VIEJO **y** sí la del nuevo — o
+sea, antes del swap no hace nada (correrlo por error ahí no publica el sitio
+nuevo). `PORT` (default 3001) y `BASE_URL` controlan contra qué servidor se
+verifica después del intercambio; sin servidor escuchando, el script lo avisa
+y omite los curls (no es un fallo, y sale 0). Si hay servidor y alguna
+verificación falla, sale 2. No hay target de Makefile para `swap`/`rollback`
+— se invocan a mano con la ruta del sitio explícita para que nadie los
+dispare sin querer.
