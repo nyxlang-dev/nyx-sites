@@ -1,0 +1,14 @@
+# content/i18n/en.toml — diccionario en inglés.
+# Claves planas y ORDENADAS alfabéticamente; en.toml y es.toml tienen SIEMPRE
+# el mismo juego de claves (la verificación de la task las compara con diff).
+footer_changelog = "Changelog"
+footer_license = "Apache 2.0"
+lang_alt_label = "Español"
+lang_switch_label = "Ver esta página en español"
+nav_docs = "Docs"
+nav_examples = "By example"
+nav_github = "GitHub"
+nav_install = "Install"
+nav_label = "Main"
+placeholder_body = "Placeholder: the landing page arrives in the next task. This page already comes out of the Nyx static generator: layout, navigation, footer and dictionaries are in place."
+title_home = "Nyx — a gradually typed language that compiles to native code"

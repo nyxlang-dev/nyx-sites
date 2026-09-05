@@ -1,0 +1,13 @@
+# content/i18n/es.toml — diccionario en español neutro latinoamericano (tuteo).
+# Mismas claves que en.toml, mismo orden alfabético.
+footer_changelog = "Changelog"
+footer_license = "Apache 2.0"
+lang_alt_label = "English"
+lang_switch_label = "View this page in English"
+nav_docs = "Documentación"
+nav_examples = "Por ejemplo"
+nav_github = "GitHub"
+nav_install = "Instalar"
+nav_label = "Principal"
+placeholder_body = "Marcador de posición: la landing llega en la próxima tarea. Esta página ya sale del generador estático escrito en Nyx: layout, navegación, pie y diccionarios ya están en su lugar."
+title_home = "Nyx — un lenguaje de tipado gradual que compila a código nativo"

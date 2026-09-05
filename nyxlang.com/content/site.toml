@@ -1,0 +1,9 @@
+# content/site.toml — datos globales del sitio.
+#
+# Claves PLANAS a propósito (sin `[seccion]`): std/toml prefija cada clave con
+# "seccion." cuando hay encabezado, y el contexto del motor de templates es
+# plano, así que evitamos la traducción de nombres en el medio.
+version = "0.31.0"
+site_url = "https://nyxlang.com"
+repo_url = "https://github.com/nyxlang-dev/nyx"
+install_cmd = "curl -sSf https://nyxlang.com/install.sh | sh"

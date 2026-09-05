@@ -1,0 +1,17 @@
+/* assets/spec.css — hoja del rediseño «spec sheet».
+   T1 deja solo el reset mínimo y las variables base; la T2 escribe el diseño.
+   El generador lo copia tal cual a <out>/shared/spec.css. */
+:root {
+  --ink: #111;
+  --paper: #fff;
+  --rule: #d8d8d8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font: 16px/1.6 ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+}
+main { display: block; }
+a { color: inherit; }
