@@ -1,71 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Productor-Consumidor — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Productor-Consumidor — Nyx por ejemplo</title>
+<meta name="description" content="Pipeline desacoplado con contrapresión de channel acotado.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/60-producer-consumer.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/60-producer-consumer.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/60-producer-consumer.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/60-producer-consumer.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/60-producer-consumer.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
-<main class="book-content">
-    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
-    <h1>Productor-Consumidor</h1>
-    <p>El patrón productor-consumidor desacopla la generación de datos de su procesamiento. El canal acotado (capacidad 3) provee contrapresión natural: el productor se bloquea cuando el buffer está lleno.</p>
-    <h2>Código</h2>
-    <pre><code><span class="cm">// Producer-consumer pattern with bounded channel</span>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">60</span> / Concurrencia</span></p>
+<h1 class="doc-title">Productor-Consumidor</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>El patrón productor-consumidor desacopla la generación de datos de su procesamiento. El canal acotado (capacidad 3) provee contrapresión natural: el productor se bloquea cuando el buffer está lleno.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">60-producer-consumer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/60-producer-consumer.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Producer-consumer pattern with bounded channel</span>
 <span class="cm">// Patrón productor-consumidor con canal acotado</span>
 
-<span class="kw">var</span> items_ch: <span class="ty">Map</span> = Map.new()
+<span class="kw">var</span> items_ch<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
 
-<span class="kw">fn</span> <span class="fn">produce</span>() -> <span class="ty">int</span> {
-    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
-    <span class="kw">while</span> i &lt; <span class="num">5</span> {
-        <span class="kw">let</span> item: <span class="ty">int</span> = (i + <span class="num">1</span>) * <span class="num">10</span>
-        print(<span class="str">"produced: "</span> + int_to_string(item))
-        channel_send(items_ch, item)
-        i = i + <span class="num">1</span>
-    }
-    channel_send(items_ch, <span class="num">-1</span>)
+<span class="kw">fn</span> <span class="fn">produce</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="kw">let</span> item<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="op">(</span>i <span class="op">+</span> <span class="num">1</span><span class="op">)</span> <span class="op">*</span> <span class="num">10</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;produced: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>item<span class="op">))</span>
+        <span class="fn">channel_send</span><span class="op">(</span>items_ch<span class="op">,</span> item<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">channel_send</span><span class="op">(</span>items_ch<span class="op">,</span> <span class="op">-</span><span class="num">1</span><span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}
+<span class="op">}</span>
 
-<span class="kw">fn</span> <span class="fn">consume</span>() -> <span class="ty">int</span> {
-    <span class="kw">while</span> <span class="kw">true</span> {
-        <span class="kw">let</span> item: <span class="ty">int</span> = channel_recv(items_ch)
-        <span class="kw">if</span> item &lt; <span class="num">0</span> { <span class="kw">return</span> <span class="num">0</span> }
-        print(<span class="str">"consumed: "</span> + int_to_string(item))
-    }
+<span class="kw">fn</span> <span class="fn">consume</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">while</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">let</span> item<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>items_ch<span class="op">)</span>
+        <span class="kw">if</span> item <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">return</span> <span class="num">0</span> <span class="op">}</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;consumed: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>item<span class="op">))</span>
+    <span class="op">}</span>
     <span class="kw">return</span> <span class="num">0</span>
-}
+<span class="op">}</span>
 
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
     <span class="cm">// Bounded channel — producer blocks if buffer is full</span>
-    items_ch = channel_new(<span class="num">3</span>)
+    items_ch <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">3</span><span class="op">)</span>
 
-    <span class="kw">let</span> p: <span class="ty">int</span> = thread_spawn(produce)
-    <span class="kw">let</span> c: <span class="ty">int</span> = thread_spawn(consume)
+    <span class="kw">let</span> p<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span><span class="op">(</span>produce<span class="op">)</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">thread_spawn</span><span class="op">(</span>consume<span class="op">)</span>
 
-    thread_join(p)
-    thread_join(c)
-    channel_destroy(items_ch)
-    print(<span class="str">"pipeline complete"</span>)
+    <span class="fn">thread_join</span><span class="op">(</span>p<span class="op">)</span>
+    <span class="fn">thread_join</span><span class="op">(</span>c<span class="op">)</span>
+    <span class="fn">channel_destroy</span><span class="op">(</span>items_ch<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;pipeline complete&quot;</span><span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-    <h2>Salida</h2>
-    <pre class="output">produced: 10
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">produced: 10
 produced: 20
 produced: 30
 produced: 40
@@ -75,16 +89,28 @@ consumed: 20
 consumed: 30
 consumed: 40
 consumed: 50
-pipeline complete</pre>
-    <h2>Explicación</h2>
-    <p>El canal <code>items_ch</code> tiene una capacidad de 3, lo que significa que el productor puede enviar como máximo 3 elementos antes de bloquearse. Esto provee contrapresión natural -- si el consumidor es lento, el productor automáticamente se ralentiza para ajustarse.</p>
-    <p>El productor genera los valores 10, 20, 30, 40, 50 y los envía a través del canal, seguidos de un centinela <code>-1</code> para señalar la finalización. El consumidor recorre en bucle <code>channel_recv</code>, procesando cada elemento hasta que ve el centinela.</p>
-    <p>El entrelazado exacto de los mensajes "produced" y "consumed" depende de la planificación del sistema, pero el orden dentro de cada flujo siempre se preserva. El buffer acotado evita que el productor sature al consumidor con datos.</p>
-    <div class="book-nav">
-        <a href="/es/by-example/59-worker-pool.html">&larr; Anterior</a>
-        <a href="/es/by-example/61-waitgroup.html">Siguiente &rarr;</a>
-    </div>
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/60-producer-consumer.nx">examples/by-example/60-producer-consumer.nx</a></small></p>
+pipeline complete</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>El canal <code>items_ch</code> tiene una capacidad de 3, lo que significa que el productor puede enviar como máximo 3 elementos antes de bloquearse. Esto provee contrapresión natural -- si el consumidor es lento, el productor automáticamente se ralentiza para ajustarse.</p>
+<p>El productor genera los valores 10, 20, 30, 40, 50 y los envía a través del canal, seguidos de un centinela <code>-1</code> para señalar la finalización. El consumidor recorre en bucle <code>channel_recv</code>, procesando cada elemento hasta que ve el centinela.</p>
+<p>El entrelazado exacto de los mensajes "produced" y "consumed" depende de la planificación del sistema, pero el orden dentro de cada flujo siempre se preserva. El buffer acotado evita que el productor sature al consumidor con datos.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/59-worker-pool.html"><span class="label">← Anterior</span><span class="doc-nav-name">Pool de Workers</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/61-waitgroup.html"><span class="label">Siguiente →</span><span class="doc-nav-name">WaitGroup</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

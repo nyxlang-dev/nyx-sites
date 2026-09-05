@@ -1,110 +1,124 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manejo de Errores — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manejo de Errores — Nyx por ejemplo</title>
+<meta name="description" content="Bloques try/catch para recuperarse de errores en tiempo de ejecución.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/35-error-handling.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/35-error-handling.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/35-error-handling.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/35-error-handling.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/35-error-handling.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">35</span> / Avanzado</span></p>
+<h1 class="doc-title">Manejo de Errores</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. El built-in <code>throw</code> lanza un error de tipo string que se puede capturar, mientras que <code>panic</code> termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">35-error-handling.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/35-error-handling.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Manejo de errores: try/catch con throw y panic</span>
 
-    <h1>Manejo de Errores</h1>
+<span class="kw">fn</span> <span class="fn">dividir</span><span class="op">(</span>a<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> b<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">throw</span><span class="op">(</span><span class="str">&quot;division por cero: denominador es 0&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> a <span class="op">/</span> b
+<span class="op">}</span>
 
-    <p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. El built-in <code>throw</code> lanza un error de tipo string que se puede capturar, mientras que <code>panic</code> termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Capturar un throw explícito</span>
+    <span class="kw">var</span> resultado<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">try</span> <span class="op">{</span>
+        <span class="kw">let</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">dividir</span><span class="op">(</span><span class="num">10</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+        resultado <span class="op">=</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">)</span>
+    <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+        resultado <span class="op">=</span> <span class="str">&quot;Error capturado: &quot;</span> <span class="op">+</span> e
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span>resultado<span class="op">)</span>
 
-    <h2>Código</h2>
-    <pre><code>// Manejo de errores: try/catch con throw y panic
+    <span class="cm">// try normal (sin error)</span>
+    <span class="kw">var</span> ok<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">try</span> <span class="op">{</span>
+        <span class="kw">let</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">dividir</span><span class="op">(</span><span class="num">20</span><span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+        ok <span class="op">=</span> <span class="str">&quot;resultado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">)</span>
+    <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+        ok <span class="op">=</span> <span class="str">&quot;inesperado: &quot;</span> <span class="op">+</span> e
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span>ok<span class="op">)</span>
 
-fn dividir(a: int, b: int) -> int {
-    if b == 0 {
-        throw("division por cero: denominador es 0")
-    }
-    return a / b
-}
+    <span class="cm">// Capturar panic</span>
+    <span class="kw">var</span> panic_msg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">try</span> <span class="op">{</span>
+        <span class="fn">panic</span><span class="op">(</span><span class="str">&quot;algo salio muy mal&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+        panic_msg <span class="op">=</span> <span class="str">&quot;panic atrapado: &quot;</span> <span class="op">+</span> e
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span>panic_msg<span class="op">)</span>
 
-fn main() -> int {
-    // Capturar un throw explícito
-    var resultado: String = ""
-    try {
-        let r: int = dividir(10, 0)
-        resultado = int_to_string(r)
-    } catch(e: String) {
-        resultado = "Error capturado: " + e
-    }
-    print(resultado)
+    <span class="cm">// try anidado</span>
+    <span class="kw">var</span> externo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">try</span> <span class="op">{</span>
+        <span class="kw">try</span> <span class="op">{</span>
+            <span class="kw">throw</span><span class="op">(</span><span class="str">&quot;error interno&quot;</span><span class="op">)</span>
+        <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+            externo <span class="op">=</span> <span class="str">&quot;manejado: &quot;</span> <span class="op">+</span> e
+        <span class="op">}</span>
+    <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+        externo <span class="op">=</span> <span class="str">&quot;no deberia llegar aqui&quot;</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span>externo<span class="op">)</span>
 
-    // try normal (sin error)
-    var ok: String = ""
-    try {
-        let r: int = dividir(20, 4)
-        ok = "resultado: " + int_to_string(r)
-    } catch(e: String) {
-        ok = "inesperado: " + e
-    }
-    print(ok)
-
-    // Capturar panic
-    var panic_msg: String = ""
-    try {
-        panic("algo salio muy mal")
-    } catch(e: String) {
-        panic_msg = "panic atrapado: " + e
-    }
-    print(panic_msg)
-
-    // try anidado
-    var externo: String = ""
-    try {
-        try {
-            throw("error interno")
-        } catch(e: String) {
-            externo = "manejado: " + e
-        }
-    } catch(e: String) {
-        externo = "no deberia llegar aqui"
-    }
-    print(externo)
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Error capturado: division por cero: denominador es 0
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Error capturado: division por cero: denominador es 0
 resultado: 5
 panic atrapado: algo salio muy mal
-manejado: error interno</pre>
-
-    <h2>Explicación</h2>
-    <p><code>throw(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>throw</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
-    <p><code>panic</code> señala una condición irrecuperable — por defecto aborta el proceso, pero también se puede capturar con <code>try</code>/<code>catch</code> cuando la recuperación es genuinamente posible. Esto lo hace útil para aserciones durante el desarrollo que pueden envolverse en tests.</p>
-    <p>Los bloques <code>try</code> anidados permiten manejar los errores internos localmente sin propagarlos a los manejadores externos. En el último ejemplo, el <code>catch</code> interno maneja <code>"error interno"</code> por completo, así que nunca se llega al <code>catch</code> externo.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/34-sorting.html">← Anterior</a>
-        <a href="/es/by-example/36-defer-cleanup.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/35-error-handling.nx">examples/by-example/35-error-handling.nx</a></small></p>
+manejado: error interno</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>throw(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>throw</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
+<p><code>panic</code> señala una condición irrecuperable — por defecto aborta el proceso, pero también se puede capturar con <code>try</code>/<code>catch</code> cuando la recuperación es genuinamente posible. Esto lo hace útil para aserciones durante el desarrollo que pueden envolverse en tests.</p>
+<p>Los bloques <code>try</code> anidados permiten manejar los errores internos localmente sin propagarlos a los manejadores externos. En el último ejemplo, el <code>catch</code> interno maneja <code>"error interno"</code> por completo, así que nunca se llega al <code>catch</code> externo.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/34-sorting.html"><span class="label">← Anterior</span><span class="doc-nav-name">Ordenamiento</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/36-defer-cleanup.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Defer y Cleanup</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

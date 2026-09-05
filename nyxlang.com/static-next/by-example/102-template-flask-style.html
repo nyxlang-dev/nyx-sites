@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Template Engine, Flask-Style — Nyx by example</title>
+<meta name="description" content="Interpolation, #if, #each and partials with std/template.">
+<link rel="canonical" href="https://nyxlang.com/by-example/102-template-flask-style.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/102-template-flask-style.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/102-template-flask-style.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/102-template-flask-style.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/102-template-flask-style.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">102</span> / Advanced</span></p>
+<h1 class="doc-title">Template Engine, Flask-Style</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/template</code> is the pure rendering engine: no networking, no I/O. <code>tpl_render(tmpl, ctx)</code> takes a template string and a <code>Map</code> context and returns the finished text, so it works standalone as well as behind an HTTP server. This recipe drives it on its own and checks every feature with <code>assert</code>, which makes the program its own test.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">102-template-flask-style.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/102-template-flask-style.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Template engine, Flask-style — {{}}, {{{raw}}}, #if, #each, partials</span>
+<span class="cm">// Motor de templates estilo Flask — interpolación, condicionales, loops, partials</span>
+<span class="cm">//</span>
+<span class="cm">// std/template is the PURE engine (no networking): tpl_render(tmpl, ctx)</span>
+<span class="cm">// takes a template string and a Map&lt;String&gt; context and returns the final</span>
+<span class="cm">// text. It works standalone (this example) or behind std/serve (see</span>
+<span class="cm">// examples/by-example/78-84, which render real HTTP responses with it).</span>
+<span class="kw">import</span> <span class="str">&quot;std/template&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// ── Escaped vs. raw interpolation ───────────────────────────────────</span>
+    <span class="cm">// {{key}} HTML-escapes the value (XSS-safe by default); {{{key}}} does</span>
+    <span class="cm">// NOT escape — only use it with trusted/pre-sanitized content.</span>
+    <span class="kw">var</span> ctx1<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx1<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;name&quot;</span><span class="op">,</span> <span class="str">&quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> out1<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;hola {{name}}&quot;</span><span class="op">,</span> ctx1<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out1 <span class="op">==</span> <span class="str">&quot;hola &amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;&quot;</span><span class="op">,</span> <span class="str">&quot;{{key}} escapa por defecto&quot;</span><span class="op">)</span>
+
+    <span class="kw">var</span> ctx2<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx2<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;html&quot;</span><span class="op">,</span> <span class="str">&quot;&lt;b&gt;negrita&lt;/b&gt;&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> out2<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;{{{html}}}&quot;</span><span class="op">,</span> ctx2<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out2 <span class="op">==</span> <span class="str">&quot;&lt;b&gt;negrita&lt;/b&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;{{{key}}} no escapa (raw)&quot;</span><span class="op">)</span>
+
+    <span class="cm">// ── #if / else ───────────────────────────────────────────────────</span>
+    <span class="cm">// truthy = la key existe Y su valor no es &quot;&quot; ni &quot;0&quot;.</span>
+    <span class="kw">var</span> ctx3<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx3<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;logged_in&quot;</span><span class="op">,</span> <span class="str">&quot;1&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> out3<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;{{#if logged_in}}bienvenido{{else}}invitado{{/if}}&quot;</span><span class="op">,</span> ctx3<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out3 <span class="op">==</span> <span class="str">&quot;bienvenido&quot;</span><span class="op">,</span> <span class="str">&quot;#if con valor truthy&quot;</span><span class="op">)</span>
+
+    <span class="kw">var</span> ctx4<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx4<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;logged_in&quot;</span><span class="op">,</span> <span class="str">&quot;0&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> out4<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;{{#if logged_in}}bienvenido{{else}}invitado{{/if}}&quot;</span><span class="op">,</span> ctx4<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out4 <span class="op">==</span> <span class="str">&quot;invitado&quot;</span><span class="op">,</span> <span class="str">&quot;#if: \&quot;0\&quot; cuenta como falsy&quot;</span><span class="op">)</span>
+
+    <span class="cm">// ── #each ───────────────────────────────────────────────────────</span>
+    <span class="cm">// La key debe resolver a un Array&lt;Map&gt;; el body se renderiza una vez</span>
+    <span class="cm">// por elemento, usando ese Map como contexto del bloque (soporta</span>
+    <span class="cm">// anidar {{#each}} dentro de {{#each}}).</span>
+    <span class="kw">var</span> it1<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    it1<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;name&quot;</span><span class="op">,</span> <span class="str">&quot;uno&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> it2<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    it2<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;name&quot;</span><span class="op">,</span> <span class="str">&quot;dos&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> items<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span>it1<span class="op">,</span> it2<span class="op">]</span>
+    <span class="kw">var</span> ctx5<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx5<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;items&quot;</span><span class="op">,</span> items<span class="op">)</span>
+    <span class="kw">let</span> out5<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;&lt;ul&gt;{{#each items}}&lt;li&gt;{{name}}&lt;/li&gt;{{/each}}&lt;/ul&gt;&quot;</span><span class="op">,</span> ctx5<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out5 <span class="op">==</span> <span class="str">&quot;&lt;ul&gt;&lt;li&gt;uno&lt;/li&gt;&lt;li&gt;dos&lt;/li&gt;&lt;/ul&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;#each renderiza un &lt;li&gt; por item&quot;</span><span class="op">)</span>
+
+    <span class="cm">// ── Partials ───────────────────────────────────────────────────</span>
+    <span class="cm">// tpl_partial registra un template reusable por nombre; {{&gt; name}} lo</span>
+    <span class="cm">// incluye renderizado con el contexto ACTUAL (no uno nuevo ni vacío).</span>
+    <span class="fn">tpl_partial</span><span class="op">(</span><span class="str">&quot;footer&quot;</span><span class="op">,</span> <span class="str">&quot;&lt;footer&gt;{{year}}&lt;/footer&gt;&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> ctx6<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    ctx6<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;year&quot;</span><span class="op">,</span> <span class="str">&quot;2026&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> out6<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span><span class="str">&quot;&lt;body&gt;hola{{&gt; footer}}&lt;/body&gt;&quot;</span><span class="op">,</span> ctx6<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>out6 <span class="op">==</span> <span class="str">&quot;&lt;body&gt;hola&lt;footer&gt;2026&lt;/footer&gt;&lt;/body&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;{{&gt; name}} incluye el partial&quot;</span><span class="op">)</span>
+
+    <span class="cm">// ── Todo junto: una página real ───────────────────────────────────</span>
+    <span class="kw">var</span> page_ctx<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">map_new</span><span class="op">()</span>
+    page_ctx<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;title&quot;</span><span class="op">,</span> <span class="str">&quot;Nyx &amp; serve&quot;</span><span class="op">)</span>
+    page_ctx<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;items&quot;</span><span class="op">,</span> items<span class="op">)</span>
+    <span class="kw">let</span> page_tmpl<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&lt;h1&gt;{{title}}&lt;/h1&gt;&lt;ul&gt;{{#each items}}&lt;li&gt;{{name}}&lt;/li&gt;{{/each}}&lt;/ul&gt;&quot;</span>
+    <span class="kw">let</span> page<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tpl_render</span><span class="op">(</span>page_tmpl<span class="op">,</span> page_ctx<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>page <span class="op">==</span> <span class="str">&quot;&lt;h1&gt;Nyx &amp;amp; serve&lt;/h1&gt;&lt;ul&gt;&lt;li&gt;uno&lt;/li&gt;&lt;li&gt;dos&lt;/li&gt;&lt;/ul&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;página completa: título + loop&quot;</span><span class="op">)</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;OK: motor de templates (interpolación, #if, #each, partial) verificado end-to-end&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">OK: motor de templates (interpolación, #if, #each, partial) verificado end-to-end</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>{{key}}</code> HTML-escapes the value, which is what makes interpolation XSS-safe by default: the context holds <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> and the render produces the escaped entities. <code>{{{key}}}</code> does not escape and is only for content you already trust or have sanitized yourself.</p>
+<p><code>{{#if key}}…{{else}}…{{/if}}</code> counts a key as truthy when it exists and its value is neither empty nor <code>"0"</code> — the recipe asserts both branches. <code>{{#each key}}</code> expects the key to resolve to an array of <code>Map</code> values and renders its body once per element, using that element as the context of the block, which is what lets one <code>{{#each}}</code> nest inside another.</p>
+<p><code>tpl_partial(name, tmpl)</code> registers a reusable fragment by name and <code>{{&gt; name}}</code> includes it rendered with the CURRENT context, not a fresh or empty one. Every assertion holds, so the single line of output is the whole proof: escaping, conditionals, loops and partials behave as documented.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/101-file-errors-two-tier.html"><span class="label">← Previous</span><span class="doc-nav-name">File Errors: Two Tiers</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

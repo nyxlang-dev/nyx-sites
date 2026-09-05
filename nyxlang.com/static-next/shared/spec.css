@@ -1,0 +1,709 @@
+/* assets/spec.css — hoja del rediseño «hoja de especificaciones» de nyxlang.com.
+   El generador la copia tal cual a <out>/shared/spec.css.
+
+   Principios (decididos con Ottavio, T2):
+   · monoespaciada del sistema como VOZ PRINCIPAL — nav, títulos, etiquetas,
+     tablas y comandos; la sans solo para párrafos largos;
+   · UN solo acento (ámbar señal) y ninguna otra saturación;
+   · retícula con hairlines VISIBLES: la página se lee como una ficha técnica;
+   · cero fuentes externas, cero gradientes, cero sombras, cero ilustración;
+   · cero animación salvo la transición de foco/hover del botón Copy.
+
+   Bloques: 1 tokens · 2 reset · 3 tipografía · 4 retícula/bandas · 5 nav
+   6 hero + comando de instalación · 7 tabla clave/valor · 8 paneles de código
+   9 listas numeradas · 10 botones · 11 footer · 12 responsive · 13 motion
+   14 guía /docs · 15 recetario /by-example. */
+
+/* ── 1. Tokens ─────────────────────────────────────────────────────────────
+   Contraste verificado sobre --paper (#ececea): --ink 15:1, --steel 5.1:1.
+   --accent (#d97706) NO llega a 4.5:1 sobre papel: se usa como FONDO (con
+   --ink encima, 5.8:1), como filete y como texto SOLO sobre grafito
+   (5.3:1). Esa es la razón de que no haya un solo texto ámbar sobre papel. */
+:root {
+  /* Diseño de una sola cara: se declara claro para que el navegador no
+     re-tinte los controles nativos (el botón Copy) en modo oscuro. */
+  color-scheme: light;
+
+  --paper:   #ececea;   /* fondo de la página: papel hormigón */
+  --surface: #f7f7f5;   /* superficie de tarjetas y celdas */
+  --ink:     #141516;   /* tinta grafito: todo el texto principal */
+  --steel:   #5b6470;   /* texto secundario, etiquetas, notas */
+  --line:    #b9bcc0;   /* hairlines: la retícula visible */
+  --line-soft: #d5d7d9; /* hairline interior (filas de tabla) */
+  --panel:   #1b1d1f;   /* paneles de código/terminal */
+  --panel-ink: #e6e7e4; /* texto dentro de los paneles */
+  --panel-line: #2f3336;/* divisiones dentro de los paneles */
+  --accent:  #d97706;   /* ÚNICO acento: instalación, foco, sellos */
+  --accent-ink: #141516;/* texto sobre el acento */
+
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --wrap: 1040px;       /* contenedor canónico */
+  --gut: 24px;          /* canal lateral */
+  --label-col: 168px;   /* columna de sellos/numeración en el margen */
+  --band-y: 56px;       /* ritmo vertical de las bandas */
+}
+
+/* ── 2. Reset mínimo ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.55 var(--mono);
+  font-variant-ligatures: none;
+}
+h1, h2, h3, p, ul, ol, dl, dd, figure, table { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+img { max-width: 100%; }
+table { border-collapse: collapse; width: 100%; }
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── 3. Tipografía ─────────────────────────────────────────────────────── */
+.prose {                       /* párrafos largos: la única voz sans */
+  font-family: var(--sans);
+  font-size: 1.0625rem;
+  line-height: 1.62;
+  max-width: 64ch;
+}
+.mono { font-family: var(--mono); }
+
+/* Sello/etiqueta de sección: versalitas mono con tracking amplio. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+/* El número del sello va invertido en ámbar y a ras del borde: los márgenes
+   negativos cancelan exactamente el padding de .stamp (5px/10px). */
+.stamp-num {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 5px 8px;
+  margin: -5px 2px -5px -10px;
+  letter-spacing: 0.1em;
+}
+.stamp-num-end {              /* la misma ficha, pero al final del sello */
+  margin: -5px -10px -5px 2px;
+}
+.stamp-accent { border-color: var(--accent); }
+
+.label {                      /* etiqueta suelta (sin caja) */
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.note { font-size: 0.8125rem; color: var(--steel); line-height: 1.5; }
+
+/* ── 4. Retícula y bandas ──────────────────────────────────────────────── */
+.wrap {
+  max-width: var(--wrap);
+  margin: 0 auto;
+  padding: 0 var(--gut);
+  width: 100%;
+}
+.band { border-top: 1px solid var(--line); }
+.band-inner { padding: var(--band-y) 0; }
+
+/* Cabecera de banda: sello en la columna del margen, título al lado. */
+.band-head {
+  display: grid;
+  grid-template-columns: var(--label-col) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+.band-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.band-sub { margin-top: 8px; }
+
+/* Dos columnas con hairline entre ellas (se colapsa en responsive). */
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+}
+.cols > * + * {
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+}
+.cols > * { padding-right: 28px; }
+.cols > *:last-child { padding-right: 0; }
+.cols-58 { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+.cols-64 { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); }
+.stack > * + * { margin-top: 24px; }
+
+/* ── 5. Navegación ─────────────────────────────────────────────────────── */
+.nav { border-bottom: 1px solid var(--line); background: var(--paper); }
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 52px;
+}
+.nav-wordmark {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.34em;
+  padding-right: 20px;
+  margin-right: auto;
+  border-right: 1px solid var(--line);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.nav-wordmark:hover { text-decoration: none; color: var(--accent); }
+.nav-links { display: flex; gap: 22px; }
+.nav-links a, .nav-lang {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.nav-links a:hover, .nav-lang:hover { color: var(--ink); }
+.nav-lang {
+  border: 1px solid var(--line);
+  padding: 4px 9px;
+  margin-left: 4px;
+}
+.nav-lang:hover { border-color: var(--accent); text-decoration: none; }
+
+/* ── 6. Hero + comando de instalación ──────────────────────────────────── */
+.hero-inner { padding: 52px 0 var(--band-y); }
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+.hero-rule { flex: 1 1 60px; height: 1px; background: var(--line); }
+.hero-title {
+  font-size: clamp(1.85rem, 4.4vw, 2.85rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  max-width: 20ch;
+}
+.hero-lede { margin-top: 20px; }
+
+/* El comando de instalación es el objeto central de la página: va en grafito
+   para que sea el único bloque oscuro del hero — y para que el prompt pueda
+   ser ámbar (5.3:1 sobre grafito; sobre papel el ámbar no llegaría a AA). */
+/* Selector con etiqueta a propósito: `.cmd` a secas también matchearía el
+   <span class="cmd"> que emite hl_shell dentro de un <pre>, y le pegaría el
+   borde y el fondo del bloque. El bloque del hero es un div; el token, un span. */
+div.cmd {
+  margin-top: 34px;
+  border: 1px solid var(--ink);
+  background: var(--panel);
+  color: var(--panel-ink);
+}
+.cmd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px 7px 14px;
+  border-bottom: 1px solid var(--panel-line);
+}
+.cmd-head .label { color: #9aa3ad; }
+div.cmd .btn { color: var(--panel-ink); background: transparent; border-color: #4a5056; }
+.cmd-body {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 18px 16px;
+  overflow-x: auto;
+}
+.cmd-prompt { color: var(--accent); font-weight: 700; }
+.cmd-text {
+  font-size: clamp(0.95rem, 2.5vw, 1.4rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.cmd-foot {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 0.8125rem;
+  color: var(--steel);
+}
+.cmd-foot .tick { color: var(--ink); }
+
+/* ── 7. Tabla clave/valor ──────────────────────────────────────────────── */
+.kv { font-size: 0.875rem; }
+.kv th, .kv td {
+  text-align: left;
+  vertical-align: top;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.kv tr:first-child th, .kv tr:first-child td { border-top: 1px solid var(--line); }
+.kv th {
+  width: 34%;
+  padding-right: 18px;
+  font-weight: 600;
+  color: var(--steel);
+  letter-spacing: 0.04em;
+}
+.kv td { color: var(--ink); line-height: 1.55; }
+.kv .kv-cmd { white-space: nowrap; }
+.kv-wide th { width: 26%; }
+.kv-title { margin-bottom: 14px; }
+
+/* Un enlace INLINE dentro de una celda kv tiene que distinguirse del texto
+   sin depender del hover: con el `a { color: inherit; text-decoration: none }`
+   global, los dos enlaces de la tabla «Source» de la landing eran
+   indistinguibles del resto de la fila. Subrayado ámbar y no texto ámbar:
+   --accent no llega a 4.5:1 sobre papel (ver tokens), así que el texto se
+   queda en --ink (15:1) y el acento hace de filete. */
+.kv a {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.kv a:hover { text-decoration-thickness: 2px; }
+
+/* `code` suelto dentro del texto: ficha, no bloque. */
+code:not([class]) {
+  font-family: var(--mono);
+  font-size: 0.9375em;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  padding: 1px 5px;
+}
+
+/* ── 8. Paneles de código / terminal ───────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 1px solid var(--ink);
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--panel-line);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9aa3ad;
+}
+.panel-head .panel-name { color: var(--panel-ink); font-weight: 600; }
+.panel-body { padding: 16px 14px; overflow-x: auto; }
+.panel pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.75;
+  tab-size: 4;
+}
+.panel a { color: var(--panel-ink); }
+
+/* Terminal: la línea de comando lleva prompt ámbar; la salida va en gris. */
+.term-line { display: block; white-space: pre; }
+.term-line + .term-line { margin-top: 2px; }
+.term-prompt { color: var(--accent); font-weight: 700; }
+.term-note { display: block; color: #7d8590; white-space: pre-wrap; margin: 0 0 10px 0; }
+.term-note:last-child { margin-bottom: 0; }
+
+/* Resaltado de sintaxis. Las clases las emite src/gen/highlight.nx: hl_nyx da
+   kw/str/cm/num/ty/fn/op sobre código Nyx, hl_shell da prompt/cmd sobre bloques
+   de terminal. */
+.kw { color: #e6e7e4; font-weight: 700; }
+.str { color: #c9d1c3; }
+.cm  { color: #7d8590; }
+.num { color: #f0c060; }
+.ty  { color: #a5c8ff; }
+.fn  { color: #e6e7e4; }
+.op  { color: #9aa3ad; }
+.prompt { color: var(--accent); font-weight: 700; }
+.cmd { color: var(--panel-ink); }
+
+/* ── 9. Listas numeradas (pasos de la guía) ────────────────────────────── */
+.steps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; }
+.step { border-top: 1px solid var(--line-soft); }
+.step:first-child, .step:nth-child(2) { border-top: 1px solid var(--line); }
+.step-link {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px 0;
+  align-items: baseline;
+}
+.step-link:hover { text-decoration: none; }
+.step-num {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+}
+.step-link:hover .step-num { color: var(--accent); }
+.step-name { font-size: 0.9375rem; font-weight: 600; }
+.step-link:hover .step-name { text-decoration: underline; text-underline-offset: 3px; }
+.step-name, .step-note, .callout-name { display: block; }
+.step-note { margin-top: 3px; }
+
+/* Lista de herramientas: el comando en su propia línea (algunos son largos),
+   la nota debajo, hairline por fila — misma lectura que la tabla clave/valor. */
+.tools { border-top: 1px solid var(--line); }
+.tool { border-bottom: 1px solid var(--line-soft); padding: 11px 0; }
+.tool-cmd {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  overflow-wrap: anywhere;
+}
+.tool .note { display: block; }
+
+/* Fila destacada (el recetario): misma retícula, filete ámbar a la izquierda. */
+.callout {
+  margin-top: 26px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 16px 18px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.callout-name { font-size: 0.9375rem; font-weight: 600; }
+.callout-go { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.callout:hover { text-decoration: none; border-color: var(--accent); }
+.callout:hover .callout-name { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── 10. Botones ───────────────────────────────────────────────────────── */
+.btn {
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+  /* la ÚNICA transición de la hoja (foco/hover del botón Copy) */
+  transition: background-color 120ms linear, border-color 120ms linear, color 120ms linear;
+}
+.btn:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.is-copied { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* ── 11. Footer ────────────────────────────────────────────────────────── */
+.footer { border-top: 1px solid var(--line); }
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 22px 0 40px;
+  font-size: 0.8125rem;
+  color: var(--steel);
+}
+.footer-version { color: var(--ink); font-weight: 600; }
+.footer a:hover { color: var(--ink); }
+
+/* ── 12. Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  :root { --label-col: 132px; --band-y: 44px; }
+  .cols, .cols-58, .cols-64 { grid-template-columns: minmax(0, 1fr); }
+  .cols > * { padding-right: 0; }
+  .cols > * + * {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 26px;
+    margin-top: 26px;
+  }
+}
+@media (max-width: 768px) {
+  .band-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .step:nth-child(2) { border-top: 1px solid var(--line-soft); }
+  .hero-title { max-width: none; }
+  .nav-links { gap: 16px; }
+}
+@media (max-width: 560px) {
+  :root { --gut: 18px; --band-y: 36px; }
+  body { font-size: 14px; }
+  .nav-inner { flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; min-height: 0; }
+  .nav-wordmark { border-right: 0; padding-right: 0; }
+  .nav-links { width: 100%; order: 3; gap: 14px; flex-wrap: wrap; }
+  .cmd-body { padding: 14px 12px; }
+  .cmd-text { font-size: 0.875rem; }
+  .kv th, .kv td { display: block; width: auto; padding-right: 0; }
+  .kv th { border-bottom: 0; padding-bottom: 2px; }
+  .kv tr:first-child td { border-top: 0; }
+  .prose { font-size: 1rem; }
+}
+
+/* ── 13. Motion ────────────────────────────────────────────────────────── */
+/* La hoja no anima nada salvo el color del botón Copy; aun así se declara,
+   para que un cambio futuro no se cuele sin respetar la preferencia. */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ── 14. Guía /docs ────────────────────────────────────────────────────────
+   Bloque agregado por la T4. Mismo lenguaje que la ficha — hairlines, sellos,
+   mono como voz, un solo acento — y una sola idea nueva: la retícula de dos
+   columnas con el índice de los seis pasos pegado al margen. El cuerpo de una
+   página de la guía es prosa larga, así que ahí (y sólo ahí) el párrafo, la
+   lista y la nota usan la sans; los <pre> siguen siendo paneles grafito,
+   porque el resaltado de hl_nyx está calibrado para fondo oscuro. */
+.doc-head {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 34px;
+}
+.doc-title {
+  margin-top: 18px;
+  font-size: clamp(1.6rem, 3.4vw, 2.15rem);
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.022em;
+  max-width: 22ch;
+}
+
+.doc-layout {
+  display: grid;
+  grid-template-columns: 212px minmax(0, 1fr);
+  gap: 0;
+}
+
+/* Índice lateral: hairline por paso, el activo en tinta con el número ámbar.
+   `position: sticky` sobre el contenedor interno para que el índice acompañe
+   la lectura sin fijar la columna entera (que arrastraría el borde). */
+.doc-toc { padding-right: 28px; }
+.doc-toc-inner { position: sticky; top: 24px; }
+.doc-toc-label { display: block; margin-bottom: 12px; }
+.doc-toc-label a { color: var(--steel); }
+.doc-toc-label a:hover { color: var(--ink); }
+.doc-toc-list { border-top: 1px solid var(--line); }
+.doc-toc-item { border-bottom: 1px solid var(--line-soft); }
+.doc-toc-link {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 0;
+  font-size: 0.8125rem;
+  color: var(--steel);
+}
+.doc-toc-link:hover { color: var(--ink); text-decoration: none; }
+.doc-toc-link:hover .doc-toc-name { text-decoration: underline; text-underline-offset: 3px; }
+.doc-toc-num { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; }
+.doc-toc-link.is-active { color: var(--ink); font-weight: 600; }
+.doc-toc-link.is-active .doc-toc-num { color: var(--accent); }
+
+/* Cuerpo: hairline vertical de separación, igual que .cols. */
+.doc-body {
+  border-left: 1px solid var(--line);
+  padding-left: 32px;
+  min-width: 0;
+}
+.doc-body > * + * { margin-top: 16px; }
+.doc-body h2 {
+  margin-top: 40px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.doc-body > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.doc-body h3 { margin-top: 26px; font-size: 0.9375rem; font-weight: 600; }
+.doc-body p,
+.doc-body ul,
+.doc-body ol {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.62;
+  max-width: 68ch;
+}
+.doc-body li { position: relative; padding-left: 20px; }
+.doc-body li + li { margin-top: 6px; }
+.doc-body ul > li::before {
+  content: "·";
+  position: absolute;
+  left: 5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.doc-body ol { counter-reset: docstep; }
+.doc-body ol > li { counter-increment: docstep; padding-left: 28px; }
+.doc-body ol > li::before {
+  content: counter(docstep, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--steel);
+}
+.doc-body pre {
+  margin: 0;
+  padding: 15px 16px;
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: 1px solid var(--ink);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  tab-size: 4;
+}
+/* Nota al margen del texto: mismo filete ámbar que .callout. */
+.doc-body .doc-note {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.doc-body .doc-note code { background: var(--paper); }
+
+/* Anterior / siguiente: dos celdas de la misma retícula, hairline entre ellas. */
+.doc-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-top: 48px;
+  border-top: 1px solid var(--line);
+}
+.doc-nav-link { display: block; padding: 16px 0; }
+.doc-nav-prev { padding-right: 24px; }
+.doc-nav-next {
+  grid-column: 2;
+  text-align: right;
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.doc-nav-name { display: block; margin-top: 4px; font-size: 0.9375rem; font-weight: 600; }
+.doc-nav-link:hover { text-decoration: none; }
+.doc-nav-link:hover .doc-nav-name { text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 900px) {
+  /* El índice pasa arriba, en fila: sin columna lateral no hay sticky que
+     valga, y el cuerpo recupera el ancho completo. */
+  .doc-layout { grid-template-columns: minmax(0, 1fr); }
+  .doc-toc { padding-right: 0; margin-bottom: 28px; }
+  .doc-toc-inner { position: static; }
+  .doc-toc-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .doc-body { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 560px) {
+  .doc-toc-list { grid-template-columns: minmax(0, 1fr); }
+  .doc-nav { grid-template-columns: minmax(0, 1fr); }
+  .doc-nav-prev { padding-right: 0; border-bottom: 1px solid var(--line-soft); }
+  .doc-nav-next {
+    grid-column: 1;
+    text-align: left;
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+/* ── 15. Recetario /by-example ─────────────────────────────────────────────
+   Bloque agregado por la fase 2. Ningún ladrillo nuevo: el índice reusa la
+   retícula de `.steps` de la guía con una etiqueta de categoría encima, y una
+   receta reusa la cabecera de `.doc-head`, los paneles grafito de `.panel` y
+   la barra anterior/siguiente de `.doc-nav`. Lo único propio es el ritmo
+   vertical de la ficha y el color de la salida, que va un punto por debajo del
+   código: lo que el programa IMPRIME no compite con lo que el programa DICE. */
+.ex-cat + .ex-cat { margin-top: 38px; }
+.ex-cat-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-bottom: 10px;
+}
+
+.recipe > * + * { margin-top: 26px; }
+.recipe-lede { max-width: 68ch; }
+.recipe-lede p + p { margin-top: 14px; }
+
+/* El enlace al fuente vive en la cabecera del panel, con el resto de las
+   versalitas; se subraya al pasar por encima y no antes. */
+.panel-head a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* La salida: mismo panel, texto un tono más apagado que el código. */
+.recipe-output { color: #b9c0c7; }
+
+/* «Cómo funciona»: el mismo corte de sección que un <h2> de la guía. */
+.recipe-head {
+  margin-top: 40px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.recipe-prose p {
+  font-family: var(--sans);
+  font-size: 1rem;
+  line-height: 1.62;
+  max-width: 68ch;
+}
+.recipe-prose p + p { margin-top: 14px; }
+
+/* Las dos salidas de la página: al índice y a la guía. Misma voz que el nav. */
+.recipe-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 22px;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.recipe-links a { color: var(--steel); }
+.recipe-links a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }

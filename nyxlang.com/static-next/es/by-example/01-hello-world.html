@@ -1,61 +1,75 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hello World — Nyx por ejemplo</title>
+<meta name="description" content="El programa Nyx más simple — imprimir texto en la terminal.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/01-hello-world.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/01-hello-world.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/01-hello-world.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/01-hello-world.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/01-hello-world.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">01</span> / Fundamentos</span></p>
+<h1 class="doc-title">Hello World</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Todo camino en programación empieza acá. Este es el programa Nyx completo más pequeño posible: define una función <code>main</code>, llama a <code>print</code> dos veces y devuelve <code>0</code> para indicar éxito. Sin imports, sin código de relleno — solo el código que importa.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">01-hello-world.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/01-hello-world.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Programa mínimo: imprime un saludo al mundo</span>
 
-    <h1>Hello World</h1>
-
-    <p>Todo camino en programación empieza acá. Este es el programa Nyx completo más pequeño posible: define una función <code>main</code>, llama a <code>print</code> dos veces y devuelve <code>0</code> para indicar éxito. Sin imports, sin código de relleno — solo el código que importa.</p>
-
-    <h2>Código</h2>
-    <pre><code>// Programa mínimo: imprime un saludo al mundo
-
-fn main() -> int {
-    print("Hello, world!")
-    print("Bienvenido a Nyx")
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Hello, world!
-Bienvenido a Nyx</pre>
-
-    <h2>Explicación</h2>
-    <p>Todo programa Nyx comienza su ejecución desde la función <code>main</code>. El tipo de retorno <code>-> int</code> le indica al compilador que <code>main</code> devuelve un entero — por convención, <code>0</code> significa éxito y cualquier otro valor le señala un error al sistema operativo.</p>
-    <p>La función incorporada <code>print</code> escribe una cadena en la salida estándar seguida de un salto de línea. Acepta un único argumento de tipo <code>String</code>. A diferencia de muchos lenguajes, Nyx no requiere importar nada para usar <code>print</code> — siempre está disponible.</p>
-    <p>Los comentarios empiezan con <code>//</code> y se extienden hasta el final de la línea. El compilador los ignora y existen solo para quienes leen el código.</p>
-
-    <div class="book-nav">
-        <span></span>
-        <a href="/es/by-example/02-variables.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/01-hello-world.nx">examples/by-example/01-hello-world.nx</a></small></p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Hello, world!&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Bienvenido a Nyx&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Hello, world!
+Bienvenido a Nyx</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Todo programa Nyx comienza su ejecución desde la función <code>main</code>. El tipo de retorno <code>-> int</code> le indica al compilador que <code>main</code> devuelve un entero — por convención, <code>0</code> significa éxito y cualquier otro valor le señala un error al sistema operativo.</p>
+<p>La función incorporada <code>print</code> escribe una cadena en la salida estándar seguida de un salto de línea. Acepta un único argumento de tipo <code>String</code>. A diferencia de muchos lenguajes, Nyx no requiere importar nada para usar <code>print</code> — siempre está disponible.</p>
+<p>Los comentarios empiezan con <code>//</code> y se extienden hasta el final de la línea. El compilador los ignora y existen solo para quienes leen el código.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/"><span class="label">← Anterior</span><span class="doc-nav-name">Nyx por ejemplo</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/02-variables.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Variables</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

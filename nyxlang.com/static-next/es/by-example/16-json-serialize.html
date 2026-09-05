@@ -1,99 +1,113 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Serialización JSON — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serialización JSON — Nyx por ejemplo</title>
+<meta name="description" content="Convertir estructuras de datos de vuelta a strings JSON.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/16-json-serialize.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/16-json-serialize.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/16-json-serialize.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/16-json-serialize.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/16-json-serialize.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">16</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Serialización JSON</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Este ejemplo se apoya en los fundamentos de JSON de la página anterior para mostrar cómo se serializan datos del mundo real — una lista de personas — en una respuesta JSON anidada. Una función auxiliar encapsula la construcción de cada registro, manteniendo <code>main</code> limpio y legible.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">16-json-serialize.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/16-json-serialize.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Serializar datos a JSON con std/json: json_object, json_array, json_stringify</span>
 
-    <h1>Serialización JSON</h1>
+<span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
 
-    <p>Este ejemplo se apoya en los fundamentos de JSON de la página anterior para mostrar cómo se serializan datos del mundo real — una lista de personas — en una respuesta JSON anidada. Una función auxiliar encapsula la construcción de cada registro, manteniendo <code>main</code> limpio y legible.</p>
+<span class="kw">fn</span> <span class="fn">build_persona</span><span class="op">(</span>nombre<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> edad<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> activo<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Array</span> <span class="op">{</span>
+    <span class="kw">let</span> keys<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;nombre&quot;</span><span class="op">,</span> <span class="str">&quot;edad&quot;</span><span class="op">,</span> <span class="str">&quot;activo&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> vals<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_string</span><span class="op">(</span>nombre<span class="op">))</span>
+    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span>edad<span class="op">))</span>
+    vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_bool</span><span class="op">(</span>activo<span class="op">))</span>
+    <span class="kw">return</span> <span class="fn">json_object</span><span class="op">(</span>keys<span class="op">,</span> vals<span class="op">)</span>
+<span class="op">}</span>
 
-    <h2>Código</h2>
-    <pre><code>// Serializar datos a JSON con std/json: json_object, json_array, json_stringify
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Objeto simple</span>
+    <span class="kw">let</span> persona<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">build_persona</span><span class="op">(</span><span class="str">&quot;Bob&quot;</span><span class="op">,</span> <span class="num">25</span><span class="op">,</span> <span class="kw">true</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>persona<span class="op">))</span>
 
-import "std/json"
+    <span class="cm">// Array de objetos</span>
+    <span class="kw">let</span> lista<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    lista<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">build_persona</span><span class="op">(</span><span class="str">&quot;Ana&quot;</span><span class="op">,</span> <span class="num">30</span><span class="op">,</span> <span class="kw">true</span><span class="op">))</span>
+    lista<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">build_persona</span><span class="op">(</span><span class="str">&quot;Carlos&quot;</span><span class="op">,</span> <span class="num">40</span><span class="op">,</span> <span class="kw">false</span><span class="op">))</span>
+    lista<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">build_persona</span><span class="op">(</span><span class="str">&quot;Dina&quot;</span><span class="op">,</span> <span class="num">22</span><span class="op">,</span> <span class="kw">true</span><span class="op">))</span>
 
-fn build_persona(nombre: String, edad: int, activo: bool) -> Array {
-    let keys: Array = ["nombre", "edad", "activo"]
-    let vals: Array = []
-    vals.push(json_string(nombre))
-    vals.push(json_number(edad))
-    vals.push(json_bool(activo))
-    return json_object(keys, vals)
-}
+    <span class="kw">let</span> arr<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_array</span><span class="op">(</span>lista<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>arr<span class="op">))</span>
 
-fn main() -> int {
-    // Objeto simple
-    let persona: Array = build_persona("Bob", 25, true)
-    print(json_stringify(persona))
+    <span class="cm">// Objeto anidado</span>
+    <span class="kw">let</span> meta_keys<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;version&quot;</span><span class="op">,</span> <span class="str">&quot;total&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> meta_vals<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    meta_vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">1</span><span class="op">))</span>
+    meta_vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">json_number</span><span class="op">(</span><span class="num">3</span><span class="op">))</span>
+    <span class="kw">let</span> meta<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_object</span><span class="op">(</span>meta_keys<span class="op">,</span> meta_vals<span class="op">)</span>
 
-    // Array de objetos
-    let lista: Array = []
-    lista.push(build_persona("Ana", 30, true))
-    lista.push(build_persona("Carlos", 40, false))
-    lista.push(build_persona("Dina", 22, true))
+    <span class="kw">let</span> resp_keys<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;meta&quot;</span><span class="op">,</span> <span class="str">&quot;data&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> resp_vals<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    resp_vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span>meta<span class="op">)</span>
+    resp_vals<span class="op">.</span><span class="fn">push</span><span class="op">(</span>arr<span class="op">)</span>
+    <span class="kw">let</span> resp<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_object</span><span class="op">(</span>resp_keys<span class="op">,</span> resp_vals<span class="op">)</span>
 
-    let arr: Array = json_array(lista)
-    print(json_stringify(arr))
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>resp<span class="op">))</span>
 
-    // Objeto anidado
-    let meta_keys: Array = ["version", "total"]
-    let meta_vals: Array = []
-    meta_vals.push(json_number(1))
-    meta_vals.push(json_number(3))
-    let meta: Array = json_object(meta_keys, meta_vals)
-
-    let resp_keys: Array = ["meta", "data"]
-    let resp_vals: Array = []
-    resp_vals.push(meta)
-    resp_vals.push(arr)
-    let resp: Array = json_object(resp_keys, resp_vals)
-
-    print(json_stringify(resp))
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">{"nombre":"Bob","edad":25,"activo":true}
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">{"nombre":"Bob","edad":25,"activo":true}
 [{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]
-{"meta":{"version":1,"total":3},"data":[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]}</pre>
-
-    <h2>Explicación</h2>
-    <p><code>build_persona</code> es una función Nyx sencilla que recibe argumentos tipados y devuelve un nodo de objeto JSON. Envolver la lógica de construcción en una función evita desajustes entre los arrays de claves y valores, y hace que el código se documente a sí mismo — la firma de la función indica exactamente qué campos contiene cada registro.</p>
-    <p>Los arrays de objetos se construyen empujando nodos de objeto individuales dentro de un <code>Array</code> simple y envolviendo el resultado con <code>json_array</code>. Como los nodos JSON son solo arrays etiquetados, se componen de manera natural: puedes empujar un nodo de objeto como valor del campo de otro objeto para crear anidamiento tan profundo como sea necesario.</p>
-    <p>El objeto final <code>resp</code> envuelve <code>meta</code> y <code>data</code> en un único sobre de respuesta estilo API. Este patrón — un objeto de metadatos más un array de datos — es común en las APIs REST y muestra cómo <code>std/json</code> maneja formas reales de producción sin sintaxis especial.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/15-json-parse.html">← Anterior</a>
-        <a href="/es/by-example/17-regex.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/16-json-serialize.nx">examples/by-example/16-json-serialize.nx</a></small></p>
+{"meta":{"version":1,"total":3},"data":[{"nombre":"Ana","edad":30,"activo":true},{"nombre":"Carlos","edad":40,"activo":false},{"nombre":"Dina","edad":22,"activo":true}]}</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>build_persona</code> es una función Nyx sencilla que recibe argumentos tipados y devuelve un nodo de objeto JSON. Envolver la lógica de construcción en una función evita desajustes entre los arrays de claves y valores, y hace que el código se documente a sí mismo — la firma de la función indica exactamente qué campos contiene cada registro.</p>
+<p>Los arrays de objetos se construyen empujando nodos de objeto individuales dentro de un <code>Array</code> simple y envolviendo el resultado con <code>json_array</code>. Como los nodos JSON son solo arrays etiquetados, se componen de manera natural: puedes empujar un nodo de objeto como valor del campo de otro objeto para crear anidamiento tan profundo como sea necesario.</p>
+<p>El objeto final <code>resp</code> envuelve <code>meta</code> y <code>data</code> en un único sobre de respuesta estilo API. Este patrón — un objeto de metadatos más un array de datos — es común en las APIs REST y muestra cómo <code>std/json</code> maneja formas reales de producción sin sintaxis especial.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/15-json-parse.html"><span class="label">← Anterior</span><span class="doc-nav-name">Parseo de JSON</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/17-regex.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Expresiones Regulares</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

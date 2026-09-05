@@ -1,85 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTTP Middleware — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP Middleware — Nyx by example</title>
+<meta name="description" content="Web framework with App, routes, logging, and CORS.">
+<link rel="canonical" href="https://nyxlang.com/by-example/52-http-middleware.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/52-http-middleware.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/52-http-middleware.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/52-http-middleware.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/#products">Products</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/52-http-middleware.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">52</span> / Networking</span></p>
+<h1 class="doc-title">HTTP Middleware</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>The <code>std/web</code> framework provides a Flask-style API for building web applications. <code>App</code> holds routes and middleware, <code>app_get</code>/<code>app_post</code> register route handlers, and <code>app_use</code> adds middleware that runs before each request. Built-in middleware includes <code>mw_logging</code> and <code>mw_cors</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">52-http-middleware.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/52-http-middleware.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Web framework — registering routes and middleware</span>
+<span class="cm">// Framework web — registrar rutas y middleware</span>
 
-    <h1>HTTP Middleware</h1>
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
 
-    <p>The <code>std/web</code> framework provides a Flask-style API for building web applications. <code>App</code> holds routes and middleware, <code>app_get</code>/<code>app_post</code> register route handlers, and <code>app_use</code> adds middleware that runs before each request. Built-in middleware includes <code>mw_logging</code> and <code>mw_cors</code>.</p>
+<span class="kw">fn</span> <span class="fn">handle_root</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_new</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;Welcome to Nyx!&quot;</span><span class="op">)</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code><span class="cm">// Web framework — registering routes and middleware</span>
+<span class="kw">fn</span> <span class="fn">handle_api</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_json</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;{\&quot;status\&quot;: \&quot;ok\&quot;}&quot;</span><span class="op">)</span>
+<span class="op">}</span>
 
-<span class="kw">import</span> <span class="str">"std/http"</span>
-<span class="kw">import</span> <span class="str">"std/web"</span>
-
-<span class="kw">fn</span> <span class="fn">handle_root</span>(req: <span class="ty">Request</span>) -> <span class="ty">Response</span> {
-    <span class="kw">return</span> response_new(<span class="num">200</span>, <span class="str">"Welcome to Nyx!"</span>)
-}
-
-<span class="kw">fn</span> <span class="fn">handle_api</span>(req: <span class="ty">Request</span>) -> <span class="ty">Response</span> {
-    <span class="kw">return</span> response_json(<span class="num">200</span>, <span class="str">"{\"status\": \"ok\"}"</span>)
-}
-
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="kw">let</span> app: <span class="ty">App</span> = app_new()
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Create an app and register middleware + routes</span>
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
 
     <span class="cm">// Middleware runs before each request</span>
-    app_use(app, mw_logging)
-    app_use(app, mw_cors)
+    <span class="fn">app_use</span><span class="op">(</span>app<span class="op">,</span> mw_logging<span class="op">)</span>
+    <span class="fn">app_use</span><span class="op">(</span>app<span class="op">,</span> mw_cors<span class="op">)</span>
 
     <span class="cm">// Routes match method + path pattern</span>
-    app_get(app, <span class="str">"/"</span>, handle_root)
-    app_get(app, <span class="str">"/api/status"</span>, handle_api)
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/&quot;</span><span class="op">,</span> handle_root<span class="op">)</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/api/status&quot;</span><span class="op">,</span> handle_api<span class="op">)</span>
 
-    print(<span class="str">"app configured with 2 routes and 2 middlewares"</span>)
-    print(<span class="str">"routes: GET / and GET /api/status"</span>)
-    print(<span class="str">"middleware: logging + CORS"</span>)
+    <span class="cm">// The app is ready — in production you would pass it</span>
+    <span class="cm">// to serve_app() from std/serve to start serving.</span>
+    <span class="cm">// Here we just demonstrate the framework API.</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;app configured with 2 routes and 2 middlewares&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;routes: GET / and GET /api/status&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;middleware: logging + CORS&quot;</span><span class="op">)</span>
 
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">app configured with 2 routes and 2 middlewares
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">app configured with 2 routes and 2 middlewares
 routes: GET / and GET /api/status
-middleware: logging + CORS</pre>
-
-    <h2>Explanation</h2>
-    <p><code>app_new()</code> creates an empty application. Route handlers take a <code>Request</code> struct (with fields: method, path, query, headers_flat, body) and return a <code>Response</code> struct. Helper functions like <code>response_new</code> and <code>response_json</code> create responses with appropriate headers.</p>
-    <p><code>mw_logging</code> logs each request's method, path, status, and latency. <code>mw_cors</code> handles OPTIONS preflight requests and adds CORS headers. You can configure CORS with <code>cors_configure(origin, methods, headers)</code>.</p>
-    <p>In production, pass the app to <code>serve_app(app, port, workers)</code> from <code>nyx-serve</code> to start a multi-threaded HTTP server. This is how all four nyxlang.com sites are built.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/51-http-server.html">← Previous</a>
-        <a href="/by-example/53-websocket.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/52-http-middleware.nx">examples/by-example/52-http-middleware.nx</a></small></p>
+middleware: logging + CORS</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>app_new()</code> creates an empty application. Route handlers take a <code>Request</code> struct (with fields: method, path, query, headers_flat, body) and return a <code>Response</code> struct. Helper functions like <code>response_new</code> and <code>response_json</code> create responses with appropriate headers.</p>
+<p><code>mw_logging</code> logs each request's method, path, status, and latency. <code>mw_cors</code> handles OPTIONS preflight requests and adds CORS headers. You can configure CORS with <code>cors_configure(origin, methods, headers)</code>.</p>
+<p>In production you hand the app to <code>serve_app(app, port, workers)</code> from <code>std/serve</code>, which runs it on a thread pool. The framework itself does no I/O — it only registers routes and matches them.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/51-http-server.html"><span class="label">← Previous</span><span class="doc-nav-name">HTTP Server</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/53-websocket.html"><span class="label">Next →</span><span class="doc-nav-name">WebSocket</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

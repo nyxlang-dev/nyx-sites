@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects — Nyx docs</title>
+<meta name="description" content="nyx init, the tree it seeds, nyx.toml, build, run, tests and dependencies.">
+<link rel="canonical" href="https://nyxlang.com/docs/03-project.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/03-project.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/03-project.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/03-project.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/docs/03-project.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">03</span> / 06</span></p>
+<h1 class="doc-title">Projects</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Guide steps">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/docs/">Nyx, step by step</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/01-install.html"><span class="doc-toc-num">01</span><span class="doc-toc-name">Install</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/02-first-program.html"><span class="doc-toc-num">02</span><span class="doc-toc-name">First program</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/docs/03-project.html" aria-current="page"><span class="doc-toc-num">03</span><span class="doc-toc-name">Projects</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/04-agents.html"><span class="doc-toc-num">04</span><span class="doc-toc-name">Agents</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/05-cli.html"><span class="doc-toc-num">05</span><span class="doc-toc-name">Command line</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/06-syntax.html"><span class="doc-toc-num">06</span><span class="doc-toc-name">Syntax</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">A single file stops being enough as soon as you want tests, dependencies or a binary you can copy somewhere else. A project gives you all three, and it is one command away.</p>
+
+<h2>nyx init</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx init my-app</span>
+nyx v0.31.0 — init
+CAPABILITIES.md generado desde ~/.nyx/std (59 archivos escaneados)
+Initialized project: my-app
+  Created: my-app/
+  Next:    cd my-app &amp;&amp; nyx run</pre>
+<p>That seeds nine files:</p>
+<pre data-lang="sh">my-app/
+  nyx.toml
+  .gitignore
+  src/main.nx
+  AGENTS.md
+  CAPABILITIES.md
+  docs/nyx/LLM.md
+  docs/nyx/guides/write-a-program.md
+  docs/nyx/guides/fix-a-compile-error.md
+  docs/nyx/guides/report-friction.md</pre>
+<p>The first three are the project. The other six are the context an assistant needs in order to write Nyx here without guessing — step 04 is about them. If you want the documents in Spanish, <code>nyx init my-app --lang es</code> seeds the Spanish set instead; <code>--agent=</code> and <code>--sdd</code> add more, and step 04 covers both.</p>
+
+<h2>nyx.toml</h2>
+<pre data-lang="sh">[package]
+name = &quot;my-app&quot;
+version = &quot;0.1.0&quot;
+main = &quot;src/main.nx&quot;
+
+[dependencies]</pre>
+<p><code>name</code> is also the name of the binary that <code>nyx build</code> produces, and the line the seeded <code>.gitignore</code> already ignores. <code>main</code> is the entry point every tool falls back to when you give it no file.</p>
+
+<h2>Build and run</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx build</span>
+nyx v0.31.0 — build
+-&gt; building my-app v0.1.0
+   compiling src/main.nx
+✓ Built: my-app
+build complete</pre>
+<p>That leaves <code>./my-app</code> next to <code>nyx.toml</code>: a native executable you can copy to another machine of the same architecture. <code>nyx run</code> does the same build and then runs it.</p>
+<p>Arguments after <code>nyx run</code> go to your program, not to Nyx. When an argument could be mistaken for a flag, put <code>--</code> first:</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> a<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">print</span><span class="op">(</span><span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> a<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+<span class="op">}</span></pre>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx run -- --verbose one</span>
+nyx v0.31.0 — run
+-&gt; building my-app v0.1.0
+   compiling src/main.nx
+✓ Built: my-app
+0: ./my-app
+1: --verbose
+2: one</pre>
+<p>Element <code>0</code> is the path of the binary itself, so your own arguments start at <code>1</code>. Note the type annotation on <code>a</code>: an element read out of an <code>Array</code> without one is treated as an <code>int</code>, and printing it gives you a number instead of the string.</p>
+
+<h2>Tests</h2>
+<p><code>nyx test</code> runs every <code>tests/*.nx</code>. A test is a <code>test "name" { … }</code> block — not a function:</p>
+<pre data-lang="nyx" data-fragment="test"><span class="kw">test</span> <span class="str">&quot;greeting is not empty&quot;</span> <span class="op">{</span>
+    <span class="kw">let</span> msg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;hello&quot;</span>
+    <span class="kw">assert</span><span class="op">(</span>msg<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">test</span> <span class="str">&quot;sum works&quot;</span> <span class="op">{</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="num">1</span> <span class="op">+</span> <span class="num">1</span> <span class="op">==</span> <span class="num">2</span><span class="op">)</span>
+<span class="op">}</span></pre>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx test</span>
+=== Nyx Test Runner ===
+  Found 1 test file(s)
+
+  PASS  tests/greet_test.nx (2 tests)
+
+===================================
+  Files:  1 passed, 0 failed (1 total)
+  Tests:  2 passed, 0 failed (2 total)
+  Status: ALL TESTS PASSED
+===================================</pre>
+<p class="doc-note"><strong>The trap worth knowing before it bites.</strong> A file full of functions named <code>test_something()</code> is found, counted, and then skipped — the runner says <code>No files with test blocks found</code> and exits happily. Nothing failed, because nothing ran. If your test count is zero and you expected tests, this is why: the blocks are <code>test "name" { … }</code>, always.</p>
+<p>Note also that <code>assert()</code> aborts the process on the first failure. Inside <code>nyx test</code> that is handled for you — it reports per test and exits at the end — but in a program of your own, a failed assertion is the end of the program.</p>
+
+<h2>Dependencies</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx add some-package</span>
+<span class="prompt">$</span> <span class="cmd">nyx add some-package --from https://example.com/some-package.git</span></pre>
+<p>The dependency is written into <code>[dependencies]</code> in <code>nyx.toml</code>, and <code>nyx build</code> clones what is missing into <code>packages/</code> — which the seeded <code>.gitignore</code> ignores, on the assumption that you would rather fetch than vendor. Deleting that line and committing <code>packages/</code> is the other reasonable choice: it makes the build reproducible without a network.</p>
+<p>The standard library needs none of this. Modules like <code>std/json</code>, <code>std/http</code> or <code>std/toml</code> ship with the toolchain and are used with a plain <code>import "std/json"</code>.</p>
+
+<h2>Two commands you will want later</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx info</span>
+nyx v0.31.0 — info
+Project: my-app
+Version: 0.1.0
+Main:    src/main.nx
+Mode:    GC (default)</pre>
+<p>And, after upgrading the toolchain, <code>nyx update --sync-docs</code> — run inside the project — refreshes the seeded documents to the version you now have, keeping a <code>.bak</code> of anything it replaces. What it refreshes, and why it matters, is the next step.</p>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Previous and next">
+<a class="doc-nav-link doc-nav-prev" href="/docs/02-first-program.html"><span class="label">← Previous</span><span class="doc-nav-name">First program</span></a>
+<a class="doc-nav-link doc-nav-next" href="/docs/04-agents.html"><span class="label">Next →</span><span class="doc-nav-name">Agents</span></a>
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

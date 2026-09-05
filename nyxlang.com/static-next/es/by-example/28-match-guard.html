@@ -1,78 +1,84 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guardas de Match — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardas de Match — Nyx por ejemplo</title>
+<meta name="description" content="Agregar condiciones a los brazos de match con guardas if.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/28-match-guard.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/28-match-guard.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/28-match-guard.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/28-match-guard.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/28-match-guard.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">28</span> / Tipos y patrones</span></p>
+<h1 class="doc-title">Guardas de Match</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Las guardas de match agregan una condición booleana adicional a un brazo de match usando la palabra clave <code>if</code>. Un brazo solo se dispara cuando tanto su patrón coincide como su guarda evalúa a verdadero, permitiendo ramificaciones finas que de otro modo requerirían cadenas anidadas de if-else.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">28-match-guard.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/28-match-guard.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Match guards: condiciones adicionales dentro de los brazos del match</span>
 
-    <h1>Guardas de Match</h1>
+<span class="kw">fn</span> <span class="fn">classify</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> n <span class="op">{</span>
+        x <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">100</span>  <span class="op">=&gt;</span> <span class="str">&quot;muy grande (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">,</span>
+        x <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">10</span>   <span class="op">=&gt;</span> <span class="str">&quot;grande (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">,</span>
+        x <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">0</span>    <span class="op">=&gt;</span> <span class="str">&quot;positivo (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">,</span>
+        x <span class="kw">if</span> x <span class="op">==</span> <span class="num">0</span>   <span class="op">=&gt;</span> <span class="str">&quot;cero&quot;</span><span class="op">,</span>
+        x <span class="kw">if</span> x <span class="op">&gt;</span> <span class="op">-</span><span class="num">10</span>  <span class="op">=&gt;</span> <span class="str">&quot;negativo pequeno (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">,</span>
+        x              <span class="op">=&gt;</span> <span class="str">&quot;muy negativo (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-    <p>Las guardas de match agregan una condición booleana adicional a un brazo de match usando la palabra clave <code>if</code>. Un brazo solo se dispara cuando tanto su patrón coincide como su guarda evalúa a verdadero, permitiendo ramificaciones finas que de otro modo requerirían cadenas anidadas de if-else.</p>
+<span class="kw">fn</span> <span class="fn">grade</span><span class="op">(</span>score<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> score <span class="op">{</span>
+        s <span class="kw">if</span> s <span class="op">&gt;=</span> <span class="num">90</span> <span class="op">=&gt;</span> <span class="str">&quot;A&quot;</span><span class="op">,</span>
+        s <span class="kw">if</span> s <span class="op">&gt;=</span> <span class="num">80</span> <span class="op">=&gt;</span> <span class="str">&quot;B&quot;</span><span class="op">,</span>
+        s <span class="kw">if</span> s <span class="op">&gt;=</span> <span class="num">70</span> <span class="op">=&gt;</span> <span class="str">&quot;C&quot;</span><span class="op">,</span>
+        s <span class="kw">if</span> s <span class="op">&gt;=</span> <span class="num">60</span> <span class="op">=&gt;</span> <span class="str">&quot;D&quot;</span><span class="op">,</span>
+        _            <span class="op">=&gt;</span> <span class="str">&quot;F&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
 
-    <h2>Código</h2>
-    <pre><code>// Match guards: condiciones adicionales dentro de los brazos del match
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(</span><span class="num">200</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(</span><span class="num">50</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(</span><span class="num">5</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(</span><span class="num">0</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(-</span><span class="num">3</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">classify</span><span class="op">(-</span><span class="num">99</span><span class="op">))</span>
 
-fn classify(n: int) -> String {
-    return match n {
-        x if x &gt; 100  =&gt; "muy grande (" + int_to_string(x) + ")",
-        x if x &gt; 10   =&gt; "grande (" + int_to_string(x) + ")",
-        x if x &gt; 0    =&gt; "positivo (" + int_to_string(x) + ")",
-        x if x == 0   =&gt; "cero",
-        x if x &gt; -10  =&gt; "negativo pequeno (" + int_to_string(x) + ")",
-        x              =&gt; "muy negativo (" + int_to_string(x) + ")"
-    }
-}
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;nota 95: &quot;</span> <span class="op">+</span> <span class="fn">grade</span><span class="op">(</span><span class="num">95</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;nota 82: &quot;</span> <span class="op">+</span> <span class="fn">grade</span><span class="op">(</span><span class="num">82</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;nota 71: &quot;</span> <span class="op">+</span> <span class="fn">grade</span><span class="op">(</span><span class="num">71</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;nota 55: &quot;</span> <span class="op">+</span> <span class="fn">grade</span><span class="op">(</span><span class="num">55</span><span class="op">))</span>
 
-fn grade(score: int) -> String {
-    return match score {
-        s if s &gt;= 90 =&gt; "A",
-        s if s &gt;= 80 =&gt; "B",
-        s if s &gt;= 70 =&gt; "C",
-        s if s &gt;= 60 =&gt; "D",
-        _            =&gt; "F"
-    }
-}
-
-fn main() -> int {
-    print(classify(200))
-    print(classify(50))
-    print(classify(5))
-    print(classify(0))
-    print(classify(-3))
-    print(classify(-99))
-
-    print("nota 95: " + grade(95))
-    print("nota 82: " + grade(82))
-    print("nota 71: " + grade(71))
-    print("nota 55: " + grade(55))
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">muy grande (200)
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">muy grande (200)
 grande (50)
 positivo (5)
 cero
@@ -81,20 +87,28 @@ muy negativo (-99)
 nota 95: A
 nota 82: B
 nota 71: C
-nota 55: F</pre>
-
-    <h2>Explicación</h2>
-    <p>Cada brazo del match en <code>classify</code> usa el patrón comodín <code>x</code> para vincular el valor evaluado, y luego aplica una guarda <code>if</code> para restringir cuándo se dispara el brazo. Los brazos se evalúan de arriba hacia abajo, así que el orden importa: <code>x &gt; 100</code> debe aparecer antes que <code>x &gt; 10</code>, de lo contrario valores como 200 serían capturados primero por la guarda menos específica. El último brazo no tiene guarda, lo que lo convierte en un catch-all incondicional que garantiza la exhaustividad.</p>
-    <p>La función <code>grade</code> muestra la misma técnica aplicada a una escala de calificación académica. El comodín <code>_</code> en el último brazo es equivalente a un patrón de variable catch-all pero descarta el valor, señalando a quien lea el código que el valor vinculado se ignora a propósito. Ambas funciones retornan una expresión <code>String</code> directamente desde el match, por lo que no se necesita ninguna variable intermedia.</p>
-    <p>Las guardas de match son especialmente poderosas cuando se combinan con variantes de enum que llevan datos — primero se puede verificar qué variante se tiene, y luego aplicar una condición numérica o de string sobre su contenido, todo dentro de un único bloque match conciso.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/27-if-let.html">← Anterior</a>
-        <a href="/es/by-example/29-iterator-map-filter.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/28-match-guard.nx">examples/by-example/28-match-guard.nx</a></small></p>
+nota 55: F</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Cada brazo del match en <code>classify</code> usa el patrón comodín <code>x</code> para vincular el valor evaluado, y luego aplica una guarda <code>if</code> para restringir cuándo se dispara el brazo. Los brazos se evalúan de arriba hacia abajo, así que el orden importa: <code>x &gt; 100</code> debe aparecer antes que <code>x &gt; 10</code>, de lo contrario valores como 200 serían capturados primero por la guarda menos específica. El último brazo no tiene guarda, lo que lo convierte en un catch-all incondicional que garantiza la exhaustividad.</p>
+<p>La función <code>grade</code> muestra la misma técnica aplicada a una escala de calificación académica. El comodín <code>_</code> en el último brazo es equivalente a un patrón de variable catch-all pero descarta el valor, señalando a quien lea el código que el valor vinculado se ignora a propósito. Ambas funciones retornan una expresión <code>String</code> directamente desde el match, por lo que no se necesita ninguna variable intermedia.</p>
+<p>Las guardas de match son especialmente poderosas cuando se combinan con variantes de enum que llevan datos — primero se puede verificar qué variante se tiene, y luego aplicar una condición numérica o de string sobre su contenido, todo dentro de un único bloque match conciso.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/27-if-let.html"><span class="label">← Anterior</span><span class="doc-nav-name">if let</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/29-iterator-map-filter.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Iterator: map y filter</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

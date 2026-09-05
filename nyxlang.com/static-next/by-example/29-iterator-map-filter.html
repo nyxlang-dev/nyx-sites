@@ -1,103 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iterator: map and filter — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterator: map and filter — Nyx by example</title>
+<meta name="description" content="Lazy transformations with .iter().filter().map().collect().">
+<link rel="canonical" href="https://nyxlang.com/by-example/29-iterator-map-filter.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/29-iterator-map-filter.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/29-iterator-map-filter.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/29-iterator-map-filter.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/#products">Products</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/29-iterator-map-filter.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">29</span> / Types and patterns</span></p>
+<h1 class="doc-title">Iterator: map and filter</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx iterators are lazy chains of transformations. Calling <code>.iter()</code> on an array creates an iterator, <code>.filter(pred)</code> keeps only elements satisfying a predicate, <code>.map(f)</code> transforms each element, and <code>.collect()</code> materializes the result into a new array.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">29-iterator-map-filter.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/29-iterator-map-filter.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Iterators: filter + map + collect en cadena</span>
 
-    <h1>Iterator: map and filter</h1>
+<span class="kw">fn</span> <span class="fn">is_even</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="kw">return</span> x <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span>
+<span class="op">}</span>
 
-    <p>Nyx iterators are lazy chains of transformations. Calling <code>.iter()</code> on an array creates an iterator, <code>.filter(pred)</code> keeps only elements satisfying a predicate, <code>.map(f)</code> transforms each element, and <code>.collect()</code> materializes the result into a new array.</p>
+<span class="kw">fn</span> <span class="fn">double</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> x <span class="op">*</span> <span class="num">2</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// Iterators: filter + map + collect en cadena
+<span class="kw">fn</span> <span class="fn">square</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> x <span class="op">*</span> x
+<span class="op">}</span>
 
-fn is_even(x: int) -> bool {
-    return x % 2 == 0
-}
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">,</span> <span class="num">6</span><span class="op">,</span> <span class="num">7</span><span class="op">,</span> <span class="num">8</span><span class="op">,</span> <span class="num">9</span><span class="op">,</span> <span class="num">10</span><span class="op">]</span>
 
-fn double(x: int) -> int {
-    return x * 2
-}
+    <span class="cm">// Filtrar pares y duplicarlos</span>
+    <span class="kw">let</span> result<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">filter</span><span class="op">(</span>is_even<span class="op">).</span><span class="fn">map</span><span class="op">(</span>double<span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;pares duplicados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>result<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> r0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> result<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">let</span> r4<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> result<span class="op">[</span><span class="num">4</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;primero: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r0<span class="op">))</span>   <span class="cm">// 4  (2*2)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ultimo:  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r4<span class="op">))</span>   <span class="cm">// 20 (10*2)</span>
 
-fn square(x: int) -> int {
-    return x * x
-}
+    <span class="cm">// Solo map: elevar al cuadrado todos</span>
+    <span class="kw">let</span> squares<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">map</span><span class="op">(</span>square<span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;cuadrados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>squares<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> s0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> squares<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">let</span> s9<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> squares<span class="op">[</span><span class="num">9</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;1^2 = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>s0<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;10^2 = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>s9<span class="op">))</span>
 
-fn main() -> int {
-    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    <span class="cm">// Filtrar, mapear y tomar los primeros 3</span>
+    <span class="kw">let</span> top3<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">filter</span><span class="op">(</span>is_even<span class="op">).</span><span class="fn">map</span><span class="op">(</span>double<span class="op">).</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;top3 pares*2:&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> top3<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">let</span> t1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> top3<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+    <span class="kw">let</span> t2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> top3<span class="op">[</span><span class="num">2</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">int_to_string</span><span class="op">(</span>t0<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t1<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t2<span class="op">))</span>
 
-    // Filtrar pares y duplicarlos
-    let result: Array = nums.iter().filter(is_even).map(double).collect()
-    print("pares duplicados: " + int_to_string(result.length()) + " elementos")
-    let r0: int = result[0]
-    let r4: int = result[4]
-    print("primero: " + int_to_string(r0))   // 4  (2*2)
-    print("ultimo:  " + int_to_string(r4))   // 20 (10*2)
-
-    // Solo map: elevar al cuadrado todos
-    let squares: Array = nums.iter().map(square).collect()
-    print("cuadrados: " + int_to_string(squares.length()) + " elementos")
-    let s0: int = squares[0]
-    let s9: int = squares[9]
-    print("1^2 = " + int_to_string(s0))
-    print("10^2 = " + int_to_string(s9))
-
-    // Filtrar, mapear y tomar los primeros 3
-    let top3: Array = nums.iter().filter(is_even).map(double).take(3).collect()
-    print("top3 pares*2:")
-    let t0: int = top3[0]
-    let t1: int = top3[1]
-    let t2: int = top3[2]
-    print(int_to_string(t0) + " " + int_to_string(t1) + " " + int_to_string(t2))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">pares duplicados: 5 elementos
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">pares duplicados: 5 elementos
 primero: 4
 ultimo:  20
 cuadrados: 10 elementos
 1^2 = 1
 10^2 = 100
 top3 pares*2:
-4 8 12</pre>
-
-    <h2>Explanation</h2>
-    <p>Iterator pipelines in Nyx follow a consistent pattern: start with <code>.iter()</code>, chain zero or more intermediate adapters (<code>filter</code>, <code>map</code>, <code>take</code>, <code>skip</code>, etc.), and terminate with a consumer (<code>collect</code>, <code>fold</code>, <code>for_each</code>). Each adapter is lazy — no element is processed until the consumer drives the pipeline. This avoids allocating intermediate arrays for each step.</p>
-    <p>The first pipeline, <code>nums.iter().filter(is_even).map(double).collect()</code>, walks through all 10 numbers: <code>filter</code> passes only the 5 even ones (2, 4, 6, 8, 10), then <code>map</code> doubles each, producing [4, 8, 12, 16, 20]. Functions passed to <code>filter</code> and <code>map</code> are named top-level functions here, but closures work equally well.</p>
-    <p>Adding <code>.take(3)</code> to the chain stops the pipeline after the first three results are collected, so the third example yields [4, 8, 12] without processing the remaining elements. This composability — mixing filter, map, take, and other adapters in any order — is the core strength of Nyx's iterator design.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/28-match-guard.html">← Previous</a>
-        <a href="/by-example/30-iterator-fold.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/29-iterator-map-filter.nx">examples/by-example/29-iterator-map-filter.nx</a></small></p>
+4 8 12</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Iterator pipelines in Nyx follow a consistent pattern: start with <code>.iter()</code>, chain zero or more intermediate adapters (<code>filter</code>, <code>map</code>, <code>take</code>, <code>skip</code>, etc.), and terminate with a consumer (<code>collect</code>, <code>fold</code>, <code>for_each</code>). Each adapter is lazy — no element is processed until the consumer drives the pipeline. This avoids allocating intermediate arrays for each step.</p>
+<p>The first pipeline, <code>nums.iter().filter(is_even).map(double).collect()</code>, walks through all 10 numbers: <code>filter</code> passes only the 5 even ones (2, 4, 6, 8, 10), then <code>map</code> doubles each, producing [4, 8, 12, 16, 20]. Functions passed to <code>filter</code> and <code>map</code> are named top-level functions here, but closures work equally well.</p>
+<p>Adding <code>.take(3)</code> to the chain stops the pipeline after the first three results are collected, so the third example yields [4, 8, 12] without processing the remaining elements. This composability — mixing filter, map, take, and other adapters in any order — is the core strength of Nyx's iterator design.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/28-match-guard.html"><span class="label">← Previous</span><span class="doc-nav-name">Match Guards</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/30-iterator-fold.html"><span class="label">Next →</span><span class="doc-nav-name">Iterator: fold</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

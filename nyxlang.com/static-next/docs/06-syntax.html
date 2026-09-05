@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax — Nyx docs</title>
+<meta name="description" content="Variables, functions, control flow, arrays, maps, strings, structs, enums, Option, Result, traits and closures — every block compiles.">
+<link rel="canonical" href="https://nyxlang.com/docs/06-syntax.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/06-syntax.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/06-syntax.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/06-syntax.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/docs/06-syntax.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">06</span> / 06</span></p>
+<h1 class="doc-title">Syntax</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Guide steps">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/docs/">Nyx, step by step</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/01-install.html"><span class="doc-toc-num">01</span><span class="doc-toc-name">Install</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/02-first-program.html"><span class="doc-toc-num">02</span><span class="doc-toc-name">First program</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/03-project.html"><span class="doc-toc-num">03</span><span class="doc-toc-name">Projects</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/04-agents.html"><span class="doc-toc-num">04</span><span class="doc-toc-name">Agents</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/05-cli.html"><span class="doc-toc-num">05</span><span class="doc-toc-name">Command line</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/docs/06-syntax.html" aria-current="page"><span class="doc-toc-num">06</span><span class="doc-toc-name">Syntax</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">A tour of the language in twelve programs. Every one of them is compiled and run by the check that publishes this page, so what you read here is what the compiler in the footer accepts today.</p>
+
+<h2>Variables and types</h2>
+<p><code>let</code> binds once, <code>var</code> can be reassigned, <code>const</code> is a compile-time constant. Types are written after the name; the language is gradually typed, but annotating is what keeps the compiler honest — and, as you will see with arrays, sometimes it is what keeps it correct.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> name<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx&quot;</span>   <span class="cm">// immutable</span>
+    <span class="kw">var</span> counter<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>       <span class="cm">// mutable</span>
+    <span class="kw">const</span> <span class="ty">MAX</span><span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">100</span>       <span class="cm">// constant</span>
+
+    counter <span class="op">=</span> counter <span class="op">+</span> <span class="num">1</span>
+    <span class="fn">print</span><span class="op">(</span>name<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>counter<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="ty">MAX</span><span class="op">)</span>
+<span class="op">}</span></pre>
+
+<h2>Functions</h2>
+<p>Parameters are typed, the return type follows <code>-&gt;</code>, and a function with no return type returns nothing.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">add</span><span class="op">(</span>a<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> b<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> a <span class="op">+</span> b
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">greet</span><span class="op">(</span>name<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="str">&quot;Hello, &quot;</span> <span class="op">+</span> name <span class="op">+</span> <span class="str">&quot;!&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">add</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">greet</span><span class="op">(</span><span class="str">&quot;world&quot;</span><span class="op">))</span>
+<span class="op">}</span></pre>
+
+<h2>Control flow</h2>
+<p><code>if</code>/<code>else</code>, <code>while</code>, and <code>for</code> over a range or over anything iterable. No parentheses around the condition; braces are not optional.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">if</span> x <span class="op">&gt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;greater&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;less or equal&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">3</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span>i<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+
+    <span class="kw">for</span> j <span class="kw">in</span> <span class="num">0</span><span class="op">..</span><span class="num">3</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span>j<span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span></pre>
+
+<h2>Arrays</h2>
+<p>Arrays grow with <code>push</code>, iterate with <code>for</code>, and chain through <code>iter()</code>. The lambda passed to <code>filter</code> is an ordinary typed function without a name.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">var</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">]</span>
+    nums<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">6</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>nums<span class="op">.</span><span class="fn">length</span><span class="op">())</span>
+
+    <span class="kw">for</span> n <span class="kw">in</span> nums <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span>n<span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="kw">let</span> evens<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">()</span>
+        <span class="op">.</span><span class="fn">filter</span><span class="op">(</span><span class="kw">fn</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span> <span class="kw">return</span> x <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="op">})</span>
+        <span class="op">.</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span>evens<span class="op">.</span><span class="fn">length</span><span class="op">())</span>
+<span class="op">}</span></pre>
+
+<h2>Maps</h2>
+<p><code>insert</code>, <code>get</code>, <code>has</code>, <code>size</code>, and <code>keys()</code> to walk them.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">var</span> capitals<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    capitals<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;Argentina&quot;</span><span class="op">,</span> <span class="str">&quot;Buenos Aires&quot;</span><span class="op">)</span>
+    capitals<span class="op">.</span><span class="fn">insert</span><span class="op">(</span><span class="str">&quot;France&quot;</span><span class="op">,</span> <span class="str">&quot;Paris&quot;</span><span class="op">)</span>
+
+    <span class="fn">print</span><span class="op">(</span>capitals<span class="op">.</span><span class="fn">size</span><span class="op">())</span>            <span class="cm">// 2</span>
+    <span class="fn">print</span><span class="op">(</span>capitals<span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="str">&quot;France&quot;</span><span class="op">))</span>     <span class="cm">// Paris</span>
+    <span class="fn">print</span><span class="op">(</span>capitals<span class="op">.</span><span class="fn">has</span><span class="op">(</span><span class="str">&quot;Brazil&quot;</span><span class="op">))</span>     <span class="cm">// false</span>
+
+    <span class="kw">let</span> ks<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> capitals<span class="op">.</span><span class="fn">keys</span><span class="op">()</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> ks<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> k<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> ks<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">print</span><span class="op">(</span>k <span class="op">+</span> <span class="str">&quot; -&gt; &quot;</span> <span class="op">+</span> capitals<span class="op">.</span><span class="fn">get</span><span class="op">(</span>k<span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+<span class="op">}</span></pre>
+<p class="doc-note">Notice <code>let k: String = ks[i]</code> rather than using <code>ks[i]</code> directly. An element read out of an <code>Array</code> without a type annotation is treated as an <code>int</code> — which, passed to <code>get</code>, is not a compile error but the wrong lookup. Annotate the element; it costs one line and removes a whole class of confusing bugs.</p>
+
+<h2>Strings are bytes</h2>
+<p><code>length()</code>, <code>substring()</code>, <code>indexOf()</code> and <code>charAt()</code> all count bytes, not characters. For characters — UTF-8 codepoints — there is <code>char_length()</code>. The rest is what you would expect: <code>trim()</code>, <code>split()</code>, <code>contains()</code>, <code>toUpper()</code>, <code>toLower()</code>, and <code>${…}</code> interpolation inside a literal.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> text<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;  café latte  &quot;</span>
+    <span class="kw">let</span> clean<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> text<span class="op">.</span><span class="fn">trim</span><span class="op">()</span>
+
+    <span class="fn">print</span><span class="op">(</span>clean<span class="op">.</span><span class="fn">length</span><span class="op">())</span>         <span class="cm">// 11 — BYTES: é takes two</span>
+    <span class="fn">print</span><span class="op">(</span>clean<span class="op">.</span><span class="fn">char_length</span><span class="op">())</span>    <span class="cm">// 10 — UTF-8 codepoints</span>
+    <span class="fn">print</span><span class="op">(</span>clean<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">3</span><span class="op">))</span>  <span class="cm">// &quot;caf&quot; — substring cuts bytes too</span>
+    <span class="fn">print</span><span class="op">(</span>clean<span class="op">.</span><span class="fn">contains</span><span class="op">(</span><span class="str">&quot;latte&quot;</span><span class="op">))</span>
+
+    <span class="kw">let</span> parts<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> clean<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot; &quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>parts<span class="op">.</span><span class="fn">length</span><span class="op">())</span>         <span class="cm">// 2</span>
+
+    <span class="kw">let</span> lang<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx&quot;</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;language: ${lang}&quot;</span><span class="op">)</span>
+<span class="op">}</span></pre>
+
+<h2>Structs</h2>
+<p>Fields are typed; methods live in an <code>impl</code> block and take <code>self</code>.</p>
+<pre data-lang="nyx"><span class="kw">struct</span> <span class="ty">Point</span> <span class="op">{</span>
+    x<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    y<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
+
+<span class="kw">impl</span> <span class="ty">Point</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">distance_sq</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="kw">self</span><span class="op">.</span>x <span class="op">*</span> <span class="kw">self</span><span class="op">.</span>x <span class="op">+</span> <span class="kw">self</span><span class="op">.</span>y <span class="op">*</span> <span class="kw">self</span><span class="op">.</span>y
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> p<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> <span class="ty">Point</span> <span class="op">{</span> x<span class="op">:</span> <span class="num">3</span><span class="op">,</span> y<span class="op">:</span> <span class="num">4</span> <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span>p<span class="op">.</span><span class="fn">distance_sq</span><span class="op">())</span>   <span class="cm">// 25</span>
+<span class="op">}</span></pre>
+
+<h2>Enums and match</h2>
+<p>A variant can carry data, and <code>match</code> must cover every one of them. The separator is a dot — <code>Shape.Circle</code> — never a double colon; that mistake is common enough that <code>nyx vet</code> has a warning for it.</p>
+<pre data-lang="nyx"><span class="kw">enum</span> <span class="ty">Shape</span> <span class="op">{</span>
+    <span class="ty">Circle</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Rect</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Empty</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>  <span class="op">=&gt;</span> <span class="num">3</span> <span class="op">*</span> r <span class="op">*</span> r<span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span> <span class="op">=&gt;</span> w <span class="op">*</span> h<span class="op">,</span>
+        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Empty</span>      <span class="op">=&gt;</span> <span class="num">0</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span><span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span><span class="num">5</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span><span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">7</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">area</span><span class="op">(</span><span class="ty">Shape</span><span class="op">.</span><span class="ty">Empty</span><span class="op">))</span>
+<span class="op">}</span></pre>
+
+<h2>Option</h2>
+<p>Absence is a value, not a null. <code>match</code> handles both cases, and <code>if let</code> is the short form when you only care about one.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">first_positive</span><span class="op">(</span>nums<span class="op">:</span> <span class="ty">Array</span><span class="op">,</span> index<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> val<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> nums<span class="op">[</span>index<span class="op">]</span>
+    <span class="kw">if</span> val <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>val<span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">describe</span><span class="op">(</span>opt<span class="op">:</span> <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="kw">match</span> opt <span class="op">{</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=&gt;</span> <span class="str">&quot;found: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">),</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span>    <span class="op">=&gt;</span> <span class="str">&quot;nothing&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">10</span><span class="op">,</span> <span class="op">-</span><span class="num">5</span><span class="op">,</span> <span class="num">3</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span><span class="fn">first_positive</span><span class="op">(</span>nums<span class="op">,</span> <span class="num">0</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">describe</span><span class="op">(</span><span class="fn">first_positive</span><span class="op">(</span>nums<span class="op">,</span> <span class="num">1</span><span class="op">)))</span>
+
+    <span class="kw">if</span> <span class="kw">let</span> <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=</span> <span class="fn">first_positive</span><span class="op">(</span>nums<span class="op">,</span> <span class="num">2</span><span class="op">)</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;if let: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">))</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;if let: nothing&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span></pre>
+
+<h2>Result and the ? operator</h2>
+<p>Failure is a value too. <code>?</code> unwraps the success case and returns the error to the caller, so a chain of fallible steps reads like a chain of ordinary ones.</p>
+<pre data-lang="nyx"><span class="kw">enum</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="ty">Ok</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
+    <span class="ty">Err</span><span class="op">(</span><span class="ty">String</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">parse_positive</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>s<span class="op">)</span>
+    <span class="kw">if</span> n <span class="op">&lt;=</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;not positive: &quot;</span> <span class="op">+</span> s<span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">double_it</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">if</span> n <span class="op">&gt;</span> <span class="num">1000</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;too large&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n <span class="op">*</span> <span class="num">2</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// ? hands the Err back to the caller, no explicit match needed</span>
+<span class="kw">fn</span> <span class="fn">pipeline</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">parse_positive</span><span class="op">(</span>s<span class="op">)?</span>
+    <span class="kw">let</span> d<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">double_it</span><span class="op">(</span>n<span class="op">)?</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>d <span class="op">+</span> <span class="num">1</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">show</span><span class="op">(</span>r<span class="op">:</span> <span class="ty">Result</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span>  <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">)),</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;err: &quot;</span> <span class="op">+</span> e<span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;42&quot;</span><span class="op">))</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;-5&quot;</span><span class="op">))</span>
+    <span class="fn">show</span><span class="op">(</span><span class="fn">pipeline</span><span class="op">(</span><span class="str">&quot;2000&quot;</span><span class="op">))</span>
+<span class="op">}</span></pre>
+
+<h2>Traits</h2>
+<p>A trait is a set of methods a type promises to have. <code>dyn Trait</code> as a parameter type accepts any type that implements it.</p>
+<pre data-lang="nyx"><span class="kw">trait</span> <span class="ty">Describable</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">describe</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span>
+<span class="op">}</span>
+
+<span class="kw">struct</span> <span class="ty">Cat</span> <span class="op">{</span> name<span class="op">:</span> <span class="ty">String</span> <span class="op">}</span>
+
+<span class="kw">impl</span> <span class="ty">Describable</span> <span class="kw">for</span> <span class="ty">Cat</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">describe</span><span class="op">(</span><span class="kw">self</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="kw">self</span><span class="op">.</span>name <span class="op">+</span> <span class="str">&quot; the cat&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">print_desc</span><span class="op">(</span>d<span class="op">:</span> <span class="kw">dyn</span> <span class="ty">Describable</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span>d<span class="op">.</span><span class="fn">describe</span><span class="op">())</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Cat</span> <span class="op">=</span> <span class="ty">Cat</span> <span class="op">{</span> name<span class="op">:</span> <span class="str">&quot;Whiskers&quot;</span> <span class="op">}</span>
+    <span class="fn">print_desc</span><span class="op">(</span>c<span class="op">)</span>
+<span class="op">}</span></pre>
+
+<h2>Closures</h2>
+<p>A function defined inside another captures its environment, and <code>Fn</code> is the type of a function value — returnable, storable, passable as an argument.</p>
+<pre data-lang="nyx"><span class="kw">fn</span> <span class="fn">make_adder</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Fn</span> <span class="op">{</span>
+    <span class="kw">fn</span> <span class="fn">add</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+        <span class="kw">return</span> n <span class="op">+</span> x
+    <span class="op">}</span>
+    <span class="kw">return</span> add
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">apply</span><span class="op">(</span>f<span class="op">:</span> <span class="ty">Fn</span><span class="op">,</span> value<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">f</span><span class="op">(</span>value<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> add5<span class="op">:</span> <span class="ty">Fn</span> <span class="op">=</span> <span class="fn">make_adder</span><span class="op">(</span><span class="num">5</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">add5</span><span class="op">(</span><span class="num">3</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">apply</span><span class="op">(</span>add5<span class="op">,</span> <span class="num">10</span><span class="op">))</span>
+
+    <span class="kw">let</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">,</span> <span class="num">6</span><span class="op">]</span>
+    <span class="kw">let</span> evens<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">()</span>
+        <span class="op">.</span><span class="fn">filter</span><span class="op">(</span><span class="kw">fn</span><span class="op">(</span>x<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span> <span class="kw">return</span> x <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="op">})</span>
+        <span class="op">.</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span>evens<span class="op">.</span><span class="fn">length</span><span class="op">())</span>
+<span class="op">}</span></pre>
+
+<h2>Where to go next</h2>
+<p>This was the shape of the language. What the standard library can do — HTTP servers and clients, JSON, TOML, CSV, SQLite, sockets, TLS, threads and channels, cryptography, dates — is a different question, and it is answered by worked examples rather than by prose.</p>
+<a class="callout" href="/by-example/"><span><span class="callout-name">Nyx by example</span><span class="step-note note">Around a hundred recipes, from hello world to an HTTP server. Read one, copy it, change it.</span></span><span class="callout-go">Open →</span></a>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Previous and next">
+<a class="doc-nav-link doc-nav-prev" href="/docs/05-cli.html"><span class="label">← Previous</span><span class="doc-nav-name">Command line</span></a>
+
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

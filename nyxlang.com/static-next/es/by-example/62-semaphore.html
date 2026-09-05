@@ -1,64 +1,83 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semáforo — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semáforo — Nyx por ejemplo</title>
+<meta name="description" content="Limitar el acceso concurrente con sem_acquire/sem_release.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/62-semaphore.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/62-semaphore.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/62-semaphore.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/62-semaphore.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/62-semaphore.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
-<main class="book-content">
-    <div class="book-breadcrumb"><a href="/es/by-example/">Nyx con Ejemplos</a></div>
-    <h1>Semáforo</h1>
-    <p>Un <code>Semaphore</code> de <code>std/sync</code> limita el número de accesos concurrentes a un recurso. <code>sem_new(n)</code> crea un semáforo con n permisos, <code>sem_acquire</code> toma un permiso (bloqueando si no hay ninguno disponible), y <code>sem_release</code> devuelve uno.</p>
-    <h2>Código</h2>
-    <pre><code><span class="cm">// Semaphore — limiting concurrent access to a resource</span>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">62</span> / Concurrencia</span></p>
+<h1 class="doc-title">Semáforo</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un <code>Semaphore</code> de <code>std/sync</code> limita el número de accesos concurrentes a un recurso. <code>sem_new(n)</code> crea un semáforo con n permisos, <code>sem_acquire</code> toma un permiso (bloqueando si no hay ninguno disponible), y <code>sem_release</code> devuelve uno.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">62-semaphore.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/62-semaphore.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Semaphore — limiting concurrent access to a resource</span>
 <span class="cm">// Semáforo — limitar acceso concurrente a un recurso</span>
 
-<span class="kw">import</span> <span class="str">"std/sync"</span>
+<span class="kw">import</span> <span class="str">&quot;std/sync&quot;</span>
 
-<span class="kw">var</span> sem: <span class="ty">Semaphore</span> = sem_new(<span class="num">2</span>)
-<span class="kw">var</span> done: <span class="ty">WaitGroup</span> = wg_new()
+<span class="cm">// Stateful handles (Semaphore/WaitGroup/mutex_new()) are SAFE as global</span>
+<span class="cm">// initializers — they run single-threaded before main (since v0.24.27).</span>
+<span class="cm">// Never lazy-init them behind a READY flag: that&#x27;s a data race (see LLM.md).</span>
+<span class="cm">// ES: los handles con estado son SEGUROS como inicializadores globales —</span>
+<span class="cm">// corren single-threaded antes de main. Nunca lazy-init detrás de un flag.</span>
+<span class="kw">var</span> sem<span class="op">:</span> <span class="ty">Semaphore</span> <span class="op">=</span> <span class="fn">sem_new</span><span class="op">(</span><span class="num">2</span><span class="op">)</span>
+<span class="kw">var</span> done<span class="op">:</span> <span class="ty">WaitGroup</span> <span class="op">=</span> <span class="fn">wg_new</span><span class="op">()</span>
 
-<span class="kw">fn</span> <span class="fn">access_resource</span>() -> <span class="ty">int</span> {
-    sem_acquire(sem)
-    print(<span class="str">"acquired (count: "</span> + int_to_string(sem_count(sem)) + <span class="str">")"</span>)
-    sleep(<span class="num">50</span>)
-    sem_release(sem)
-    print(<span class="str">"released"</span>)
-    wg_done(done)
+<span class="kw">fn</span> <span class="fn">access_resource</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">sem_acquire</span><span class="op">(</span>sem<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;acquired (count: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">sem_count</span><span class="op">(</span>sem<span class="op">))</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span>
+    <span class="fn">sleep</span><span class="op">(</span><span class="num">50</span><span class="op">)</span>
+    <span class="fn">sem_release</span><span class="op">(</span>sem<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;released&quot;</span><span class="op">)</span>
+    <span class="fn">wg_done</span><span class="op">(</span>done<span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}
+<span class="op">}</span>
 
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
     <span class="cm">// Allow at most 2 concurrent accesses</span>
-    wg_add(done, <span class="num">5</span>)
+    <span class="fn">wg_add</span><span class="op">(</span>done<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
 
-    <span class="kw">var</span> i: <span class="ty">int</span> = <span class="num">0</span>
-    <span class="kw">while</span> i &lt; <span class="num">5</span> {
-        thread_spawn(access_resource)
-        i = i + <span class="num">1</span>
-    }
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="fn">thread_spawn</span><span class="op">(</span>access_resource<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
 
-    wg_wait(done)
-    print(<span class="str">"all done"</span>)
+    <span class="fn">wg_wait</span><span class="op">(</span>done<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;all done&quot;</span><span class="op">)</span>
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-    <h2>Salida</h2>
-    <pre class="output">acquired (count: 1)
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">acquired (count: 1)
 acquired (count: 0)
 released
 released
@@ -68,16 +87,28 @@ released
 released
 acquired (count: 1)
 released
-all done</pre>
-    <h2>Explicación</h2>
-    <p><code>sem_new(2)</code> crea un semáforo con 2 permisos. Como máximo 2 hilos pueden tener un permiso al mismo tiempo. Cuando un tercer hilo llama a <code>sem_acquire</code>, se bloquea hasta que uno de los dos primeros llame a <code>sem_release</code>.</p>
-    <p>Cinco hilos compiten por el semáforo. <code>sem_count</code> devuelve el número de permisos restantes, que cae a 0 cuando ambos están tomados. Después de dormir 50ms (simulando trabajo), cada hilo libera su permiso y avisa al WaitGroup.</p>
-    <p>Este patrón es útil para limitar la velocidad de acceso a recursos externos como conexiones de base de datos, descriptores de archivo o endpoints de API, donde se desea concurrencia controlada en lugar de exclusión mutua total.</p>
-    <div class="book-nav">
-        <a href="/es/by-example/61-waitgroup.html">&larr; Anterior</a>
-        <a href="/es/by-example/63-select-channel.html">Siguiente &rarr;</a>
-    </div>
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/62-semaphore.nx">examples/by-example/62-semaphore.nx</a></small></p>
+all done</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>sem_new(2)</code> crea un semáforo con 2 permisos. Como máximo 2 hilos pueden tener un permiso al mismo tiempo. Cuando un tercer hilo llama a <code>sem_acquire</code>, se bloquea hasta que uno de los dos primeros llame a <code>sem_release</code>.</p>
+<p>Cinco hilos compiten por el semáforo. <code>sem_count</code> devuelve el número de permisos restantes, que cae a 0 cuando ambos están tomados. Después de dormir 50 milisegundos (simulando trabajo), cada hilo libera su permiso y avisa al WaitGroup.</p>
+<p>Este patrón es útil para limitar la velocidad de acceso a recursos externos como conexiones de base de datos, descriptores de archivo o endpoints de API, donde se desea concurrencia controlada en lugar de exclusión mutua total.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/61-waitgroup.html"><span class="label">← Anterior</span><span class="doc-nav-name">WaitGroup</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/64-fork-exec.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Fork &amp; Exec</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

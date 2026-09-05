@@ -1,92 +1,106 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iterador: take() y skip() — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterador: take() y skip() — Nyx por ejemplo</title>
+<meta name="description" content="Recortar secuencias con take y skip.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/32-iterator-take-skip.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/32-iterator-take-skip.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/32-iterator-take-skip.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/32-iterator-take-skip.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/32-iterator-take-skip.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">32</span> / Avanzado</span></p>
+<h1 class="doc-title">Iterador: take() y skip()</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>take(n)</code> limita un iterador a sus primeros <code>n</code> elementos, mientras que <code>skip(n)</code> descarta los primeros <code>n</code> y produce el resto. Juntos forman los bloques básicos de ventanas deslizantes, recortes y paginación sobre cualquier secuencia.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">32-iterator-take-skip.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/32-iterator-take-skip.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Iteradores: skip() y take() para componer pipelines de datos</span>
 
-    <h1>Iterador: take() y skip()</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> nums<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">,</span> <span class="num">6</span><span class="op">,</span> <span class="num">7</span><span class="op">,</span> <span class="num">8</span><span class="op">,</span> <span class="num">9</span><span class="op">,</span> <span class="num">10</span><span class="op">]</span>
 
-    <p><code>take(n)</code> limita un iterador a sus primeros <code>n</code> elementos, mientras que <code>skip(n)</code> descarta los primeros <code>n</code> y produce el resto. Juntos forman los bloques básicos de ventanas deslizantes, recortes y paginación sobre cualquier secuencia.</p>
+    <span class="cm">// skip(2): omitir los primeros 2 elementos</span>
+    <span class="kw">let</span> sin_primeros2<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">skip</span><span class="op">(</span><span class="num">2</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;skip(2): &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>sin_primeros2<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
 
-    <h2>Código</h2>
-    <pre><code>// Iteradores: skip() y take() para componer pipelines de datos
+    <span class="cm">// take(3): tomar solo los primeros 3</span>
+    <span class="kw">let</span> solo3<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;take(3): &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>solo3<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> v0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> solo3<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">let</span> v2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> solo3<span class="op">[</span><span class="num">2</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  [0]=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v0<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; [2]=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v2<span class="op">))</span>
 
-fn main() -> int {
-    let nums: Array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    <span class="cm">// Combinacion: skip(2).take(3) — elementos 3, 4, 5</span>
+    <span class="kw">let</span> ventana<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">skip</span><span class="op">(</span><span class="num">2</span><span class="op">).</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;skip(2).take(3): &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>ventana<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> ventana<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> ventana<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>v<span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
 
-    // skip(2): omitir los primeros 2 elementos
-    let sin_primeros2: Array = nums.iter().skip(2).collect()
-    print("skip(2): " + int_to_string(sin_primeros2.length()) + " elementos")
+    <span class="cm">// Otro uso: paginar — página 2, tamaño 3</span>
+    <span class="kw">let</span> pagina2<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> nums<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">skip</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;pagina 2 (skip 3, take 3): &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pagina2<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; elementos&quot;</span><span class="op">)</span>
 
-    // take(3): tomar solo los primeros 3
-    let solo3: Array = nums.iter().take(3).collect()
-    print("take(3): " + int_to_string(solo3.length()) + " elementos")
-    let v0: int = solo3[0]
-    let v2: int = solo3[2]
-    print("  [0]=" + int_to_string(v0) + " [2]=" + int_to_string(v2))
-
-    // Combinacion: skip(2).take(3) — elementos 3, 4, 5
-    let ventana: Array = nums.iter().skip(2).take(3).collect()
-    print("skip(2).take(3): " + int_to_string(ventana.length()) + " elementos")
-    var i: int = 0
-    while i < ventana.length() {
-        let v: int = ventana[i]
-        print("  " + int_to_string(v))
-        i = i + 1
-    }
-
-    // Otro uso: paginar — página 2, tamaño 3
-    let pagina2: Array = nums.iter().skip(3).take(3).collect()
-    print("pagina 2 (skip 3, take 3): " + int_to_string(pagina2.length()) + " elementos")
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">skip(2): 8 elementos
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">skip(2): 8 elementos
 take(3): 3 elementos
   [0]=1 [2]=3
 skip(2).take(3): 3 elementos
   3
   4
   5
-pagina 2 (skip 3, take 3): 3 elementos</pre>
-
-    <h2>Explicación</h2>
-    <p><code>skip(2)</code> sobre un array de 10 elementos produce los elementos en las posiciones 2 a 9, dando 8 elementos. <code>take(3)</code> detiene el iterador después de los primeros 3 elementos, produciendo <code>[1, 2, 3]</code> — así que <code>[0]</code> es <code>1</code> y <code>[2]</code> es <code>3</code>.</p>
-    <p>Encadenar <code>skip(2).take(3)</code> primero descarta dos elementos, y luego limita el resto a tres — produciendo <code>[3, 4, 5]</code>. Este es el patrón clásico de ventana deslizante. El orden importa: <code>take(3).skip(2)</code> en cambio daría un único elemento.</p>
-    <p>El ejemplo de paginación al final muestra un uso real directo: para obtener la página <em>P</em> de tamaño <em>N</em>, se escribe <code>.skip((P-1) * N).take(N)</code>. Ambos adaptadores son perezosos — no se asigna ningún elemento hasta que se llama a <code>.collect()</code>.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/31-iterator-enumerate.html">← Anterior</a>
-        <a href="/es/by-example/33-recursion.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/32-iterator-take-skip.nx">examples/by-example/32-iterator-take-skip.nx</a></small></p>
+pagina 2 (skip 3, take 3): 3 elementos</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>skip(2)</code> sobre un array de 10 elementos produce los elementos en las posiciones 2 a 9, dando 8 elementos. <code>take(3)</code> detiene el iterador después de los primeros 3 elementos, produciendo <code>[1, 2, 3]</code> — así que <code>[0]</code> es <code>1</code> y <code>[2]</code> es <code>3</code>.</p>
+<p>Encadenar <code>skip(2).take(3)</code> primero descarta dos elementos, y luego limita el resto a tres — produciendo <code>[3, 4, 5]</code>. Este es el patrón clásico de ventana deslizante. El orden importa: <code>take(3).skip(2)</code> en cambio daría un único elemento.</p>
+<p>El ejemplo de paginación al final muestra un uso real directo: para obtener la página <em>P</em> de tamaño <em>N</em>, se escribe <code>.skip((P-1) * N).take(N)</code>. Ambos adaptadores son perezosos — no se asigna ningún elemento hasta que se llama a <code>.collect()</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/30-iterator-fold.html"><span class="label">← Anterior</span><span class="doc-nav-name">Iterator: fold</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/33-recursion.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Recursión</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

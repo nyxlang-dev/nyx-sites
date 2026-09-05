@@ -1,94 +1,115 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expresiones Regulares — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expresiones Regulares — Nyx por ejemplo</title>
+<meta name="description" content="Match, extracción y reemplazo con regex POSIX.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/17-regex.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/17-regex.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/17-regex.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/17-regex.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/17-regex.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">17</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Expresiones Regulares</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>El módulo <code>std/regex</code> envuelve expresiones regulares extendidas POSIX. Tres funciones cubren las operaciones más comunes: probar si un patrón coincide, extraer la primera coincidencia y reemplazar coincidencias en una cadena. Los patrones siguen la sintaxis estándar POSIX ERE.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">17-regex.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/17-regex.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Expresiones regulares: regex_is_match, regex_match, regex_replace</span>
 
-    <h1>Expresiones Regulares</h1>
+<span class="kw">import</span> <span class="str">&quot;std/regex&quot;</span>
 
-    <p>El módulo <code>std/regex</code> envuelve expresiones regulares extendidas POSIX. Tres funciones cubren las operaciones más comunes: probar si un patrón coincide, extraer la primera coincidencia y reemplazar coincidencias en una cadena. Los patrones siguen la sintaxis estándar POSIX ERE.</p>
+<span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
+<span class="cm">// así que la conversión se escribe explícita.</span>
+<span class="kw">fn</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;si&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
 
-    <h2>Código</h2>
-    <pre><code>// Expresiones regulares: regex_is_match, regex_match, regex_replace
+<span class="kw">fn</span> <span class="fn">validar_email</span><span class="op">(</span>email<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="cm">// Patrón POSIX básico para email</span>
+    <span class="kw">return</span> <span class="fn">regex_is_match</span><span class="op">(</span>email<span class="op">,</span> <span class="str">&quot;^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9.-]+$&quot;</span><span class="op">)</span>
+<span class="op">}</span>
 
-import "std/regex"
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Validar emails</span>
+    <span class="kw">let</span> email1<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;alice@example.com&quot;</span>
+    <span class="kw">let</span> email2<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;no-es-email&quot;</span>
+    <span class="kw">let</span> email3<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;bob.dev@nyx-lang.org&quot;</span>
 
-fn validar_email(email: String) -> bool {
-    // Patrón POSIX básico para email
-    return regex_is_match(email, "^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")
-}
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Email: &quot;</span> <span class="op">+</span> email1 <span class="op">+</span> <span class="str">&quot; -&gt; &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span><span class="fn">validar_email</span><span class="op">(</span>email1<span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Email: &quot;</span> <span class="op">+</span> email2 <span class="op">+</span> <span class="str">&quot; -&gt; &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span><span class="fn">validar_email</span><span class="op">(</span>email2<span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Email: &quot;</span> <span class="op">+</span> email3 <span class="op">+</span> <span class="str">&quot; -&gt; &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span><span class="fn">validar_email</span><span class="op">(</span>email3<span class="op">)))</span>
 
-fn main() -> int {
-    // Validar emails
-    let email1: String = "alice@example.com"
-    let email2: String = "no-es-email"
-    let email3: String = "bob.dev@nyx-lang.org"
+    <span class="cm">// regex_match: retorna la primera coincidencia o &quot;&quot;</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx version 0.12.0 released&quot;</span>
+    <span class="kw">let</span> resultado<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">regex_match</span><span class="op">(</span>texto<span class="op">,</span> <span class="str">&quot;[0-9]+\\.[0-9]+\\.[0-9]+&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Version encontrada: &quot;</span> <span class="op">+</span> resultado<span class="op">)</span>
 
-    print("Email: " + email1 + " -> " + int_to_string(validar_email(email1)))
-    print("Email: " + email2 + " -> " + int_to_string(validar_email(email2)))
-    print("Email: " + email3 + " -> " + int_to_string(validar_email(email3)))
+    <span class="cm">// regex_replace: reemplaza primera coincidencia</span>
+    <span class="kw">let</span> frase<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Hola   mundo   Nyx&quot;</span>
+    <span class="kw">let</span> limpio<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">regex_replace</span><span class="op">(</span>frase<span class="op">,</span> <span class="str">&quot;  +&quot;</span><span class="op">,</span> <span class="str">&quot; &quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Sin espacios dobles: &quot;</span> <span class="op">+</span> limpio<span class="op">)</span>
 
-    // regex_match: retorna la primera coincidencia o ""
-    let texto: String = "Nyx version 0.12.0 released"
-    let resultado: String = regex_match(texto, "[0-9]+\\.[0-9]+\\.[0-9]+")
-    print("Version encontrada: " + resultado)
+    <span class="cm">// regex_replace_all: reemplaza todas las coincidencias</span>
+    <span class="kw">let</span> html<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&lt;b&gt;nyx&lt;/b&gt; es &lt;i&gt;rapido&lt;/i&gt;&quot;</span>
+    <span class="kw">let</span> sin_tags<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">regex_replace_all</span><span class="op">(</span>html<span class="op">,</span> <span class="str">&quot;&lt;[^&gt;]+&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Sin HTML: &quot;</span> <span class="op">+</span> sin_tags<span class="op">)</span>
 
-    // regex_replace: reemplaza primera coincidencia
-    let frase: String = "Hola   mundo   Nyx"
-    let limpio: String = regex_replace(frase, "  +", " ")
-    print("Sin espacios dobles: " + limpio)
-
-    // regex_replace_all: reemplaza todas las coincidencias
-    let html: String = "<b>nyx</b> es <i>rapido</i>"
-    let sin_tags: String = regex_replace_all(html, "<[^>]+>", "")
-    print("Sin HTML: " + sin_tags)
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Email: alice@example.com -> 1
-Email: no-es-email -> 0
-Email: bob.dev@nyx-lang.org -> 1
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Email: alice@example.com -> si
+Email: no-es-email -> no
+Email: bob.dev@nyx-lang.org -> si
 Version encontrada: 0.12.0
-Sin espacios dobles: Hola mundo Nyx
-Sin HTML: nyx es rapido</pre>
-
-    <h2>Explicación</h2>
-    <p><code>regex_is_match(str, pattern)</code> devuelve un <code>bool</code> (representado como <code>1</code>/<code>0</code> al imprimirse vía <code>int_to_string</code>) que indica si el patrón coincide en algún punto de la cadena. Anclar con <code>^</code> y <code>$</code> obliga a que la coincidencia sea sobre la cadena completa, algo esencial para validar entradas como en el ejemplo del email.</p>
-    <p><code>regex_match(str, pattern)</code> devuelve la primera subcadena que coincide con el patrón, o una cadena vacía si no hay coincidencia. Es útil para tareas de extracción, como parsear números de versión, fechas o identificadores dentro de un texto más grande.</p>
-    <p><code>regex_replace</code> sustituye la primera coincidencia por una cadena de reemplazo, mientras que <code>regex_replace_all</code> reemplaza todas las coincidencias no solapadas. El ejemplo que elimina etiquetas HTML usa el patrón <code>&lt;[^&gt;]+&gt;</code> para hacer coincidir cualquier etiqueta HTML completa y la reemplaza por una cadena vacía, dejando solo el contenido de texto.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/16-json-serialize.html">← Anterior</a>
-        <a href="/es/by-example/18-csv.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/17-regex.nx">examples/by-example/17-regex.nx</a></small></p>
+Sin espacios dobles: Hola mundo   Nyx
+Sin HTML: nyx es rapido</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>regex_is_match(str, pattern)</code> devuelve un <code>bool</code> que indica si el patrón coincide en algún punto de la cadena; un bool no entra en <code>int_to_string</code>, así que la receta lo imprime con el helper <code>si_no</code>. Anclar con <code>^</code> y <code>$</code> obliga a que la coincidencia sea sobre la cadena completa, algo esencial para validar entradas como en el ejemplo del email. Ojo con las clases de caracteres: un <code>-</code> literal entre corchetes va primero o último, si no POSIX lo lee como rango y la clase entera deja de coincidir.</p>
+<p><code>regex_match(str, pattern)</code> devuelve la primera subcadena que coincide con el patrón, o una cadena vacía si no hay coincidencia. Es útil para tareas de extracción, como parsear números de versión, fechas o identificadores dentro de un texto más grande.</p>
+<p><code>regex_replace</code> sustituye SOLO la primera coincidencia — por eso la salida conserva el triple espacio antes de <code>Nyx</code> — mientras que <code>regex_replace_all</code> reemplaza todas las coincidencias no solapadas. El ejemplo que elimina etiquetas HTML usa el patrón <code>&lt;[^&gt;]+&gt;</code> para hacer coincidir cualquier etiqueta HTML completa y la reemplaza por una cadena vacía, dejando solo el contenido de texto.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/16-json-serialize.html"><span class="label">← Anterior</span><span class="doc-nav-name">Serialización JSON</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/18-csv.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Parseo de CSV</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

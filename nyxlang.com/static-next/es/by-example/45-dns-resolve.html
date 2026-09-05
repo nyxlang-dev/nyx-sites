@@ -1,72 +1,90 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DNS Resolve — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DNS Resolve — Nyx por ejemplo</title>
+<meta name="description" content="Convertir nombres de host a direcciones IP con resolve.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/45-dns-resolve.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/45-dns-resolve.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/45-dns-resolve.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/45-dns-resolve.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/45-dns-resolve.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">45</span> / Redes</span></p>
+<h1 class="doc-title">DNS Resolve</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>resolve(hostname)</code> es una función incorporada que realiza resolución DNS, convirtiendo un nombre de host en una cadena de dirección IP. Este es el primer paso en cualquier conexión de red — antes de poder hacer <code>tcp_connect</code> a un host, se necesita su IP.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">45-dns-resolve.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/45-dns-resolve.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// DNS resolution — resolve hostnames to IP addresses</span>
+<span class="cm">// Resolución DNS — resolver nombres de host a direcciones IP</span>
 
-    <h1>DNS Resolve</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// resolve() returns the IP address as a string</span>
+    <span class="kw">let</span> ip<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">resolve</span><span class="op">(</span><span class="str">&quot;localhost&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;localhost -&gt; &quot;</span> <span class="op">+</span> ip<span class="op">)</span>
 
-    <p><code>resolve(hostname)</code> es una función incorporada que realiza resolución DNS, convirtiendo un nombre de host en una cadena de dirección IP. Este es el primer paso en cualquier conexión de red — antes de poder hacer <code>tcp_connect</code> a un host, se necesita su IP.</p>
+    <span class="cm">// Resolve a public domain</span>
+    <span class="kw">let</span> nyx_ip<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">resolve</span><span class="op">(</span><span class="str">&quot;nyxlang.com&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;nyxlang.com -&gt; &quot;</span> <span class="op">+</span> nyx_ip<span class="op">)</span>
 
-    <h2>Código</h2>
-    <pre><code><span class="cm">// DNS resolution — resolve hostnames to IP addresses</span>
-
-<span class="kw">fn</span> <span class="fn">main</span>() -> <span class="ty">int</span> {
-    <span class="kw">let</span> ip: <span class="ty">String</span> = resolve(<span class="str">"localhost"</span>)
-    print(<span class="str">"localhost -> "</span> + ip)
-
-    <span class="kw">let</span> nyx_ip: <span class="ty">String</span> = resolve(<span class="str">"nyxlang.com"</span>)
-    print(<span class="str">"nyxlang.com -> "</span> + nyx_ip)
-
-    <span class="kw">if</span> nyx_ip.length() > <span class="num">0</span> {
-        print(<span class="str">"resolution successful"</span>)
-    } <span class="kw">else</span> {
-        print(<span class="str">"resolution failed"</span>)
-    }
+    <span class="cm">// Use the result to connect or display</span>
+    <span class="kw">if</span> nyx_ip<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;resolution successful&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;resolution failed&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
 
     <span class="kw">return</span> <span class="num">0</span>
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">localhost -> 127.0.0.1
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">localhost -> 127.0.0.1
 nyxlang.com -> 52.207.231.44
-resolution successful</pre>
-
-    <h2>Explicación</h2>
-    <p><code>resolve</code> llama al resolvedor DNS del sistema (vía <code>getaddrinfo</code> en el runtime) y devuelve la primera dirección IPv4 como una cadena en notación decimal con puntos. Si la resolución falla, devuelve una cadena vacía.</p>
-    <p>Para <code>localhost</code>, el resultado típicamente proviene de <code>/etc/hosts</code> en lugar de una consulta DNS. Para dominios públicos como <code>nyxlang.com</code>, el runtime realiza una búsqueda DNS completa a través de los servidores de nombres configurados.</p>
-    <p>Esta es una llamada síncrona y bloqueante. Para servidores de alto rendimiento que necesiten resolución no bloqueante, se puede considerar ejecutar el resolve en un hilo separado con <code>thread_spawn</code>.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/44-msgpack.html">← Anterior</a>
-        <a href="/es/by-example/46-tcp-client.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/45-dns-resolve.nx">examples/by-example/45-dns-resolve.nx</a></small></p>
+resolution successful</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>resolve</code> llama al resolvedor DNS del sistema (vía <code>getaddrinfo</code> en el runtime) y devuelve la primera dirección IPv4 como una cadena en notación decimal con puntos. Si la resolución falla, devuelve una cadena vacía.</p>
+<p>Para <code>localhost</code>, el resultado típicamente proviene de <code>/etc/hosts</code> en lugar de una consulta DNS. Para dominios públicos como <code>nyxlang.com</code>, el runtime realiza una búsqueda DNS completa a través de los servidores de nombres configurados.</p>
+<p>Esta es una llamada síncrona y bloqueante. Para servidores de alto rendimiento que necesiten resolución no bloqueante, se puede considerar ejecutar el resolve en un hilo separado con <code>thread_spawn</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/44-msgpack.html"><span class="label">← Anterior</span><span class="doc-nav-name">MessagePack</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/46-tcp-client.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Cliente TCP</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

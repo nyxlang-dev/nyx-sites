@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errores de archivo: dos niveles — Nyx por ejemplo</title>
+<meta name="description" content="Result cuando quien llama puede reaccionar, panic cuando morir es lo honesto.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/101-file-errors-two-tier.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/101-file-errors-two-tier.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/101-file-errors-two-tier.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/101-file-errors-two-tier.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/101-file-errors-two-tier.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">101</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Errores de archivo: dos niveles</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx maneja los fallos de E/S en dos niveles. El primero devuelve <code>Result&lt;T, Error&gt;</code> y lo propaga con <code>?</code>, así que quien llama decide qué hacer con el fallo; el segundo llama a <code>unwrap()</code> y muere en el acto, que es la opción honesta cuando no hay un fallback razonable. Esta receta usa <code>try_read_file</code> y <code>try_write_file</code> de <code>std/fs</code> junto con <code>std/error</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">101-file-errors-two-tier.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/101-file-errors-two-tier.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Errores tipados de E/S: Result&lt;T, Error&gt; cuando el caller reacciona, panic cuando morir es correcto</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/fs&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Nivel 1 (Result): el caller de cargar_config puede reaccionar distinto</span>
+<span class="cm">// según el fallo, así que esta función NO decide por él — propaga el</span>
+<span class="cm">// Error con `?` sin necesitar saber por qué try_read_file falló.</span>
+<span class="kw">fn</span> <span class="fn">cargar_config</span><span class="op">(</span>path<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> contenido<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">try_read_file</span><span class="op">(</span>path<span class="op">)?</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>contenido<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> path<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;/tmp/nyx_example_101_config.txt&quot;</span>
+
+    <span class="cm">// Nivel 2 (panic): sembrar el archivo de ejemplo en /tmp. Si esto</span>
+    <span class="cm">// falla, /tmp no es escribible y no hay fallback razonable — morir</span>
+    <span class="cm">// acá con unwrap() es más honesto que seguir con un estado a medias.</span>
+    <span class="cm">// Anotación explícita necesaria: un `let` sin tipo pierde el genérico</span>
+    <span class="cm">// Result&lt;T,E&gt; (queda i8* opaco) y .unwrap() no dispatchea.</span>
+    <span class="kw">let</span> w<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_write_file</span><span class="op">(</span>path<span class="op">,</span> <span class="str">&quot;puerto=8080\nmodo=dev\n&quot;</span><span class="op">)</span>
+    w<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+
+    <span class="cm">// Nivel 1: match exhaustivo, la config existe.</span>
+    <span class="kw">match</span> <span class="fn">cargar_config</span><span class="op">(</span>path<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>cfg<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span>cfg<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo cargar config: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Mismo Result, ahora el archivo no existe: el caller distingue el</span>
+    <span class="cm">// tipo de fallo por e.kind sin parsear un string de mensaje.</span>
+    <span class="kw">match</span> <span class="fn">cargar_config</span><span class="op">(</span><span class="str">&quot;/tmp/nyx_example_101_no_existe.txt&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>cfg<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span>cfg<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;kind: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">puerto=8080
+modo=dev
+
+kind: not_found</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>cargar_config</code> es el primer nivel: <code>try_read_file(path)?</code> entrega el contenido del archivo o retorna temprano con el <code>Error</code> intacto. La función nunca necesita saber por qué falló la lectura — <code>?</code> propaga el error tipado y <code>Result.Ok(contenido)</code> envuelve el caso de éxito.</p>
+<p>Sembrar el archivo de ejemplo en <code>/tmp</code> es el segundo nivel. Si esa escritura falla, el directorio no es escribible y no hay un fallback sensato, así que <code>w.unwrap()</code> aborta. La anotación de <code>let w: Result&lt;int, Error&gt;</code> es obligatoria: un <code>let</code> sin tipo pierde los parámetros genéricos y <code>.unwrap()</code> deja de despachar.</p>
+<p>Las dos llamadas a <code>cargar_config</code> se resuelven con match exhaustivo. La segunda pide un archivo que no existe, y la rama <code>Result.Err</code> lee <code>e.kind</code> — un campo del valor de error, no un mensaje que haya que parsear — y por eso la última línea de la salida es <code>not_found</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/70-shebang-script.html"><span class="label">← Anterior</span><span class="doc-nav-name">Script Shebang</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/102-template-flask-style.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Motor de templates estilo Flask</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

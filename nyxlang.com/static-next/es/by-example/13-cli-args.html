@@ -1,81 +1,95 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Argumentos de CLI — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Argumentos de CLI — Nyx por ejemplo</title>
+<meta name="description" content="Acceder a los argumentos de línea de comandos con get_args.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/13-cli-args.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/13-cli-args.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/13-cli-args.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/13-cli-args.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/13-cli-args.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">13</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Argumentos de CLI</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Los argumentos de línea de comandos se acceden mediante <code>get_args()</code>, que devuelve el array <code>argv</code> completo como un <code>Array</code> de <code>String</code>. El índice <code>0</code> es siempre la ruta del programa, y los índices siguientes contienen los argumentos pasados por el usuario.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">13-cli-args.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/13-cli-args.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Argumentos de CLI: get_args() retorna un Array de Strings (argv)</span>
 
-    <h1>Argumentos de CLI</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> argv<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+    <span class="kw">let</span> total<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> argv<span class="op">.</span><span class="fn">length</span><span class="op">()</span>
 
-    <p>Los argumentos de línea de comandos se acceden mediante <code>get_args()</code>, que devuelve el array <code>argv</code> completo como un <code>Array</code> de <code>String</code>. El índice <code>0</code> es siempre la ruta del programa, y los índices siguientes contienen los argumentos pasados por el usuario.</p>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Total de argumentos: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>total<span class="op">))</span>
 
-    <h2>Código</h2>
-    <pre><code>// Argumentos de CLI: get_args() retorna un Array de Strings (argv)
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> total <span class="op">{</span>
+        <span class="kw">let</span> arg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> argv<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">if</span> i <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  [&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;] programa: &quot;</span> <span class="op">+</span> arg<span class="op">)</span>
+        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  [&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;] arg: &quot;</span> <span class="op">+</span> arg<span class="op">)</span>
+        <span class="op">}</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
 
-fn main() -> int {
-    let argv: Array = get_args()
-    let total: int = argv.length()
+    <span class="kw">if</span> total <span class="op">&lt;</span> <span class="num">2</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;(sin argumentos — ejecutar con: ./programa arg1 arg2)&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
 
-    print("Total de argumentos: " + int_to_string(total))
-
-    var i: int = 0
-    while i < total {
-        let arg: String = argv[i]
-        if i == 0 {
-            print("  [" + int_to_string(i) + "] programa: " + arg)
-        } else {
-            print("  [" + int_to_string(i) + "] arg: " + arg)
-        }
-        i = i + 1
-    }
-
-    if total < 2 {
-        print("(sin argumentos — ejecutar con: ./programa arg1 arg2)")
-    }
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">Total de argumentos: 3
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Total de argumentos: 3
   [0] programa: ./programa
   [1] arg: arg1
-  [2] arg: arg2</pre>
-
-    <h2>Explicación</h2>
-    <p><code>get_args()</code> es una función integrada que envuelve el array <code>argv</code> de C en un <code>Array</code> de Nyx. A diferencia de C, no necesitas <code>argc</code> por separado — simplemente llama a <code>.length()</code> sobre el array devuelto. El primer elemento (índice 0) es siempre la ruta del ejecutable tal como la reporta el sistema operativo.</p>
-    <p>El bucle <code>while</code> con una variable de índice manual es el patrón de iteración estándar cuando necesitas el índice junto con el valor. Para los casos en los que solo te interesan los valores, los métodos de iterador de Nyx como <code>.map</code> y <code>.filter</code> son más ergonómicos.</p>
-    <p>La guarda al final detecta cuando no se proporcionaron argumentos del usuario e imprime una sugerencia de uso. Construir herramientas de CLI en Nyx normalmente combina <code>get_args()</code> con el módulo <code>std/cli</code> para el parseo de flags, pero este ejemplo muestra la base cruda.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/12-stdin-input.html">← Anterior</a>
-        <a href="/es/by-example/14-env-vars.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/13-cli-args.nx">examples/by-example/13-cli-args.nx</a></small></p>
+  [2] arg: arg2</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>get_args()</code> es una función integrada que envuelve el array <code>argv</code> de C en un <code>Array</code> de Nyx. A diferencia de C, no necesitas <code>argc</code> por separado — simplemente llama a <code>.length()</code> sobre el array devuelto. El primer elemento (índice 0) es siempre la ruta del ejecutable tal como la reporta el sistema operativo.</p>
+<p>El bucle <code>while</code> con una variable de índice manual es el patrón de iteración estándar cuando necesitas el índice junto con el valor. Para los casos en los que solo te interesan los valores, los métodos de iterador de Nyx como <code>.map</code> y <code>.filter</code> son más ergonómicos.</p>
+<p>La guarda al final detecta cuando no se proporcionaron argumentos del usuario e imprime una sugerencia de uso. Construir herramientas de CLI en Nyx normalmente combina <code>get_args()</code> con el módulo <code>std/cli</code> para el parseo de flags, pero este ejemplo muestra la base cruda.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/12-stdin-input.html"><span class="label">← Anterior</span><span class="doc-nav-name">Entrada por Stdin</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/14-env-vars.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Variables de Entorno</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

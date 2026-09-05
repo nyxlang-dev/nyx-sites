@@ -1,92 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Derive Clone — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Derive Clone — Nyx by example</title>
+<meta name="description" content="Auto-generating Clone, Debug, and other trait impls.">
+<link rel="canonical" href="https://nyxlang.com/by-example/23-derive-clone.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/23-derive-clone.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/23-derive-clone.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/23-derive-clone.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/#products">Products</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/23-derive-clone.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">23</span> / Types and patterns</span></p>
+<h1 class="doc-title">Derive Clone</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>The <code>#[derive]</code> attribute instructs the compiler to auto-generate trait implementations for a struct. <code>Clone</code> adds a <code>.clone()</code> method that produces a deep copy, while <code>Debug</code> adds <code>.debug_str()</code> for human-readable inspection.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">23-derive-clone.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/23-derive-clone.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// #[derive(Clone, Debug)]: clonar structs y obtener representación debug</span>
 
-    <h1>Derive Clone</h1>
+#<span class="op">[</span><span class="fn">derive</span><span class="op">(</span><span class="ty">Clone</span><span class="op">,</span> <span class="ty">Debug</span><span class="op">)]</span>
+<span class="kw">struct</span> <span class="ty">Point</span> <span class="op">{</span>
+    x<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    y<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-    <p>The <code>#[derive]</code> attribute instructs the compiler to auto-generate trait implementations for a struct. <code>Clone</code> adds a <code>.clone()</code> method that produces a deep copy, while <code>Debug</code> adds <code>.debug_str()</code> for human-readable inspection.</p>
+#<span class="op">[</span><span class="fn">derive</span><span class="op">(</span><span class="ty">Clone</span><span class="op">,</span> <span class="ty">Debug</span><span class="op">)]</span>
+<span class="kw">struct</span> <span class="ty">Rectangle</span> <span class="op">{</span>
+    origin<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    width<span class="op">:</span> <span class="ty">int</span><span class="op">,</span>
+    height<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
 
-    <h2>Code</h2>
-    <pre><code>// #[derive(Clone, Debug)]: clonar structs y obtener representación debug
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Clonar un Point</span>
+    <span class="kw">let</span> p1<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> <span class="ty">Point</span> <span class="op">{</span> x<span class="op">:</span> <span class="num">10</span><span class="op">,</span> y<span class="op">:</span> <span class="num">20</span> <span class="op">}</span>
+    <span class="kw">let</span> p2<span class="op">:</span> <span class="ty">Point</span> <span class="op">=</span> p1<span class="op">.</span><span class="fn">clone</span><span class="op">()</span>
 
-#[derive(Clone, Debug)]
-struct Point {
-    x: int,
-    y: int
-}
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Original:  x=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p1<span class="op">.</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; y=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p1<span class="op">.</span>y<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Clon:      x=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p2<span class="op">.</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; y=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p2<span class="op">.</span>y<span class="op">))</span>
 
-#[derive(Clone, Debug)]
-struct Rectangle {
-    origin: int,
-    width: int,
-    height: int
-}
+    <span class="cm">// Debug string</span>
+    <span class="kw">let</span> ds<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> p1<span class="op">.</span><span class="fn">debug_str</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Debug: &quot;</span> <span class="op">+</span> ds<span class="op">)</span>
 
-fn main() -> int {
-    // Clonar un Point
-    let p1: Point = Point { x: 10, y: 20 }
-    let p2: Point = p1.clone()
+    <span class="cm">// Clonar Rectangle</span>
+    <span class="kw">let</span> r1<span class="op">:</span> <span class="ty">Rectangle</span> <span class="op">=</span> <span class="ty">Rectangle</span> <span class="op">{</span> origin<span class="op">:</span> <span class="num">0</span><span class="op">,</span> width<span class="op">:</span> <span class="num">100</span><span class="op">,</span> height<span class="op">:</span> <span class="num">50</span> <span class="op">}</span>
+    <span class="kw">let</span> r2<span class="op">:</span> <span class="ty">Rectangle</span> <span class="op">=</span> r1<span class="op">.</span><span class="fn">clone</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Rect original: w=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r1<span class="op">.</span>width<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Rect clon:     w=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r2<span class="op">.</span>width<span class="op">))</span>
 
-    print("Original:  x=" + int_to_string(p1.x) + " y=" + int_to_string(p1.y))
-    print("Clon:      x=" + int_to_string(p2.x) + " y=" + int_to_string(p2.y))
-
-    // Debug string
-    let ds: String = p1.debug_str()
-    print("Debug: " + ds)
-
-    // Clonar Rectangle
-    let r1: Rectangle = Rectangle { origin: 0, width: 100, height: 50 }
-    let r2: Rectangle = r1.clone()
-    print("Rect original: w=" + int_to_string(r1.width))
-    print("Rect clon:     w=" + int_to_string(r2.width))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">Original:  x=10 y=20
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Original:  x=10 y=20
 Clon:      x=10 y=20
 Debug: Point { x: 10, y: 20 }
 Rect original: w=100
-Rect clon:     w=100</pre>
-
-    <h2>Explanation</h2>
-    <p>Placing <code>#[derive(Clone, Debug)]</code> above a struct declaration tells the Nyx compiler to synthesize the corresponding trait implementations automatically. You get a fully working <code>.clone()</code> and <code>.debug_str()</code> without writing a single line of implementation code. This eliminates a whole category of repetitive boilerplate.</p>
-    <p><code>Clone</code> performs a field-by-field copy of the struct. After <code>let p2 = p1.clone()</code>, modifying <code>p2</code> does not affect <code>p1</code> — each holds its own independent copy of the data. This is safe even for structs that contain heap-allocated fields, because the derive macro handles the deep copy logic.</p>
-    <p><code>Debug</code> generates a <code>.debug_str()</code> method that formats the struct with its type name and field values in a readable form — useful for logging, tests, and development-time inspection. Multiple traits can be derived in a single annotation by listing them comma-separated inside the parentheses.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/22-trait-bounds.html">← Previous</a>
-        <a href="/by-example/24-option-some-none.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/23-derive-clone.nx">examples/by-example/23-derive-clone.nx</a></small></p>
+Rect clon:     w=100</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Placing <code>#[derive(Clone, Debug)]</code> above a struct declaration tells the Nyx compiler to synthesize the corresponding trait implementations automatically. You get a fully working <code>.clone()</code> and <code>.debug_str()</code> without writing a single line of implementation code. This eliminates a whole category of repetitive boilerplate.</p>
+<p><code>Clone</code> performs a field-by-field copy of the struct. After <code>let p2 = p1.clone()</code>, modifying <code>p2</code> does not affect <code>p1</code> — each holds its own independent copy of the data. This is safe even for structs that contain heap-allocated fields, because the derive macro handles the deep copy logic.</p>
+<p><code>Debug</code> generates a <code>.debug_str()</code> method that formats the struct with its type name and field values in a readable form — useful for logging, tests, and development-time inspection. Multiple traits can be derived in a single annotation by listing them comma-separated inside the parentheses.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/22-trait-bounds.html"><span class="label">← Previous</span><span class="doc-nav-name">Trait Bounds</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/24-option-some-none.html"><span class="label">Next →</span><span class="doc-nav-name">Option: Some and None</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

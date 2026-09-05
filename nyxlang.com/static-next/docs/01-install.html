@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install — Nyx docs</title>
+<meta name="description" content="Requirements, supported platforms, what the installer puts where, and how to verify, update or remove it.">
+<link rel="canonical" href="https://nyxlang.com/docs/01-install.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/docs/01-install.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/docs/01-install.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/docs/01-install.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/docs/01-install.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">01</span> / 06</span></p>
+<h1 class="doc-title">Install</h1>
+</header>
+<div class="doc-layout">
+<nav class="doc-toc" aria-label="Guide steps">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label"><a href="/docs/">Nyx, step by step</a></p>
+<ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link is-active" href="/docs/01-install.html" aria-current="page"><span class="doc-toc-num">01</span><span class="doc-toc-name">Install</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/02-first-program.html"><span class="doc-toc-num">02</span><span class="doc-toc-name">First program</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/03-project.html"><span class="doc-toc-num">03</span><span class="doc-toc-name">Projects</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/04-agents.html"><span class="doc-toc-num">04</span><span class="doc-toc-name">Agents</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/05-cli.html"><span class="doc-toc-num">05</span><span class="doc-toc-name">Command line</span></a></li>
+<li class="doc-toc-item"><a class="doc-toc-link" href="/docs/06-syntax.html"><span class="doc-toc-num">06</span><span class="doc-toc-name">Syntax</span></a></li>
+</ol>
+</div>
+</nav>
+<article class="doc-body">
+<p class="prose">The installer builds Nyx from source on your machine: it clones the repository, compiles the compiler and the tools, and links one command into your PATH. It runs on Linux and nowhere else — <code>install.sh</code> stops with an error on any other operating system.</p>
+
+<h2>What you need</h2>
+<p>Three programs — <code>clang</code>, <code>make</code> and <code>git</code> — and three sets of development headers: <code>libgc</code>, OpenSSL and zlib. You do not have to install them yourself: the installer checks for each one and installs whatever is missing with the package manager it finds — <code>apt</code>, <code>dnf</code>, <code>pacman</code>, <code>apk</code>, <code>xbps</code>, or <code>pkg</code> on Termux. Outside Termux it uses <code>sudo</code> to do it.</p>
+
+<table class="kv kv-wide">
+<tr><th>Operating system</th><td>Linux. Anything else stops the installer with an error.</td></tr>
+<tr><th>Architectures</th><td><code>x86_64</code>, <code>aarch64</code>, <code>armv7l</code>.</td></tr>
+<tr><th>Also supported</th><td>Termux on Android, which uses <code>pkg</code> and needs no <code>sudo</code>.</td></tr>
+</table>
+
+<h2>Install</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">curl -sSf https://nyxlang.com/install.sh | sh</span></pre>
+<p>That is the whole installation. It takes a few minutes, most of it spent compiling.</p>
+
+<h2>What the installer does</h2>
+<ol>
+<li><strong>Checks the platform.</strong> Linux plus one of the three architectures above, or it stops.</li>
+<li><strong>Checks the dependencies</strong> and installs the missing ones with your package manager.</li>
+<li><strong>Clones the repository</strong> into <code>~/.nyx</code>. If <code>~/.nyx</code> is already a git clone it fetches and resets it instead.</li>
+<li><strong>Builds the compiler</strong> from the LLVM IR seed files committed in the repository.</li>
+<li><strong>Builds the tools</strong>: the package manager, the test runner, the checker, vet and the formatter. Each one is a separate binary, and all of them are built here — that is why the install is not instant.</li>
+<li><strong>Organises the tree</strong>: the binaries move to <code>~/.nyx/bin/</code> and everything that is not needed to run Nyx is removed, keeping the C runtime, the standard library, the project templates and the changelog.</li>
+<li><strong>Links the command</strong>: <code>~/.local/bin/nyx</code> points at the wrapper inside <code>~/.nyx</code>. On Termux the link goes to <code>$PREFIX/bin/nyx</code> instead.</li>
+<li><strong>Fixes your PATH</strong> if <code>~/.local/bin</code> was not on it, by appending one <code>export</code> line to <code>~/.bashrc</code>, <code>~/.zshrc</code> or <code>~/.profile</code> — whichever exists first.</li>
+</ol>
+
+<h2>Verify</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx --version</span>
+nyx 0.31.0</pre>
+<p>If the shell answers <code>command not found</code>, the link exists but this shell has not picked up the new PATH yet. See <em>Common problems</em> below.</p>
+
+<h2>Update</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx update</span></pre>
+<p>It fetches the latest version into <code>~/.nyx</code>, rebuilds the compiler and the five tools, and then prints two things worth reading: <strong>What's new</strong>, the changelog entries between the version you had and the one you now have, and <strong>the traps you no longer have to dodge</strong> — the gotchas that were fixed in between, taken from the toolchain's own table rather than from a hand-written list.</p>
+<p class="doc-note">Updating the toolchain does not update the documents already seeded inside your projects. Inside a project, <code>nyx update --sync-docs</code> refreshes them and leaves a <code>.bak</code> of anything it replaces. Step 04 covers what those documents are.</p>
+
+<h2>Uninstall</h2>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx uninstall</span>
+Uninstalling Nyx...
+Nyx has been uninstalled.
+  Removed: ~/.nyx/
+  Removed: ~/.local/bin/nyx</pre>
+<p>It removes <code>~/.nyx</code> and <code>~/.local/bin/nyx</code>. Your projects are untouched — they are ordinary directories with source files.</p>
+
+<h2>Termux</h2>
+<p>Termux is detected on its own and treated as a first-class target: packages come from <code>pkg</code>, nothing runs under <code>sudo</code>, and the command is linked into <code>$PREFIX/bin</code>, which is already on your PATH — so there is no profile to edit and no new shell to open.</p>
+
+<h2>Build from source instead</h2>
+<p>If you would rather not run an installer, the repository builds by itself. This is also the path to take if you want to work on the compiler.</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">sudo apt install clang make git libgc-dev libssl-dev zlib1g-dev</span>
+<span class="prompt">$</span> <span class="cmd">git clone https://github.com/nyxlang-dev/nyx.git</span>
+<span class="prompt">$</span> <span class="cmd">cd nyx</span>
+<span class="prompt">$</span> <span class="cmd">make bootstrap</span></pre>
+<p><code>make bootstrap</code> produces <code>nyx_bootstrap</code> from the LLVM IR seed files committed in the repository — that is how a self-hosted compiler builds without already having itself installed.</p>
+
+<h2>Common problems</h2>
+<h3>No supported package manager found</h3>
+<p>The installer knows <code>apt</code>, <code>dnf</code>, <code>pacman</code>, <code>apk</code>, <code>xbps</code> and Termux's <code>pkg</code>. On anything else it stops and prints the list of packages it wanted; install them by hand with your own package manager and run the installer again.</p>
+<h3>nyx: command not found, right after installing</h3>
+<p>The link is there; this shell's PATH is not. The installer says so when it happens, and tells you which file it edited:</p>
+<pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">source ~/.bashrc</span></pre>
+<p>Opening a new terminal works just as well.</p>
+<h3>A warning about libgc during install</h3>
+<p>If your distribution ships a <code>libgc</code>/<code>bdwgc</code> older than 8.2, the installer warns and keeps going:</p>
+<pre data-lang="sh">warn libgc/bdwgc 8.0.4-1 detected (&lt; 8.2 required for healthy concurrency under load).</pre>
+<p>Below 8.2 one function the scheduler relies on does not exist, and the garbage collector can crash a program that runs many concurrent tasks. Single-threaded programs are unaffected. The runtime repeats the warning at startup when it happens, so the problem is never silent — but upgrading the package is the real fix.</p>
+
+</article>
+</div>
+<nav class="doc-nav" aria-label="Previous and next">
+<a class="doc-nav-link doc-nav-prev" href="/docs/"><span class="label">← Previous</span><span class="doc-nav-name">Nyx, step by step</span></a>
+<a class="doc-nav-link doc-nav-next" href="/docs/02-first-program.html"><span class="label">Next →</span><span class="doc-nav-name">First program</span></a>
+</nav>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

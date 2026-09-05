@@ -1,77 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stdin Input — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stdin Input — Nyx by example</title>
+<meta name="description" content="Reading user input from the terminal with read_line.">
+<link rel="canonical" href="https://nyxlang.com/by-example/12-stdin-input.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/12-stdin-input.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/12-stdin-input.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/12-stdin-input.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/#products">Products</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/12-stdin-input.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">12</span> / Input, output and data</span></p>
+<h1 class="doc-title">Stdin Input</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Reading from standard input in Nyx is done with <code>read_line()</code>, which blocks until the user presses Enter and returns the typed text as a <code>String</code>. A companion function <code>print_no_newline</code> lets you display a prompt without advancing to the next line, so what you type appears right after the colon.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">12-stdin-input.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/12-stdin-input.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Leer una línea de stdin con read_line() y saludar al usuario</span>
+<span class="cm">// En CI/testing: redirigir stdin con echo &quot;Alice&quot; | ./programa</span>
 
-    <h1>Stdin Input</h1>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print_no_newline</span><span class="op">(</span><span class="str">&quot;Ingresa tu nombre: &quot;</span><span class="op">)</span>
 
-    <p>Reading from standard input in Nyx is done with <code>read_line()</code>, which blocks until the user presses Enter and returns the typed text as a <code>String</code>. A companion function <code>print_no_newline</code> lets you display a prompt without advancing to the next line, keeping the cursor right after the colon.</p>
+    <span class="cm">// read_line() lee hasta &#x27;\n&#x27; desde stdin</span>
+    <span class="kw">let</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">read_line</span><span class="op">()</span>
 
-    <h2>Code</h2>
-    <pre><code>// Leer una línea de stdin con read_line() y saludar al usuario
-// En CI/testing: redirigir stdin con echo "Alice" | ./programa
+    <span class="cm">// Eliminar posible &#x27;\n&#x27; al final con trim</span>
+    <span class="kw">let</span> nombre_limpio<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> nombre<span class="op">.</span><span class="fn">trim</span><span class="op">()</span>
 
-fn main() -> int {
-    print_no_newline("Ingresa tu nombre: ")
+    <span class="kw">if</span> nombre_limpio<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Hola, desconocido!&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Hola, &quot;</span> <span class="op">+</span> nombre_limpio <span class="op">+</span> <span class="str">&quot;! Bienvenido a Nyx.&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
 
-    // read_line() lee hasta '\n' desde stdin
-    let nombre: String = read_line()
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Longitud del nombre: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>nombre_limpio<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-    // Eliminar posible '\n' al final con trim
-    let nombre_limpio: String = nombre.trim()
-
-    if nombre_limpio.length() == 0 {
-        print("Hola, desconocido!")
-    } else {
-        print("Hola, " + nombre_limpio + "! Bienvenido a Nyx.")
-    }
-
-    print("Longitud del nombre: " + int_to_string(nombre_limpio.length()))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">Ingresa tu nombre: Alice
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Ingresa tu nombre: Alice
 Hola, Alice! Bienvenido a Nyx.
-Longitud del nombre: 5</pre>
-
-    <h2>Explanation</h2>
-    <p><code>print_no_newline(s)</code> writes a string to stdout without appending a newline, unlike the regular <code>print</code>. This is the idiomatic way to display an inline prompt so the user's input appears on the same line.</p>
-    <p><code>read_line()</code> reads characters from stdin until it encounters a newline character. The returned string may include a trailing <code>\n</code> depending on the platform and how input was piped, so calling <code>.trim()</code> is good practice to strip leading and trailing whitespace.</p>
-    <p>The <code>if/else</code> guard handles the empty-input case gracefully. In automated testing you can feed input via shell redirection: <code>echo "Alice" | ./programa</code>, which makes <code>read_line()</code> return <code>"Alice\n"</code> without blocking.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/11-file-read-write.html">← Previous</a>
-        <a href="/by-example/13-cli-args.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/12-stdin-input.nx">examples/by-example/12-stdin-input.nx</a></small></p>
+Longitud del nombre: 5</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>print_no_newline(s)</code> writes a string to stdout without appending a newline, unlike the regular <code>print</code>. This is the idiomatic way to display an inline prompt so the user's input appears on the same line.</p>
+<p><code>read_line()</code> reads characters from stdin until it encounters a newline character. The returned string may include a trailing <code>\n</code> depending on the platform and how input was piped, so calling <code>.trim()</code> is good practice to strip leading and trailing whitespace.</p>
+<p>The <code>if/else</code> guard handles the empty-input case gracefully. In automated testing you can feed input via shell redirection: <code>echo "Alice" | ./programa</code>, which makes <code>read_line()</code> return <code>"Alice\n"</code> without blocking.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/11-file-read-write.html"><span class="label">← Previous</span><span class="doc-nav-name">File Read &amp; Write</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/13-cli-args.html"><span class="label">Next →</span><span class="doc-nav-name">CLI Arguments</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

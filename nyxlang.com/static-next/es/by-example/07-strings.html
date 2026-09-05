@@ -1,104 +1,125 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strings — Nyx con Ejemplos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/es/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strings — Nyx por ejemplo</title>
+<meta name="description" content="trim, length, substring, toUpper, split, contains e interpolación.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/07-strings.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/07-strings.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/07-strings.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/07-strings.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/es/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/es/#products">Productos</a>
-        <a href="/es/learn/">Aprender</a>
-        <a href="/es/by-example/">Ejemplos</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/07-strings.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/es/by-example/">Nyx con Ejemplos</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">07</span> / Fundamentos</span></p>
+<h1 class="doc-title">Strings</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Los strings de Nyx son valores UTF-8 con un amplio conjunto de métodos incorporados. Este ejemplo muestra las operaciones más usadas: recorte de espacios, extracción de subcadenas, conversión de mayúsculas/minúsculas, búsqueda de subcadenas, división e interpolación.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">07-strings.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/07-strings.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Strings: length, substring, split, contains, trim, toUpper, interpolación</span>
 
-    <h1>Strings</h1>
+<span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
+<span class="cm">// así que la conversión se escribe explícita.</span>
+<span class="kw">fn</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;si&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
 
-    <p>Los strings de Nyx son valores UTF-8 con un amplio conjunto de métodos incorporados. Este ejemplo muestra las operaciones más usadas: recorte de espacios, extracción de subcadenas, conversión de mayúsculas/minúsculas, búsqueda de subcadenas, división e interpolación.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;  Hola Nyx  &quot;</span>
 
-    <h2>Código</h2>
-    <pre><code>// Strings: length, substring, split, contains, trim, toUpper, interpolación
+    <span class="cm">// trim elimina espacios al inicio y al final</span>
+    <span class="kw">let</span> limpio<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">trim</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;trim: &#x27;&quot;</span> <span class="op">+</span> limpio <span class="op">+</span> <span class="str">&quot;&#x27;&quot;</span><span class="op">)</span>
 
-fn main() -> int {
-    let texto: String = "  Hola Nyx  "
+    <span class="cm">// length</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;longitud: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>limpio<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-    // trim elimina espacios al inicio y al final
-    let limpio: String = texto.trim()
-    print("trim: '" + limpio + "'")
+    <span class="cm">// substring(inicio, fin)  — fin es exclusivo</span>
+    <span class="kw">let</span> sub<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> limpio<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;substring(0,4): &quot;</span> <span class="op">+</span> sub<span class="op">)</span>
 
-    // length
-    print("longitud: " + int_to_string(limpio.length()))
+    <span class="cm">// toUpper / toLower</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;toUpper: &quot;</span> <span class="op">+</span> limpio<span class="op">.</span><span class="fn">toUpper</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;toLower: &quot;</span> <span class="op">+</span> limpio<span class="op">.</span><span class="fn">toLower</span><span class="op">())</span>
 
-    // substring(inicio, fin)  — fin es exclusivo
-    let sub: String = limpio.substring(0, 4)
-    print("substring(0,4): " + sub)
+    <span class="cm">// contains</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;contains &#x27;Nyx&#x27;: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>limpio<span class="op">.</span><span class="fn">contains</span><span class="op">(</span><span class="str">&quot;Nyx&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;contains &#x27;Go&#x27;: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>limpio<span class="op">.</span><span class="fn">contains</span><span class="op">(</span><span class="str">&quot;Go&quot;</span><span class="op">)))</span>
 
-    // toUpper / toLower
-    print("toUpper: " + limpio.toUpper())
-    print("toLower: " + limpio.toLower())
+    <span class="cm">// split</span>
+    <span class="kw">let</span> frase<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;uno dos tres&quot;</span>
+    <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> frase<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot; &quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;partes: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>partes<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+    <span class="kw">for</span> p <span class="kw">in</span> partes <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> p<span class="op">)</span>
+    <span class="op">}</span>
 
-    // contains
-    print("contains 'Nyx': " + int_to_string(limpio.contains("Nyx")))
-    print("contains 'Go': " + int_to_string(limpio.contains("Go")))
+    <span class="cm">// interpolación</span>
+    <span class="kw">let</span> lang<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Nyx&quot;</span>
+    <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">12</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Lenguaje: ${lang} v0.${v}&quot;</span><span class="op">)</span>
 
-    // split
-    let frase: String = "uno dos tres"
-    let partes: Array = frase.split(" ")
-    print("partes: " + int_to_string(partes.length()))
-    for p in partes {
-        print("  " + p)
-    }
-
-    // interpolación
-    let lang: String = "Nyx"
-    let v: int = 12
-    print("Lenguaje: ${lang} v0.${v}")
-
-    return 0
-}</code></pre>
-
-    <h2>Salida</h2>
-    <pre class="output">trim: 'Hola Nyx'
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">trim: 'Hola Nyx'
 longitud: 8
 substring(0,4): Hola
 toUpper: HOLA NYX
 toLower: hola nyx
-contains 'Nyx': 1
-contains 'Go': 0
+contains 'Nyx': si
+contains 'Go': no
 partes: 3
   uno
   dos
   tres
-Lenguaje: Nyx v0.12</pre>
-
-    <h2>Explicación</h2>
-    <p><code>.trim()</code> devuelve un nuevo string con los espacios en blanco al inicio y al final eliminados. El string original no se modifica — los strings de Nyx son valores inmutables; todos los métodos devuelven strings nuevos.</p>
-    <p><code>.substring(start, end)</code> extrae una porción desde el índice <code>start</code> hasta, sin incluir, el índice <code>end</code>. Los índices son posiciones de byte. <code>.length()</code> devuelve la longitud en bytes del string, no la cantidad de puntos de código Unicode — para texto ASCII son lo mismo.</p>
-    <p><code>.contains(needle)</code> devuelve <code>1</code> si se encuentra la subcadena, <code>0</code> en caso contrario. <code>.split(separator)</code> divide el string en cada ocurrencia del separador y devuelve un <code>Array</code> con las partes resultantes.</p>
-    <p>La interpolación de strings con <code>${expr}</code> funciona dentro de cualquier string entre comillas dobles. La expresión puede ser una variable, una llamada a función o cualquier otra expresión — el resultado se convierte automáticamente a su representación de string y se incrusta en línea.</p>
-
-    <div class="book-nav">
-        <a href="/es/by-example/06-maps.html">← Anterior</a>
-        <a href="/es/by-example/08-structs.html">Siguiente →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/07-strings.nx">examples/by-example/07-strings.nx</a></small></p>
+Lenguaje: Nyx v0.12</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>.trim()</code> devuelve un nuevo string con los espacios en blanco al inicio y al final eliminados. El string original no se modifica — los strings de Nyx son valores inmutables; todos los métodos devuelven strings nuevos.</p>
+<p><code>.substring(start, end)</code> extrae una porción desde el índice <code>start</code> hasta, sin incluir, el índice <code>end</code>. Los índices son posiciones de byte. <code>.length()</code> devuelve la longitud en bytes del string, no la cantidad de puntos de código Unicode — para texto ASCII son lo mismo.</p>
+<p><code>.contains(needle)</code> devuelve un <code>bool</code>, y por eso la receta lo imprime con el helper <code>si_no</code> en vez de con <code>int_to_string</code>. <code>.split(separator)</code> divide el string en cada ocurrencia del separador y devuelve un <code>Array</code> con las partes resultantes.</p>
+<p>La interpolación de strings con <code>${expr}</code> funciona dentro de cualquier string entre comillas dobles. La expresión puede ser una variable, una llamada a función o cualquier otra expresión — el resultado se convierte automáticamente a su representación de string y se incrusta en línea.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/06-maps.html"><span class="label">← Anterior</span><span class="doc-nav-name">Maps</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/08-structs.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Structs</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

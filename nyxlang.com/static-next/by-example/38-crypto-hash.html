@@ -1,80 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cryptographic Hashing — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cryptographic Hashing — Nyx by example</title>
+<meta name="description" content="SHA-256, MD5, and HMAC-SHA256 for integrity checking.">
+<link rel="canonical" href="https://nyxlang.com/by-example/38-crypto-hash.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/38-crypto-hash.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/38-crypto-hash.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/38-crypto-hash.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/#products">Products</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/38-crypto-hash.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">38</span> / Advanced</span></p>
+<h1 class="doc-title">Cryptographic Hashing</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx ships SHA-256, MD5, and HMAC-SHA256 as built-in functions backed by the runtime's <code>crypto.c</code> module. No external library or import is required — all three are available in every Nyx program.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">38-crypto-hash.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/38-crypto-hash.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Criptografía: SHA-256, MD5 y HMAC-SHA256</span>
 
-    <h1>Cryptographic Hashing</h1>
+<span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
+<span class="cm">// así que la conversión se escribe explícita.</span>
+<span class="kw">fn</span> <span class="fn">si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;si&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
 
-    <p>Nyx ships SHA-256, MD5, and HMAC-SHA256 as built-in functions backed by the runtime's <code>crypto.c</code> module. No external library or import is required — all three are available in every Nyx program.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// SHA-256</span>
+    <span class="kw">let</span> h1<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;hello world&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sha256(\&quot;hello world\&quot;):&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> h1<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  longitud: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>h1<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; chars&quot;</span><span class="op">)</span>
 
-    <h2>Code</h2>
-    <pre><code>// Criptografía: SHA-256, MD5 y HMAC-SHA256
+    <span class="cm">// SHA-256 de string vacío</span>
+    <span class="kw">let</span> h_empty<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sha256(\&quot;\&quot;):&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> h_empty<span class="op">)</span>
 
-fn main() -> int {
-    // SHA-256
-    let h1: String = sha256("hello world")
-    print("sha256(\"hello world\"):")
-    print("  " + h1)
-    print("  longitud: " + int_to_string(h1.length()) + " chars")
+    <span class="cm">// MD5</span>
+    <span class="kw">let</span> m1<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">md5</span><span class="op">(</span><span class="str">&quot;hello world&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;md5(\&quot;hello world\&quot;):&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> m1<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  longitud: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>m1<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; chars&quot;</span><span class="op">)</span>
 
-    // SHA-256 de string vacío
-    let h_empty: String = sha256("")
-    print("sha256(\"\"):")
-    print("  " + h_empty)
+    <span class="cm">// HMAC-SHA256</span>
+    <span class="kw">let</span> key<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;clave-secreta&quot;</span>
+    <span class="kw">let</span> data<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;mensaje importante&quot;</span>
+    <span class="kw">let</span> hmac<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">hmac_sha256</span><span class="op">(</span>key<span class="op">,</span> data<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;hmac_sha256(key, data):&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> hmac<span class="op">)</span>
 
-    // MD5
-    let m1: String = md5("hello world")
-    print("md5(\"hello world\"):")
-    print("  " + m1)
-    print("  longitud: " + int_to_string(m1.length()) + " chars")
+    <span class="cm">// Verificar determinismo: mismo input -&gt; mismo hash</span>
+    <span class="kw">let</span> a<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;nyx&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> b<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;nyx&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sha256 es determinista: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>a <span class="op">==</span> b<span class="op">))</span>
 
-    // HMAC-SHA256
-    let key: String = "clave-secreta"
-    let data: String = "mensaje importante"
-    let hmac: String = hmac_sha256(key, data)
-    print("hmac_sha256(key, data):")
-    print("  " + hmac)
+    <span class="cm">// Verificar que inputs distintos -&gt; hashes distintos</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;aaa&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> d<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">sha256</span><span class="op">(</span><span class="str">&quot;bbb&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;hashes distintos para inputs distintos: &quot;</span> <span class="op">+</span> <span class="fn">si_no</span><span class="op">(</span>c <span class="op">!=</span> d<span class="op">))</span>
 
-    // Verificar determinismo: mismo input -> mismo hash
-    let a: String = sha256("nyx")
-    let b: String = sha256("nyx")
-    print("sha256 es determinista: " + int_to_string(a == b))
-
-    // Verificar que inputs distintos -> hashes distintos
-    let c: String = sha256("aaa")
-    let d: String = sha256("bbb")
-    print("hashes distintos para inputs distintos: " + int_to_string(c != d))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">sha256("hello world"):
-  b94d27b9934d3e08a52e52d7da7dabfac484efe04294e576e5b9571d73f61a7d
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">sha256("hello world"):
+  b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
   longitud: 64 chars
 sha256(""):
   e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -82,22 +95,30 @@ md5("hello world"):
   5eb63bbbe01eeed093cb22bb8f5acdc3
   longitud: 32 chars
 hmac_sha256(key, data):
-  (valor dependiente de key y data)
-sha256 es determinista: 1
-hashes distintos para inputs distintos: 1</pre>
-
-    <h2>Explanation</h2>
-    <p><code>sha256(s)</code> returns a 64-character lowercase hexadecimal string — the standard encoding of a 256-bit (32-byte) digest. The empty-string hash <code>e3b0c44...</code> is a well-known constant you can use to verify your toolchain is computing correctly. SHA-256 is suitable for data integrity checks, password hashing (with a proper KDF on top), and digital signatures.</p>
-    <p><code>md5(s)</code> returns a 32-character hex string (128-bit digest). MD5 is no longer considered cryptographically secure for collision resistance, but it remains widely used for checksums and cache keys where collision attacks are not a concern.</p>
-    <p><code>hmac_sha256(key, data)</code> computes a keyed hash that proves both the content of <code>data</code> and knowledge of <code>key</code>. It is the standard primitive for API request signing and JWT verification. The determinism assertions at the end demonstrate a fundamental property of all hash functions: identical inputs always produce identical outputs.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/37-sleep-timer.html">← Previous</a>
-        <a href="/by-example/39-random-uuid.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/38-crypto-hash.nx">examples/by-example/38-crypto-hash.nx</a></small></p>
+  5f7881b8e97ca2ea9adbf0c50a0ccf6207eb8923b5e91e2810b292f7b20bae18
+sha256 es determinista: si
+hashes distintos para inputs distintos: si</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>sha256(s)</code> returns a 64-character lowercase hexadecimal string — the standard encoding of a 256-bit (32-byte) digest. The empty-string hash <code>e3b0c44...</code> is a well-known constant you can use to verify your toolchain is computing correctly. SHA-256 is suitable for data integrity checks, password hashing (with a proper KDF on top), and digital signatures.</p>
+<p><code>md5(s)</code> returns a 32-character hex string (128-bit digest). MD5 is no longer considered cryptographically secure for collision resistance, but it remains widely used for checksums and cache keys where collision attacks are not a concern.</p>
+<p><code>hmac_sha256(key, data)</code> computes a keyed hash that proves both the content of <code>data</code> and knowledge of <code>key</code>. It is the standard primitive for API request signing and JWT verification. The determinism assertions at the end demonstrate a fundamental property of all hash functions: identical inputs always produce identical outputs.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/37-sleep-timer.html"><span class="label">← Previous</span><span class="doc-nav-name">Sleep and Timers</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/39-random-uuid.html"><span class="label">Next →</span><span class="doc-nav-name">Random Numbers and UUID</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>
