@@ -56,13 +56,27 @@
 #      byte a byte lo que gen.nx SABE que produce) + comparación del LISTADO
 #      de archivos entre ROOT y una generación fresca en un temporal (caza
 #      huérfanos que --check no ve, porque --check no mira archivos de más
-#      en <out>). Se salta con aviso si no hay `nyx` en PATH o si ROOT no
-#      tiene un gen.nx al lado (p.ej. el fixture sintético del autotest).
+#      en <out>). Si `nyx` no está en PATH da ✗ (fix round 2: esta guardia
+#      corre en máquinas con la toolchain, que falte no es un pase gratis).
+#      Se salta con ⚠ solo si ROOT no tiene un gen.nx al lado (el fixture
+#      sintético del autotest, que no pretende ser un sitio generado).
 #   J. Autotest (control positivo): corre PRIMERO, siempre. Crea un ROOT
 #      temporal con un HTML que dispara A, B, C, E y F a propósito; si
 #      alguno de los cinco no lo detecta, el script se declara ROTO y sale 2
 #      antes de tocar el árbol real — un guardia que no ve sus propios
 #      controles positivos no prueba nada estando en verde.
+#
+#   Piso mínimo (corre después del autotest, antes de evaluar A-I sobre
+#   ROOT, sin depender de `nyx` ni de `gen.nx`): ROOT/index.html y
+#   ROOT/es/index.html tienen que existir, y tiene que haber al menos
+#   $MIN_HTML_FILES archivos .html fuera de learn/ (el legado PERMANENTE,
+#   nunca enlazado — un legado MÁS ANGOSTO que el de A-D/G/H/I, que además
+#   excluye by-example/ de forma transitoria: por volumen, by-example
+#   cuenta como material real aunque esos checks no lo escaneen todavía;
+#   ver el comentario en `check_floor`). Sin esto un ROOT vacío o a medio
+#   generar daba "✓ 0 coincidencias" en A-D/F/H (nada que escanear no es
+#   lo mismo que nada sospechoso) — rc=0 sobre la nada. Si falta, imprime
+#   «GUARDIA SIN MATERIAL» y sale 2, mismo trato que el autotest roto.
 #
 # LEGADO (TRANSITORIO — fix round 1, ruling del coordinador): en la fase 1
 # del rediseño, static-next/ tiene que seguir sirviendo el by-example VIEJO
@@ -160,15 +174,26 @@ find_nolegacy() {
 
 # Escanea $files (lista separada por líneas) con el regex $2 y reporta cada
 # coincidencia como ✗ etiquetada $1. $files vacío = 0 archivos, 0 hallazgos.
+#
+# Un archivo por vez, con "$f" citado (nunca $files sin comillas pasado
+# entero a grep): un nombre con espacios se partía en silencio en varios
+# argumentos de find/grep y podía saltearse contenido sin avisar. `grep -H`
+# fuerza el prefijo de archivo aunque sea una sola invocación por archivo.
 scan_denylist() {
     local label="$1" regex="$2" files="$3"
     local n=0
     if [ -n "$files" ]; then
-        while IFS= read -r hit; do
-            [ -z "$hit" ] && continue
-            print_bad "[$label] $hit"
-            n=$((n + 1))
-        done < <(grep -HniE -- "$regex" $files 2>/dev/null)
+        local f
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            while IFS= read -r hit; do
+                [ -z "$hit" ] && continue
+                print_bad "[$label] $hit"
+                n=$((n + 1))
+            done < <(grep -HniE -- "$regex" "$f" 2>/dev/null)
+        done <<EOF
+$files
+EOF
     fi
     if [ "$n" -eq 0 ]; then
         print_ok "[$label] 0 coincidencias"
@@ -225,16 +250,22 @@ check_a() {
     html_files=$(find_nolegacy "$root" -name '*.html')
     n2=0
     if [ -n "$html_files" ]; then
-        while IFS= read -r hit; do
-            [ -z "$hit" ] && continue
-            case "$hit" in
-                *--agent=*) continue ;;
-                *)
-                    print_bad "[A] herramienta de IA fuera de --agent=: $hit"
-                    n2=$((n2 + 1))
-                    ;;
-            esac
-        done < <(grep -HniE -- "$AI_TOOLS_RE" $html_files 2>/dev/null)
+        local hf
+        while IFS= read -r hf; do
+            [ -z "$hf" ] && continue
+            while IFS= read -r hit; do
+                [ -z "$hit" ] && continue
+                case "$hit" in
+                    *--agent=*) continue ;;
+                    *)
+                        print_bad "[A] herramienta de IA fuera de --agent=: $hit"
+                        n2=$((n2 + 1))
+                        ;;
+                esac
+            done < <(grep -HniE -- "$AI_TOOLS_RE" "$hf" 2>/dev/null)
+        done <<EOF
+$html_files
+EOF
     fi
     if [ "$n2" -eq 0 ]; then
         print_ok "[A] 0 nombres de herramienta de IA fuera de --agent="
@@ -464,8 +495,11 @@ check_i() {
     local fails=0
 
     if ! command -v nyx >/dev/null 2>&1; then
-        print_warn "[I] nyx no está en PATH — se salta (no se puede generar para comparar)"
-        CHECK_LAST_FAILS=0
+        # ✗, no ⚠ (fix round 2): esta guardia corre en máquinas con la
+        # toolchain instalada — que falte `nyx` no es un estado válido para
+        # dar por buena la frescura, es no poder verificarla.
+        print_bad "[I] nyx no está en PATH — no se puede verificar la frescura de $root"
+        CHECK_LAST_FAILS=1
         return
     fi
     if [ ! -f "$SITE_DIR/gen.nx" ]; then
@@ -567,8 +601,58 @@ HTML
     print_ok "autotest: A, B, C, E y F detectan el control positivo — el instrumento sirve"
 }
 
+# ── Piso mínimo (fix round 2) ─────────────────────────────────────────────
+# Sin esto: un ROOT vacío, a medio generar, o con un typo de path, hacía que
+# A-D/F/H dieran "✓ 0 coincidencias" (nada que escanear no es lo mismo que
+# nada sospechoso) e I se salteara con ⚠ si además faltaba `nyx` — la
+# guardia daba rc=0 sobre la nada. Corre SIEMPRE, sin depender de `nyx` ni
+# de que exista `gen.nx` al lado (a diferencia del check I): dos archivos
+# concretos + un volumen mínimo de HTML fuera del legado. Mismo trato que
+# el autotest roto — sin piso, no tiene sentido evaluar nada más.
+MIN_HTML_FILES=20
+
+check_floor() {
+    local root="$1"
+    local broken=0 n
+
+    if [ ! -f "$root/index.html" ]; then
+        print_bad "GUARDIA SIN MATERIAL: falta $root/index.html"
+        broken=1
+    fi
+    if [ ! -f "$root/es/index.html" ]; then
+        print_bad "GUARDIA SIN MATERIAL: falta $root/es/index.html"
+        broken=1
+    fi
+
+    # OJO — "el legado" acá es MÁS ANGOSTO que `find_nolegacy` (A-D/G/H/I):
+    # solo learn/+es/learn/ (el legado PERMANENTE, nunca enlazado — la
+    # definición original de la T6, antes de que la T7 sumara by-example/
+    # como excepción TRANSITORIA de fase 1). Con la lista completa de
+    # find_nolegacy, tanto static-next (16 páginas propias: landing+docs)
+    # como static (2: solo index.html/es/index.html, todo lo demás es
+    # by-example/learn) quedan por debajo de cualquier piso razonable — el
+    # piso dejaría de medir "¿hay un sitio acá?" y pasaría a medir "¿ya se
+    # regeneró by-example?", que es el trabajo de I, no de esto. by-example
+    # es contenido real y enlazado (a diferencia de learn/): cuenta para
+    # "hay material", aunque A-D no lo escaneen todavía.
+    n=$(find "$root" -type f -name '*.html' \
+        -not -path "$root/learn/*" -not -path "$root/es/learn/*" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$n" -lt "$MIN_HTML_FILES" ]; then
+        print_bad "GUARDIA SIN MATERIAL: $n archivo(s) .html fuera de learn/ en $root (mínimo $MIN_HTML_FILES)"
+        broken=1
+    fi
+
+    if [ "$broken" -eq 1 ]; then
+        printf '\nEl árbol no tiene material suficiente para que esta guardia signifique algo.\n'
+        printf 'Abortando antes de evaluar los checks.\n'
+        exit 2
+    fi
+    print_ok "piso mínimo: index.html + es/index.html + $n archivo(s) .html fuera de learn/"
+}
+
 # ── main ──────────────────────────────────────────────────────────────────
 run_autotest
+check_floor "$ROOT"
 
 TOTAL_FAIL=0
 for c in a b c d e f g h i; do
