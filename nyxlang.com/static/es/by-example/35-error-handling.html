@@ -33,20 +33,20 @@
 <h1 class="doc-title">Manejo de Errores</h1>
 </header>
 <article class="recipe">
-<div class="recipe-lede prose"><p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. El built-in <code>throw</code> lanza un error de tipo string que se puede capturar, mientras que <code>panic</code> termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante.</p></div>
+<div class="recipe-lede prose"><p>Nyx ofrece <code>try</code>/<code>catch</code> para errores recuperables y <code>panic</code> para los irrecuperables. <code>panic(msg)</code> lanza un error de tipo string que se puede capturar: termina el programa a menos que sea capturado dentro de un bloque <code>try</code> circundante. <code>throw</code> es un alias deprecado de <code>panic</code>, y <code>nyx vet</code> lo marca.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">35-error-handling.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/35-error-handling.nx">Fuente →</a></div>
-<div class="panel-body"><pre><span class="cm">// Manejo de errores: try/catch con throw y panic</span>
+<div class="panel-body"><pre><span class="cm">// Manejo de errores: try/catch con panic (throw es un alias deprecado de panic)</span>
 
 <span class="kw">fn</span> <span class="fn">dividir</span><span class="op">(</span>a<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> b<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
     <span class="kw">if</span> b <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
-        <span class="kw">throw</span><span class="op">(</span><span class="str">&quot;division por cero: denominador es 0&quot;</span><span class="op">)</span>
+        <span class="fn">panic</span><span class="op">(</span><span class="str">&quot;division por cero: denominador es 0&quot;</span><span class="op">)</span>
     <span class="op">}</span>
     <span class="kw">return</span> a <span class="op">/</span> b
 <span class="op">}</span>
 
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Capturar un throw explícito</span>
+    <span class="cm">// Capturar un panic explícito</span>
     <span class="kw">var</span> resultado<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
     <span class="kw">try</span> <span class="op">{</span>
         <span class="kw">let</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">dividir</span><span class="op">(</span><span class="num">10</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
@@ -79,7 +79,7 @@
     <span class="kw">var</span> externo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
     <span class="kw">try</span> <span class="op">{</span>
         <span class="kw">try</span> <span class="op">{</span>
-            <span class="kw">throw</span><span class="op">(</span><span class="str">&quot;error interno&quot;</span><span class="op">)</span>
+            <span class="fn">panic</span><span class="op">(</span><span class="str">&quot;error interno&quot;</span><span class="op">)</span>
         <span class="op">}</span> <span class="kw">catch</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
             externo <span class="op">=</span> <span class="str">&quot;manejado: &quot;</span> <span class="op">+</span> e
         <span class="op">}</span>
@@ -100,7 +100,7 @@ panic atrapado: algo salio muy mal
 manejado: error interno</pre></div>
 </div>
 <h2 class="recipe-head">Cómo funciona</h2>
-<div class="recipe-prose"><p><code>throw(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>throw</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
+<div class="recipe-prose"><p><code>panic(msg)</code> lanza un error que desenrolla la pila hasta la cláusula <code>catch</code> más cercana que lo envuelve. El valor capturado <code>e</code> tiene tipo <code>String</code>, correspondiéndose con lo que se le pasó a <code>panic</code>. Cuando no ocurre ningún error, el bloque <code>catch</code> se omite por completo, así que la llamada <code>dividir(20, 4)</code> va directo a su resultado.</p>
 <p><code>panic</code> señala una condición irrecuperable — por defecto aborta el proceso, pero también se puede capturar con <code>try</code>/<code>catch</code> cuando la recuperación es genuinamente posible. Esto lo hace útil para aserciones durante el desarrollo que pueden envolverse en tests.</p>
 <p>Los bloques <code>try</code> anidados permiten manejar los errores internos localmente sin propagarlos a los manejadores externos. En el último ejemplo, el <code>catch</code> interno maneja <code>"error interno"</code> por completo, así que nunca se llega al <code>catch</code> externo.</p></div>
 </article>
