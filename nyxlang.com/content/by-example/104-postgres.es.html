@@ -1,0 +1,13 @@
+<!-- title: Sin driver de por medio | blurb: <code>std/postgres</code> habla el protocolo wire v3 y SCRAM-SHA-256 en Nyx puro — conectar, versionar migraciones y parametrizar sin libpq. -->
+<section data-part="intro">
+<p>La mayoría de los lenguajes llegan a Postgres a través de libpq, una biblioteca en C que el runtime tiene que enlazar y el despliegue tiene que llevar consigo. <code>std/postgres</code> la evita: el protocolo wire —incluida SCRAM-SHA-256, el método de autenticación que exige cualquier Postgres moderno— está implementado directamente en Nyx. Nada que instalar además del servidor. Esta receta conecta, aplica una migración, inserta una fila con parámetros y la vuelve a leer.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+insertadas: 1
+1 · O'Brien · obrien@ejemplo.com
+</section>
+<section data-part="explanation">
+<p><code>pg_migrate</code> es idempotente, y la razón está en dónde guarda su estado: no en un archivo local, sino en una tabla <code>nyx_migrations</code> del propio servidor, escrita por <code>pg_migrate_init</code>. <code>pg_migrate_version</code> lee de esa tabla la versión más alta ya aplicada, y <code>pg_migrate</code> no hace nada cuando la versión que recibe no es mayor. Dos procesos —o el mismo despliegue corrido dos veces— ven la misma tabla y coinciden en dónde está el esquema, porque la versión vive donde vive el esquema.</p>
+<p>El insert pasa por <code>try_pg_exec_params</code> en vez de armar un string de SQL. <code>"O'Brien"</code> viaja en el mensaje Bind del protocolo como un valor, no como un fragmento que se concatena y se parsea —así que la comilla es solo un carácter dentro de un nombre, nunca una comilla que cierra el literal antes de tiempo. Parametrizar no es un paso extra de seguridad agregado sobre el camino fácil; acá es la única forma que ofrece <code>try_pg_exec_params</code>.</p>
+<p>Todo lo que vuelve de <code>try_pg_query</code> llega como texto, NULL incluido —Postgres no manda una marca distinguible de "sin valor" en el modo texto del wire, manda una columna ausente. Comparar una celda contra <code>""</code> trataría un string vacío y un NULL como la misma cosa, y no lo son. <code>pg_is_null</code> le pregunta a la fila directamente en vez de adivinar por el texto, que es por qué <code>email</code> solo cae a <code>"(sin email)"</code> cuando la columna de verdad no tiene valor.</p>
+</section>

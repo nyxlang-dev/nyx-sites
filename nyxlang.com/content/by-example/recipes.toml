@@ -42,7 +42,7 @@
 categories = "fundamentals,io-data,types-patterns,advanced,networking,concurrency,systems"
 
 # Recetas publicadas, en orden de índice y de la navegación prev/next.
-order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style"
+order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style,103-orm-sin-mapeo,104-postgres"
 
 [r01]
 slug = "01-hello-world"
@@ -759,3 +759,17 @@ num = "102"
 category = "advanced"
 excluded = "0"
 sidecar = "0"
+
+[r103]
+slug = "103-orm-sin-mapeo"
+num = "103"
+category = "networking"
+excluded = "0"
+sidecar = "1"
+
+[r104]
+slug = "104-postgres"
+num = "104"
+category = "networking"
+excluded = "0"
+sidecar = "1"

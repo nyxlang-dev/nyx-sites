@@ -1,0 +1,14 @@
+<!-- title: A model written once | blurb: <code>#[derive(Fields)]</code> and <code>std/postgres</code>: the struct is the only source of truth for the schema. -->
+<section data-part="intro">
+<p>Writing a model twice — once as a <code>struct</code> and once as the SQL that stores it — is how a schema starts lying: renaming a field still compiles, and the description keeps describing something that no longer exists. <code>#[derive(Fields)]</code> removes the second copy. It generates three functions from the fields themselves, at compile time and with no runtime reflection: <code>Contacto_campos()</code> returns <code>"name:type"</code> per field, <code>Contacto_valores(c)</code> returns the same fields as strings in the same order, and <code>Contacto_desde_fila(row)</code> rebuilds the struct from a database row. This recipe drives them against <code>std/postgres</code>, the native PostgreSQL client — wire protocol v3 spoken in Nyx, with no libpq and no external dependency.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+tabla creada desde Contacto_campos()
+insertadas: 1
+El Tornillo · J-29643190-6 · activo=true · saldo=1500
+</section>
+<section data-part="explanation">
+<p>Declaration order is the contract between the three generated functions: <code>valores()[i]</code> is the value of the field described by <code>campos()[i]</code>, and <code>desde_fila</code> reads that same position. That is what lets <code>crear_tabla_sql</code>, <code>nombres_columnas</code> and <code>placeholders</code> all be derived from <code>campos()</code> — the <code>CREATE TABLE</code>, the column list and the <code>$1, $2, …</code> placeholders are never typed by hand, so adding or renaming a field in <code>Contacto</code> changes the SQL by itself.</p>
+<p>The values travel through <code>try_pg_exec_params</code>, which puts them in the protocol's Bind message rather than interpolating them into the SQL string. A name like <code>O'Brien</code> is a name, not a quote that ends the literal; the same mechanism is what makes the parameterized form the safe one by default.</p>
+<p>Rows come from two producers that disagree about booleans: <code>valores()</code> writes <code>"true"</code>/<code>"false"</code>, while PostgreSQL's text format for <code>boolean</code> is <code>t</code>/<code>f</code>. <code>desde_fila</code> understands both — plus <code>1</code>/<code>0</code> — and <strong>aborts naming the value</strong> on anything else, rather than assuming <code>false</code>: a boolean nobody can read is not <code>false</code>, and assuming it would write a wrong decision into a system that bills people. The derive itself only converts <code>int</code>, <code>bool</code>, <code>float</code> and <code>String</code>: a field holding an array, a map or a nested struct stops the compilation instead of writing an approximation into a real column.</p>
+</section>

@@ -1,0 +1,13 @@
+<!-- title: No driver in between | blurb: <code>std/postgres</code> speaks wire protocol v3 and SCRAM-SHA-256 in pure Nyx — connect, track migrations, and bind parameters without libpq. -->
+<section data-part="intro">
+<p>Most languages reach Postgres through libpq, a C library the runtime has to link against and the deployment has to ship. <code>std/postgres</code> skips it: the wire protocol — including SCRAM-SHA-256, the authentication method any modern Postgres server requires — is implemented directly in Nyx. Nothing to install beyond the server itself. This recipe connects, applies a migration, inserts a row with parameters, and reads it back.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+insertadas: 1
+1 · O'Brien · obrien@ejemplo.com
+</section>
+<section data-part="explanation">
+<p><code>pg_migrate</code> is idempotent, and the reason is where it keeps its state: not a local file, but a <code>nyx_migrations</code> table on the server itself, written by <code>pg_migrate_init</code>. <code>pg_migrate_version</code> reads the highest version already applied from that table, and <code>pg_migrate</code> is a no-op when the version it's given is not greater. Two processes — or the same deploy run twice — see the same table and agree on where the schema stands, because the version lives where the schema does.</p>
+<p>The insert goes through <code>try_pg_exec_params</code> rather than building a SQL string. <code>"O'Brien"</code> travels in the protocol's Bind message as a value, not as a fragment that gets concatenated and parsed — so the apostrophe is just a character in a name, never a quote that closes the literal early. Binding parameters isn't an extra safety step bolted on top of the easy way; here it's the only way <code>try_pg_exec_params</code> offers.</p>
+<p>Everything that comes back from <code>try_pg_query</code> arrives as text, NULL included — Postgres doesn't send a distinguishable "no value" marker in the wire format's text mode, it sends an absent column. Comparing a cell against <code>""</code> would treat an empty string and a NULL as the same thing, which they are not. <code>pg_is_null</code> asks the row directly instead of guessing from the text, which is why <code>email</code> only falls back to <code>"(sin email)"</code> when the column genuinely has no value.</p>
+</section>
