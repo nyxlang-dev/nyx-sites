@@ -10,5 +10,5 @@ users 30+: 2
 </section>
 <section data-part="explanation">
 <p><code>sqlite_open</code> returns an opaque database handle (<code>*int</code>, NULL on failure). The special path <code>":memory:"</code> creates a temporary in-memory database that is discarded when the handle is closed. For persistent storage, pass a file path like <code>"data.db"</code>.</p>
-<p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values (SQLite stores all values as text internally). Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p>
+<p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values — not because SQLite stores them that way (it has storage classes: NULL, INTEGER, REAL, TEXT, BLOB), but because the binding reads every column with <code>sqlite3_column_text</code>, which converts whatever is stored into text. Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p>
 </section>
