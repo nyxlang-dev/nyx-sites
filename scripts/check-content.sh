@@ -20,10 +20,16 @@
 # si hubo algún ✗ en el árbol real):
 #
 #   A. Denylist de productos (case-insensitive) sobre ROOT menos el LEGADO
-#      (ver `is_legacy_path()` más abajo). Incluye además los nombres de
-#      herramientas de IA (claude/cursor/copilot) FUERA del literal
-#      `--agent=claude,cursor,copilot`, que es la única excepción — esta
-#      segunda parte, sólo sobre .html del legado excluido.
+#      (ver `is_legacy_path()` más abajo), con el contenido de <pre>…</pre>
+#      quitado antes de buscar (scan_denylist_nopre, gemelo de B — un .nx
+#      verbatim del monorepo dentro de una receta puede nombrar con razón
+#      un producto real que vive en otro repo, como 110-serve-sse
+#      explicando que detrás de nyx-proxy la conexión SSE no se corta;
+#      2026-09-23). nyx-serve NO está en la lista: se absorbió a std/serve
+#      el 2026-08-31 y ya no es un producto aparte. Incluye además los
+#      nombres de herramientas de IA (claude/cursor/copilot) FUERA del
+#      literal `--agent=claude,cursor,copilot`, que es la única excepción —
+#      esta segunda parte, sólo sobre .html del legado excluido.
 #   B. Métricas/benchmarks inventados. Solo sobre *.html fuera del LEGADO
 #      (una cifra de rendimiento es copy, no CSS/JS) y con el contenido de
 #      <pre>...</pre> quitado antes de buscar — una transcripción real de
@@ -119,11 +125,14 @@
 #      copia de receta y un "monorepo" falso cuyo .nx difiere en un byte); si
 #      alguno no lo detecta, el script se declara ROTO y sale 2 antes de tocar
 #      el árbol real — un guardia que no ve sus propios controles positivos no
-#      prueba nada estando en verde. B, J, K y L exigen un número EXACTO de
-#      hallazgos, no «≥1»: así el control no lo puede dar por bueno un error de
-#      otra clase plantado en la misma página. D y H comparten scan_denylist
-#      con A y C (cobertura indirecta); I queda sin control positivo (ficha
-#      [BAJA] en el TASKS.md del monorepo).
+#      prueba nada estando en verde. A, B, J, K y L exigen un número EXACTO
+#      de hallazgos, no «≥1»: así el control no lo puede dar por bueno un
+#      error de otra clase plantado en la misma página (A además verifica,
+#      contando exacto, que nyx-serve NO cuenta y que un <pre> con
+#      nyx-proxy/gateway adentro tampoco — ver scan_denylist_nopre).
+#      D y H comparten scan_denylist con A y C (cobertura indirecta); I
+#      queda sin control positivo (ficha [BAJA] en el TASKS.md del
+#      monorepo).
 #
 #   Piso mínimo (corre después del autotest, antes de evaluar A-I sobre
 #   ROOT, sin depender de `nyx` ni de `gen.nx`): ROOT/index.html y
@@ -185,7 +194,13 @@ fi
 # esta copia se queda atrás hasta que alguien la sincronice a mano.
 VOSEO_RE='\b(sos|tenés|podés|querés|sabés|hacé|seguí|ofrecé|leé|probá|declará|borrá|usá|corré|mirá|fijate|acordate|vos|vosotros|tenéis|podéis|sabéis|ejecutá|agregá|revisá|instalá|escribí|elegí|poné|dejá|decí|tené|asegurate|necesitás|debés|hacés|abrí|cambiá|verificá)\b'
 
-DENY_PRODUCTS_RE='nyx-kv|nyxkv|nyx-serve|nyx-proxy|nyx-edit|nyx-db|nyx-queue|nyx-shell|\bgateway\b|playground|serve\.nyxlang|proxy\.nyxlang|edit\.nyxlang|nyxkv\.com'
+# nyx-serve SALIÓ de esta lista el 2026-09-23: dejó de ser un producto
+# aparte el 2026-08-31 (absorción a std/serve, docs/PRODUCTS.md y
+# CHANGELOG del monorepo) y el recetario ya lo nombra en salida REAL — la
+# receta 110-serve-sse imprime el banner del servidor, «nyx-serve starting
+# on…». nyx-kv, nyx-proxy, nyx-edit, nyx-db, nyx-queue y nyx-shell siguen
+# siendo productos separados (~/nyx/products/*) y se quedan en la lista.
+DENY_PRODUCTS_RE='nyx-kv|nyxkv|nyx-proxy|nyx-edit|nyx-db|nyx-queue|nyx-shell|\bgateway\b|playground|serve\.nyxlang|proxy\.nyxlang|edit\.nyxlang|nyxkv\.com'
 AI_TOOLS_RE='\bclaude\b|cursor|copilot'
 # El porcentaje comparativo entró en la fase 2 (review final): «~30% smaller
 # than JSON» / «~30% más liviana que JSON» vivía en seis superficies
@@ -277,6 +292,48 @@ EOF
     CHECK_LAST_FAILS=$n
 }
 
+# Gemelo de scan_denylist que además quita el contenido de <pre>…</pre>
+# antes de buscar (usa strip_pre, la misma máquina de estados que ya
+# protege al check B — ver su comentario). Lo usa SOLO el check A para el
+# denylist de PRODUCTOS (no el de herramientas de IA, que tiene su propia
+# excepción --agent=, ni C/D).
+#
+# Por qué (2026-09-23, receta 110-serve-sse): el recetario muestra el .nx
+# de cada receta —copia verbatim del monorepo, que sync-recipes.sh
+# vigila— dentro de un <pre data-lang="nyx">. El comentario fuente de esa
+# receta explica que detrás de un «gateway» real, «nyx-proxy 0.4.4»
+# reenvía SSE sin cambios: un hecho técnico exacto sobre OTRO producto,
+# dentro de código de ejemplo, no copy de la landing hablando de un
+# producto ajeno. A vigila lo segundo (que esta landing no promocione ni
+# dependa de un producto que vive en otro repo); el bloque de código de
+# una receta no es esa clase de mención, igual que un «120ms» de
+# transición CSS dentro de un <pre> no es la clase de cifra que B
+# persigue. Fuera de <pre> — en prosa real de la página— A los sigue
+# cazando igual que siempre.
+scan_denylist_nopre() {
+    local label="$1" regex="$2" files="$3"
+    local n=0
+    if [ -n "$files" ]; then
+        local f
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            while IFS= read -r hit; do
+                [ -z "$hit" ] && continue
+                print_bad "[$label] $f:$hit"
+                n=$((n + 1))
+            done < <(strip_pre "$f" | grep -niE -- "$regex" 2>/dev/null)
+        done <<EOF
+$files
+EOF
+    fi
+    if [ "$n" -eq 0 ]; then
+        print_ok "[$label] 0 coincidencias (fuera de bloques <pre>)"
+    else
+        print_bad "[$label] $n coincidencia(s)"
+    fi
+    CHECK_LAST_FAILS=$n
+}
+
 # Quita el contenido de <pre>...</pre> (abre y cierra en cualquier línea,
 # tags balanceados dentro de la misma línea o repartidos en varias) — usado
 # SOLO por el check B. Máquina de estados simple con index()/substr(), sin
@@ -343,7 +400,7 @@ check_a() {
     local files html_files n1 n2
     files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
 
-    scan_denylist "A" "$DENY_PRODUCTS_RE" "$files"
+    scan_denylist_nopre "A" "$DENY_PRODUCTS_RE" "$files"
     n1=$CHECK_LAST_FAILS
 
     # Sólo .html: "cursor" es una propiedad CSS legítima (cursor: pointer) y
@@ -976,8 +1033,9 @@ run_autotest() {
     aroot="$site/static-next"
     mkdir -p "$aroot/es" "$site/content/docs"
 
-    # A (nyx-kv), B (req/s + «más rápido que»), C (macOS), E (#products),
-    # F (enlace roto), K (<title> vacío + {{ residual}).
+    # A (nyx-kv, y las tres líneas de más abajo), B (req/s + «más rápido
+    # que»), C (macOS), E (#products), F (enlace roto), K (<title> vacío +
+    # {{ residual}).
     cat > "$aroot/index.html" <<'HTML'
 <!doctype html>
 <html>
@@ -990,6 +1048,9 @@ run_autotest() {
 <p>{{clave_que_no_existe}}</p>
 <pre>{{ok_en_pre}}</pre>
 <p>La receta 102 escribe <code>{{ok_en_code}}</code> como tema, no como interpolación.</p>
+<p>nyx-serve ya es std/serve desde 2026-08-31: no cuenta para A (control negativo).</p>
+<pre data-lang="nyx">// nyx-proxy 0.4.4 tunnels this gateway end to end</pre>
+<p>nyx-proxy sigue siendo un producto aparte: fuera de un bloque de código, A lo sigue cazando.</p>
 </body>
 </html>
 HTML
@@ -1013,7 +1074,11 @@ HTML
     # para que J siga contando exactamente 2.
     printf '<p>Par ES del fragmento del autotest.</p>\n' > "$site/content/docs/fixture.es.html"
 
-    check_a "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: A no detectó el control positivo"; broken=1; }
+    # Exactamente 4, no «≥1»: nyx-kv y nyx-proxy-fuera-de-<pre>, por las DOS
+    # copias del fixture. Ni 2 (nyx-serve se coló de vuelta en la denylist)
+    # ni 6/8 (scan_denylist_nopre dejó de proteger el <pre data-lang="nyx">
+    # con «nyx-proxy»/«gateway» adentro — 2026-09-23, ver comentario de A).
+    check_a "$aroot"; [ "$CHECK_LAST_FAILS" -eq 4 ] || { print_bad "AUTOTEST ROTO: A vio $CHECK_LAST_FAILS hallazgo(s), esperaba 4 (nyx-kv + nyx-proxy fuera de <pre>, en index.html y en es/index.html; nyx-serve exento y el <pre> con nyx-proxy/gateway no cuentan)"; broken=1; }
     # Exactamente 4, no «≥1»: son DOS líneas plantadas (la de req/s y la del
     # porcentaje comparativo, que es lo único que ejercita el patrón nuevo de
     # la fase 2) por DOS copias del fixture (index.html y su gemela es/). Con
