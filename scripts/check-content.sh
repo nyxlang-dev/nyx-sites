@@ -634,11 +634,19 @@ EOF2
         # stub queda lleno de TODO A PROPÓSITO: es preferible que la guardia se
         # ponga en rojo a publicar una receta muda o, peor, con prosa inventada.
         # El rojo se apaga escribiendo la prosa, no borrando la palabra.
+        #
+        # `\bTODO\b` (con borde de palabra), no `TODO` a secas: la receta 115
+        # (fricción nyxerp 20260923-160005) imprime «recuperan TODOS los
+        # valores» como salida real del programa, y un grep de substring la
+        # marcaba como prosa pendiente por contener «TODO» dentro de «TODOS».
+        # Los STUB de sync-recipes.sh siempre siembran la palabra suelta
+        # («TODO», «TODO — write…», «TODO — falta…»), así que el borde de
+        # palabra no pierde ningún caso real.
         while IFS= read -r todof; do
             [ -z "$todof" ] && continue
             print_bad "[G] content: prosa pendiente (TODO) en ${todof#$site_dir/}"
             fails=$((fails + 1))
-        done < <(grep -rl 'TODO' "$content_dir" --include='*.html' 2>/dev/null | sort)
+        done < <(grep -rlE '\bTODO\b' "$content_dir" --include='*.html' 2>/dev/null | sort)
     fi
 
     if [ "$fails" -eq 0 ]; then
