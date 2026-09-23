@@ -1,0 +1,12 @@
+<!-- title: Offline IndexedDB | blurb: A catalog and a sales queue that survive an F5 — await over IndexedDB, past localStorage's limit. -->
+<section data-part="intro">
+<p><code>std/browser_idb</code> brings IndexedDB with <code>await</code>: <code>idb_get</code>/<code>idb_put</code>/<code>idb_delete</code>/<code>idb_keys</code> are asynchronous, return <code>Result&lt;_, Error&gt;</code> with the usual <code>kind</code>s, and are built for what outgrows the ~5&nbsp;MB limit and synchronous writes of <code>localStorage</code>: a catalog of thousands of records and a queue of pending operations in an offline PWA. A single database with a composite <code>[store, key]</code> key, so a new <code>store</code> never triggers a version bump that would block across tabs.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+ventas drenadas: 1
+</section>
+<section data-part="explanation">
+<p><code>guardar_catalogo</code>/<code>cargar_catalogo</code> use the <code>"catalogo"</code> <code>store</code>; <code>encolar_venta</code>/<code>drenar_cola</code> use <code>"cola-ventas"</code>, a SEPARATE logical namespace: the two never mix in <code>idb_keys()</code> even though they share a single physical database. <code>idb_get</code> on a missing key is <code>Err(kind: "not_found")</code>, not an empty string — the same closed <code>Error</code> vocabulary as the rest of the stdlib, so <code>cargar_catalogo</code> tells "first visit" apart from a real failure.</p>
+<p><code>idb_put</code>/<code>idb_delete</code> return <code>Result&lt;int, Error&gt;</code>, and <code>delete</code> is idempotent: <code>Ok</code> even if the key is already gone, so draining the queue twice does not blow up. <code>drenar_cola</code> walks <code>idb_keys("cola-ventas")</code> and processes each queued sale — here deleting it afterward, in a real case sending the matching POST before the <code>idb_delete</code>.</p>
+<p>Same "one suspended stack at a time" contract as <code>std/browser_await</code>: if another part of the screen fires an <code>idb_*</code> while this <code>await</code> is waiting, it gets queued and processed in order.</p>
+</section>

@@ -1,0 +1,13 @@
+<!-- title: HTTP: plazo y causa | blurb: Un cliente que se rinde a tiempo y distingue POR QUÉ falló: tls, timeout, connection. -->
+<section data-part="intro">
+<p>Un programa que consulta una fuente externa necesita dos cosas del cliente HTTP: poder rendirse (un plazo para conectar y otro para la respuesta completa) y distinguir la causa del fallo, porque un certificado inválido y una red lenta piden reacciones distintas. <code>try_http_request_opts</code> recibe los plazos en un <code>HttpOpts</code> (armado con <code>http_opts()</code>) y devuelve un <code>Error</code> con <code>kind</code>/<code>code</code> reales: <code>"tls"</code> para el certificado, <code>"timeout"</code> para los plazos, <code>"connection"</code> para el puerto cerrado, <code>"io"</code> para una respuesta cortada a la mitad. Esta receta levanta su propio servidor local lento, así que corre sin red.</p>
+</section>
+<section data-part="output">
+falló con timeout (code 110) → reintentar más tarde (no respondió a tiempo)
+falló con connection (code 111) → reintentar más tarde (no hay servicio)
+</section>
+<section data-part="explanation">
+<p><code>opts.respuesta_ms = 1500</code> es un plazo TOTAL, no uno que se reinicia con cada byte: el servidor de la receta manda un byte cada medio segundo indefinidamente, y aun así la espera corta a los 1500&nbsp;ms — el <code>assert(tardo &lt; 3000, ...)</code> lo confirma. Sin ese plazo total, un cliente contra un servidor que gotea así se quedaría esperando para siempre.</p>
+<p><code>decidir(e)</code> es la función que justifica que el <code>Error</code> lleve <code>kind</code>: un certificado inválido significa dejar de usar la fuente, mientras que un <code>timeout</code> o una <code>connection</code> caída significan reintentar más tarde. Leer <code>e.kind</code> como un campo del valor —no como un mensaje de texto que hay que parsear— es lo que hace posible esa rama.</p>
+<p>La segunda llamada contra un puerto que nunca escuchó nada falla inmediato con <code>connection</code> (código 111): no hay plazo que esperar cuando el sistema operativo rechaza la conexión al toque.</p>
+</section>

@@ -1,0 +1,13 @@
+<!-- title: Campo Fn en un struct | blurb: Ligar el campo a una variable antes de llamarlo — el receptor puede ser variable local, parámetro por valor o campo anidado. -->
+<section data-part="intro">
+<p>Un struct puede tener un campo de tipo <code>Fn</code>, y llamarlo funciona en tres formas de receptor: variable local, parámetro por valor y campo anidado dentro de otro struct. Lo que <strong>no</strong> funciona todavía es llamar el campo directo (<code>pais.calcular_impuesto(monto)</code>): el compilador lo rechaza con <code>NYX1016</code>, así que primero hay que ligarlo a una variable sin anotar el tipo.</p>
+</section>
+<section data-part="output">
+Argentina: 21.0
+cobrar(): 21.0
+Uruguay: 22.0
+</section>
+<section data-part="explanation">
+<p>Las tres llamadas usan el mismo patrón: <code>let calcular = valor.campo_fn</code> seguido de <code>calcular(argumentos)</code>. <code>f = ar.calcular_impuesto</code> liga el campo de una variable local; <code>cobrar</code> hace lo mismo con <code>p</code>, un parámetro recibido por valor; y <code>calcular_anidado = r.pais.calcular_impuesto</code> atraviesa un campo struct dentro de otro struct antes de ligar.</p>
+<p>Ninguna de las tres anota el tipo de <code>calcular</code>: el compilador infiere la firma completa (<code>Fn(float) -> float</code>) desde el campo de origen, así que la llamada indirecta sabe qué convenio de retorno usar. Esto es justamente lo que evita el problema de un <code>Fn</code> sin firma — ver la receta de plazo y causa HTTP para el caso donde SÍ hace falta declarar la firma a mano.</p>
+</section>

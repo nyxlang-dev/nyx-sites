@@ -1,0 +1,18 @@
+<!-- title: continue en for | blurb: Saltar al siguiente elemento dentro de un for — sobre un array y sobre un rango. -->
+<section data-part="intro">
+<p><code>continue</code> dentro de un <code>for ... in</code> salta al siguiente elemento, igual que ya hacía dentro de un <code>while</code>. Esta receta lo muestra en las dos formas de <code>for</code>: recorriendo un <code>Array</code> y recorriendo un rango.</p>
+</section>
+<section data-part="output">
+impar: 1
+impar: 3
+impar: 5
+i = 0
+i = 1
+i = 2
+i = 4
+i = 5
+</section>
+<section data-part="explanation">
+<p>El primer bucle recorre <code>numeros</code> con <code>for n: int in numeros</code>. Cuando <code>n</code> es par, <code>continue</code> corta esa vuelta sin ejecutar el <code>print</code> que sigue, así que solo se imprimen los impares.</p>
+<p>El segundo bucle hace lo mismo sobre un rango, <code>for i in 0..6</code>: cuando <code>i</code> vale <code>3</code>, <code>continue</code> salta esa iteración puntual y sigue con <code>4</code> — el rango no se corta, solo se omite ese valor.</p>
+</section>

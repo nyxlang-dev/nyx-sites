@@ -1,0 +1,14 @@
+<!-- title: await in the browser | blurb: An async fn that waits on the JS host without splitting the flow into callbacks — wasm32-wasi with Asyncify. -->
+<section data-part="intro">
+<p>Nyx compiled to <code>wasm32-wasi</code> can use real <code>await</code>: an <code>async fn</code> that calls <code>await browser_fetch_await(...)</code> WAITS for the server's response and continues on the next line with the value, without splitting the flow into a closure per request. The new <code>std/browser_await</code> module lives apart from <code>std/browser</code> on purpose: only a program that imports it pays for Asyncify (and binaryen as a build dependency).</p>
+</section>
+<section data-part="output" data-illustrative="1">
+#estado → "cargando la factura 7..."
+#factura → (the response body, or the failure's reason)
+#estado → "listo"
+</section>
+<section data-part="explanation">
+<p>The HTTP status is not an error: a 404 arrives as <code>Result.Ok</code> with <code>r.status == 404</code>, and <code>cargar_factura</code> tells them apart by hand. The only thing that lands in <code>Result.Err</code> is getting no response at all — <code>kind</code> <code>"connection"</code> or <code>"timeout"</code>, the same <code>Error</code> vocabulary as the rest of the stdlib.</p>
+<p><code>abrir_factura</code> is the export the «open» button of each row calls: it updates the DOM before waiting, waits with <code>await</code>, and updates the DOM again with the result — no callback in between. Only ONE function can be waiting at a time: a click that arrives mid-fetch is processed once the fetch finishes, in order.</p>
+<p>Building needs <code>binaryen</code> (<code>wasm-opt</code>) because the generated <code>.ll</code> carries an Asyncify imports marker; a program without <code>#[suspends]</code> compiles byte for byte the same as before. <code>spawn</code> and channels still do not exist in wasm: here <code>await</code> is sequential.</p>
+</section>

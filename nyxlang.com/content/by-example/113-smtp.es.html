@@ -1,0 +1,30 @@
+<!-- title: Correo saliente con std/smtp | blurb: Mensaje, adjunto y dot-stuffing armados en Nyx puro — STARTTLS en 587 o TLS desde el saludo en 465. -->
+<section data-part="intro">
+<p><code>std/smtp</code> conecta por los dos caminos reales —587 con <code>STARTTLS</code> y 465 con TLS desde el saludo—, autentica con <code>AUTH PLAIN</code>/<code>LOGIN</code> y arma el mensaje con headers, cuerpo y adjuntos binarios en base64. Esta receta no abre una conexión a propósito —un servidor SMTP de verdad necesita credenciales—, así que corre sola bajo <code>make test-examples</code>; las llamadas que conectan quedan comentadas, listas para copiar.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+— headers del mensaje —
+From: facturacion@miempresa.com
+To: cliente@ejemplo.com
+Subject: Factura de septiembre
+Date: Wed, 23 Sep 2026 17:04:58 +0000
+Message-ID: &lt;...@miempresa.com&gt;
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="=_nyx_..."
+
+¿lleva el adjunto en base64? sí
+¿lleva Content-Disposition?  sí
+
+línea que empieza con punto, ya protegida: sí
+
+— qué hacer con cada error —
+auth       → revisar usuario y clave del proveedor
+recipient  → la dirección del destinatario está mal
+connection → red, host o puerto; o el certificado no validó
+protocol   → el servidor cortó o contestó algo inesperado
+</section>
+<section data-part="explanation">
+<p><code>smtp_render</code> es una función PURA: arma el mensaje completo —headers, MIME, adjunto— sin abrir ningún socket, así que se puede inspeccionar y testear antes de mandar nada. <code>smtp_attach</code> toma los bytes crudos de un archivo (por ejemplo, de <code>read_file</code>, que es binary-safe) y los codifica en base64 cortado a 76 columnas.</p>
+<p>El DOT-STUFFING es lo que evita que un mensaje llegue cortado a la mitad: el protocolo termina el cuerpo con una línea que dice solo «.», así que si una línea del contenido empieza con punto y no se duplica, el servidor da el mensaje por terminado ahí — sin error de ningún lado. <code>std/smtp</code> lo hace solo, junto con la normalización a CRLF.</p>
+<p>Cada <code>kind</code> de <code>Error</code> pide una acción distinta: <code>"auth"</code> es credenciales, <code>"recipient"</code> es la dirección, <code>"connection"</code> es red o certificado. Y <code>AUTH</code> nunca viaja en claro — si el canal no está cifrado, la autenticación falla ANTES de mandar las credenciales, sin flag para forzarlo; el certificado se verifica por omisión, con variantes <code>_insecure</code> que lo dicen en el nombre para un servidor de desarrollo.</p>
+</section>

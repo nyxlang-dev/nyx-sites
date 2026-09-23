@@ -1,0 +1,20 @@
+<!-- title: Server-Sent Events | blurb: A channel that doesn't hold a worker: the route runs the full pipeline, then broadcasts to a room. -->
+<section data-part="intro">
+<p><code>std/serve</code> serves Server-Sent Events through a NORMAL route: it runs through hooks, middlewares, mounts and wraps, so an auth middleware that answers 401 stops the channel before it ever opens. <code>sse_open(req, room)</code> opens the connection, <code>sse_broadcast(room, evento, datos)</code> broadcasts from any handler or thread, and the channel does not hold a worker: the process writes the header, registers the fd in the room and lets go of the connection. Behind a reverse proxy that does not buffer the stream, the channel works unchanged; one that does buffer only releases events once the origin closes the connection, and until then the client sees nothing.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18208 with 2 workers
+head: 200 text/event-stream, no Content-Length
+open channels in the room: 1
+delivered to: 1
+event: stock
+data: {"sku":"A-1","cantidad":7}
+
+
+rejected event name delivered to: 0
+</section>
+<section data-part="explanation">
+<p>This recipe plays the client with a raw TCP socket, so it can run (and finish) on its own: the response head arrives with no <code>Content-Length</code>, as befits a stream that does not know when it will end. On the browser side the counterpart is <code>browser_sse_fn(url, fn(evento, datos) {...})</code> from <code>std/browser</code>.</p>
+<p><code>sse_broadcast</code> returns how many clients received the WHOLE frame — here <code>1</code>, the only channel open in the <code>"inventario"</code> room. What the client reads is exactly <code>event:</code> plus one <code>data:</code> line per line of the payload, followed by a blank line that closes the frame.</p>
+<p>An event name carrying <code>\r</code> or <code>\n</code> is REJECTED (<code>sse_broadcast</code> returns <code>0</code>), never silently sanitized — hence the last line showing 0 deliveries.</p>
+</section>

@@ -1,0 +1,18 @@
+<!-- title: continue in for | blurb: Skip to the next element inside a for loop — over an array and over a range. -->
+<section data-part="intro">
+<p><code>continue</code> inside a <code>for ... in</code> skips to the next element, the same way it already did inside a <code>while</code>. This recipe shows it in both forms of <code>for</code>: iterating an <code>Array</code> and iterating a range.</p>
+</section>
+<section data-part="output">
+impar: 1
+impar: 3
+impar: 5
+i = 0
+i = 1
+i = 2
+i = 4
+i = 5
+</section>
+<section data-part="explanation">
+<p>The first loop walks <code>numeros</code> with <code>for n: int in numeros</code>. When <code>n</code> is even, <code>continue</code> cuts that pass short without running the <code>print</code> that follows, so only the odd numbers get printed.</p>
+<p>The second loop does the same over a range, <code>for i in 0..6</code>: when <code>i</code> is <code>3</code>, <code>continue</code> skips just that iteration and moves on to <code>4</code> — the range itself is not cut short, only that one value is skipped.</p>
+</section>

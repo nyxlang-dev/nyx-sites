@@ -1,0 +1,13 @@
+<!-- title: HTTP: deadline and cause | blurb: A client that gives up on time and tells WHY it failed: tls, timeout, connection. -->
+<section data-part="intro">
+<p>A program that queries an external source needs two things from its HTTP client: the ability to give up (a deadline to connect, and another for the complete response) and a way to tell the failure's cause apart, because an invalid certificate and a slow network call for different reactions. <code>try_http_request_opts</code> takes the deadlines in an <code>HttpOpts</code> (built with <code>http_opts()</code>) and returns an <code>Error</code> with a real <code>kind</code>/<code>code</code>: <code>"tls"</code> for the certificate, <code>"timeout"</code> for the deadlines, <code>"connection"</code> for a closed port, <code>"io"</code> for a response cut off mid-way. This recipe spins up its own slow local server, so it runs without network access.</p>
+</section>
+<section data-part="output">
+falló con timeout (code 110) → reintentar más tarde (no respondió a tiempo)
+falló con connection (code 111) → reintentar más tarde (no hay servicio)
+</section>
+<section data-part="explanation">
+<p><code>opts.respuesta_ms = 1500</code> is a TOTAL deadline, not one that resets with every byte: the recipe's server sends one byte every half second indefinitely, and the wait still cuts off at 1500&nbsp;ms — the <code>assert(tardo &lt; 3000, ...)</code> confirms it. Without that total deadline, a client against a server that dribbles bytes like this would wait forever.</p>
+<p><code>decidir(e)</code> is the function that justifies giving <code>Error</code> a <code>kind</code>: an invalid certificate means stop using the source, while a <code>timeout</code> or a downed <code>connection</code> mean retry later. Reading <code>e.kind</code> as a field of the value — not a text message that has to be parsed — is what makes that branch possible.</p>
+<p>The second call, against a port that never listened for anything, fails immediately with <code>connection</code> (code 111): there is no deadline to wait out when the operating system rejects the connection outright.</p>
+</section>

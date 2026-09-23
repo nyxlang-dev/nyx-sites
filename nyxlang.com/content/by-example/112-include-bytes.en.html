@@ -1,0 +1,17 @@
+<!-- title: include_bytes | blurb: A binary resource that travels inside the executable, read at compile time — no dependence on the file reaching disk. -->
+<section data-part="intro">
+<p><code>include_bytes("path")</code> reads a file AT COMPILE TIME and puts its bytes into the binary, so the resource cannot get lost along the way — the real case: a UI that silently degrades to another typeface because someone copied only the executable, not the assets folder. The path is a literal, resolved from the project root and never from the file that uses it: with a variable the compiler rejects it with <code>NYX1033</code>.</p>
+</section>
+<section data-part="output">
+bytes: 776
+firma: wOF2
+byte 8 (NUL): 0
+sha256: 0d4f9fe0394d9008f67caddb00171ffe7a3a63aaac4ec225d66f5fadcc79c1d2
+respuesta: 200 con 776 bytes
+segunda llamada: el mismo recurso
+</section>
+<section data-part="explanation">
+<p>The bytes arrive intact, NULs included: a real <code>.woff2</code> is full of them, which is why the recipe measures with <code>str_byte_length</code> and not <code>length()</code> — <code>length()</code> counts UTF-8 codepoints, these are arbitrary bytes (the repo's <code>strings-are-bytes</code> gotcha). Byte 8 of the file is a real NUL, and it is still a NUL once embedded.</p>
+<p>The value works AS IS as an HTTP response body: <code>servir_tipografia</code> assigns it straight to <code>Response.body</code>, reading nothing from disk at runtime. Since the resource is immutable by definition — it only changes if the program is recompiled — the response can be cached forever (<code>Cache-Control: public, max-age=31536000, immutable</code>).</p>
+<p>Two calls to the same path share a single global: the resource occupies its bytes ONCE in the binary, not once per use. For a file the user picks at runtime, the right tool is <code>read_file</code>/<code>try_read_file</code>, not <code>include_bytes</code> — which also does not exist in the interpreter or the REPL, where it answers <code>NYX3007</code>.</p>
+</section>

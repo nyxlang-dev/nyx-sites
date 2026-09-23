@@ -1,0 +1,16 @@
+<!-- title: JSON: números exactos | blurb: json_stringify reemite cada número tal como vino; json_as_float pasa por un double y pierde los ceros de más. -->
+<section data-part="intro">
+<p><code>json_stringify</code> sobre un nodo reemite el número EXACTO tal como llegó en el texto de origen, ceros de más incluidos. <code>json_as_float</code> en cambio pasa por un <code>double</code> y después <code>float_to_string</code> devuelve la forma mínima que vuelve a ese mismo double — así que <code>19.90</code> puede volver como <code>19.9</code>. Para mostrar un precio con un ancho fijo de decimales está <code>float_to_fixed</code>.</p>
+</section>
+<section data-part="output">
+{"precio":19.90,"embedding":[0.013426971,0.1]}
+19.90
+[0.013426971,0.1]
+19.9
+19.90
+</section>
+<section data-part="explanation">
+<p>El documento completo reemitido conserva cada número tal como estaba escrito: <code>19.90</code> sigue siendo <code>19.90</code>, no <code>19.9</code>. Lo mismo pasa al reemitir un nodo suelto con <code>json_stringify(precio_node)</code>: es texto exacto, no una vuelta por punto flotante.</p>
+<p><code>embedding_node</code> muestra por qué esto importa más allá de la estética: un array de flotantes de alta precisión —el caso típico de un embedding para <code>pgvector</code>— necesita conservar cada dígito para no perder precisión en la ida y vuelta.</p>
+<p><code>json_as_float(precio_node)</code> sí pasa por un <code>double</code>, y <code>float_to_string</code> imprime la representación mínima que redondea de vuelta al mismo valor: el cero de más se pierde. <code>float_to_fixed(precio, 2)</code> lo recupera para mostrar, forzando dos decimales sin depender de qué trajo el JSON original.</p>
+</section>

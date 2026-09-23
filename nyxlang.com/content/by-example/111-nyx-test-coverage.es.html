@@ -1,0 +1,12 @@
+<!-- title: nyx test --coverage | blurb: Qué función de src/ ninguna prueba llamó — homónimas de módulos distintos no se mezclan al medir. -->
+<section data-part="intro">
+<p><code>nyx test --coverage</code> (necesita <code>llvm-profdata</code>, la misma versión mayor que <code>clang</code>) imprime, después del resumen de la corrida, qué funciones de <code>src/</code> ninguna prueba llamó — algo que un runner que solo dice «pasó/falló» por archivo no puede contestar. Esta receta demuestra la garantía del LENGUAJE en la que se apoya ese informe: dos funciones homónimas en módulos distintos no se mezclan al medir. El flag en sí es de la herramienta, no algo invocable desde un programa Nyx.</p>
+</section>
+<section data-part="output">
+calc.valor() = 1, aux.valor() = 2
+</section>
+<section data-part="explanation">
+<p><code>calc_valor</code> y <code>aux_valor</code> juegan el papel de dos funciones <code>valor()</code> homónimas en módulos distintos (<code>src/calc.nx</code> y <code>src/aux.nx</code> en un proyecto real). El <code>assert</code> confirma que llamar a la de un módulo nunca llama a la del otro — la garantía de la que depende todo el informe de cobertura por módulo.</p>
+<p>Contra un proyecto real de ejemplo, <code>nyx test --coverage</code> imprime algo así después del resumen: <code>src/calc.nx: 3/5 llamadas</code> con la lista de líneas sin llamar, <code>src/otro.nx: 0/1 llamadas (ninguna prueba lo importa)</code>, y un total. Cuenta solo funciones, no líneas ni ramas; una función que corre dentro de un <code>spawn</code> igual cuenta como llamada, y un archivo de prueba que revienta o hace timeout deja sus funciones como «sin datos», nunca como «no llamadas» — matar un test con <code>--timeout</code> no puede falsear el informe.</p>
+<p>Medido en una suite real de 93 archivos: +13,6&nbsp;% de tiempo (105m23s → 119m41s). <code>--coverage=lcov</code> además escribe <code>target/coverage.lcov</code> para un visor externo.</p>
+</section>

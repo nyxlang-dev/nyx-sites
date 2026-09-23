@@ -1,0 +1,20 @@
+<!-- title: Eventos del servidor (SSE) | blurb: Un canal que no ocupa un worker: la ruta pasa por el pipeline entero y después difunde a un room. -->
+<section data-part="intro">
+<p><code>std/serve</code> sirve Server-Sent Events con una ruta NORMAL: pasa por hooks, middlewares, mounts y wraps, así que un middleware de autenticación que responde 401 corta el canal antes de que se abra. <code>sse_open(req, room)</code> abre la conexión, <code>sse_broadcast(room, evento, datos)</code> difunde desde cualquier handler o thread, y el canal no ocupa un worker: el proceso escribe la cabecera, registra el fd en el room y suelta la conexión. Detrás de un proxy inverso que no bufferice el stream, el canal funciona sin cambios; uno que sí bufferiza recién suelta los eventos cuando el origen cierra la conexión, y hasta entonces el cliente no ve nada.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18208 with 2 workers
+head: 200 text/event-stream, no Content-Length
+open channels in the room: 1
+delivered to: 1
+event: stock
+data: {"sku":"A-1","cantidad":7}
+
+
+rejected event name delivered to: 0
+</section>
+<section data-part="explanation">
+<p>Esta receta juega el rol del cliente con un socket TCP crudo, así puede correr (y terminar) sola: el header de respuesta llega sin <code>Content-Length</code>, como corresponde a un stream que no sabe cuándo termina. Del lado del navegador el equivalente es <code>browser_sse_fn(url, fn(evento, datos) {...})</code> de <code>std/browser</code>.</p>
+<p><code>sse_broadcast</code> devuelve cuántos clientes recibieron el frame COMPLETO — acá <code>1</code>, el único canal abierto en el room <code>"inventario"</code>. Lo que el cliente lee es exactamente <code>event:</code> más una línea <code>data:</code> por línea del payload, seguido de una línea en blanco que cierra el frame.</p>
+<p>Un nombre de evento con <code>\r</code> o <code>\n</code> se RECHAZA (<code>sse_broadcast</code> devuelve <code>0</code>), nunca se sanea en silencio — de ahí que la última línea muestre <code>0</code> entregas.</p>
+</section>

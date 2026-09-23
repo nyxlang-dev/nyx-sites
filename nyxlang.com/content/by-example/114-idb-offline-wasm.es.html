@@ -1,0 +1,12 @@
+<!-- title: IndexedDB sin conexión | blurb: Un catálogo y una cola de ventas que sobreviven a un F5 — await sobre IndexedDB, sin el límite de localStorage. -->
+<section data-part="intro">
+<p><code>std/browser_idb</code> trae IndexedDB con <code>await</code>: <code>idb_get</code>/<code>idb_put</code>/<code>idb_delete</code>/<code>idb_keys</code> son asíncronos, devuelven <code>Result&lt;_, Error&gt;</code> con los <code>kind</code> de siempre, y pensados para lo que se sale del límite de ~5&nbsp;MB y la escritura síncrona de <code>localStorage</code>: un catálogo de miles de registros y una cola de operaciones pendientes en una PWA sin conexión. Una sola base con clave compuesta <code>[store, key]</code>, así que un <code>store</code> nuevo no dispara una subida de versión que bloquee entre pestañas.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+ventas drenadas: 1
+</section>
+<section data-part="explanation">
+<p><code>guardar_catalogo</code>/<code>cargar_catalogo</code> usan el <code>store</code> <code>"catalogo"</code>; <code>encolar_venta</code>/<code>drenar_cola</code> usan <code>"cola-ventas"</code>, un namespace lógico APARTE: los dos nunca se mezclan en <code>idb_keys()</code> aunque compartan una sola base física. <code>idb_get</code> de una clave ausente es <code>Err(kind: "not_found")</code>, no una cadena vacía — el mismo vocabulario cerrado de <code>Error</code> que el resto de la stdlib, así que <code>cargar_catalogo</code> distingue «primera visita» de un fallo real.</p>
+<p><code>idb_put</code>/<code>idb_delete</code> devuelven <code>Result&lt;int, Error&gt;</code>, y <code>delete</code> es idempotente: <code>Ok</code> aunque la clave ya no exista, así que drenar la cola dos veces no revienta. <code>drenar_cola</code> recorre <code>idb_keys("cola-ventas")</code> y procesa cada venta encolada —acá borrándola después, en un caso real mandando el POST correspondiente antes del <code>idb_delete</code>.</p>
+<p>Mismo contrato de «una sola pila suspendida a la vez» que <code>std/browser_await</code>: si otra parte de la pantalla dispara un <code>idb_*</code> mientras este <code>await</code> espera, se encola y se procesa en orden.</p>
+</section>

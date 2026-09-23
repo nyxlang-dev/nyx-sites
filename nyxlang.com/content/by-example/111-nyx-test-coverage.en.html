@@ -1,0 +1,12 @@
+<!-- title: nyx test --coverage | blurb: Which function in src/ no test called — homonyms from different modules never mix when measuring. -->
+<section data-part="intro">
+<p><code>nyx test --coverage</code> (needs <code>llvm-profdata</code>, the same major version as <code>clang</code>) prints, after the run's summary, which functions in <code>src/</code> no test called — something a runner that only says pass/fail per file cannot answer. This recipe demonstrates the LANGUAGE guarantee that report leans on: two homonymous functions in different modules never mix when measured. The flag itself belongs to the tool, not to something callable from a Nyx program.</p>
+</section>
+<section data-part="output">
+calc.valor() = 1, aux.valor() = 2
+</section>
+<section data-part="explanation">
+<p><code>calc_valor</code> and <code>aux_valor</code> play the role of two homonymous <code>valor()</code> functions in different modules (<code>src/calc.nx</code> and <code>src/aux.nx</code> in a real project). The <code>assert</code> confirms that calling one module's never calls the other's — the guarantee the whole per-module coverage report depends on.</p>
+<p>Against a real sample project, <code>nyx test --coverage</code> prints something like this after the summary: <code>src/calc.nx: 3/5 llamadas</code> with the list of uncalled lines, <code>src/otro.nx: 0/1 llamadas (ninguna prueba lo importa)</code>, and a total. It counts functions only, not lines or branches; a function that runs inside a <code>spawn</code> still counts as called, and a test file that crashes or times out leaves its functions marked "no data", never "not called" — killing a test with <code>--timeout</code> cannot skew the report.</p>
+<p>Measured on a real 93-file suite: +13.6% time (105m23s → 119m41s). <code>--coverage=lcov</code> also writes <code>target/coverage.lcov</code> for an external viewer.</p>
+</section>

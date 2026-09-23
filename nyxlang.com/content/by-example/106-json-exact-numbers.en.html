@@ -1,0 +1,16 @@
+<!-- title: JSON: exact numbers | blurb: json_stringify re-emits every number exactly as it came in; json_as_float goes through a double and loses the extra zeros. -->
+<section data-part="intro">
+<p><code>json_stringify</code> on a node re-emits the number EXACTLY as it appeared in the source text, extra trailing zeros included. <code>json_as_float</code> instead goes through a <code>double</code>, and then <code>float_to_string</code> returns the minimal form that rounds back to that same double — so <code>19.90</code> can come back as <code>19.9</code>. To show a price with a fixed number of decimals, there is <code>float_to_fixed</code>.</p>
+</section>
+<section data-part="output">
+{"precio":19.90,"embedding":[0.013426971,0.1]}
+19.90
+[0.013426971,0.1]
+19.9
+19.90
+</section>
+<section data-part="explanation">
+<p>The whole document re-emitted keeps every number exactly as written: <code>19.90</code> stays <code>19.90</code>, not <code>19.9</code>. The same happens when re-emitting a single node with <code>json_stringify(precio_node)</code>: it is exact text, not a round trip through floating point.</p>
+<p><code>embedding_node</code> shows why this matters beyond aesthetics: an array of high-precision floats — the typical case of an embedding headed for <code>pgvector</code> — needs every digit preserved to avoid losing precision on the round trip.</p>
+<p><code>json_as_float(precio_node)</code> does go through a <code>double</code>, and <code>float_to_string</code> prints the minimal representation that rounds back to the same value: the extra zero is lost. <code>float_to_fixed(precio, 2)</code> gets it back for display, forcing two decimals regardless of what the original JSON carried.</p>
+</section>
