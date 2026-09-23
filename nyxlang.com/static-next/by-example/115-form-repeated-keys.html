@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeated form/query keys — Nyx by example</title>
+<meta name="description" content="form_values/query_values recover every value of a repeated key — checkboxes, &lt;select multiple&gt; — where req.form silently keeps only the last.">
+<link rel="canonical" href="https://nyxlang.com/by-example/115-form-repeated-keys.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/115-form-repeated-keys.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/115-form-repeated-keys.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/115-form-repeated-keys.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/115-form-repeated-keys.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">115</span> / Networking</span></p>
+<h1 class="doc-title">Repeated form/query keys</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A group of checkboxes or a <code>&lt;select multiple&gt;</code> sends the SAME <code>name</code> more than once — <code>ver=a&amp;ver=b&amp;ver=c</code> — but <code>req.form</code> and <code>req.query</code> are <code>Map</code>s, and a <code>Map</code> does not keep duplicate keys: <code>parse_form_data</code>/<code>parse_query_string</code> silently keep only the LAST one. <code>form_values(req, key)</code> and <code>query_values(req, key)</code> return every value instead, in the order they arrived; <code>parse_form_data_all</code>/<code>parse_query_string_all</code> do the same without a <code>Request</code>, as a flat <code>Array</code> of <code>[key, value]</code> pairs.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">115-form-repeated-keys.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/115-form-repeated-keys.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Formularios con claves repetidas — checkboxes y &lt;select multiple&gt;</span>
+<span class="cm">// Repeated form/query keys — checkboxes and &lt;select multiple&gt;</span>
+<span class="cm">//</span>
+<span class="cm">// El HTML normal de &quot;elegí varias opciones&quot; es un grupo de checkboxes o un</span>
+<span class="cm">// &lt;select multiple&gt; con el MISMO name en cada &lt;input&gt;:</span>
+<span class="cm">//</span>
+<span class="cm">//   &lt;input type=&quot;checkbox&quot; name=&quot;ver&quot; value=&quot;a&quot;&gt; a</span>
+<span class="cm">//   &lt;input type=&quot;checkbox&quot; name=&quot;ver&quot; value=&quot;b&quot;&gt; b</span>
+<span class="cm">//   &lt;input type=&quot;checkbox&quot; name=&quot;ver&quot; value=&quot;c&quot;&gt; c</span>
+<span class="cm">//</span>
+<span class="cm">// El navegador manda &quot;ver=a&amp;ver=b&amp;ver=c&quot; — pero req.form es un Map, y un Map</span>
+<span class="cm">// no guarda claves duplicadas: parse_form_data/parse_query_string se quedan</span>
+<span class="cm">// con la ÚLTIMA, en silencio (fricción nyxerp 20260923-160005). Esta receta</span>
+<span class="cm">// no levanta servidor (import &quot;std/serve&quot; haría falta uno): parsea el body</span>
+<span class="cm">// crudo directo, como se ve en un test de handler con request_with().</span>
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> body<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;ver=a&amp;ver=b&amp;ver=c&amp;otro=1&quot;</span>
+    <span class="kw">let</span> content_type<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;application/x-www-form-urlencoded&quot;</span>
+
+    <span class="cm">// El Map de siempre: cómodo para el caso de &quot;una clave, un valor&quot; — pero</span>
+    <span class="cm">// con una clave repetida solo sobrevive la última.</span>
+    <span class="kw">let</span> form<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">parse_form_data</span><span class="op">(</span>body<span class="op">,</span> content_type<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;req.form.get(\&quot;ver\&quot;) = &quot;</span> <span class="op">+</span> form<span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="str">&quot;ver&quot;</span><span class="op">))</span>   <span class="cm">// &quot;c&quot; -- las otras dos, perdidas</span>
+
+    <span class="cm">// parse_form_data_all: TODOS los pares [clave, valor], en el orden en que</span>
+    <span class="cm">// llegaron -- nada colapsado.</span>
+    <span class="kw">let</span> pairs<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">parse_form_data_all</span><span class="op">(</span>body<span class="op">,</span> content_type<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;pares totales = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pairs<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>   <span class="cm">// 4 (3 &quot;ver&quot; + 1 &quot;otro&quot;)</span>
+
+    <span class="cm">// El caso normal, sobre un Request -- como lo vería un handler real.</span>
+    <span class="cm">// form_values(req, key) reparsea req.body + el Content-Type de</span>
+    <span class="cm">// req.headers_flat (no agrega un campo nuevo al Request ni cambia</span>
+    <span class="cm">// req.form, que sigue siendo el Map de siempre).</span>
+    <span class="kw">var</span> req<span class="op">:</span> <span class="ty">Request</span> <span class="op">=</span> <span class="fn">request_with</span><span class="op">(</span><span class="str">&quot;POST&quot;</span><span class="op">,</span> <span class="str">&quot;/encuesta&quot;</span><span class="op">)</span>
+    req<span class="op">.</span>body <span class="op">=</span> body
+    req<span class="op">.</span>headers_flat <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Content-Type&quot;</span><span class="op">,</span> content_type<span class="op">]</span>
+
+    <span class="kw">let</span> seleccionadas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">form_values</span><span class="op">(</span>req<span class="op">,</span> <span class="str">&quot;ver&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;form_values(req, \&quot;ver\&quot;) = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>seleccionadas<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; valores&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> seleccionadas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> v<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> seleccionadas<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  - &quot;</span> <span class="op">+</span> v<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">assert</span><span class="op">(</span>seleccionadas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">3</span><span class="op">,</span> <span class="str">&quot;las 3 casillas, no solo la última&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> s0<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> seleccionadas<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">let</span> s1<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> seleccionadas<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+    <span class="kw">let</span> s2<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> seleccionadas<span class="op">[</span><span class="num">2</span><span class="op">]</span>
+    <span class="kw">assert</span><span class="op">(</span>s0 <span class="op">==</span> <span class="str">&quot;a&quot;</span> <span class="kw">and</span> s1 <span class="op">==</span> <span class="str">&quot;b&quot;</span> <span class="kw">and</span> s2 <span class="op">==</span> <span class="str">&quot;c&quot;</span><span class="op">,</span> <span class="str">&quot;en el orden en que el navegador las mandó&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Clave ausente -&gt; Array vacío, no error.</span>
+    <span class="kw">let</span> ninguna<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">form_values</span><span class="op">(</span>req<span class="op">,</span> <span class="str">&quot;no_existe&quot;</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>ninguna<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span><span class="op">,</span> <span class="str">&quot;clave ausente -&gt; []&quot;</span><span class="op">)</span>
+
+    <span class="cm">// El mismo problema existe en la query string -- misma forma:</span>
+    <span class="cm">// query_values(req, key) / parse_query_string_all(path).</span>
+    <span class="kw">var</span> req_q<span class="op">:</span> <span class="ty">Request</span> <span class="op">=</span> <span class="fn">request_with</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;/buscar?tag=urgente&amp;tag=bug&amp;q=nyx&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> tags<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">query_values</span><span class="op">(</span>req_q<span class="op">,</span> <span class="str">&quot;tag&quot;</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>tags<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">2</span><span class="op">,</span> <span class="str">&quot;query_values agrupa igual que form_values&quot;</span><span class="op">)</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;OK: form_values/query_values recuperan TODOS los valores de una clave repetida&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">req.form.get("ver") = c
+pares totales = 4
+form_values(req, "ver") = 3 valores
+  - a
+  - b
+  - c
+OK: form_values/query_values recuperan TODOS los valores de una clave repetida</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>req.form.get("ver")</code> proves the trap: only <code>"c"</code> survives, the last of the three checkboxes — silently, with no error. <code>parse_form_data_all(body, content_type)</code> returns the four pairs as they arrived instead, ready to filter or count.</p>
+<p><code>form_values(req, "ver")</code> reparses <code>req.body</code> plus the <code>Content-Type</code> from <code>req.headers_flat</code> on every call — it does not add a field to <code>Request</code> nor change what <code>req.form</code> already means, so existing code keeps working. A missing key returns an empty <code>Array</code>, never an error.</p>
+<p><code>query_values(req, key)</code> is the same idea over <code>req.path</code>'s query string, via <code>parse_query_string_all</code>: <code>?tag=urgente&amp;tag=bug&amp;q=nyx</code> gives two values for <code>"tag"</code>. Both helpers work on a synthetic <code>Request</code> from <code>request_with()</code>, so a handler test does not need a running server.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/114-idb-offline-wasm.html"><span class="label">← Previous</span><span class="doc-nav-name">Offline IndexedDB</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
