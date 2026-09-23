@@ -1,0 +1,18 @@
+<!-- title: Repeated form/query keys | blurb: form_values/query_values recover every value of a repeated key — checkboxes, &lt;select multiple&gt; — where req.form silently keeps only the last. -->
+<section data-part="intro">
+<p>A group of checkboxes or a <code>&lt;select multiple&gt;</code> sends the SAME <code>name</code> more than once — <code>ver=a&amp;ver=b&amp;ver=c</code> — but <code>req.form</code> and <code>req.query</code> are <code>Map</code>s, and a <code>Map</code> does not keep duplicate keys: <code>parse_form_data</code>/<code>parse_query_string</code> silently keep only the LAST one. <code>form_values(req, key)</code> and <code>query_values(req, key)</code> return every value instead, in the order they arrived; <code>parse_form_data_all</code>/<code>parse_query_string_all</code> do the same without a <code>Request</code>, as a flat <code>Array</code> of <code>[key, value]</code> pairs.</p>
+</section>
+<section data-part="output">
+req.form.get("ver") = c
+pares totales = 4
+form_values(req, "ver") = 3 valores
+  - a
+  - b
+  - c
+OK: form_values/query_values recuperan TODOS los valores de una clave repetida
+</section>
+<section data-part="explanation">
+<p><code>req.form.get("ver")</code> proves the trap: only <code>"c"</code> survives, the last of the three checkboxes — silently, with no error. <code>parse_form_data_all(body, content_type)</code> returns the four pairs as they arrived instead, ready to filter or count.</p>
+<p><code>form_values(req, "ver")</code> reparses <code>req.body</code> plus the <code>Content-Type</code> from <code>req.headers_flat</code> on every call — it does not add a field to <code>Request</code> nor change what <code>req.form</code> already means, so existing code keeps working. A missing key returns an empty <code>Array</code>, never an error.</p>
+<p><code>query_values(req, key)</code> is the same idea over <code>req.path</code>'s query string, via <code>parse_query_string_all</code>: <code>?tag=urgente&amp;tag=bug&amp;q=nyx</code> gives two values for <code>"tag"</code>. Both helpers work on a synthetic <code>Request</code> from <code>request_with()</code>, so a handler test does not need a running server.</p>
+</section>

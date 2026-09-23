@@ -1,0 +1,18 @@
+<!-- title: Claves repetidas de formulario/query | blurb: form_values/query_values recuperan todos los valores de una clave repetida — casillas, &lt;select multiple&gt; — donde req.form se queda callado con la última. -->
+<section data-part="intro">
+<p>Un grupo de casillas (checkboxes) o un <code>&lt;select multiple&gt;</code> manda el MISMO <code>name</code> más de una vez —<code>ver=a&amp;ver=b&amp;ver=c</code>— pero <code>req.form</code> y <code>req.query</code> son <code>Map</code>s, y un <code>Map</code> no guarda claves duplicadas: <code>parse_form_data</code>/<code>parse_query_string</code> se quedan en silencio con la ÚLTIMA. <code>form_values(req, key)</code> y <code>query_values(req, key)</code> devuelven todos los valores en cambio, en el orden en que llegaron; <code>parse_form_data_all</code>/<code>parse_query_string_all</code> hacen lo mismo sin un <code>Request</code>, como un <code>Array</code> plano de pares <code>[clave, valor]</code>.</p>
+</section>
+<section data-part="output">
+req.form.get("ver") = c
+pares totales = 4
+form_values(req, "ver") = 3 valores
+  - a
+  - b
+  - c
+OK: form_values/query_values recuperan TODOS los valores de una clave repetida
+</section>
+<section data-part="explanation">
+<p><code>req.form.get("ver")</code> muestra la trampa: solo sobrevive <code>"c"</code>, la última de las tres casillas — en silencio, sin error. <code>parse_form_data_all(body, content_type)</code> devuelve en cambio los cuatro pares tal como llegaron, listos para filtrar o contar.</p>
+<p><code>form_values(req, "ver")</code> reparsea <code>req.body</code> más el <code>Content-Type</code> de <code>req.headers_flat</code> en cada llamada — no agrega un campo a <code>Request</code> ni cambia lo que ya significa <code>req.form</code>, así que el código existente sigue andando. Una clave ausente devuelve un <code>Array</code> vacío, nunca un error.</p>
+<p><code>query_values(req, key)</code> es la misma idea sobre la query string de <code>req.path</code>, vía <code>parse_query_string_all</code>: <code>?tag=urgente&amp;tag=bug&amp;q=nyx</code> da dos valores para <code>"tag"</code>. Los dos helpers funcionan sobre un <code>Request</code> sintético de <code>request_with()</code>, así que probar un handler no necesita un servidor corriendo.</p>
+</section>
