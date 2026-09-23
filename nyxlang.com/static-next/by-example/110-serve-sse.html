@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server-Sent Events — Nyx by example</title>
+<meta name="description" content="A channel that doesn&#x27;t hold a worker: the route runs the full pipeline, then broadcasts to a room.">
+<link rel="canonical" href="https://nyxlang.com/by-example/110-serve-sse.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/110-serve-sse.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/110-serve-sse.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/110-serve-sse.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/110-serve-sse.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">110</span> / Networking</span></p>
+<h1 class="doc-title">Server-Sent Events</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/serve</code> serves Server-Sent Events through a NORMAL route: it runs through hooks, middlewares, mounts and wraps, so an auth middleware that answers 401 stops the channel before it ever opens. <code>sse_open(req, room)</code> opens the connection, <code>sse_broadcast(room, evento, datos)</code> broadcasts from any handler or thread, and the channel does not hold a worker: the process writes the header, registers the fd in the room and lets go of the connection. Behind a reverse proxy that does not buffer the stream, the channel works unchanged; one that does buffer only releases events once the origin closes the connection, and until then the client sees nothing.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">110-serve-sse.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/110-serve-sse.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// std/serve Server-Sent Events — a normal route opens the channel, rooms broadcast</span>
+<span class="cm">// Eventos del servidor (SSE) con std/serve — una ruta normal abre el canal, los rooms difunden</span>
+<span class="cm">//</span>
+<span class="cm">// The browser side is browser_sse_fn(url, fn(evento, datos) {...}) from</span>
+<span class="cm">// std/browser. This recipe plays the client with a raw TCP socket so it can</span>
+<span class="cm">// run (and finish) on its own.</span>
+<span class="cm">//</span>
+<span class="cm">// Behind a gateway: nyx-proxy 0.4.4 tunnels SSE end to end, so this works</span>
+<span class="cm">// unchanged behind it. Older proxies buffer the stream until the upstream</span>
+<span class="cm">// closes (the client sees nothing), so with one of those, expose SSE only on</span>
+<span class="cm">// a server the client reaches directly.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+
+<span class="cm">// A NORMAL route: it runs through hooks, middlewares, mounts and wraps, so</span>
+<span class="cm">// an auth middleware that answers 401 stops it before any channel opens.</span>
+<span class="kw">fn</span> <span class="fn">open_inventory</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">sse_open</span><span class="op">(</span>req<span class="op">,</span> <span class="str">&quot;inventario&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18208</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/eventos/inventario&quot;</span><span class="op">,</span> open_inventory<span class="op">)</span>
+
+    <span class="cm">// Real server in a detached goroutine; it dies with the process.</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> port<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Wait for the listener.</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> tries<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> tries <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+            <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span>
+        <span class="op">}</span>
+        tries <span class="op">=</span> tries <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;the server did not start&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
+
+    <span class="cm">// Open the channel like a browser would.</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;GET /eventos/inventario HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept: text/event-stream\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> head<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="kw">if</span> head<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;text/event-stream&quot;</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;head: 200 text/event-stream, no Content-Length&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;unexpected head: &quot;</span> <span class="op">+</span> head<span class="op">)</span>
+        <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+
+    <span class="cm">// The channel is registered once the head is written; it does NOT hold</span>
+    <span class="cm">// a worker, so the server keeps answering other requests meanwhile.</span>
+    <span class="kw">var</span> waited<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> <span class="fn">sse_count_room</span><span class="op">(</span><span class="str">&quot;inventario&quot;</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span> <span class="kw">and</span> waited <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        <span class="fn">sleep</span><span class="op">(</span><span class="num">20</span><span class="op">)</span>
+        waited <span class="op">=</span> waited <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;open channels in the room: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">sse_count_room</span><span class="op">(</span><span class="str">&quot;inventario&quot;</span><span class="op">)))</span>
+
+    <span class="cm">// From any handler or thread: one event to everyone in the room. The</span>
+    <span class="cm">// return value counts clients that received the WHOLE frame.</span>
+    <span class="kw">let</span> delivered<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span><span class="str">&quot;inventario&quot;</span><span class="op">,</span> <span class="str">&quot;stock&quot;</span><span class="op">,</span> <span class="str">&quot;{\&quot;sku\&quot;:\&quot;A-1\&quot;,\&quot;cantidad\&quot;:7}&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;delivered to: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>delivered<span class="op">))</span>
+
+    <span class="cm">// What the client reads: `event:` + one `data:` per line + a blank line.</span>
+    <span class="kw">let</span> frame<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>frame<span class="op">)</span>
+
+    <span class="cm">// An event name with a line break is rejected (0), never sanitized.</span>
+    <span class="kw">let</span> rejected<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span><span class="str">&quot;inventario&quot;</span><span class="op">,</span> <span class="str">&quot;bad\nname&quot;</span><span class="op">,</span> <span class="str">&quot;x&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;rejected event name delivered to: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>rejected<span class="op">))</span>
+
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18208 with 2 workers
+head: 200 text/event-stream, no Content-Length
+open channels in the room: 1
+delivered to: 1
+event: stock
+data: {"sku":"A-1","cantidad":7}
+
+
+rejected event name delivered to: 0</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>This recipe plays the client with a raw TCP socket, so it can run (and finish) on its own: the response head arrives with no <code>Content-Length</code>, as befits a stream that does not know when it will end. On the browser side the counterpart is <code>browser_sse_fn(url, fn(evento, datos) {...})</code> from <code>std/browser</code>.</p>
+<p><code>sse_broadcast</code> returns how many clients received the WHOLE frame — here <code>1</code>, the only channel open in the <code>"inventario"</code> room. What the client reads is exactly <code>event:</code> plus one <code>data:</code> line per line of the payload, followed by a blank line that closes the frame.</p>
+<p>An event name carrying <code>\r</code> or <code>\n</code> is REJECTED (<code>sse_broadcast</code> returns <code>0</code>), never silently sanitized — hence the last line showing 0 deliveries.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/109-await-fetch-wasm.html"><span class="label">← Previous</span><span class="doc-nav-name">await in the browser</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/111-nyx-test-coverage.html"><span class="label">Next →</span><span class="doc-nav-name">nyx test --coverage</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

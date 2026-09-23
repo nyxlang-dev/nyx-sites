@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campo Fn en un struct — Nyx por ejemplo</title>
+<meta name="description" content="Ligar el campo a una variable antes de llamarlo — el receptor puede ser variable local, parámetro por valor o campo anidado.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/105-struct-fn-field.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/105-struct-fn-field.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/105-struct-fn-field.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/105-struct-fn-field.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/105-struct-fn-field.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">105</span> / Tipos y patrones</span></p>
+<h1 class="doc-title">Campo Fn en un struct</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un struct puede tener un campo de tipo <code>Fn</code>, y llamarlo funciona en tres formas de receptor: variable local, parámetro por valor y campo anidado dentro de otro struct. Lo que <strong>no</strong> funciona todavía es llamar el campo directo (<code>pais.calcular_impuesto(monto)</code>): el compilador lo rechaza con <code>NYX1016</code>, así que primero hay que ligarlo a una variable sin anotar el tipo.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">105-struct-fn-field.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/105-struct-fn-field.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Campo `Fn` en un struct: ligar el campo a una variable SIN anotar el tipo</span>
+<span class="cm">// y llamar la variable — funciona con el receptor como variable local,</span>
+<span class="cm">// parámetro por valor y campo anidado (también con parámetro puntero,</span>
+<span class="cm">// `c: *Contrato`, no mostrado aquí). Llamar el campo DIRECTO</span>
+<span class="cm">// (`pais.calcular_impuesto(monto)`) sigue sin soportarse (NYX1016): hay que</span>
+<span class="cm">// ligarlo a una variable primero.</span>
+
+<span class="kw">struct</span> <span class="ty">Pais</span> <span class="op">{</span>
+    nombre<span class="op">:</span> <span class="ty">String</span><span class="op">,</span>
+    calcular_impuesto<span class="op">:</span> <span class="ty">Fn</span><span class="op">(</span><span class="ty">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">float</span>
+<span class="op">}</span>
+
+<span class="kw">struct</span> <span class="ty">Region</span> <span class="op">{</span>
+    pais<span class="op">:</span> <span class="ty">Pais</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">impuesto_ar</span><span class="op">(</span>monto<span class="op">:</span> <span class="ty">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">float</span> <span class="op">{</span>
+    <span class="kw">return</span> monto <span class="op">*</span> <span class="num">0.21</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">impuesto_uy</span><span class="op">(</span>monto<span class="op">:</span> <span class="ty">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">float</span> <span class="op">{</span>
+    <span class="kw">return</span> monto <span class="op">*</span> <span class="num">0.22</span>
+<span class="op">}</span>
+
+<span class="cm">// Receptor: parámetro POR VALOR</span>
+<span class="kw">fn</span> <span class="fn">cobrar</span><span class="op">(</span>p<span class="op">:</span> <span class="ty">Pais</span><span class="op">,</span> monto<span class="op">:</span> <span class="ty">float</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">float</span> <span class="op">{</span>
+    <span class="kw">let</span> calcular <span class="op">=</span> p<span class="op">.</span>calcular_impuesto   <span class="cm">// sin anotar</span>
+    <span class="kw">return</span> <span class="fn">calcular</span><span class="op">(</span>monto<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> ar<span class="op">:</span> <span class="ty">Pais</span> <span class="op">=</span> <span class="ty">Pais</span> <span class="op">{</span> nombre<span class="op">:</span> <span class="str">&quot;Argentina&quot;</span><span class="op">,</span> calcular_impuesto<span class="op">:</span> impuesto_ar <span class="op">}</span>
+
+    <span class="cm">// Receptor: variable local</span>
+    <span class="kw">let</span> f <span class="op">=</span> ar<span class="op">.</span>calcular_impuesto
+    <span class="fn">print</span><span class="op">(</span>ar<span class="op">.</span>nombre <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span><span class="fn">f</span><span class="op">(</span><span class="num">100.0</span><span class="op">)))</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;cobrar(): &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span><span class="fn">cobrar</span><span class="op">(</span>ar<span class="op">,</span> <span class="num">100.0</span><span class="op">)))</span>
+
+    <span class="cm">// Receptor: campo anidado</span>
+    <span class="kw">let</span> uy<span class="op">:</span> <span class="ty">Pais</span> <span class="op">=</span> <span class="ty">Pais</span> <span class="op">{</span> nombre<span class="op">:</span> <span class="str">&quot;Uruguay&quot;</span><span class="op">,</span> calcular_impuesto<span class="op">:</span> impuesto_uy <span class="op">}</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Region</span> <span class="op">=</span> <span class="ty">Region</span> <span class="op">{</span> pais<span class="op">:</span> uy <span class="op">}</span>
+    <span class="kw">let</span> calcular_anidado <span class="op">=</span> r<span class="op">.</span>pais<span class="op">.</span>calcular_impuesto
+    <span class="fn">print</span><span class="op">(</span>r<span class="op">.</span>pais<span class="op">.</span>nombre <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span><span class="fn">calcular_anidado</span><span class="op">(</span><span class="num">100.0</span><span class="op">)))</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">Argentina: 21.0
+cobrar(): 21.0
+Uruguay: 22.0</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Las tres llamadas usan el mismo patrón: <code>let calcular = valor.campo_fn</code> seguido de <code>calcular(argumentos)</code>. <code>f = ar.calcular_impuesto</code> liga el campo de una variable local; <code>cobrar</code> hace lo mismo con <code>p</code>, un parámetro recibido por valor; y <code>calcular_anidado = r.pais.calcular_impuesto</code> atraviesa un campo struct dentro de otro struct antes de ligar.</p>
+<p>Ninguna de las tres anota el tipo de <code>calcular</code>: el compilador infiere la firma completa (<code>Fn(float) -> float</code>) desde el campo de origen, así que la llamada indirecta sabe qué convenio de retorno usar. Esto es justamente lo que evita el problema de un <code>Fn</code> sin firma — ver la receta de plazo y causa HTTP para el caso donde SÍ hace falta declarar la firma a mano.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/104-postgres.html"><span class="label">← Anterior</span><span class="doc-nav-name">Sin driver de por medio</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/106-json-exact-numbers.html"><span class="label">Siguiente →</span><span class="doc-nav-name">JSON: números exactos</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

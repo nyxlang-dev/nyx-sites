@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Correo saliente con std/smtp — Nyx por ejemplo</title>
+<meta name="description" content="Mensaje, adjunto y dot-stuffing armados en Nyx puro — STARTTLS en 587 o TLS desde el saludo en 465.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/113-smtp.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/113-smtp.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/113-smtp.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/113-smtp.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/113-smtp.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">113</span> / Redes</span></p>
+<h1 class="doc-title">Correo saliente con std/smtp</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/smtp</code> conecta por los dos caminos reales —587 con <code>STARTTLS</code> y 465 con TLS desde el saludo—, autentica con <code>AUTH PLAIN</code>/<code>LOGIN</code> y arma el mensaje con headers, cuerpo y adjuntos binarios en base64. Esta receta no abre una conexión a propósito —un servidor SMTP de verdad necesita credenciales—, así que corre sola bajo <code>make test-examples</code>; las llamadas que conectan quedan comentadas, listas para copiar.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">113-smtp.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/113-smtp.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: mandar un correo con una factura adjunta.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP perdió la contraseña de su instalación de demostración</span>
+<span class="cm">// y la única salida que el sistema pudo ofrecer fue crear un usuario nuevo,</span>
+<span class="cm">// porque no había forma de mandar un correo de recuperación. El campo `correo`</span>
+<span class="cm">// estaba guardado en el usuario y no se usaba para nada.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. el mensaje armado tal como viaja — headers, MIME y adjunto en base64;</span>
+<span class="cm">//   2. el DOT-STUFFING, que es lo que evita que el mensaje llegue cortado;</span>
+<span class="cm">//   3. cómo se distingue un rechazo de auth de uno de destinatario;</span>
+<span class="cm">//   4. la forma de las dos conexiones reales (587 con STARTTLS y 465).</span>
+<span class="cm">//</span>
+<span class="cm">// NO abre una conexión a propósito: un servidor SMTP de verdad necesita</span>
+<span class="cm">// credenciales, y esta receta corre sola bajo `make test-examples`. Las dos</span>
+<span class="cm">// llamadas que conectan quedan como comentario, listas para copiar.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/smtp&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// ── 1. El mensaje ────────────────────────────────────────────────────</span>
+    <span class="cm">// El cuerpo se escribe con \n normal: std/smtp lo normaliza a CRLF, que es</span>
+    <span class="cm">// lo único que el protocolo admite.</span>
+    <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Estimado cliente,\n\nAdjuntamos la factura del mes.\n\nSaludos&quot;</span>
+
+    <span class="kw">var</span> msg<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">smtp_message</span><span class="op">(</span>
+        <span class="str">&quot;facturacion@miempresa.com&quot;</span><span class="op">,</span>          <span class="cm">// de</span>
+        <span class="op">[</span><span class="str">&quot;cliente@ejemplo.com&quot;</span><span class="op">],</span>              <span class="cm">// para (varios: agregar a la lista)</span>
+        <span class="str">&quot;Factura de septiembre&quot;</span><span class="op">,</span>              <span class="cm">// asunto</span>
+        cuerpo<span class="op">)</span>
+
+    <span class="cm">// El adjunto son los BYTES del archivo. read_file es binary-safe, así que</span>
+    <span class="cm">// un PDF viaja entero; la codificación base64 la hace smtp_attach.</span>
+    <span class="cm">//   let pdf: String = read_file(&quot;factura.pdf&quot;)</span>
+    <span class="kw">let</span> pdf<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;%PDF-1.4 (contenido de ejemplo)&quot;</span>
+    msg <span class="op">=</span> <span class="fn">smtp_attach</span><span class="op">(</span>msg<span class="op">,</span> <span class="str">&quot;factura.pdf&quot;</span><span class="op">,</span> <span class="str">&quot;application/pdf&quot;</span><span class="op">,</span> pdf<span class="op">)</span>
+
+    <span class="cm">// ── 2. Lo que se manda de verdad ─────────────────────────────────────</span>
+    <span class="cm">// smtp_render es una función PURA: se puede inspeccionar el mensaje sin</span>
+    <span class="cm">// abrir un socket. Útil para depurar y para testear.</span>
+    <span class="kw">let</span> crudo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">smtp_render</span><span class="op">(</span>msg<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;— headers del mensaje —&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> corte<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> crudo<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>crudo<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> corte<span class="op">))</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;¿lleva el adjunto en base64? &quot;</span> <span class="op">+</span> <span class="fn">__si_no</span><span class="op">(</span>crudo<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;Content-Transfer-Encoding: base64&quot;</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="num">0</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;¿lleva Content-Disposition?  &quot;</span> <span class="op">+</span> <span class="fn">__si_no</span><span class="op">(</span>crudo<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;Content-Disposition: attachment&quot;</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="num">0</span><span class="op">))</span>
+
+    <span class="cm">// ── 3. DOT-STUFFING: por qué la factura no llega cortada ─────────────</span>
+    <span class="cm">// El cuerpo de un mensaje termina con una línea que dice solo &quot;.&quot;. Si una</span>
+    <span class="cm">// línea del CONTENIDO empieza con punto y no se duplica, el servidor da el</span>
+    <span class="cm">// mensaje por terminado ahí y entrega la mitad — sin error de ningún lado.</span>
+    <span class="cm">// std/smtp lo hace solo.</span>
+    <span class="kw">let</span> con_punto<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">smtp_message</span><span class="op">(</span><span class="str">&quot;a@x.com&quot;</span><span class="op">,</span> <span class="op">[</span><span class="str">&quot;b@x.com&quot;</span><span class="op">],</span> <span class="str">&quot;Importe&quot;</span><span class="op">,</span>
+                                        <span class="str">&quot;Total:\n.50 de descuento\nGracias&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">smtp_render</span><span class="op">(</span>con_punto<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;línea que empieza con punto, ya protegida: &quot;</span> <span class="op">+</span> <span class="fn">__si_no</span><span class="op">(</span>r<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;..50 de descuento&quot;</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="num">0</span><span class="op">))</span>
+
+    <span class="cm">// ── 4. Cómo se conecta de verdad ─────────────────────────────────────</span>
+    <span class="cm">// 587 con STARTTLS (lo habitual):</span>
+    <span class="cm">//</span>
+    <span class="cm">//   match smtp_connect_plain(&quot;smtp.proveedor.com&quot;, 587, &quot;miempresa.com&quot;) {</span>
+    <span class="cm">//       Result.Ok(c0) =&gt; {</span>
+    <span class="cm">//           match smtp_starttls(c0, &quot;miempresa.com&quot;) {</span>
+    <span class="cm">//               Result.Ok(c) =&gt; {</span>
+    <span class="cm">//                   match smtp_auth_plain(c, &quot;usuario&quot;, &quot;clave&quot;) {</span>
+    <span class="cm">//                       Result.Ok(_x) =&gt; {</span>
+    <span class="cm">//                           match smtp_send(c, msg) {</span>
+    <span class="cm">//                               Result.Ok(_y) =&gt; { print(&quot;enviado&quot;) }</span>
+    <span class="cm">//                               Result.Err(e) =&gt; { print(explicar(e)) }</span>
+    <span class="cm">//                           }</span>
+    <span class="cm">//                           let _q: int = smtp_quit(c)</span>
+    <span class="cm">//                       }</span>
+    <span class="cm">//                       Result.Err(e) =&gt; { print(explicar(e)) }</span>
+    <span class="cm">//                   }</span>
+    <span class="cm">//               }</span>
+    <span class="cm">//               Result.Err(e) =&gt; { print(explicar(e)) }</span>
+    <span class="cm">//           }</span>
+    <span class="cm">//       }</span>
+    <span class="cm">//       Result.Err(e) =&gt; { print(explicar(e)) }</span>
+    <span class="cm">//   }</span>
+    <span class="cm">//</span>
+    <span class="cm">// 465 con TLS desde el saludo: smtp_connect_tls(host, 465, &quot;miempresa.com&quot;)</span>
+    <span class="cm">// y después igual, sin el paso de smtp_starttls.</span>
+    <span class="cm">//</span>
+    <span class="cm">// Las dos VERIFICAN el certificado. Para un servidor de desarrollo con</span>
+    <span class="cm">// certificado autofirmado existen smtp_starttls_insecure y</span>
+    <span class="cm">// smtp_connect_tls_insecure, que dicen en el nombre lo que hacen.</span>
+    <span class="cm">//</span>
+    <span class="cm">// Y AUTH nunca viaja en claro: si el canal no está cifrado, smtp_auth_*</span>
+    <span class="cm">// falla ANTES de mandar las credenciales. No hay flag para saltearlo.</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;— qué hacer con cada error —&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">535</span><span class="op">,</span> <span class="str">&quot;auth&quot;</span><span class="op">,</span> <span class="str">&quot;autenticación rechazada&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">550</span><span class="op">,</span> <span class="str">&quot;recipient&quot;</span><span class="op">,</span> <span class="str">&quot;destinatario rechazado&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;connection&quot;</span><span class="op">,</span> <span class="str">&quot;no se pudo conectar&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">451</span><span class="op">,</span> <span class="str">&quot;protocol&quot;</span><span class="op">,</span> <span class="str">&quot;fallo transitorio&quot;</span><span class="op">)))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// Cada `kind` pide una acción distinta. Eso es lo que hace que valga la pena</span>
+<span class="cm">// que el error sea tipado: un Err genérico no dice qué arreglar.</span>
+<span class="kw">fn</span> <span class="fn">explicar</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">Error</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;auth&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;auth       → revisar usuario y clave del proveedor&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;recipient&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;recipient  → la dirección del destinatario está mal&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;sender&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;sender     → el proveedor no te deja mandar desde ese remitente&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;connection&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;connection → red, host o puerto; o el certificado no validó&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;protocol&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;protocol   → el servidor cortó o contestó algo inesperado&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;desconocido&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">__si_no</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;sí&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;no&quot;</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">— headers del mensaje —
+From: facturacion@miempresa.com
+To: cliente@ejemplo.com
+Subject: Factura de septiembre
+Date: Wed, 23 Sep 2026 17:04:58 +0000
+Message-ID: &lt;...@miempresa.com&gt;
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="=_nyx_..."
+
+¿lleva el adjunto en base64? sí
+¿lleva Content-Disposition?  sí
+
+línea que empieza con punto, ya protegida: sí
+
+— qué hacer con cada error —
+auth       → revisar usuario y clave del proveedor
+recipient  → la dirección del destinatario está mal
+connection → red, host o puerto; o el certificado no validó
+protocol   → el servidor cortó o contestó algo inesperado</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>smtp_render</code> es una función PURA: arma el mensaje completo —headers, MIME, adjunto— sin abrir ningún socket, así que se puede inspeccionar y testear antes de mandar nada. <code>smtp_attach</code> toma los bytes crudos de un archivo (por ejemplo, de <code>read_file</code>, que es binary-safe) y los codifica en base64 cortado a 76 columnas.</p>
+<p>El DOT-STUFFING es lo que evita que un mensaje llegue cortado a la mitad: el protocolo termina el cuerpo con una línea que dice solo «.», así que si una línea del contenido empieza con punto y no se duplica, el servidor da el mensaje por terminado ahí — sin error de ningún lado. <code>std/smtp</code> lo hace solo, junto con la normalización a CRLF.</p>
+<p>Cada <code>kind</code> de <code>Error</code> pide una acción distinta: <code>"auth"</code> es credenciales, <code>"recipient"</code> es la dirección, <code>"connection"</code> es red o certificado. Y <code>AUTH</code> nunca viaja en claro — si el canal no está cifrado, la autenticación falla ANTES de mandar las credenciales, sin flag para forzarlo; el certificado se verifica por omisión, con variantes <code>_insecure</code> que lo dicen en el nombre para un servidor de desarrollo.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/112-include-bytes.html"><span class="label">← Anterior</span><span class="doc-nav-name">include_bytes</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/114-idb-offline-wasm.html"><span class="label">Siguiente →</span><span class="doc-nav-name">IndexedDB sin conexión</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

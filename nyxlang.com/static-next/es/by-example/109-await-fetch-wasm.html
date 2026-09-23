@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>await en el navegador — Nyx por ejemplo</title>
+<meta name="description" content="Una async fn que espera al anfitrión JS sin partir el flujo en callbacks — wasm32-wasi con Asyncify.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/109-await-fetch-wasm.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/109-await-fetch-wasm.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/109-await-fetch-wasm.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/109-await-fetch-wasm.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/109-await-fetch-wasm.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">109</span> / Avanzado</span></p>
+<h1 class="doc-title">await en el navegador</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Nyx compilado a <code>wasm32-wasi</code> puede usar <code>await</code> de verdad: una <code>async fn</code> que llama a <code>await browser_fetch_await(...)</code> ESPERA la respuesta del servidor y sigue en la línea siguiente con el valor, sin partir el flujo en un cierre por cada pedido. El módulo nuevo <code>std/browser_await</code> vive aparte de <code>std/browser</code> a propósito: solo paga el costo de Asyncify (más binaryen como dependencia de build) el programa que lo importa.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">109-await-fetch-wasm.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/109-await-fetch-wasm.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 109 — await en el navegador: una pantalla que carga una factura sin callbacks</span>
+<span class="cm">//</span>
+<span class="cm">// Target wasm32-wasi (corre en el navegador, o bajo node con</span>
+<span class="cm">// examples/browser/run-node.mjs). `await browser_fetch_await(...)` ESPERA la</span>
+<span class="cm">// respuesta del servidor y la función sigue en la línea siguiente con el</span>
+<span class="cm">// valor: sin partir el flujo en un cierre por cada pedido.</span>
+<span class="cm">//</span>
+<span class="cm">// Construir:  nyx build --target wasm32-wasi</span>
+<span class="cm">//   (necesita binaryen: `sudo apt install binaryen`, o NYX_WASM_OPT=/ruta/a/wasm-opt;</span>
+<span class="cm">//    nyx build lo usa SOLO porque el programa espera al anfitrión)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que conviene saber:</span>
+<span class="cm">//   - El status HTTP no es error: un 404 llega como Ok con r.status == 404.</span>
+<span class="cm">//     Err es «no hubo respuesta» (kind &quot;connection&quot;) o «venció el plazo» (&quot;timeout&quot;).</span>
+<span class="cm">//   - UNA sola función puede estar esperando a la vez. Un click que llega</span>
+<span class="cm">//     durante el fetch se procesa cuando el fetch termina, en orden.</span>
+<span class="cm">//   - spawn y los canales siguen sin existir en wasm: await es secuencial.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/browser_await&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/dom&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">cargar_factura</span><span class="op">(</span>id<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> res <span class="op">=</span> <span class="kw">await</span> <span class="fn">browser_fetch_await_opts</span><span class="op">(</span><span class="str">&quot;/api/facturas/&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>id<span class="op">),</span> <span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="num">5000</span><span class="op">)</span>
+    <span class="kw">match</span> res <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> r<span class="op">.</span>status <span class="op">!=</span> <span class="num">200</span> <span class="op">{</span>
+                <span class="kw">return</span> <span class="str">&quot;la factura &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>id<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; no está (HTTP &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>status<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> r<span class="op">.</span>body
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;sin respuesta del servidor: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">+</span> <span class="str">&quot;)&quot;</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="cm">// El botón «abrir» de cada fila llama a este export con el número de factura.</span>
+#<span class="op">[</span>export_name <span class="op">=</span> <span class="str">&quot;abrir_factura&quot;</span><span class="op">]</span>
+<span class="kw">fn</span> <span class="fn">abrir_factura</span><span class="op">(</span>id<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> <span class="str">&quot;cargando la factura &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>id<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;...&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">cargar_factura</span><span class="op">(</span>id<span class="op">)</span>
+    <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#factura&quot;</span><span class="op">,</span> texto<span class="op">)</span>
+    <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> <span class="str">&quot;listo&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">abrir_factura</span><span class="op">(</span><span class="num">7</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">#estado → "cargando la factura 7..."
+#factura → (el cuerpo de la respuesta, o el motivo del fallo)
+#estado → "listo"</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>El status HTTP no es un error: un 404 llega como <code>Result.Ok</code> con <code>r.status == 404</code>, y <code>cargar_factura</code> lo distingue a mano. Lo único que cae en <code>Result.Err</code> es no haber tenido respuesta —<code>kind</code> <code>"connection"</code> o <code>"timeout"</code>—, el mismo vocabulario de <code>Error</code> que el resto de la stdlib.</p>
+<p><code>abrir_factura</code> es el export que llama el botón «abrir» de cada fila: actualiza el DOM antes de esperar, espera con <code>await</code>, y actualiza el DOM otra vez con el resultado — sin un callback de por medio. Solo puede haber UNA función esperando a la vez: un click que llega durante el fetch se procesa recién cuando el fetch termina, en orden.</p>
+<p>Construir necesita <code>binaryen</code> (<code>wasm-opt</code>) porque el <code>.ll</code> generado trae un marcador de imports Asyncify; un programa sin <code>#[suspends]</code> compila byte a byte igual que antes. <code>spawn</code> y los canales siguen sin existir en wasm: acá <code>await</code> es secuencial.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/108-http-plazo-y-causa.html"><span class="label">← Anterior</span><span class="doc-nav-name">HTTP: plazo y causa</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/110-serve-sse.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Eventos del servidor (SSE)</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

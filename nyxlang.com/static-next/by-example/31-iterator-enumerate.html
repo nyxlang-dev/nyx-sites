@@ -1,87 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iterator: enumerate() — Nyx by Example</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/shared/nyx-design-system.css">
-    <link rel="stylesheet" href="/learn/book.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterator: enumerate() — Nyx by example</title>
+<meta name="description" content="Getting index and value pairs during iteration.">
+<link rel="canonical" href="https://nyxlang.com/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/31-iterator-enumerate.html">
+<link rel="stylesheet" href="/shared/spec.css">
 </head>
 <body>
-
-<nav>
-    <a href="/" class="nav-logo">Nyx</a>
-    <div class="nav-right">
-        <a href="/docs/">Docs</a>
-        <a href="/learn/">Learn</a>
-        <a href="/by-example/">By Example</a>
-        <a href="https://github.com/nyxlang-dev/nyx">GitHub</a>
-    </div>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/31-iterator-enumerate.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
 </nav>
 
-<main class="book-content">
-    <div class="book-breadcrumb">
-        <a href="/by-example/">Nyx by Example</a>
-    </div>
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">31</span> / Advanced</span></p>
+<h1 class="doc-title">Iterator: enumerate()</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>enumerate()</code> transforms any iterator into one that yields pairs of <code>[index, value]</code>. It is the idiomatic way to track the position of each element without managing a counter variable by hand.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">31-iterator-enumerate.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/31-iterator-enumerate.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Iteradores: enumerate() para obtener pares (índice, valor)</span>
 
-    <h1>Iterator: enumerate()</h1>
+<span class="kw">fn</span> <span class="fn">print_pair</span><span class="op">(</span>idx<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> val<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;[&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>idx<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;] = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>val<span class="op">))</span>
+<span class="op">}</span>
 
-    <p><code>enumerate()</code> transforms any iterator into one that yields pairs of <code>[index, value]</code>. It is the idiomatic way to track the position of each element without managing a counter variable by hand.</p>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> frutas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">10</span><span class="op">,</span> <span class="num">20</span><span class="op">,</span> <span class="num">30</span><span class="op">,</span> <span class="num">40</span><span class="op">,</span> <span class="num">50</span><span class="op">]</span>
 
-    <h2>Code</h2>
-    <pre><code>// Iteradores: enumerate() para obtener pares (índice, valor)
+    <span class="cm">// enumerate() retorna un iterador de pares {index, value}</span>
+    <span class="cm">// Se puede iterar con for-in desempaquetando idx y val</span>
+    <span class="kw">let</span> enumerado<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> frutas<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">enumerate</span><span class="op">().</span><span class="fn">collect</span><span class="op">()</span>
 
-fn print_pair(idx: int, val: int) {
-    print("[" + int_to_string(idx) + "] = " + int_to_string(val))
-}
+    <span class="cm">// Cada elemento es un array [indice, valor]</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> enumerado<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> par<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> enumerado<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> idx<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> par<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+        <span class="kw">let</span> val<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> par<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+        <span class="fn">print_pair</span><span class="op">(</span>idx<span class="op">,</span> val<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
 
-fn main() -> int {
-    let frutas: Array = [10, 20, 30, 40, 50]
+    <span class="cm">// También se puede combinar con otros adapters</span>
+    <span class="kw">let</span> primeros<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> frutas<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">enumerate</span><span class="op">().</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;primeros 3 enumerados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>primeros<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
 
-    // enumerate() retorna un iterador de pares {index, value}
-    // Se puede iterar con for-in desempaquetando idx y val
-    let enumerado: Array = frutas.iter().enumerate().collect()
-
-    // Cada elemento es un array [indice, valor]
-    var i: int = 0
-    while i < enumerado.length() {
-        let par: Array = enumerado[i]
-        let idx: int = par[0]
-        let val: int = par[1]
-        print_pair(idx, val)
-        i = i + 1
-    }
-
-    // También se puede combinar con otros adapters
-    let primeros: Array = frutas.iter().enumerate().take(3).collect()
-    print("primeros 3 enumerados: " + int_to_string(primeros.length()))
-
-    return 0
-}</code></pre>
-
-    <h2>Output</h2>
-    <pre class="output">[0] = 10
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">[0] = 10
 [1] = 20
 [2] = 30
 [3] = 40
 [4] = 50
-primeros 3 enumerados: 3</pre>
-
-    <h2>Explanation</h2>
-    <p>Calling <code>.iter()</code> on an array produces a lazy iterator. Chaining <code>.enumerate()</code> wraps each item into a two-element array <code>[index, value]</code>, and <code>.collect()</code> materializes the whole pipeline into a concrete <code>Array</code>. Each element of the result is itself an array, so <code>par[0]</code> gives the index and <code>par[1]</code> gives the original value.</p>
-    <p>Because <code>enumerate()</code> is just another iterator adapter, it composes freely with the rest of the iterator API. The second pipeline in this example adds <code>.take(3)</code> after <code>.enumerate()</code> to collect only the first three indexed pairs — demonstrating that adapters can be stacked in any order.</p>
-    <p>This pattern eliminates the error-prone pattern of maintaining a separate counter variable alongside a loop, and makes the intent of the code immediately clear to any reader.</p>
-
-    <div class="book-nav">
-        <a href="/by-example/30-iterator-fold.html">← Previous</a>
-        <a href="/by-example/32-iterator-take-skip.html">Next →</a>
-    </div>
-
-    <p><small>Source: <a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/31-iterator-enumerate.nx">examples/by-example/31-iterator-enumerate.nx</a></small></p>
+primeros 3 enumerados: 3</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Calling <code>.iter()</code> on an array produces a lazy iterator. Chaining <code>.enumerate()</code> wraps each item into a two-element array <code>[index, value]</code>, and <code>.collect()</code> materializes the whole pipeline into a concrete <code>Array</code>. Each element of the result is itself an array, so <code>par[0]</code> gives the index and <code>par[1]</code> gives the original value.</p>
+<p>Because <code>enumerate()</code> is just another iterator adapter, it composes freely with the rest of the iterator API. The second pipeline in this example adds <code>.take(3)</code> after <code>.enumerate()</code> to collect only the first three indexed pairs — demonstrating that adapters can be stacked in any order.</p>
+<p>This pattern eliminates the error-prone pattern of maintaining a separate counter variable alongside a loop, and makes the intent of the code immediately clear to any reader.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/30-iterator-fold.html"><span class="label">← Previous</span><span class="doc-nav-name">Iterator: fold</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/32-iterator-take-skip.html"><span class="label">Next →</span><span class="doc-nav-name">Iterator: take() and skip()</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
 </main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
 
+<script src="/shared/copy.js" defer></script>
 </body>
 </html>

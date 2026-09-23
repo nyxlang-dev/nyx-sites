@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No driver in between — Nyx by example</title>
+<meta name="description" content="std/postgres speaks wire protocol v3 and SCRAM-SHA-256 in pure Nyx — connect, track migrations, and bind parameters without libpq.">
+<link rel="canonical" href="https://nyxlang.com/by-example/104-postgres.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/104-postgres.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/104-postgres.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/104-postgres.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/104-postgres.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">104</span> / Networking</span></p>
+<h1 class="doc-title">No driver in between</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Most languages reach Postgres through libpq, a C library the runtime has to link against and the deployment has to ship. <code>std/postgres</code> skips it: the wire protocol — including SCRAM-SHA-256, the authentication method any modern Postgres server requires — is implemented directly in Nyx. Nothing to install beyond the server itself. This recipe connects, applies a migration, inserts a row with parameters, and reads it back.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">104-postgres.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/104-postgres.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// PostgreSQL: conectar, migrar, insertar con parámetros y leer</span>
+<span class="cm">//</span>
+<span class="cm">// std/postgres habla el protocolo v3 en Nyx puro: no necesita libpq ni ninguna</span>
+<span class="cm">// biblioteca instalada. La autenticación es SCRAM-SHA-256, que es la que exige</span>
+<span class="cm">// cualquier PostgreSQL moderno.</span>
+<span class="cm">//</span>
+<span class="cm">// Para correrlo hace falta un servidor. Con uno local:</span>
+<span class="cm">//   sudo -u postgres psql -c &quot;CREATE USER app WITH PASSWORD &#x27;secreto&#x27;;&quot;</span>
+<span class="cm">//   sudo -u postgres psql -c &quot;CREATE DATABASE midb OWNER app;&quot;</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/postgres&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> conninfo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;host=127.0.0.1 port=5432 dbname=midb user=app password=secreto&quot;</span>
+
+    <span class="kw">match</span> <span class="fn">try_pg_connect</span><span class="op">(</span>conninfo<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo conectar: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>conn<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="cm">// Migraciones: el estado vive en el servidor, así que dos procesos</span>
+            <span class="cm">// ven la misma versión. Aplicar dos veces la misma es un no-op.</span>
+            <span class="fn">pg_migrate_init</span><span class="op">(</span>conn<span class="op">)</span>
+            <span class="fn">pg_migrate</span><span class="op">(</span>conn<span class="op">,</span> <span class="num">1</span><span class="op">,</span> <span class="str">&quot;crear clientes&quot;</span><span class="op">,</span>
+                       <span class="str">&quot;CREATE TABLE clientes (id serial PRIMARY KEY, nombre text, email text)&quot;</span><span class="op">)</span>
+
+            <span class="cm">// Los parámetros van POR VALOR: un nombre con comillas es solo un</span>
+            <span class="cm">// nombre, nunca SQL.</span>
+            <span class="kw">match</span> <span class="fn">try_pg_exec_params</span><span class="op">(</span>conn<span class="op">,</span>
+                    <span class="str">&quot;INSERT INTO clientes (nombre, email) VALUES ($1, $2)&quot;</span><span class="op">,</span>
+                    <span class="op">[</span><span class="str">&quot;O&#x27;Brien&quot;</span><span class="op">,</span> <span class="str">&quot;obrien@ejemplo.com&quot;</span><span class="op">])</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;insertadas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;insert fallo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+
+            <span class="kw">match</span> <span class="fn">try_pg_query</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;SELECT id, nombre, email FROM clientes ORDER BY id&quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>filas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+                    <span class="kw">while</span> i <span class="op">&lt;</span> filas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                        <span class="kw">let</span> f<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> filas<span class="op">[</span>i<span class="op">]</span>
+                        <span class="cm">// Todo llega como texto; un NULL se pregunta con</span>
+                        <span class="cm">// pg_is_null, NUNCA comparando con &quot;&quot;.</span>
+                        <span class="kw">var</span> email<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;(sin email)&quot;</span>
+                        <span class="kw">if</span> <span class="kw">not</span> <span class="fn">pg_is_null</span><span class="op">(</span>f<span class="op">[</span><span class="num">2</span><span class="op">])</span> <span class="op">{</span> email <span class="op">=</span> f<span class="op">[</span><span class="num">2</span><span class="op">]</span> <span class="op">}</span>
+                        <span class="fn">print</span><span class="op">(</span>f<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">+</span> <span class="str">&quot; · &quot;</span> <span class="op">+</span> f<span class="op">[</span><span class="num">1</span><span class="op">]</span> <span class="op">+</span> <span class="str">&quot; · &quot;</span> <span class="op">+</span> email<span class="op">)</span>
+                        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+                    <span class="op">}</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;select fallo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+
+            <span class="kw">let</span> _c <span class="op">=</span> <span class="fn">try_pg_close</span><span class="op">(</span>conn<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">insertadas: 1
+1 · O'Brien · obrien@ejemplo.com</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>pg_migrate</code> is idempotent, and the reason is where it keeps its state: not a local file, but a <code>nyx_migrations</code> table on the server itself, written by <code>pg_migrate_init</code>. <code>pg_migrate_version</code> reads the highest version already applied from that table, and <code>pg_migrate</code> is a no-op when the version it's given is not greater. Two processes — or the same deploy run twice — see the same table and agree on where the schema stands, because the version lives where the schema does.</p>
+<p>The insert goes through <code>try_pg_exec_params</code> rather than building a SQL string. <code>"O'Brien"</code> travels in the protocol's Bind message as a value, not as a fragment that gets concatenated and parsed — so the apostrophe is just a character in a name, never a quote that closes the literal early. Binding parameters isn't an extra safety step bolted on top of the easy way; here it's the only way <code>try_pg_exec_params</code> offers.</p>
+<p>Everything that comes back from <code>try_pg_query</code> arrives as text. NULL does not: the wire marks it. In the <code>DataRow</code> message every column is preceded by its length as a <strong>signed</strong> 32-bit integer, and a length of <code>-1</code> means NULL — distinct from <code>0</code>, which is a genuinely empty string. What cannot carry that distinction is the row on the Nyx side: it is an <code>Array</code> of <code>String</code>, and a <code>String</code> has no way to say “absent”. So the module translates that <code>-1</code> into a sentinel of its own — a one-byte <code>0x00</code> <code>String</code> — instead of letting it collapse into <code>""</code>. Comparing a cell against <code>""</code> would treat an empty string and a NULL as the same thing, which they are not. <code>pg_is_null</code> asks for that sentinel instead of guessing from the text, which is why <code>email</code> only falls back to <code>"(sin email)"</code> when the column genuinely has no value.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/103-orm-sin-mapeo.html"><span class="label">← Previous</span><span class="doc-nav-name">A model written once</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/105-struct-fn-field.html"><span class="label">Next →</span><span class="doc-nav-name">An Fn field in a struct</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -51,7 +51,7 @@
 
 <h2>nyx init</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx init my-app</span>
-nyx v0.31.0 — init
+nyx v0.33.0 — init
 CAPABILITIES.md generado desde ~/.nyx/std (59 archivos escaneados)
 Initialized project: my-app
   Created: my-app/
@@ -80,7 +80,7 @@ main = &quot;src/main.nx&quot;
 
 <h2>Build and run</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx build</span>
-nyx v0.31.0 — build
+nyx v0.33.0 — build
 -&gt; building my-app v0.1.0
    compiling src/main.nx
 ✓ Built: my-app
@@ -97,7 +97,7 @@ build complete</pre>
     <span class="op">}</span>
 <span class="op">}</span></pre>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx run -- --verbose one</span>
-nyx v0.31.0 — run
+nyx v0.33.0 — run
 -&gt; building my-app v0.1.0
    compiling src/main.nx
 ✓ Built: my-app
@@ -136,9 +136,17 @@ nyx v0.31.0 — run
 <p>The dependency is written into <code>[dependencies]</code> in <code>nyx.toml</code>, and <code>nyx build</code> clones what is missing into <code>packages/</code> — which the seeded <code>.gitignore</code> ignores, on the assumption that you would rather fetch than vendor. Deleting that line and committing <code>packages/</code> is the other reasonable choice: it makes the build reproducible without a network.</p>
 <p>The standard library needs none of this. Modules like <code>std/json</code>, <code>std/http</code> or <code>std/toml</code> ship with the toolchain and are used with a plain <code>import "std/json"</code>.</p>
 
+<h2>Separate compilation: <code>[lib] modules</code></h2>
+<p>A project can declare which modules under <code>src/</code> compile as separate units, once, and get reused across builds instead of being inlined into every <code>nyx build</code> again:</p>
+<pre data-lang="sh">[lib]
+modules = [&quot;src/util&quot;, &quot;src/geo&quot;]</pre>
+<p>Each entry is written the way you import it (no <code>.nx</code>), and never a <code>std/</code> module — the manifest rejects both. <code>nyx build</code> compiles each declared module to <code>target/nyx-lib/</code> and reuses the object while neither the module nor anything in its import closure (the prelude and any <code>std/</code> it uses included) has changed, and neither has the compiler or the build flags. Touching a module recompiles it and, in cascade, the <code>[lib]</code> modules that import it — <code>main.nx</code> itself always compiles fresh, against the interfaces in effect. This only applies to native targets: with <code>--target wasm32-wasi</code>, <code>[lib]</code> modules inline like a normal import.</p>
+<p>What crosses the boundary is a signature, not a body — like a C header: exported functions (<code>export fn</code>/<code>pub fn</code>, with their parameter and return types) and exported <code>struct</code>/<code>enum</code>. A generic <code>fn</code>, the methods of an <code>impl</code> (with or without a trait) and a <code>trait</code> need their body where they are called — monomorphization and method dispatch cannot cross a compiled-object boundary — so a <code>[lib]</code> module that declares any of those is inlined as usual instead (the program stays the same), with a <code>NYX0302</code> warning.</p>
+<p class="doc-note"><strong>Known limit.</strong> Type-checking of arguments across the boundary does not exist yet: calling a separately compiled function with the wrong argument type is not caught at compile time today. <code>nyx test</code> does not use <code>[lib]</code> either — it always inlines, same as a project with no <code>[lib]</code> section.</p>
+
 <h2>Two commands you will want later</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx info</span>
-nyx v0.31.0 — info
+nyx v0.33.0 — info
 Project: my-app
 Version: 0.1.0
 Main:    src/main.nx
@@ -156,7 +164,7 @@ Mode:    GC (default)</pre>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

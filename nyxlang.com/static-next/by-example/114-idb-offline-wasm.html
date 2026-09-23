@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline IndexedDB — Nyx by example</title>
+<meta name="description" content="A catalog and a sales queue that survive an F5 — await over IndexedDB, past localStorage&#x27;s limit.">
+<link rel="canonical" href="https://nyxlang.com/by-example/114-idb-offline-wasm.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/114-idb-offline-wasm.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/114-idb-offline-wasm.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/114-idb-offline-wasm.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/114-idb-offline-wasm.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">114</span> / Advanced</span></p>
+<h1 class="doc-title">Offline IndexedDB</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/browser_idb</code> brings IndexedDB with <code>await</code>: <code>idb_get</code>/<code>idb_put</code>/<code>idb_delete</code>/<code>idb_keys</code> are asynchronous, return <code>Result&lt;_, Error&gt;</code> with the usual <code>kind</code>s, and are built for what outgrows the ~5&nbsp;MB limit and synchronous writes of <code>localStorage</code>: a catalog of thousands of records and a queue of pending operations in an offline PWA. A single database with a composite <code>[store, key]</code> key, so a new <code>store</code> never triggers a version bump that would block across tabs.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">114-idb-offline-wasm.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/114-idb-offline-wasm.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// 114 — IndexedDB con await: un catálogo que sobrevive a un F5, sin callbacks</span>
+<span class="cm">//</span>
+<span class="cm">// Target wasm32-wasi (corre en el navegador, o bajo node con</span>
+<span class="cm">// examples/browser/run-node.mjs). Pensado para una PWA sin conexión: un</span>
+<span class="cm">// catálogo de miles de registros y una cola de operaciones pendientes, algo</span>
+<span class="cm">// que se sale del límite de ~5 MB y la escritura síncrona de localStorage</span>
+<span class="cm">// (ls_get/ls_set, std/browser).</span>
+<span class="cm">//</span>
+<span class="cm">// Construir:  nyx build --target wasm32-wasi</span>
+<span class="cm">//   (necesita binaryen: `sudo apt install binaryen`, o NYX_WASM_OPT=/ruta/a/wasm-opt;</span>
+<span class="cm">//    nyx build lo usa SOLO porque el programa espera al anfitrión)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que conviene saber:</span>
+<span class="cm">//   - idb_get de una clave ausente es Err(kind: &quot;not_found&quot;), no &quot;&quot; — el</span>
+<span class="cm">//     mismo vocabulario cerrado de Error que el resto de la stdlib.</span>
+<span class="cm">//   - `store` (&quot;catalogo&quot;, &quot;cola-ventas&quot; acá abajo) es un namespace lógico:</span>
+<span class="cm">//     dos stores nunca se mezclan aunque compartan una sola base física —</span>
+<span class="cm">//     ver std/browser_idb.nx para el porqué (clave compuesta [store, key]).</span>
+<span class="cm">//   - idb_put/idb_delete son Result&lt;int, Error&gt;: Ok(0) en éxito, y delete es</span>
+<span class="cm">//     idempotente (Ok aunque la clave ya no exista).</span>
+<span class="cm">//   - Mismo contrato de &quot;una sola pila suspendida&quot; que browser_await: si otra</span>
+<span class="cm">//     parte de la pantalla dispara un idb_* mientras este espera, se encola.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/browser_idb&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Guarda el catálogo completo como JSON. Devuelve true si quedó persistido.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">guardar_catalogo</span><span class="op">(</span>json<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="kw">let</span> r <span class="op">=</span> <span class="kw">await</span> <span class="fn">idb_put</span><span class="op">(</span><span class="str">&quot;catalogo&quot;</span><span class="op">,</span> <span class="str">&quot;items&quot;</span><span class="op">,</span> json<span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="kw">true</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo guardar el catálogo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">);</span> <span class="kw">return</span> <span class="kw">false</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="cm">// Lee el catálogo guardado, o &quot;&quot; si todavía no hay uno (primera visita).</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">cargar_catalogo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> r <span class="op">=</span> <span class="kw">await</span> <span class="fn">idb_get</span><span class="op">(</span><span class="str">&quot;catalogo&quot;</span><span class="op">,</span> <span class="str">&quot;items&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>json<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> json <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;not_found&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;&quot;</span> <span class="op">}</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo leer el catálogo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">)</span>
+            <span class="kw">return</span> <span class="str">&quot;&quot;</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="cm">// Encola una venta hecha sin conexión, bajo su propio ID, en un store</span>
+<span class="cm">// APARTE del catálogo — nunca se van a mezclar en idb_keys().</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">encolar_venta</span><span class="op">(</span>id<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> venta_json<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="kw">let</span> r <span class="op">=</span> <span class="kw">await</span> <span class="fn">idb_put</span><span class="op">(</span><span class="str">&quot;cola-ventas&quot;</span><span class="op">,</span> id<span class="op">,</span> venta_json<span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="kw">true</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo encolar la venta &quot;</span> <span class="op">+</span> id <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">);</span> <span class="kw">return</span> <span class="kw">false</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="cm">// Cuando vuelve la conexión: procesa y borra cada venta encolada.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">drenar_cola</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> claves <span class="op">=</span> <span class="kw">await</span> <span class="fn">idb_keys</span><span class="op">(</span><span class="str">&quot;cola-ventas&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> claves <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>ids<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> ventas<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> ids
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> i <span class="op">&lt;</span> ventas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> id<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> ventas<span class="op">[</span>i<span class="op">]</span>
+                <span class="cm">// acá iría el POST real al servidor con el JSON de la venta</span>
+                <span class="kw">let</span> _b <span class="op">=</span> <span class="kw">await</span> <span class="fn">idb_delete</span><span class="op">(</span><span class="str">&quot;cola-ventas&quot;</span><span class="op">,</span> id<span class="op">)</span>
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> ventas<span class="op">.</span><span class="fn">length</span><span class="op">()</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo leer la cola: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">);</span> <span class="kw">return</span> <span class="num">0</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> _g<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">guardar_catalogo</span><span class="op">(</span><span class="str">&quot;{\&quot;items\&quot;:[{\&quot;id\&quot;:1,\&quot;nombre\&quot;:\&quot;tornillo\&quot;}]}&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> _v<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">encolar_venta</span><span class="op">(</span><span class="str">&quot;venta-0042&quot;</span><span class="op">,</span> <span class="str">&quot;{\&quot;total\&quot;:120}&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> procesadas<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">drenar_cola</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;ventas drenadas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>procesadas<span class="op">))</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ventas drenadas: 1</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>guardar_catalogo</code>/<code>cargar_catalogo</code> use the <code>"catalogo"</code> <code>store</code>; <code>encolar_venta</code>/<code>drenar_cola</code> use <code>"cola-ventas"</code>, a SEPARATE logical namespace: the two never mix in <code>idb_keys()</code> even though they share a single physical database. <code>idb_get</code> on a missing key is <code>Err(kind: "not_found")</code>, not an empty string — the same closed <code>Error</code> vocabulary as the rest of the stdlib, so <code>cargar_catalogo</code> tells "first visit" apart from a real failure.</p>
+<p><code>idb_put</code>/<code>idb_delete</code> return <code>Result&lt;int, Error&gt;</code>, and <code>delete</code> is idempotent: <code>Ok</code> even if the key is already gone, so draining the queue twice does not blow up. <code>drenar_cola</code> walks <code>idb_keys("cola-ventas")</code> and processes each queued sale — here deleting it afterward, in a real case sending the matching POST before the <code>idb_delete</code>.</p>
+<p>Same "one suspended stack at a time" contract as <code>std/browser_await</code>: if another part of the screen fires an <code>idb_*</code> while this <code>await</code> is waiting, it gets queued and processed in order.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/113-smtp.html"><span class="label">← Previous</span><span class="doc-nav-name">Sending mail with std/smtp</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
