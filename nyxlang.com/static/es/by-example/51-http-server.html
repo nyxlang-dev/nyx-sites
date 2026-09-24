@@ -49,7 +49,7 @@
         <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;Hello from Nyx!&quot;</span><span class="op">)</span>
     <span class="op">}</span>
     <span class="kw">if</span> path <span class="op">==</span> <span class="str">&quot;/time&quot;</span> <span class="op">{</span>
-        <span class="kw">let</span> t<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time</span><span class="op">()</span>
+        <span class="kw">let</span> t<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_epoch</span><span class="op">()</span>
         <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;timestamp: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t<span class="op">))</span>
     <span class="op">}</span>
     <span class="kw">return</span> <span class="fn">http_response</span><span class="op">(</span><span class="num">404</span><span class="op">,</span> <span class="str">&quot;not found: &quot;</span> <span class="op">+</span> path<span class="op">)</span>
@@ -88,7 +88,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

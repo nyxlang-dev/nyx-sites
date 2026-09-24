@@ -48,7 +48,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/08-structs.html"><span class="step-num">08</span><span><span class="step-name">Structs</span><span class="step-note note">Definir tipos de datos con campos y agregar métodos vía <code>impl</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/09-enums.html"><span class="step-num">09</span><span><span class="step-name">Enums</span><span class="step-note note">Tipos de datos algebraicos con variantes que portan datos y <code>match</code> exhaustivo.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/10-closures.html"><span class="step-num">10</span><span><span class="step-name">Closures</span><span class="step-note note">Funciones de primera clase que capturan su entorno circundante.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/107-for-continue.html"><span class="step-num">107</span><span><span class="step-name">continue en for</span><span class="step-note note">Saltar al siguiente elemento dentro de un for — sobre un array y sobre un rango.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -65,7 +64,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/19-datetime.html"><span class="step-num">19</span><span><span class="step-name">Fecha y Hora</span><span class="step-note note">Timestamps, fechas formateadas y medición de tiempo.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/20-spawn-channel.html"><span class="step-num">20</span><span><span class="step-name">Spawn y Channel</span><span class="step-note note">Crear threads y comunicarse mediante channels.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/101-file-errors-two-tier.html"><span class="step-num">101</span><span><span class="step-name">Errores de archivo: dos niveles</span><span class="step-note note"><code>Result</code> cuando quien llama puede reaccionar, panic cuando morir es lo honesto.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/106-json-exact-numbers.html"><span class="step-num">106</span><span><span class="step-name">JSON: números exactos</span><span class="step-note note">json_stringify reemite cada número tal como vino; json_as_float pasa por un double y pierde los ceros de más.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -81,13 +79,11 @@
 <li class="step"><a class="step-link" href="/es/by-example/28-match-guard.html"><span class="step-num">28</span><span><span class="step-name">Guardas de Match</span><span class="step-note note">Agregar condiciones a los brazos de match con guardas <code>if</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/29-iterator-map-filter.html"><span class="step-num">29</span><span><span class="step-name">Iterator: map y filter</span><span class="step-note note">Transformaciones perezosas con <code>.iter().filter().map().collect()</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/30-iterator-fold.html"><span class="step-num">30</span><span><span class="step-name">Iterator: fold</span><span class="step-note note">Reducir una secuencia a un único valor con <code>fold</code>.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/105-struct-fn-field.html"><span class="step-num">105</span><span><span class="step-name">Campo Fn en un struct</span><span class="step-note note">Ligar el campo a una variable antes de llamarlo — el receptor puede ser variable local, parámetro por valor o campo anidado.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
 <h2 class="ex-cat-name">Avanzado</h2>
 <ol class="steps">
-<li class="step"><a class="step-link" href="/es/by-example/31-iterator-enumerate.html"><span class="step-num">31</span><span><span class="step-name">Iterador: enumerate()</span><span class="step-note note">Obtener pares índice-valor durante la iteración.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/32-iterator-take-skip.html"><span class="step-num">32</span><span><span class="step-name">Iterador: take() y skip()</span><span class="step-note note">Recortar secuencias con <code>take</code> y <code>skip</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/33-recursion.html"><span class="step-num">33</span><span><span class="step-name">Recursión</span><span class="step-note note">Resolver problemas con funciones que se llaman a sí mismas.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/34-sorting.html"><span class="step-num">34</span><span><span class="step-name">Ordenamiento</span><span class="step-note note">Ordenar arrays de enteros y strings.</span></span></a></li>
@@ -98,8 +94,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/39-random-uuid.html"><span class="step-num">39</span><span><span class="step-name">Números Aleatorios y UUID</span><span class="step-note note">Generar números aleatorios e identificadores únicos.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/40-thread-spawn.html"><span class="step-num">40</span><span><span class="step-name">Creación de Threads</span><span class="step-note note">Ejecutar funciones de forma concurrente con <code>thread_spawn</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/102-template-flask-style.html"><span class="step-num">102</span><span><span class="step-name">Motor de templates estilo Flask</span><span class="step-note note">Interpolación, <code>#if</code>, <code>#each</code> y partials con <code>std/template</code>.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/109-await-fetch-wasm.html"><span class="step-num">109</span><span><span class="step-name">await en el navegador</span><span class="step-note note">Una async fn que espera al anfitrión JS sin partir el flujo en callbacks — wasm32-wasi con Asyncify.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/114-idb-offline-wasm.html"><span class="step-num">114</span><span><span class="step-name">IndexedDB sin conexión</span><span class="step-note note">Un catálogo y una cola de ventas que sobreviven a un F5 — await sobre IndexedDB, sin el límite de localStorage.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -120,12 +114,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/53-websocket.html"><span class="step-num">53</span><span><span class="step-name">WebSocket</span><span class="step-note note">Framing RFC 6455, parseo y respuestas de handshake.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/55-sqlite.html"><span class="step-num">55</span><span><span class="step-name">SQLite</span><span class="step-note note">Base de datos SQL en memoria con <code>sqlite_open</code> y <code>sqlite_query</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/56-csv-write.html"><span class="step-num">56</span><span><span class="step-name">Escritura CSV</span><span class="step-note note">Crear y serializar documentos CSV con <code>std/csv</code>.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/103-orm-sin-mapeo.html"><span class="step-num">103</span><span><span class="step-name">Un modelo escrito una sola vez</span><span class="step-note note"><code>#[derive(Fields)]</code> y <code>std/postgres</code>: el struct es la única fuente de verdad del esquema.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/104-postgres.html"><span class="step-num">104</span><span><span class="step-name">Sin driver de por medio</span><span class="step-note note"><code>std/postgres</code> habla el protocolo wire v3 y SCRAM-SHA-256 en Nyx puro — conectar, versionar migraciones y parametrizar sin libpq.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/108-http-plazo-y-causa.html"><span class="step-num">108</span><span><span class="step-name">HTTP: plazo y causa</span><span class="step-note note">Un cliente que se rinde a tiempo y distingue POR QUÉ falló: tls, timeout, connection.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/110-serve-sse.html"><span class="step-num">110</span><span><span class="step-name">Eventos del servidor (SSE)</span><span class="step-note note">Un canal que no ocupa un worker: la ruta pasa por el pipeline entero y después difunde a un room.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/113-smtp.html"><span class="step-num">113</span><span><span class="step-name">Correo saliente con std/smtp</span><span class="step-note note">Mensaje, adjunto y dot-stuffing armados en Nyx puro — STARTTLS en 587 o TLS desde el saludo en 465.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/115-form-repeated-keys.html"><span class="step-num">115</span><span><span class="step-name">Claves repetidas de formulario/query</span><span class="step-note note">form_values/query_values recuperan todos los valores de una clave repetida — casillas, &lt;select multiple&gt; — donde req.form se queda callado con la última.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -149,8 +137,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/68-process-control.html"><span class="step-num">68</span><span><span class="step-name">Control de Procesos</span><span class="step-note note">PID, directorio de trabajo, detección de terminal y stat de archivos.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/69-raw-terminal.html"><span class="step-num">69</span><span><span class="step-name">Terminal Raw</span><span class="step-note note">Entrada carácter por carácter con <code>raw_mode_enter</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/70-shebang-script.html"><span class="step-num">70</span><span><span class="step-name">Script Shebang</span><span class="step-note note">Ejecutar archivos Nyx como scripts ejecutables con <code>#!/usr/bin/env nyx</code>.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/111-nyx-test-coverage.html"><span class="step-num">111</span><span><span class="step-name">nyx test --coverage</span><span class="step-note note">Qué función de src/ ninguna prueba llamó — homónimas de módulos distintos no se mezclan al medir.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/112-include-bytes.html"><span class="step-num">112</span><span><span class="step-name">include_bytes</span><span class="step-note note">Un recurso binario que viaja dentro del ejecutable, leído al compilar — sin depender de que el archivo llegue a disco.</span></span></a></li>
 </ol>
 </section>
 <a class="callout" href="/es/docs/"><span><span class="callout-name">Nyx, paso a paso</span><span class="step-note note">Instalarlo, escribir un primer programa, armar un proyecto y entregárselo a un asistente.</span></span><span class="callout-go">Abrir →</span></a>
@@ -159,7 +145,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

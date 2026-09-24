@@ -83,7 +83,7 @@ users 30+: 2</pre></div>
 </div>
 <h2 class="recipe-head">How it works</h2>
 <div class="recipe-prose"><p><code>sqlite_open</code> returns an opaque database handle (<code>*int</code>, NULL on failure). The special path <code>":memory:"</code> creates a temporary in-memory database that is discarded when the handle is closed. For persistent storage, pass a file path like <code>"data.db"</code>.</p>
-<p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values (SQLite stores all values as text internally). Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p></div>
+<p><code>sqlite_query</code> returns an array of rows, where each row is an array of string values — not because SQLite stores them that way (it has storage classes: NULL, INTEGER, REAL, TEXT, BLOB), but because the binding reads every column with <code>sqlite3_column_text</code>, which converts whatever is stored into text. Column order matches the SELECT clause. <code>sqlite_exec</code> is used for statements that don't return data (CREATE, INSERT, UPDATE, DELETE).</p></div>
 </article>
 <nav class="doc-nav" aria-label="Previous and next recipe">
 <a class="doc-nav-link doc-nav-prev" href="/by-example/53-websocket.html"><span class="label">← Previous</span><span class="doc-nav-name">WebSocket</span></a>
@@ -95,7 +95,7 @@ users 30+: 2</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

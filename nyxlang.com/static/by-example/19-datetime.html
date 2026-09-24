@@ -38,13 +38,17 @@
 <div class="panel-head"><span class="panel-name">19-datetime.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/19-datetime.nx">Source →</a></div>
 <div class="panel-body"><pre><span class="cm">// 19: Date and time — timestamps, formatting, sleep</span>
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// Current Unix timestamp</span>
-    <span class="kw">let</span> now<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time</span><span class="op">()</span>
+    <span class="cm">// Current Unix timestamp — the WALL clock</span>
+    <span class="kw">let</span> now<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_epoch</span><span class="op">()</span>
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Unix timestamp: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>now<span class="op">))</span>
 
-    <span class="cm">// Millisecond precision</span>
-    <span class="kw">let</span> ms<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Milliseconds: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>ms<span class="op">))</span>
+    <span class="cm">// NOT the same clock with more precision: monotonic_ms() counts from when</span>
+    <span class="cm">// the MACHINE booted, so it is a duration source, never a date. Read it</span>
+    <span class="cm">// twice and subtract; a single reading is not a timestamp.</span>
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
+    <span class="fn">sleep</span><span class="op">(</span><span class="num">5</span><span class="op">)</span>
+    <span class="kw">let</span> elapsed_ms<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span> <span class="op">-</span> t0
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Elapsed ms: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>elapsed_ms<span class="op">))</span>
 
     <span class="cm">// Formatted datetime</span>
     <span class="kw">let</span> dt<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">datetime_now</span><span class="op">()</span>
@@ -80,7 +84,7 @@ From epoch: 2026-04-15 12:00:00</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
