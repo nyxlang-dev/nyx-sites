@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterador: enumerate() — Nyx por ejemplo</title>
+<meta name="description" content="Obtener pares índice-valor durante la iteración.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/31-iterator-enumerate.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/31-iterator-enumerate.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/31-iterator-enumerate.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">31</span> / Avanzado</span></p>
+<h1 class="doc-title">Iterador: enumerate()</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>enumerate()</code> transforma cualquier iterador en uno que produce pares <code>[índice, valor]</code>. Es la forma idiomática de llevar la posición de cada elemento sin manejar a mano una variable contador.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">31-iterator-enumerate.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/31-iterator-enumerate.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Iteradores: enumerate() para obtener pares (índice, valor)</span>
+
+<span class="kw">fn</span> <span class="fn">print_pair</span><span class="op">(</span>idx<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> val<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;[&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>idx<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;] = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>val<span class="op">))</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> frutas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">10</span><span class="op">,</span> <span class="num">20</span><span class="op">,</span> <span class="num">30</span><span class="op">,</span> <span class="num">40</span><span class="op">,</span> <span class="num">50</span><span class="op">]</span>
+
+    <span class="cm">// enumerate() retorna un iterador de pares {index, value}</span>
+    <span class="cm">// Se puede iterar con for-in desempaquetando idx y val</span>
+    <span class="kw">let</span> enumerado<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> frutas<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">enumerate</span><span class="op">().</span><span class="fn">collect</span><span class="op">()</span>
+
+    <span class="cm">// Cada elemento es un array [indice, valor]</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> enumerado<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> par<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> enumerado<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> idx<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> par<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+        <span class="kw">let</span> val<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> par<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+        <span class="fn">print_pair</span><span class="op">(</span>idx<span class="op">,</span> val<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+
+    <span class="cm">// También se puede combinar con otros adapters</span>
+    <span class="kw">let</span> primeros<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> frutas<span class="op">.</span><span class="fn">iter</span><span class="op">().</span><span class="fn">enumerate</span><span class="op">().</span><span class="fn">take</span><span class="op">(</span><span class="num">3</span><span class="op">).</span><span class="fn">collect</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;primeros 3 enumerados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>primeros<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">[0] = 10
+[1] = 20
+[2] = 30
+[3] = 40
+[4] = 50
+primeros 3 enumerados: 3</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Llamar a <code>.iter()</code> sobre un array produce un iterador perezoso. Encadenar <code>.enumerate()</code> envuelve cada elemento en un array de dos posiciones <code>[índice, valor]</code>, y <code>.collect()</code> materializa todo el pipeline en un <code>Array</code> concreto. Cada elemento del resultado es a su vez un array, así que <code>par[0]</code> da el índice y <code>par[1]</code> da el valor original.</p>
+<p>Como <code>enumerate()</code> es solo otro adaptador de iterador, se compone libremente con el resto de la API de iteradores. El segundo pipeline de este ejemplo agrega <code>.take(3)</code> después de <code>.enumerate()</code> para recolectar solo los primeros tres pares indexados — lo que demuestra que los adaptadores se pueden apilar en cualquier orden.</p>
+<p>Este patrón elimina el patrón propenso a errores de mantener una variable contador separada junto a un loop, y deja claro de inmediato el propósito del código para cualquier lector.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/30-iterator-fold.html"><span class="label">← Anterior</span><span class="doc-nav-name">Iterator: fold</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/32-iterator-take-skip.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Iterador: take() y skip()</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

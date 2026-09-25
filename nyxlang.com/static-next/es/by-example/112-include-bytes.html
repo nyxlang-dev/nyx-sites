@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>include_bytes — Nyx por ejemplo</title>
+<meta name="description" content="Un recurso binario que viaja dentro del ejecutable, leído al compilar — sin depender de que el archivo llegue a disco.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/112-include-bytes.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/112-include-bytes.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/112-include-bytes.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/112-include-bytes.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/112-include-bytes.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">112</span> / Sistemas</span></p>
+<h1 class="doc-title">include_bytes</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>include_bytes("ruta")</code> lee un archivo AL COMPILAR y mete sus bytes en el binario, así el recurso no se puede perder por el camino — el caso real: una interfaz que se degrada a otra tipografía sin avisar porque alguien copió solo el ejecutable y no la carpeta de assets. La ruta es un literal, se resuelve desde la raíz del proyecto y nunca desde el archivo que la usa: con una variable el compilador la rechaza con <code>NYX1033</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">112-include-bytes.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/112-include-bytes.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un recurso binario que viaja DENTRO del ejecutable.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real, en chico: un ERP que promete instalarse copiando un solo</span>
+<span class="cm">// ejecutable servía sus tipografías desde disco. Si alguien copiaba únicamente</span>
+<span class="cm">// el binario, la interfaz se degradaba a otra tipografía SIN AVISAR — el</span>
+<span class="cm">// servidor respondía 200 con un cuerpo vacío. `include_bytes` lee el archivo AL</span>
+<span class="cm">// COMPILAR y mete sus bytes en el binario, así que el recurso no se puede</span>
+<span class="cm">// perder por el camino.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. que los bytes llegan intactos (NUL incluidos — un .woff2 está lleno);</span>
+<span class="cm">//   2. que el valor sirve TAL CUAL como cuerpo de una respuesta HTTP;</span>
+<span class="cm">//   3. que dos llamadas a la misma ruta comparten un solo global.</span>
+<span class="cm">//</span>
+<span class="cm">// No abre un puerto a propósito: arma la respuesta en memoria y la describe,</span>
+<span class="cm">// así la receta corre sola bajo `make test-examples`.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+
+<span class="cm">// La ruta es un LITERAL y se resuelve desde la raíz del proyecto, nunca desde</span>
+<span class="cm">// este archivo. Con una variable el compilador la rechaza con NYX1033: la ruta</span>
+<span class="cm">// tiene que conocerse al compilar.</span>
+<span class="kw">fn</span> <span class="fn">tipografia</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;examples/by-example/assets/tipografia.woff2&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">servir_tipografia</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tipografia</span><span class="op">()</span>
+    <span class="kw">var</span> r<span class="op">:</span> <span class="ty">Response</span> <span class="op">=</span> <span class="fn">response_new</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> cuerpo<span class="op">)</span>
+    <span class="cm">// headers_flat es intercalado [nombre, valor, nombre, valor, ...].</span>
+    r<span class="op">.</span>headers_flat<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;Content-Type&quot;</span><span class="op">)</span>
+    r<span class="op">.</span>headers_flat<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;font/woff2&quot;</span><span class="op">)</span>
+    <span class="cm">// Un recurso empotrado es inmutable por definición: cambia solo si se</span>
+    <span class="cm">// recompila, así que puede cachearse para siempre.</span>
+    r<span class="op">.</span>headers_flat<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;Cache-Control&quot;</span><span class="op">)</span>
+    r<span class="op">.</span>headers_flat<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;public, max-age=31536000, immutable&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> r
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> datos<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tipografia</span><span class="op">()</span>
+
+    <span class="cm">// str_byte_length y NO length(): length() cuenta codepoints UTF-8, y esto</span>
+    <span class="cm">// son bytes arbitrarios. Es el gotcha `strings-are-bytes` del repo.</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;bytes: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">str_byte_length</span><span class="op">(</span>datos<span class="op">)))</span>
+
+    <span class="cm">// La firma del formato sobrevive, y el byte 8 es un NUL: si algo tratara</span>
+    <span class="cm">// el recurso como cadena de C, el cuerpo se cortaría justo acá.</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;firma: &quot;</span> <span class="op">+</span> datos<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">4</span><span class="op">))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;byte 8 (NUL): &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">charAt</span><span class="op">(</span><span class="num">8</span><span class="op">)))</span>
+
+    <span class="cm">// La identidad byte a byte, medida: este sha256 es el del archivo en disco</span>
+    <span class="cm">// (sha256sum examples/by-example/assets/tipografia.woff2).</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;sha256: &quot;</span> <span class="op">+</span> <span class="fn">sha256</span><span class="op">(</span>datos<span class="op">))</span>
+
+    <span class="cm">// La respuesta HTTP lleva el recurso entero, sin leer nada del disco.</span>
+    <span class="kw">let</span> resp<span class="op">:</span> <span class="ty">Response</span> <span class="op">=</span> <span class="fn">servir_tipografia</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;respuesta: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>resp<span class="op">.</span>status<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; con &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">str_byte_length</span><span class="op">(</span>resp<span class="op">.</span>body<span class="op">))</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Dos llamadas a la MISMA ruta comparten un solo global: el recurso ocupa</span>
+    <span class="cm">// sus bytes una vez, no una por uso.</span>
+    <span class="kw">let</span> otra<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tipografia</span><span class="op">()</span>
+    <span class="kw">if</span> <span class="fn">str_byte_length</span><span class="op">(</span>otra<span class="op">)</span> <span class="op">==</span> <span class="fn">str_byte_length</span><span class="op">(</span>datos<span class="op">)</span> <span class="op">{</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;segunda llamada: el mismo recurso&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Para leer un archivo AL EJECUTAR —algo que el usuario elige en tiempo de</span>
+    <span class="cm">// corrida— lo que corresponde es read_file/try_read_file. include_bytes no</span>
+    <span class="cm">// existe en el intérprete ni en el REPL: ahí responde NYX3007.</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">bytes: 776
+firma: wOF2
+byte 8 (NUL): 0
+sha256: 0d4f9fe0394d9008f67caddb00171ffe7a3a63aaac4ec225d66f5fadcc79c1d2
+respuesta: 200 con 776 bytes
+segunda llamada: el mismo recurso</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Los bytes llegan intactos, NUL incluidos: un <code>.woff2</code> real está lleno de ellos, y por eso la receta mide con <code>str_byte_length</code> y no con <code>length()</code> — <code>length()</code> cuenta codepoints UTF-8, esto son bytes arbitrarios (el gotcha <code>strings-are-bytes</code> del repo). El byte 8 del archivo es un NUL de verdad, y sigue siendo NUL después de embeberlo.</p>
+<p>El valor sirve TAL CUAL como cuerpo de una respuesta HTTP: <code>servir_tipografia</code> lo asigna directo a <code>Response.body</code>, sin leer nada del disco en tiempo de ejecución. Como el recurso es inmutable por definición — cambia solo si se recompila —, la respuesta puede cachearse para siempre (<code>Cache-Control: public, max-age=31536000, immutable</code>).</p>
+<p>Dos llamadas a la misma ruta comparten un solo global: el recurso ocupa sus bytes UNA vez en el binario, no una por uso. Para un archivo que el usuario elige en tiempo de ejecución corresponde <code>read_file</code>/<code>try_read_file</code>, no <code>include_bytes</code> — que además no existe en el intérprete ni en el REPL, donde responde <code>NYX3007</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/111-nyx-test-coverage.html"><span class="label">← Anterior</span><span class="doc-nav-name">nyx test --coverage</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/113-smtp.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Correo saliente con std/smtp</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

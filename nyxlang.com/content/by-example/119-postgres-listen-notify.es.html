@@ -1,0 +1,21 @@
+<!-- title: LISTEN/NOTIFY como bus en vivo | blurb: PostgreSQL reparte una notificación a las salas SSE de todos los procesos, solo si hace commit — sin Redis en el medio. -->
+<section data-part="intro">
+<p>Con UN proceso, <code>sse_broadcast</code> alcanza a todos los navegadores: las salas viven en la memoria de ese proceso. Con VARIOS procesos del mismo programa —para usar más de un núcleo, o para reiniciar sin perder conexiones— cada uno guarda sus propias salas, y lo que escribe el proceso A nunca llega a un navegador conectado al proceso B. El <code>LISTEN</code>/<code>NOTIFY</code> de PostgreSQL cierra esa brecha sin una pieza extra: quien escribe llama a <code>try_pg_notify</code> DENTRO de su transacción, así que un navegador nunca se entera de una fila que no existe —la notificación se entrega solo si hay <code>COMMIT</code>, nunca con <code>ROLLBACK</code>— y cada proceso mantiene una conexión dedicada que hace <code>LISTEN</code> y reparte lo que llega a sus propias salas SSE.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+$ PORT=8081 ./app          $ PORT=8082 ./app
+listening on :8081         listening on :8082
+
+$ curl -d 'pedido 7 listo' localhost:8081/avisos
+ok
+
+$ curl -N localhost:8082/eventos/avisos
+event: aviso
+data: pedido 7 listo
+
+</section>
+<section data-part="explanation">
+<p><code>guardar_aviso</code> escribe la fila y llama a <code>try_pg_notify(conn, "avisos", texto)</code> en la MISMA transacción, así que las dos hacen commit juntas o ninguna existe —el nombre del canal es un identificador entre comillas, y <code>"avisos"</code> acá tiene que coincidir exacto con lo que suscribió <code>try_pg_listen</code>, tildes incluidas. El payload viaja como texto, con un tope de 8000 bytes que pone el propio protocolo.</p>
+<p>La garantía que hace esto seguro bajo carga está en <code>std/postgres</code>, no en esta receta: una notificación que llega mientras la conexión que escucha está ocupada con otra consulta se GUARDA y la entrega la próxima llamada a <code>try_pg_wait_notifications</code> — nunca se pierde, nunca se mezcla con las filas de esa consulta. <code>escuchar</code> corre en su propio hilo con una conexión dedicada, NUNCA una del pool: una conexión del pool vuelve a otros handlers, y su suscripción <code>LISTEN</code> viajaría con ella.</p>
+<p><code>try_pg_wait_notifications(conn, 5000)</code> bloquea hasta el plazo dado y devuelve <code>Ok([])</code> cuando no llegó nada — cada elemento es <code>[canal, payload, pid]</code>, el pid del proceso del servidor que disparó la notificación. Si la conexión muere (un reinicio del servidor: <code>Err</code> con <code>kind</code> <code>"connection"</code>), la suscripción muere con ella, y el bucle exterior de <code>escuchar</code> reconecta y vuelve a pedir <code>LISTEN</code>.</p>
+</section>

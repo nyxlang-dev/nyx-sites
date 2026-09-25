@@ -36,31 +36,36 @@
 <div class="recipe-lede prose"><p><code>time_ms()</code> returns a monotonic timestamp in milliseconds as an <code>int</code>. Subtracting two readings gives an elapsed duration. <code>sleep(ms)</code> suspends the current thread for the specified number of milliseconds.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">37-sleep-timer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/37-sleep-timer.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// Timer y sleep: medir tiempo transcurrido con time_ms() y pausar con sleep()</span>
+<div class="panel-body"><pre><span class="cm">// Timer y sleep: medir tiempo transcurrido con monotonic_ms() y pausar con sleep().</span>
+<span class="cm">//</span>
+<span class="cm">// monotonic_ms() cuenta desde que arrancó la máquina, no desde 1970: una</span>
+<span class="cm">// lectura suelta no es una fecha. Lo que vale es la DIFERENCIA entre dos, y</span>
+<span class="cm">// para eso el reloj monotónico es el correcto — un salto de NTP no puede hacer</span>
+<span class="cm">// que el tiempo transcurrido salte ni retroceda. Para una fecha: time_epoch().</span>
 
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;start&quot;</span><span class="op">)</span>
 
-    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
 
     <span class="cm">// Pausar 500 milisegundos</span>
     <span class="fn">sleep</span><span class="op">(</span><span class="num">500</span><span class="op">)</span>
 
-    <span class="kw">let</span> t1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> t1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
     <span class="kw">let</span> elapsed<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> t1 <span class="op">-</span> t0
 
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;500ms passed&quot;</span><span class="op">)</span>
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tiempo real: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>elapsed<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;ms&quot;</span><span class="op">)</span>
 
     <span class="cm">// Medir una operacion costosa</span>
-    <span class="kw">let</span> t2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> t2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
     <span class="kw">var</span> suma<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
     <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
     <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">1000000</span> <span class="op">{</span>
         suma <span class="op">=</span> suma <span class="op">+</span> i
         i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
     <span class="op">}</span>
-    <span class="kw">let</span> t3<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">time_ms</span><span class="op">()</span>
+    <span class="kw">let</span> t3<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
     <span class="kw">let</span> dur<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> t3 <span class="op">-</span> t2
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma de 0..1M = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>suma<span class="op">))</span>
     <span class="fn">print</span><span class="op">(</span><span class="str">&quot;duracion loop: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>dur<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;ms&quot;</span><span class="op">)</span>
@@ -92,7 +97,7 @@ duracion loop: 0ms</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

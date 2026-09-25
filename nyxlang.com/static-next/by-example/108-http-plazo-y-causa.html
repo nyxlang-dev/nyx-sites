@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP: deadline and cause — Nyx by example</title>
+<meta name="description" content="A client that gives up on time and tells WHY it failed: tls, timeout, connection.">
+<link rel="canonical" href="https://nyxlang.com/by-example/108-http-plazo-y-causa.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/108-http-plazo-y-causa.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/108-http-plazo-y-causa.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/108-http-plazo-y-causa.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/108-http-plazo-y-causa.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">108</span> / Networking</span></p>
+<h1 class="doc-title">HTTP: deadline and cause</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A program that queries an external source needs two things from its HTTP client: the ability to give up (a deadline to connect, and another for the complete response) and a way to tell the failure's cause apart, because an invalid certificate and a slow network call for different reactions. <code>try_http_request_opts</code> takes the deadlines in an <code>HttpOpts</code> (built with <code>http_opts()</code>) and returns an <code>Error</code> with a real <code>kind</code>/<code>code</code>: <code>"tls"</code> for the certificate, <code>"timeout"</code> for the deadlines, <code>"connection"</code> for a closed port, <code>"io"</code> for a response cut off mid-way. This recipe spins up its own slow local server, so it runs without network access.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">108-http-plazo-y-causa.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/108-http-plazo-y-causa.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: pedir algo por HTTP sin quedarse colgado, y saber POR QUÉ falló.</span>
+<span class="cm">//</span>
+<span class="cm">// Un programa que consulta una fuente externa —la tasa de cambio del día, un</span>
+<span class="cm">// modelo— necesita dos cosas del cliente HTTP:</span>
+<span class="cm">//   1. poder rendirse: un plazo para conectar y otro para la respuesta COMPLETA;</span>
+<span class="cm">//   2. distinguir la causa: ante un certificado inválido se deja de usar la</span>
+<span class="cm">//      fuente, ante una red caída o lenta se reintenta más tarde.</span>
+<span class="cm">//</span>
+<span class="cm">// try_http_request_opts recibe los plazos en un HttpOpts (armado con http_opts())</span>
+<span class="cm">// y devuelve un Error con kind/code reales: &quot;tls&quot; para el certificado,</span>
+<span class="cm">// &quot;timeout&quot; para los plazos, &quot;connection&quot; para el puerto cerrado, &quot;io&quot; para una</span>
+<span class="cm">// respuesta cortada a la mitad. try_http_get/post/request usan los valores por</span>
+<span class="cm">// defecto (10 s para conectar, 30 s para la respuesta).</span>
+<span class="cm">//</span>
+<span class="cm">// La receta levanta su propio servidor local lento, así que corre sin red.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_listo<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+
+<span class="cm">// Un servidor que responde de a un byte cada medio segundo: sin plazo total, un</span>
+<span class="cm">// cliente se quedaría esperando todo lo que el servidor quiera.</span>
+<span class="kw">fn</span> <span class="fn">servidor_lento</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> srv<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="fn">channel_send</span><span class="op">(</span>g_listo<span class="op">,</span> puerto<span class="op">.</span><span class="fn">unwrap</span><span class="op">())</span>
+    <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="kw">var</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">while</span> linea<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span> linea <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span> <span class="op">}</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">10</span> <span class="op">{</span>
+        <span class="fn">sleep</span><span class="op">(</span><span class="num">500</span><span class="op">)</span>
+        <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;x&quot;</span><span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// Qué hacer según la causa. Es la decisión que justifica que el Error tenga kind.</span>
+<span class="kw">fn</span> <span class="fn">decidir</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">Error</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;tls&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;dejar de usar la fuente (certificado inválido)&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;timeout&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;reintentar más tarde (no respondió a tiempo)&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;connection&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;reintentar más tarde (no hay servicio)&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;registrar y avisar (&quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    g_listo <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span>servidor_lento<span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>g_listo<span class="op">)</span>
+
+    <span class="kw">var</span> opts<span class="op">:</span> <span class="ty">HttpOpts</span> <span class="op">=</span> <span class="fn">http_opts</span><span class="op">()</span>
+    opts<span class="op">.</span>connect_ms <span class="op">=</span> <span class="num">2000</span>
+    opts<span class="op">.</span>respuesta_ms <span class="op">=</span> <span class="num">1500</span>   <span class="cm">// plazo TOTAL: no se reinicia con cada byte</span>
+
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
+    <span class="kw">let</span> sin_headers<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_http_request_opts</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>puerto<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/tasa&quot;</span><span class="op">,</span> sin_headers<span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> opts<span class="op">)</span>
+    <span class="kw">let</span> tardo<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span> <span class="op">-</span> t0
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>resp<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tasa: &quot;</span> <span class="op">+</span> <span class="fn">http_body</span><span class="op">(</span>resp<span class="op">))</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;falló con &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; (code &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;) → &quot;</span> <span class="op">+</span> <span class="fn">decidir</span><span class="op">(</span>e<span class="op">))</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">assert</span><span class="op">(</span>tardo <span class="op">&lt;</span> <span class="num">3000</span><span class="op">,</span> <span class="str">&quot;el plazo total cortó la espera&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Puerto cerrado: connection/111, sin esperar ningún plazo.</span>
+    <span class="kw">let</span> libre<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> cerrado<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>libre<span class="op">)</span>
+    <span class="kw">let</span> p<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> cerrado<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>libre<span class="op">)</span>
+    <span class="kw">match</span> <span class="fn">try_http_get</span><span class="op">(</span><span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_resp<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: respondió&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;falló con &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; (code &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;) → &quot;</span> <span class="op">+</span> <span class="fn">decidir</span><span class="op">(</span>e<span class="op">))</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">exit</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">falló con timeout (code 110) → reintentar más tarde (no respondió a tiempo)
+falló con connection (code 111) → reintentar más tarde (no hay servicio)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>opts.respuesta_ms = 1500</code> is a TOTAL deadline, not one that resets with every byte: the recipe's server sends one byte every half second indefinitely, and the wait still cuts off at 1500&nbsp;ms — the <code>assert(tardo &lt; 3000, ...)</code> confirms it. Without that total deadline, a client against a server that dribbles bytes like this would wait forever.</p>
+<p><code>decidir(e)</code> is the function that justifies giving <code>Error</code> a <code>kind</code>: an invalid certificate means stop using the source, while a <code>timeout</code> or a downed <code>connection</code> mean retry later. Reading <code>e.kind</code> as a field of the value — not a text message that has to be parsed — is what makes that branch possible.</p>
+<p>The second call, against a port that never listened for anything, fails immediately with <code>connection</code> (code 111): there is no deadline to wait out when the operating system rejects the connection outright.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/107-for-continue.html"><span class="label">← Previous</span><span class="doc-nav-name">continue in for</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/109-await-fetch-wasm.html"><span class="label">Next →</span><span class="doc-nav-name">await in the browser</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

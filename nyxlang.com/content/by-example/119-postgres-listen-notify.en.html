@@ -1,0 +1,21 @@
+<!-- title: LISTEN/NOTIFY as a live bus | blurb: PostgreSQL fans a notification out to every process's SSE rooms, only if it commits — no Redis in between. -->
+<section data-part="intro">
+<p>With ONE process, <code>sse_broadcast</code> reaches every browser: the rooms live in that process's memory. With SEVERAL processes of the same program — to use more than one core, or to restart without dropping connections — each keeps its own rooms, and what process A writes never reaches a browser connected to process B. PostgreSQL's <code>LISTEN</code>/<code>NOTIFY</code> closes that gap with no extra moving part: whoever writes calls <code>try_pg_notify</code> INSIDE its transaction, so a browser never hears about a row that does not exist — the notification is delivered only on <code>COMMIT</code>, never on <code>ROLLBACK</code> — and every process keeps one dedicated connection that <code>LISTEN</code>s and fans out what arrives to its own SSE rooms.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+$ PORT=8081 ./app          $ PORT=8082 ./app
+listening on :8081         listening on :8082
+
+$ curl -d 'pedido 7 listo' localhost:8081/avisos
+ok
+
+$ curl -N localhost:8082/eventos/avisos
+event: aviso
+data: pedido 7 listo
+
+</section>
+<section data-part="explanation">
+<p><code>guardar_aviso</code> writes the row and calls <code>try_pg_notify(conn, "avisos", texto)</code> in the SAME transaction, so the two commit together or neither exists — the channel name is a quoted identifier, and <code>"avisos"</code> here has to match what <code>try_pg_listen</code> subscribed to exactly, accents included. The payload travels as text, capped at 8000 bytes by the protocol itself.</p>
+<p>The guarantee that makes this safe under load is in <code>std/postgres</code>, not in this recipe: a notification that arrives while the listening connection is busy running another query is KEPT and handed over by the next <code>try_pg_wait_notifications</code> call — never lost, never mixed into that query's result rows. <code>escuchar</code> runs on its own thread with a dedicated connection, NEVER one taken from the pool: a pooled connection goes back to other handlers, and its <code>LISTEN</code> subscription would travel with it.</p>
+<p><code>try_pg_wait_notifications(conn, 5000)</code> blocks up to the given timeout and returns <code>Ok([])</code> when nothing arrived — each element is <code>[channel, payload, pid]</code>, the pid of the server process that raised the notification. If the connection dies (a server restart: <code>Err</code> with <code>kind</code> <code>"connection"</code>), the subscription dies with it, and <code>escuchar</code>'s outer loop reconnects and issues <code>LISTEN</code> again.</p>
+</section>

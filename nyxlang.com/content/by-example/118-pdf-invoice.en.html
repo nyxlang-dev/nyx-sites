@@ -1,0 +1,13 @@
+<!-- title: PDF invoice | blurb: a letter-size invoice in pure Nyx — right-aligned amounts, a table made of text+line, a PNG logo and a QR, native and in wasm. -->
+<section data-part="intro">
+<p><code>std/pdf</code> writes a real PDF in pure Nyx, letter size here, with positions in MILLIMETRES from the top-left corner — the module does the conversion to points and the vertical flip PDF expects. This recipe builds a full invoice: an issuer header with a PNG logo, a buyer block, a line-item table made of <code>text</code> and <code>line</code> calls (the spec is explicit that a table is a recipe, not a function of the module, because its layout decisions belong to the caller), right-aligned totals with <code>16%</code> tax, and a QR from <code>std/barcode</code> drawn module by module with <code>rect</code>.</p>
+</section>
+<section data-part="output">
+factura: 26456 bytes, empieza con %PDF-1.4
+para escribirla: nyx run -- factura.pdf
+</section>
+<section data-part="explanation">
+<p>Every amount is worked in CENTS, as an <code>int</code> — never a <code>float</code> — and <code>monto</code> formats it with Venezuelan separators (<code>.</code> for thousands, <code>,</code> for the decimal pair). <code>mul_div_round(base, 16, 100, RoundMode.HalfUp)</code> computes the tax with the rounding rule spelled out, instead of trusting whatever a <code>float</code> multiplication happens to land on for a specific amount.</p>
+<p><code>texto_der</code> right-aligns a piece of text against a fixed edge by measuring it first with <code>pdf_text_width(s, f, pt)</code> and placing it at <code>edge - width</code> — the same primitive lines up every column of the table and every total without a single hardcoded x per row. <code>pdf_text_supported(cliente)</code> is asked BEFORE drawing a name that could carry a character outside the standard fonts' coverage (an emoji, another alphabet): <code>text()</code> would fail turning the document into <code>bytes()</code>, so the recipe substitutes a safe placeholder instead of letting the whole invoice fail on one field.</p>
+<p>The logo comes from <code>include_bytes(...)</code>, so the PNG travels inside the compiled binary — no file to ship alongside it, in native or in <code>wasm32-wasi</code>. The QR at the bottom is <code>std/barcode</code>'s <code>qr_matrix</code>, walked row by row: consecutive dark modules in a row become ONE <code>rect</code> instead of one per module, so there is no seam between them and fewer drawing operations. <code>d.bytes()</code> is the single point that can fail — anything that could not be drawn exactly as asked comes back as an <code>Err</code>, not a silently wrong PDF.</p>
+</section>

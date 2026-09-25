@@ -1,0 +1,15 @@
+<!-- title: Conexiones keep-alive ociosas | blurb: workers es cuántos pedidos corren a la vez, no cuántas conexiones quedan abiertas — una pestaña ociosa se estaciona en el event loop y no cuesta un hilo. -->
+<section data-part="intro">
+<p><code>workers</code> en <code>serve_app(app, port, workers)</code> es cuántos pedidos se atienden AL MISMO TIEMPO, no cuántas conexiones retiene el servidor. Antes de este arreglo, un worker que terminaba una respuesta quedaba bloqueado leyendo el PRÓXIMO pedido de la conexión sin plazo — así que con N hilos, N pestañas de navegador quietas entre clics dejaban el servidor sin responder a nadie. Ahora, tras cada respuesta la conexión se estaciona en el event loop del runtime hasta que llega su próximo pedido, el mismo mecanismo que <code>std/serve</code> ya usaba para SSE.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18212 with 2 workers
+idle connections parked: 5
+new client answered while 5 connections sit idle
+idle connection came back and was answered
+</section>
+<section data-part="explanation">
+<p>Esta receta arranca un servidor con solo 2 <code>workers</code> y abre 5 conexiones keep-alive que piden una página cada una y después se quedan quietas, como 5 pestañas de navegador. <code>serve_idle_connections()</code> —un gancho de depuración, no algo que llame un handler— confirma que las 5 están estacionadas, más del doble de los workers, y que ninguno quedó atascado en alguna de ellas.</p>
+<p>Un cliente nuevo se sigue respondiendo de inmediato: estacionar una conexión ociosa libera su worker por completo, no reserva uno "por si acaso". Y una conexión ociosa que después manda un pedido nuevo la atiende el worker que esté libre en ese momento — las conexiones no quedan fijadas al worker que las atendió la primera vez.</p>
+<p>Dos variables de entorno que se leen al arrancar <code>serve_app</code> ponen el límite a todo esto: <code>NYX_HTTP_KEEPALIVE_SECS</code> (15 por omisión) cierra una conexión que queda ociosa ese tiempo, y <code>NYX_HTTP_HEADER_SECS</code> (10) es el plazo para recibir la cabecera completa de un pedido — pasado ese tiempo, un <code>408</code> y el cierre, que es lo que evita que un cliente estilo slowloris (uno que abre una conexión y gotea bytes para siempre) retenga una para siempre.</p>
+</section>

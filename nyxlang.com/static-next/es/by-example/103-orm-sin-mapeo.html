@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un modelo escrito una sola vez — Nyx por ejemplo</title>
+<meta name="description" content="#[derive(Fields)] y std/postgres: el struct es la única fuente de verdad del esquema.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/103-orm-sin-mapeo.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/103-orm-sin-mapeo.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/103-orm-sin-mapeo.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/103-orm-sin-mapeo.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/103-orm-sin-mapeo.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">103</span> / Redes</span></p>
+<h1 class="doc-title">Un modelo escrito una sola vez</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Escribir el modelo dos veces —una como <code>struct</code> y otra como el SQL que lo guarda— es la forma en que un esquema empieza a mentir: renombrar un campo sigue compilando, y la descripción queda describiendo algo que ya no existe. <code>#[derive(Fields)]</code> elimina la segunda copia. Genera tres funciones a partir de los campos mismos, en tiempo de compilación y sin reflexión en runtime: <code>Contacto_campos()</code> devuelve <code>"nombre:tipo"</code> por campo, <code>Contacto_valores(c)</code> devuelve esos mismos campos como strings en el mismo orden, y <code>Contacto_desde_fila(fila)</code> reconstruye el struct desde una fila de la base. Esta receta las usa contra <code>std/postgres</code>, el cliente PostgreSQL nativo — el protocolo wire v3 hablado en Nyx, sin libpq y sin ninguna dependencia externa.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">103-orm-sin-mapeo.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/103-orm-sin-mapeo.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// #[derive(Fields)]: el struct describe su propio esquema — ORM sin mapeo escrito a mano</span>
+<span class="cm">//</span>
+<span class="cm">// #[derive(Fields)] emite tres funciones a partir de los campos del struct,</span>
+<span class="cm">// TODO en compilación (nada de reflexión en runtime):</span>
+<span class="cm">//   Contacto_campos()         -&gt; Array de &quot;nombre:tipo&quot;, en el orden de declaración</span>
+<span class="cm">//   Contacto_valores(c)       -&gt; Array de String, alineado por índice con campos()</span>
+<span class="cm">//   Contacto_desde_fila(fila) -&gt; Contacto, la vuelta desde una fila de la base</span>
+<span class="cm">//</span>
+<span class="cm">// El derive solo sabe convertir int, bool, float y String — un campo Array,</span>
+<span class="cm">// Map o struct anidado aborta la compilación con NYX2013 a propósito: ver</span>
+<span class="cm">// docs/gotchas/derive-fields-solo-primitivos.md. Inventar un valor ahí</span>
+<span class="cm">// escribiría un dato falso en una columna de la base.</span>
+<span class="cm">//</span>
+<span class="cm">// Hace falta un servidor PostgreSQL para correr esta receta (ver</span>
+<span class="cm">// examples/by-example/104-postgres.nx para montar uno local). Sin servidor</span>
+<span class="cm">// el programa lo dice por stdout y sale con código 1 — no hay panic ni</span>
+<span class="cm">// segfault por no tener con quién hablar.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/postgres&quot;</span>
+
+#<span class="op">[</span><span class="fn">derive</span><span class="op">(</span><span class="ty">Fields</span><span class="op">)]</span>
+<span class="kw">struct</span> <span class="ty">Contacto</span> <span class="op">{</span>
+    nombre<span class="op">:</span> <span class="ty">String</span><span class="op">,</span>
+    rif<span class="op">:</span> <span class="ty">String</span><span class="op">,</span>
+    activo<span class="op">:</span> <span class="ty">bool</span><span class="op">,</span>
+    saldo<span class="op">:</span> <span class="ty">int</span>
+<span class="op">}</span>
+
+<span class="cm">// bool -&gt; texto: no hay conversión automática (mismo gotcha que en</span>
+<span class="cm">// 07-strings.nx), así que se escribe explícita. &quot;true&quot;/&quot;false&quot; y no &quot;si&quot;/&quot;no&quot;</span>
+<span class="cm">// porque es lo que este programa también manda a la base.</span>
+<span class="kw">fn</span> <span class="fn">bool_texto</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;true&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;false&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// Mapea el tipo Nyx (tal como aparece en &quot;nombre:tipo&quot;) al tipo de columna</span>
+<span class="cm">// SQL. Un solo lugar: si el derive soporta otro primitivo el día de mañana,</span>
+<span class="cm">// el mapeo se extiende acá y no en cada CREATE TABLE escrito a mano.</span>
+<span class="kw">fn</span> <span class="fn">tipo_sql</span><span class="op">(</span>nyx_tipo<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> nyx_tipo <span class="op">==</span> <span class="str">&quot;int&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;integer&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> nyx_tipo <span class="op">==</span> <span class="str">&quot;bool&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;boolean&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> nyx_tipo <span class="op">==</span> <span class="str">&quot;float&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;double precision&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;text&quot;</span>  <span class="cm">// String, y cualquier otro primitivo cae en texto</span>
+<span class="op">}</span>
+
+<span class="cm">// CREATE TABLE armado ENTERAMENTE desde campos(): el struct de arriba es la</span>
+<span class="cm">// única fuente de verdad del esquema. Agregar o renombrar un campo en</span>
+<span class="cm">// Contacto cambia esta sentencia sola, sin tocar una sola línea acá.</span>
+<span class="kw">fn</span> <span class="fn">crear_tabla_sql</span><span class="op">(</span>tabla<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> campos<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> columnas<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> campos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> campo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> campos<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> campo<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;:&quot;</span><span class="op">)</span>
+        <span class="kw">let</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> partes<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+        <span class="kw">let</span> tipo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> partes<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+        <span class="kw">if</span> i <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> columnas <span class="op">=</span> columnas <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">}</span>
+        columnas <span class="op">=</span> columnas <span class="op">+</span> nombre <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">tipo_sql</span><span class="op">(</span>tipo<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;CREATE TABLE IF NOT EXISTS &quot;</span> <span class="op">+</span> tabla <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> columnas <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// &quot;nombre, rif, activo, saldo&quot; — lista de columnas en el mismo orden que</span>
+<span class="cm">// campos() y, por lo tanto, que valores(): el INSERT no necesita mantener</span>
+<span class="cm">// esa lista a mano.</span>
+<span class="kw">fn</span> <span class="fn">nombres_columnas</span><span class="op">(</span>campos<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> out<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> campos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> campos<span class="op">[</span>i<span class="op">].</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;:&quot;</span><span class="op">)</span>
+        <span class="kw">if</span> i <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> out <span class="op">=</span> out <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">}</span>
+        out <span class="op">=</span> out <span class="op">+</span> partes<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> out
+<span class="op">}</span>
+
+<span class="cm">// &quot;$1, $2, $3, $4&quot; — placeholders posicionales para try_pg_exec_params, uno</span>
+<span class="cm">// por cada campo del struct.</span>
+<span class="kw">fn</span> <span class="fn">placeholders</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> out<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> n <span class="op">{</span>
+        <span class="kw">if</span> i <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> out <span class="op">=</span> out <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">}</span>
+        out <span class="op">=</span> out <span class="op">+</span> <span class="str">&quot;$&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i <span class="op">+</span> <span class="num">1</span><span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> out
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> conninfo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;host=127.0.0.1 port=5432 dbname=nyx_test user=nyx_test password=nyx_test_pw&quot;</span>
+
+    <span class="kw">match</span> <span class="fn">try_pg_connect</span><span class="op">(</span>conninfo<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="cm">// Degradar limpio: sin servidor no hay ORM que mostrar, pero</span>
+            <span class="cm">// tampoco hay por qué reventar el proceso.</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo conectar a PostgreSQL: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;esta receta necesita un servidor local — ver examples/by-example/104-postgres.nx&quot;</span><span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>conn<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="cm">// 1. El struct de arriba es la ÚNICA fuente de verdad: nombre,</span>
+            <span class="cm">//    rif, activo y saldo se escriben acá y en ningún otro lugar</span>
+            <span class="cm">//    de este archivo.</span>
+            <span class="kw">let</span> campos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="ty">Contacto_campos</span><span class="op">()</span>
+
+            <span class="cm">// 2. El esquema sale de campos(), no de un CREATE TABLE tipeado</span>
+            <span class="cm">//    a mano que se puede desincronizar del struct.</span>
+            <span class="kw">let</span> _d <span class="op">=</span> <span class="fn">try_pg_exec</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;DROP TABLE IF EXISTS contactos&quot;</span><span class="op">)</span>
+            <span class="kw">match</span> <span class="fn">try_pg_exec</span><span class="op">(</span>conn<span class="op">,</span> <span class="fn">crear_tabla_sql</span><span class="op">(</span><span class="str">&quot;contactos&quot;</span><span class="op">,</span> campos<span class="op">))</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tabla creada desde Contacto_campos()&quot;</span><span class="op">)</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;crear tabla fallo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+
+            <span class="cm">// 3. Insertar: valores() emite la fila en el mismo orden que</span>
+            <span class="cm">//    campos(), así que la lista de columnas y los placeholders</span>
+            <span class="cm">//    calzan solos, sin escribir &quot;nombre, rif, activo, saldo&quot; una</span>
+            <span class="cm">//    segunda vez a mano.</span>
+            <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Contacto</span> <span class="op">=</span> <span class="ty">Contacto</span> <span class="op">{</span> nombre<span class="op">:</span> <span class="str">&quot;El Tornillo&quot;</span><span class="op">,</span> rif<span class="op">:</span> <span class="str">&quot;J-29643190-6&quot;</span><span class="op">,</span> activo<span class="op">:</span> <span class="kw">true</span><span class="op">,</span> saldo<span class="op">:</span> <span class="num">1500</span> <span class="op">}</span>
+            <span class="kw">let</span> sql_insert<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;INSERT INTO contactos (&quot;</span> <span class="op">+</span> <span class="fn">nombres_columnas</span><span class="op">(</span>campos<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;) VALUES (&quot;</span> <span class="op">+</span> <span class="fn">placeholders</span><span class="op">(</span>campos<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span>
+            <span class="kw">match</span> <span class="fn">try_pg_exec_params</span><span class="op">(</span>conn<span class="op">,</span> sql_insert<span class="op">,</span> <span class="ty">Contacto_valores</span><span class="op">(</span>c<span class="op">))</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;insertadas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;insert fallo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+
+            <span class="cm">// 4. Leer y reconstruir con desde_fila(), directo sobre la fila</span>
+            <span class="cm">//    que devuelve el servidor. El booleano no necesita</span>
+            <span class="cm">//    normalizarse a mano: PostgreSQL manda &quot;t&quot;/&quot;f&quot; en formato</span>
+            <span class="cm">//    text, y desde_fila entiende esa forma además de la que</span>
+            <span class="cm">//    escribe valores() (&quot;true&quot;/&quot;false&quot;). Un texto que no sea</span>
+            <span class="cm">//    ninguna de las dos ABORTA nombrando el valor, en vez de</span>
+            <span class="cm">//    asumir false — ver docs/gotchas/derive-fields-pg-bool-text.md.</span>
+            <span class="kw">match</span> <span class="fn">try_pg_query</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;SELECT &quot;</span> <span class="op">+</span> <span class="fn">nombres_columnas</span><span class="op">(</span>campos<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; FROM contactos ORDER BY nombre&quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>filas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+                    <span class="kw">while</span> i <span class="op">&lt;</span> filas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                        <span class="kw">let</span> fila<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> filas<span class="op">[</span>i<span class="op">]</span>
+                        <span class="kw">let</span> reconstruido<span class="op">:</span> <span class="ty">Contacto</span> <span class="op">=</span> <span class="ty">Contacto_desde_fila</span><span class="op">(</span>fila<span class="op">)</span>
+                        <span class="kw">let</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> reconstruido<span class="op">.</span>nombre <span class="op">+</span> <span class="str">&quot; · &quot;</span> <span class="op">+</span> reconstruido<span class="op">.</span>rif <span class="op">+</span> <span class="str">&quot; · activo=&quot;</span> <span class="op">+</span> <span class="fn">bool_texto</span><span class="op">(</span>reconstruido<span class="op">.</span>activo<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; · saldo=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>reconstruido<span class="op">.</span>saldo<span class="op">)</span>
+                        <span class="fn">print</span><span class="op">(</span>linea<span class="op">)</span>
+                        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+                    <span class="op">}</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;select fallo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+
+            <span class="kw">let</span> _c <span class="op">=</span> <span class="fn">try_pg_close</span><span class="op">(</span>conn<span class="op">)</span>
+
+            <span class="cm">// 5. El modelo se escribió UNA sola vez: el struct Contacto del</span>
+            <span class="cm">//    principio. campos(), valores() y desde_fila() salieron</span>
+            <span class="cm">//    todos de ahí — en ningún otro lugar de este archivo aparece</span>
+            <span class="cm">//    &quot;nombre text, rif text, activo boolean, saldo integer&quot;</span>
+            <span class="cm">//    tipeado a mano.</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">tabla creada desde Contacto_campos()
+insertadas: 1
+El Tornillo · J-29643190-6 · activo=true · saldo=1500</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>El orden de declaración es el contrato entre las tres funciones generadas: <code>valores()[i]</code> es el valor del campo que describe <code>campos()[i]</code>, y <code>desde_fila</code> lee esa misma posición. Eso es lo que permite derivar <code>crear_tabla_sql</code>, <code>nombres_columnas</code> y <code>placeholders</code> desde <code>campos()</code> — el <code>CREATE TABLE</code>, la lista de columnas y los placeholders <code>$1, $2, …</code> no se tipean nunca a mano, así que agregar o renombrar un campo en <code>Contacto</code> cambia el SQL solo.</p>
+<p>Los valores viajan por <code>try_pg_exec_params</code>, que los pone en el mensaje Bind del protocolo en vez de interpolarlos en el string de SQL. Un nombre como <code>O'Brien</code> es un nombre, no una comilla que termina el literal; ese mismo mecanismo es lo que hace que la forma parametrizada sea la segura por defecto.</p>
+<p>Las filas vienen de dos productores que no coinciden en los booleanos: <code>valores()</code> escribe <code>"true"</code>/<code>"false"</code>, y el formato text de PostgreSQL para <code>boolean</code> es <code>t</code>/<code>f</code>. <code>desde_fila</code> entiende las dos formas —y también <code>1</code>/<code>0</code>— y <strong>aborta nombrando el valor</strong> ante cualquier otra, en vez de asumir <code>false</code>: un booleano que nadie puede leer no es <code>false</code>, y asumirlo escribiría una decisión equivocada en un sistema que le factura a alguien. El derive en sí solo convierte <code>int</code>, <code>bool</code>, <code>float</code> y <code>String</code>: un campo que guarde un array, un map o un struct anidado detiene la compilación en vez de escribir una aproximación en una columna real.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/102-template-flask-style.html"><span class="label">← Anterior</span><span class="doc-nav-name">Motor de templates estilo Flask</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/104-postgres.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Sin driver de por medio</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LISTEN/NOTIFY como bus en vivo — Nyx por ejemplo</title>
+<meta name="description" content="PostgreSQL reparte una notificación a las salas SSE de todos los procesos, solo si hace commit — sin Redis en el medio.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/119-postgres-listen-notify.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/119-postgres-listen-notify.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/119-postgres-listen-notify.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/119-postgres-listen-notify.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/119-postgres-listen-notify.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">119</span> / Redes</span></p>
+<h1 class="doc-title">LISTEN/NOTIFY como bus en vivo</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Con UN proceso, <code>sse_broadcast</code> alcanza a todos los navegadores: las salas viven en la memoria de ese proceso. Con VARIOS procesos del mismo programa —para usar más de un núcleo, o para reiniciar sin perder conexiones— cada uno guarda sus propias salas, y lo que escribe el proceso A nunca llega a un navegador conectado al proceso B. El <code>LISTEN</code>/<code>NOTIFY</code> de PostgreSQL cierra esa brecha sin una pieza extra: quien escribe llama a <code>try_pg_notify</code> DENTRO de su transacción, así que un navegador nunca se entera de una fila que no existe —la notificación se entrega solo si hay <code>COMMIT</code>, nunca con <code>ROLLBACK</code>— y cada proceso mantiene una conexión dedicada que hace <code>LISTEN</code> y reparte lo que llega a sus propias salas SSE.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">119-postgres-listen-notify.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/119-postgres-listen-notify.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// PostgreSQL LISTEN/NOTIFY as the live-update bus between processes, fanned out to SSE</span>
+<span class="cm">// LISTEN/NOTIFY de PostgreSQL como bus en vivo entre procesos, repartido a SSE</span>
+<span class="cm">//</span>
+<span class="cm">// With ONE process, sse_broadcast reaches every browser. With SEVERAL processes</span>
+<span class="cm">// of the same program (to use more than one core, or to restart without</span>
+<span class="cm">// dropping connections), each process has its own SSE rooms in memory: what</span>
+<span class="cm">// process A writes never reaches a browser connected to process B. PostgreSQL</span>
+<span class="cm">// solves it out of the box:</span>
+<span class="cm">//</span>
+<span class="cm">//   - whoever writes calls try_pg_notify INSIDE its transaction: the</span>
+<span class="cm">//     notification is delivered only if it COMMITs (never on ROLLBACK), so a</span>
+<span class="cm">//     browser never hears about a row that does not exist;</span>
+<span class="cm">//   - every process keeps ONE dedicated connection that LISTENs and fans out</span>
+<span class="cm">//     what arrives to its own rooms.</span>
+<span class="cm">//</span>
+<span class="cm">// Guarantee of std/postgres: a notification that arrives while the listening</span>
+<span class="cm">// connection is busy with another query is KEPT and handed over by the next</span>
+<span class="cm">// try_pg_wait_notifications — never lost, never mixed into that query&#x27;s rows.</span>
+<span class="cm">//</span>
+<span class="cm">// Needs the server and database of 104-postgres (NYX_PG_CONNINFO overrides it).</span>
+<span class="cm">// Run two copies on different ports and POST to one:</span>
+<span class="cm">//   PORT=8081 ./app   PORT=8082 ./app</span>
+<span class="cm">//   curl -N localhost:8082/eventos/avisos            # browser on process B</span>
+<span class="cm">//   curl -d &#x27;pedido 7 listo&#x27; localhost:8081/avisos   # write through process A</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/postgres&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">conninfo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">getenv</span><span class="op">(</span><span class="str">&quot;NYX_PG_CONNINFO&quot;</span><span class="op">)</span>
+    <span class="kw">if</span> c <span class="op">!=</span> <span class="str">&quot;&quot;</span> <span class="op">{</span> <span class="kw">return</span> c <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;host=127.0.0.1 port=5432 dbname=midb user=app password=secreto&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">var</span> <span class="ty">POOL</span><span class="op">:</span> <span class="ty">PgPool</span> <span class="op">=</span> <span class="fn">pg_pool_new</span><span class="op">(</span><span class="fn">conninfo</span><span class="op">(),</span> <span class="num">4</span><span class="op">)</span>
+
+<span class="cm">// Write + notify in ONE transaction: the row and the notification commit</span>
+<span class="cm">// together, or neither exists.</span>
+<span class="kw">fn</span> <span class="fn">guardar_aviso</span><span class="op">(</span>texto<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> conn<span class="op">:</span> <span class="ty">PgConn</span> <span class="op">=</span> <span class="fn">try_pg_pool_get</span><span class="op">(</span><span class="ty">POOL</span><span class="op">)?</span>
+    <span class="kw">let</span> _b<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">try_pg_begin</span><span class="op">(</span>conn<span class="op">)?</span>
+    <span class="kw">let</span> _i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">try_pg_exec_params</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;INSERT INTO avisos (texto) VALUES ($1)&quot;</span><span class="op">,</span> <span class="op">[</span>texto<span class="op">])?</span>
+    <span class="cm">// The channel is a quoted identifier: &quot;avisos&quot; here and in try_pg_listen</span>
+    <span class="cm">// are the same channel (case and accents included). Payload &lt;= 8000 bytes.</span>
+    <span class="kw">let</span> _n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">try_pg_notify</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;avisos&quot;</span><span class="op">,</span> texto<span class="op">)?</span>
+    <span class="kw">let</span> _c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">try_pg_commit</span><span class="op">(</span>conn<span class="op">)?</span>
+    <span class="fn">pg_pool_put</span><span class="op">(</span><span class="ty">POOL</span><span class="op">,</span> conn<span class="op">)</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">post_aviso</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">guardar_aviso</span><span class="op">(</span>req<span class="op">.</span>body<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">201</span><span class="op">,</span> <span class="str">&quot;ok&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">500</span><span class="op">,</span> <span class="str">&quot;no se guardo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">abrir_eventos</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">sse_open</span><span class="op">(</span>req<span class="op">,</span> <span class="str">&quot;avisos&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// The listener: one dedicated connection per process, never taken from the</span>
+<span class="cm">// pool (a pooled connection goes back to other handlers, and its LISTEN would</span>
+<span class="cm">// travel with it). Each notification goes to the SSE room named like its</span>
+<span class="cm">// channel. If the connection dies (server restart: Err kind &quot;connection&quot;),</span>
+<span class="cm">// subscriptions die with the session: reconnect and LISTEN again.</span>
+<span class="kw">fn</span> <span class="fn">escuchar</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">while</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">match</span> <span class="fn">try_pg_connect</span><span class="op">(</span><span class="fn">conninfo</span><span class="op">())</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listener: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">+</span> <span class="str">&quot; — retrying in 2 s&quot;</span><span class="op">)</span>
+                <span class="fn">sleep</span><span class="op">(</span><span class="num">2000</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>conn<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="kw">match</span> <span class="fn">try_pg_listen</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;avisos&quot;</span><span class="op">)</span> <span class="op">{</span>
+                    <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listen: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+                    <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">repartir</span><span class="op">(</span>conn<span class="op">)</span> <span class="op">}</span>
+                <span class="op">}</span>
+                <span class="kw">let</span> _c <span class="op">=</span> <span class="fn">try_pg_close</span><span class="op">(</span>conn<span class="op">)</span>
+                <span class="fn">sleep</span><span class="op">(</span><span class="num">500</span><span class="op">)</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// Returns when the connection fails; the caller reconnects.</span>
+<span class="kw">fn</span> <span class="fn">repartir</span><span class="op">(</span>conn<span class="op">:</span> <span class="ty">PgConn</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">var</span> viva<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">while</span> viva <span class="op">{</span>
+        <span class="cm">// Blocks up to 5 s; Ok([]) when nothing arrived. Each element is</span>
+        <span class="cm">// [channel, payload, pid of the server process that notified].</span>
+        <span class="kw">match</span> <span class="fn">try_pg_wait_notifications</span><span class="op">(</span>conn<span class="op">,</span> <span class="num">5000</span><span class="op">)</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listener lost the connection: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+                viva <span class="op">=</span> <span class="kw">false</span>
+            <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>llegadas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="kw">for</span> n<span class="op">:</span> <span class="ty">Array</span> <span class="kw">in</span> llegadas <span class="op">{</span>
+                    <span class="kw">let</span> canal<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> n<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+                    <span class="kw">let</span> payload<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> n<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+                    <span class="kw">let</span> _k<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span>canal<span class="op">,</span> <span class="str">&quot;aviso&quot;</span><span class="op">,</span> payload<span class="op">)</span>
+                <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">string_to_int_or</span><span class="op">(</span><span class="fn">getenv</span><span class="op">(</span><span class="str">&quot;PORT&quot;</span><span class="op">),</span> <span class="num">8081</span><span class="op">)</span>
+    <span class="kw">match</span> <span class="fn">try_pg_pool_get</span><span class="op">(</span><span class="ty">POOL</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no database: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>conn<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> _t <span class="op">=</span> <span class="fn">try_pg_exec</span><span class="op">(</span>conn<span class="op">,</span> <span class="str">&quot;CREATE TABLE IF NOT EXISTS avisos (id serial PRIMARY KEY, texto text NOT NULL)&quot;</span><span class="op">)</span>
+            <span class="fn">pg_pool_put</span><span class="op">(</span><span class="ty">POOL</span><span class="op">,</span> conn<span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="fn">thread_spawn</span><span class="op">(</span>escuchar<span class="op">)</span>
+
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="fn">app_post</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/avisos&quot;</span><span class="op">,</span> post_aviso<span class="op">)</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/eventos/avisos&quot;</span><span class="op">,</span> abrir_eventos<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listening on :&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>port<span class="op">))</span>
+    <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> port<span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">$ PORT=8081 ./app          $ PORT=8082 ./app
+listening on :8081         listening on :8082
+
+$ curl -d 'pedido 7 listo' localhost:8081/avisos
+ok
+
+$ curl -N localhost:8082/eventos/avisos
+event: aviso
+data: pedido 7 listo
+</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>guardar_aviso</code> escribe la fila y llama a <code>try_pg_notify(conn, "avisos", texto)</code> en la MISMA transacción, así que las dos hacen commit juntas o ninguna existe —el nombre del canal es un identificador entre comillas, y <code>"avisos"</code> acá tiene que coincidir exacto con lo que suscribió <code>try_pg_listen</code>, tildes incluidas. El payload viaja como texto, con un tope de 8000 bytes que pone el propio protocolo.</p>
+<p>La garantía que hace esto seguro bajo carga está en <code>std/postgres</code>, no en esta receta: una notificación que llega mientras la conexión que escucha está ocupada con otra consulta se GUARDA y la entrega la próxima llamada a <code>try_pg_wait_notifications</code> — nunca se pierde, nunca se mezcla con las filas de esa consulta. <code>escuchar</code> corre en su propio hilo con una conexión dedicada, NUNCA una del pool: una conexión del pool vuelve a otros handlers, y su suscripción <code>LISTEN</code> viajaría con ella.</p>
+<p><code>try_pg_wait_notifications(conn, 5000)</code> bloquea hasta el plazo dado y devuelve <code>Ok([])</code> cuando no llegó nada — cada elemento es <code>[canal, payload, pid]</code>, el pid del proceso del servidor que disparó la notificación. Si la conexión muere (un reinicio del servidor: <code>Err</code> con <code>kind</code> <code>"connection"</code>), la suscripción muere con ella, y el bucle exterior de <code>escuchar</code> reconecta y vuelve a pedir <code>LISTEN</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/118-pdf-invoice.html"><span class="label">← Anterior</span><span class="doc-nav-name">Factura en PDF</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/120-serve-idle-connections.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Conexiones keep-alive ociosas</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

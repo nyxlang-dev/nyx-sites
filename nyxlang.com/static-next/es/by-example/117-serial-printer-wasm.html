@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Serial: ticket de impresora térmica — Nyx por ejemplo</title>
+<meta name="description" content="bytes ESC/POS directo a una impresora de punto de venta desde wasm32-wasi con await — sin diálogo de impresión, con corte y gaveta.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/117-serial-printer-wasm.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/117-serial-printer-wasm.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/117-serial-printer-wasm.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/117-serial-printer-wasm.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/117-serial-printer-wasm.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">117</span> / Avanzado</span></p>
+<h1 class="doc-title">Web Serial: ticket de impresora térmica</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Una impresora de punto de venta habla ESC/POS por puerto serie: un puñado de bytes de control para iniciar, cortar y abrir la gaveta de dinero, con texto plano en el medio. <code>std/browser_serial</code> la alcanza directo desde <code>wasm32-wasi</code> con <code>await</code>, sin pasar por el diálogo de impresión del sistema — el paso más lento de una venta, y uno que no puede cortar el papel ni abrir una gaveta. Los bytes cruzan como <code>Array&lt;int&gt;</code>, nunca como <code>String</code>: un <code>String</code> cruzaría el shim por <code>TextEncoder</code>/<code>TextDecoder</code> y corrompería en silencio los bytes de control que no son UTF-8 válido.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">117-serial-printer-wasm.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/117-serial-printer-wasm.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 117 — Web Serial: un ticket ESC/POS directo a una impresora térmica, sin</span>
+<span class="cm">// el diálogo de impresión del sistema</span>
+<span class="cm">//</span>
+<span class="cm">// Target wasm32-wasi (corre en el navegador, o bajo node con</span>
+<span class="cm">// examples/browser/run-node.mjs). Pensado para un punto de venta: la caja</span>
+<span class="cm">// hoy imprime con el diálogo del sistema en cada venta (el paso más lento</span>
+<span class="cm">// del cobro, medido) y no puede cortar el papel ni abrir la gaveta — Web</span>
+<span class="cm">// Serial resuelve las dos cosas, y es el mismo camino que necesita la</span>
+<span class="cm">// integración con una impresora FISCAL (obligatoria para vender a</span>
+<span class="cm">// consumidor final en varios países), que habla por puerto serie con un</span>
+<span class="cm">// protocolo propio de comandos y respuestas.</span>
+<span class="cm">//</span>
+<span class="cm">// Construir:  nyx build --target wasm32-wasi</span>
+<span class="cm">//   (necesita binaryen: `sudo apt install binaryen`, o NYX_WASM_OPT=/ruta/a/wasm-opt;</span>
+<span class="cm">//    nyx build lo usa SOLO porque el programa espera al anfitrión)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que conviene saber:</span>
+<span class="cm">//   - Los bytes de ESC/POS cruzan como Array&lt;int&gt; (0-255), NO como String —</span>
+<span class="cm">//     un String cruza el shim por TextEncoder/TextDecoder (UTF-8) y</span>
+<span class="cm">//     corrompería en silencio los bytes de control que no son texto válido.</span>
+<span class="cm">//     Ver std/browser_serial.nx para el porqué completo.</span>
+<span class="cm">//   - serial_request_port() muestra el diálogo de permiso del navegador la</span>
+<span class="cm">//     PRIMERA vez; serial_authorized_ports() reconecta sin diálogo en</span>
+<span class="cm">//     visitas siguientes (llamar esa primero y, si viene vacío, recién ahí</span>
+<span class="cm">//     pedir uno nuevo — evita mostrar el diálogo en cada carga de página).</span>
+<span class="cm">//   - Sin Web Serial (Firefox, Safari, o la página sin HTTPS/localhost),</span>
+<span class="cm">//     serial_request_port() es Err(kind: &quot;io&quot;) — la señal para volver al</span>
+<span class="cm">//     diálogo de impresión del sistema en vez de romper la venta.</span>
+<span class="cm">//   - serial_read(p, max, timeout_ms) puede volver con MENOS de `max` bytes</span>
+<span class="cm">//     si el plazo se cumple habiendo llegado al menos uno: una respuesta</span>
+<span class="cm">//     corta de la impresora fiscal sigue siendo válida, no es un error.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/browser_serial&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">const</span> <span class="ty">ESC</span><span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">27</span>
+<span class="kw">const</span> <span class="ty">GS</span><span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">29</span>
+
+<span class="cm">// Arma los bytes de un ticket mínimo: init, una línea de texto, corte de</span>
+<span class="cm">// papel y apertura de gaveta — los cuatro comandos que pidió el reporte de</span>
+<span class="cm">// nyxerp.</span>
+<span class="kw">fn</span> <span class="fn">armar_ticket</span><span class="op">(</span>texto<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> bytes<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">[]</span>
+
+    <span class="cm">// ESC @ — init: resetea la impresora al estado por defecto</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="ty">ESC</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">64</span><span class="op">)</span>
+
+    <span class="cm">// el texto del ticket, byte a byte (String = bytes en Nyx — ver</span>
+    <span class="cm">// LLM.md §5 — así que esto ya viaja como los bytes ASCII/Latin-1 que</span>
+    <span class="cm">// espera la impresora, sin decodificar)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> texto<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span>texto<span class="op">.</span><span class="fn">charAt</span><span class="op">(</span>i<span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">10</span><span class="op">)</span> <span class="cm">// salto de línea final</span>
+
+    <span class="cm">// GS V 66 0 — corte parcial de papel (modo B de la mayoría de</span>
+    <span class="cm">// impresoras EPSON-compatibles)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="ty">GS</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">86</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">66</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+
+    <span class="cm">// ESC p 0 25 250 — abre la gaveta de dinero conectada a la impresora</span>
+    <span class="cm">// (pin 2, pulso de 25×2ms encendido / 250×2ms apagado — valores típicos)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="ty">ESC</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">112</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">25</span><span class="op">)</span>
+    bytes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">250</span><span class="op">)</span>
+
+    <span class="kw">return</span> bytes
+<span class="op">}</span>
+
+<span class="cm">// Conecta (reusando un puerto ya autorizado si lo hay), imprime el ticket y</span>
+<span class="cm">// cierra. Devuelve cuántos bytes se escribieron, o el kind de Error si algo</span>
+<span class="cm">// falló — el llamador decide con eso si reintenta o cae a la impresión del</span>
+<span class="cm">// sistema.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">imprimir_ticket</span><span class="op">(</span>texto<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="cm">// primero los ya autorizados (sin diálogo); si no hay ninguno, recién</span>
+    <span class="cm">// ahí se pide uno nuevo (con diálogo)</span>
+    <span class="kw">var</span> puerto_id<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="op">-</span><span class="num">1</span>
+    <span class="kw">let</span> autorizados <span class="op">=</span> <span class="kw">await</span> <span class="fn">serial_authorized_ports</span><span class="op">()</span>
+    <span class="kw">match</span> autorizados <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>ids<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> lista<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> ids
+            <span class="kw">if</span> lista<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
+                puerto_id <span class="op">=</span> lista<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>_e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">var</span> p<span class="op">:</span> <span class="ty">SerialPort</span> <span class="op">=</span> <span class="ty">SerialPort</span> <span class="op">{</span> id<span class="op">:</span> <span class="num">0</span> <span class="op">}</span>
+    <span class="kw">if</span> puerto_id <span class="op">&gt;=</span> <span class="num">0</span> <span class="op">{</span>
+        p <span class="op">=</span> <span class="ty">SerialPort</span> <span class="op">{</span> id<span class="op">:</span> puerto_id <span class="op">}</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="kw">let</span> pedido <span class="op">=</span> <span class="kw">await</span> <span class="fn">serial_request_port</span><span class="op">()</span>
+        <span class="kw">match</span> pedido <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>puerto<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> p <span class="op">=</span> puerto <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">let</span> abierto <span class="op">=</span> <span class="kw">await</span> <span class="fn">serial_open</span><span class="op">(</span>p<span class="op">,</span> <span class="num">9600</span><span class="op">)</span>
+    <span class="kw">match</span> abierto <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">let</span> ticket<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">armar_ticket</span><span class="op">(</span>texto<span class="op">)</span>
+    <span class="kw">let</span> escrito <span class="op">=</span> <span class="kw">await</span> <span class="fn">serial_write</span><span class="op">(</span>p<span class="op">,</span> ticket<span class="op">)</span>
+
+    <span class="kw">let</span> _c <span class="op">=</span> <span class="kw">await</span> <span class="fn">serial_close</span><span class="op">(</span>p<span class="op">)</span>
+
+    <span class="kw">return</span> escrito
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> r <span class="op">=</span> <span class="kw">await</span> <span class="fn">imprimir_ticket</span><span class="op">(</span><span class="str">&quot;Gracias por su compra&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>n<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;ticket impreso: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="cm">// &quot;io&quot; = Web Serial no disponible: acá es donde un POS real</span>
+            <span class="cm">// caería a window.print() con el ticket como HTML de 80mm.</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo imprimir por serial (&quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;): volver a impresión del sistema&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ticket impreso: 33 bytes</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>armar_ticket</code> arma a mano cuatro comandos ESC/POS: <code>ESC @</code> resetea la impresora, el texto del ticket sigue byte a byte (un String de Nyx ya es bytes — ver el gotcha en <code>LLM.md</code> §5), y después <code>GS V 66 0</code> corta el papel y <code>ESC p 0 25 250</code> pulsa el pin de la gaveta. Nada acá es codificación de texto: es la secuencia exacta de bytes que espera el firmware de la impresora.</p>
+<p><code>serial_authorized_ports()</code> se prueba PRIMERO, así un cliente que vuelve reconecta sin diálogo de permiso; <code>serial_request_port()</code>, que sí lo muestra, queda como respaldo para la primera visita. <code>serial_read(p, max, timeout_ms)</code> —no se usa en un ticket de solo impresión, pero hace falta para la respuesta de una impresora fiscal— puede devolver menos de <code>max</code> bytes cuando se cumple el plazo habiendo llegado al menos uno: una respuesta corta de la impresora sigue siendo válida, no es un error.</p>
+<p>Sin Web Serial —Firefox, Safari, o una página servida sin HTTPS/localhost— toda la cadena de llamadas devuelve <code>Err(kind: "io")</code>, que es exactamente la señal que usa <code>main</code> para caer a la impresión del sistema en vez de perder la venta: <code>"no se pudo imprimir por serial (io): volver a impresión del sistema"</code>. WebUSB, para impresoras que solo exponen esa interfaz, queda para una fase posterior.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/116-barcode-qr.html"><span class="label">← Anterior</span><span class="doc-nav-name">Códigos de barras y QR</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/118-pdf-invoice.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Factura en PDF</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

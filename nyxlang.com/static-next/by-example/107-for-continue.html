@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>continue in for — Nyx by example</title>
+<meta name="description" content="Skip to the next element inside a for loop — over an array and over a range.">
+<link rel="canonical" href="https://nyxlang.com/by-example/107-for-continue.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/107-for-continue.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/107-for-continue.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/107-for-continue.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/107-for-continue.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">107</span> / Fundamentals</span></p>
+<h1 class="doc-title">continue in for</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>continue</code> inside a <code>for ... in</code> skips to the next element, the same way it already did inside a <code>while</code>. This recipe shows it in both forms of <code>for</code>: iterating an <code>Array</code> and iterating a range.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">107-for-continue.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/107-for-continue.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// `continue` dentro de un `for ... in` — sobre un array y sobre un rango —</span>
+<span class="cm">// salta al siguiente elemento, igual que en `while`.</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// for sobre un ARRAY</span>
+    <span class="kw">let</span> numeros<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">5</span><span class="op">,</span> <span class="num">6</span><span class="op">]</span>
+    <span class="kw">for</span> n<span class="op">:</span> <span class="ty">int</span> <span class="kw">in</span> numeros <span class="op">{</span>
+        <span class="kw">if</span> n <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+            <span class="kw">continue</span>
+        <span class="op">}</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;impar: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span>
+    <span class="op">}</span>
+
+    <span class="cm">// for sobre un RANGO</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="num">0</span><span class="op">..</span><span class="num">6</span> <span class="op">{</span>
+        <span class="kw">if</span> i <span class="op">==</span> <span class="num">3</span> <span class="op">{</span>
+            <span class="kw">continue</span>
+        <span class="op">}</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;i = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">))</span>
+    <span class="op">}</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">impar: 1
+impar: 3
+impar: 5
+i = 0
+i = 1
+i = 2
+i = 4
+i = 5</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The first loop walks <code>numeros</code> with <code>for n: int in numeros</code>. When <code>n</code> is even, <code>continue</code> cuts that pass short without running the <code>print</code> that follows, so only the odd numbers get printed.</p>
+<p>The second loop does the same over a range, <code>for i in 0..6</code>: when <code>i</code> is <code>3</code>, <code>continue</code> skips just that iteration and moves on to <code>4</code> — the range itself is not cut short, only that one value is skipped.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/106-json-exact-numbers.html"><span class="label">← Previous</span><span class="doc-nav-name">JSON: exact numbers</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/108-http-plazo-y-causa.html"><span class="label">Next →</span><span class="doc-nav-name">HTTP: deadline and cause</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!-- title: Barcodes and QR codes | blurb: std/barcode returns data, not drawings — QR, Code 128 and EAN-13 in pure Nyx, the same program native and in wasm. -->
+<section data-part="intro">
+<p><code>std/barcode</code> is Nyx code, no C: the same program that runs on the server compiles to <code>wasm32-wasi</code> and runs offline on a point-of-sale box. It returns DATA, never a drawing: <code>qr_matrix</code> gives the module grid, <code>code128_widths</code> and <code>ean13_widths</code> give the alternating bar/space widths in modules. Each caller paints that as it needs — terminal text, an SVG for a ticket, or a bar count for a thermal printer — this recipe shows all three.</p>
+</section>
+<section data-part="output">
+QR de C1-000123: 21x21 módulos (versión 1)
+
+
+
+
+        ██████████████  ████  ██    ██████████████
+        ██          ██      ██      ██          ██
+        ██  ██████  ██    ████  ██  ██  ██████  ██
+        ██  ██████  ██  ████  ████  ██  ██████  ██
+        ██  ██████  ██  ████    ██  ██  ██████  ██
+        ██          ██  ████████    ██          ██
+        ██████████████  ██  ██  ██  ██████████████
+                        ██████████
+        ██      ██  ████████████  ██████████    ██
+          ██████  ██  ██  ██  ████        ██    ██
+        ██    ██    ██      ████    ██████████████
+                        ████      ████████    ██
+        ██  ██  ████████    ██  ██████        ████
+                        ██████  ██████  ██    ██
+        ██████████████  ████    ████    ██████  ██
+        ██          ██      ██████    ██████
+        ██  ██████  ██  ██    ██    ██  ██  ██  ██
+        ██  ██████  ██    ████████    ████  ██████
+        ██  ██████  ██    ██████    ██  ████
+        ██          ██    ██      ████  ████    ██
+        ██████████████  ██      ██████      ██████
+
+
+
+
+400 bytes: invalid — qr: 400 bytes no entran en un QR de versión 10 con ese nivel de corrección (fase 1: versiones 1-10)
+Code 128 de C1-000123: 61 anchos
+2 1 1 2 1 4 1 3 1 3 2 1 1 2 3 2 2 1 1 2 2 1 3 2 1 1 3 1 4 1 2 1 2 2 2 2 2 2 2 1 2 2 3 1 2 1 3 1 3 1 1 1 2 3 2 3 3 1 1 1 2
+ancho total: 112 módulos = 224 puntos a 2 puntos por módulo
+SVG: &lt;svg viewBox="0 0 132 40"&gt;&lt;rect x="10" width="2" height="40"...
+EAN-13 5901234123457: 59 anchos, 95 módulos
+control equivocado: ean13: el dígito de control es 8 y debería ser 7
+</section>
+<section data-part="explanation">
+<p><code>qr_matrix(text, ecc)</code> picks the version (size) and mask on its own and only fails when the payload does not fit — a <code>Result.Err</code>, never a QR that a reader cannot decode. <code>QrEcc.M</code> recovers about 15% of damaged modules; <code>QrEcc.H</code> (about 30%) is for thermal paper that fades. The matrix carries no quiet zone: the 4-module margin a scanner needs around it is the caller's job, drawn here in <code>qr_as_text</code>.</p>
+<p><code>code128_widths</code> chooses the character set by itself: <code>"C1-"</code> goes out in set B (letters) and <code>"000123"</code> switches to set C, which packs a digit pair per symbol — half the width of the same run in B. The widths are barred and spaced alternately starting with a bar, which is what lets <code>code128_svg</code> emit one <code>&lt;rect&gt;</code> per even-indexed width and skip the spaces.</p>
+<p><code>ean13_widths</code> takes either 12 digits, and computes the check digit, or 13, and validates it — the second call here deliberately gets the wrong one back as an <code>Err</code> naming both the digit it found and the one it expected, instead of silently accepting a mistyped barcode.</p>
+</section>

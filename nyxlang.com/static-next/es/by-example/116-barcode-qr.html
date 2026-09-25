@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Códigos de barras y QR — Nyx por ejemplo</title>
+<meta name="description" content="std/barcode devuelve datos, no dibujos — QR, Code 128 y EAN-13 en Nyx puro, el mismo programa nativo y en wasm.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/116-barcode-qr.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/116-barcode-qr.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/116-barcode-qr.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/116-barcode-qr.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/116-barcode-qr.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">116</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Códigos de barras y QR</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/barcode</code> es código Nyx, sin C: el mismo programa que corre en el servidor compila a <code>wasm32-wasi</code> y corre sin conexión en la caja de un punto de venta. Devuelve DATOS, nunca un dibujo: <code>qr_matrix</code> da la matriz de módulos, <code>code128_widths</code> y <code>ean13_widths</code> dan los anchos alternados de barra/espacio en módulos. Cada quien lo pinta como necesita — texto en la terminal, un SVG para un ticket, o una cuenta de barras para una impresora térmica — esta receta muestra las tres.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">116-barcode-qr.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/116-barcode-qr.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: el QR y el código de barras del número de una venta.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un punto de venta imprime en el ticket el número de la venta</span>
+<span class="cm">// para leerlo con un lector al devolver o reimprimir. El mismo programa corre en</span>
+<span class="cm">// el servidor y compilado a wasm32-wasi en la caja, sin conexión — por eso</span>
+<span class="cm">// std/barcode es Nyx puro, sin C.</span>
+<span class="cm">//</span>
+<span class="cm">// std/barcode devuelve DATOS, no dibujos:</span>
+<span class="cm">//   - qr_matrix     → la matriz de módulos (Array de filas; 1 oscuro, 0 claro);</span>
+<span class="cm">//   - code128_widths → anchos alternados barra/espacio en módulos;</span>
+<span class="cm">//   - ean13_widths   → lo mismo para el código de un producto.</span>
+<span class="cm">// Cada programa lo pinta como necesite. Esta receta muestra tres formas: texto</span>
+<span class="cm">// en la terminal, un SVG para un ticket HTML, y la cuenta de una barra en puntos</span>
+<span class="cm">// de impresora.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/barcode&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// El QR como texto: dos caracteres por módulo para que salga cuadrado, y la zona</span>
+<span class="cm">// de silencio de 4 módulos claros alrededor, que el lector NECESITA (la matriz</span>
+<span class="cm">// no la trae: el margen es cosa del que dibuja).</span>
+<span class="kw">fn</span> <span class="fn">qr_as_text</span><span class="op">(</span>m<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> quiet<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">4</span>
+    <span class="kw">let</span> side<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">+</span> <span class="num">2</span> <span class="op">*</span> quiet
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">var</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> quiet
+    <span class="kw">while</span> r <span class="op">&lt;</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">+</span> quiet <span class="op">{</span>
+        <span class="kw">var</span> c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> quiet
+        <span class="kw">while</span> c <span class="op">&lt;</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">+</span> quiet <span class="op">{</span>
+            <span class="kw">var</span> dark<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">false</span>
+            <span class="kw">if</span> r <span class="op">&gt;=</span> <span class="num">0</span> <span class="kw">and</span> r <span class="op">&lt;</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="kw">and</span> c <span class="op">&gt;=</span> <span class="num">0</span> <span class="kw">and</span> c <span class="op">&lt;</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> row<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> m<span class="op">[</span>r<span class="op">]</span>
+                <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> row<span class="op">[</span>c<span class="op">]</span>
+                dark <span class="op">=</span> v <span class="op">==</span> <span class="num">1</span>
+            <span class="op">}</span>
+            <span class="kw">if</span> dark <span class="op">{</span> sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot;██&quot;</span><span class="op">)</span> <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span> sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot;  &quot;</span><span class="op">)</span> <span class="op">}</span>
+            c <span class="op">=</span> c <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+        sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">)</span>
+        r <span class="op">=</span> r <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="cm">// El Code 128 como SVG: un &lt;rect&gt; por barra, en unidades de módulo; el ancho real</span>
+<span class="cm">// lo pone la hoja de estilos. Los anchos empiezan siempre en barra, así que las</span>
+<span class="cm">// posiciones pares son barras y las impares espacios.</span>
+<span class="kw">fn</span> <span class="fn">code128_svg</span><span class="op">(</span>widths<span class="op">:</span> <span class="ty">Array</span><span class="op">,</span> alto<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> quiet<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">10</span>
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">var</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> quiet
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> widths<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> w<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> widths<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">if</span> i <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+            sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot;&lt;rect x=\&quot;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>x<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\&quot; width=\&quot;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>w<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\&quot; height=\&quot;&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>alto<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\&quot;/&gt;&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+        x <span class="op">=</span> x <span class="op">+</span> w
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> total<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> x <span class="op">+</span> quiet
+    <span class="kw">return</span> <span class="str">&quot;&lt;svg viewBox=\&quot;0 0 &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>total<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>alto<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\&quot;&gt;&quot;</span> <span class="op">+</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot;&lt;/svg&gt;&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">join</span><span class="op">(</span>widths<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> widths<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> w<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> widths<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">if</span> i <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot; &quot;</span><span class="op">)</span> <span class="op">}</span>
+        sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="fn">int_to_string</span><span class="op">(</span>w<span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> venta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;C1-000123&quot;</span>
+
+    <span class="cm">// ── 1. QR ────────────────────────────────────────────────────────────</span>
+    <span class="cm">// QrEcc.M recupera ~15% de módulos dañados; H (~30%) para papel térmico que</span>
+    <span class="cm">// se borra. Versión y máscara las elige el módulo.</span>
+    <span class="kw">match</span> <span class="fn">qr_matrix</span><span class="op">(</span>venta<span class="op">,</span> <span class="ty">QrEcc</span><span class="op">.</span><span class="ty">M</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;QR de &quot;</span> <span class="op">+</span> venta <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>m<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>m<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; módulos (versión &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">((</span>m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">17</span><span class="op">)</span> <span class="op">/</span> <span class="num">4</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span>
+            <span class="fn">print_no_newline</span><span class="op">(</span><span class="fn">qr_as_text</span><span class="op">(</span>m<span class="op">))</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Lo que no entra en la versión 10 es un Err, no un QR ilegible.</span>
+    <span class="kw">match</span> <span class="fn">qr_matrix</span><span class="op">(</span><span class="str">&quot;x&quot;</span><span class="op">.</span><span class="fn">repeat</span><span class="op">(</span><span class="num">400</span><span class="op">),</span> <span class="ty">QrEcc</span><span class="op">.</span><span class="ty">M</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: entró&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;400 bytes: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; — &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// ── 2. Code 128 ──────────────────────────────────────────────────────</span>
+    <span class="cm">// El juego (B para letras, C para pares de dígitos) se elige solo: «C1-» va</span>
+    <span class="cm">// en B y «000123» en C, que ocupa la mitad.</span>
+    <span class="kw">match</span> <span class="fn">code128_widths</span><span class="op">(</span>venta<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>w<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Code 128 de &quot;</span> <span class="op">+</span> venta <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>w<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; anchos&quot;</span><span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="fn">join</span><span class="op">(</span>w<span class="op">))</span>
+            <span class="cm">// En una impresora térmica de 203 ppp, un módulo de 2 puntos da una</span>
+            <span class="cm">// barra de ~0,25 mm: el ancho de cada barra es módulos * 2 puntos.</span>
+            <span class="kw">var</span> modulos<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> i <span class="op">&lt;</span> w<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> w<span class="op">[</span>i<span class="op">]</span>
+                modulos <span class="op">=</span> modulos <span class="op">+</span> x
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ancho total: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>modulos<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; módulos = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>modulos <span class="op">*</span> <span class="num">2</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot; puntos a 2 puntos por módulo&quot;</span><span class="op">)</span>
+            <span class="kw">let</span> svg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">code128_svg</span><span class="op">(</span>w<span class="op">,</span> <span class="num">40</span><span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;SVG: &quot;</span> <span class="op">+</span> svg<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">60</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;...&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// ── 3. EAN-13 ────────────────────────────────────────────────────────</span>
+    <span class="cm">// Con 12 dígitos calcula el de control; con 13 lo valida.</span>
+    <span class="kw">match</span> <span class="fn">ean13_widths</span><span class="op">(</span><span class="str">&quot;590123412345&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>w<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;EAN-13 5901234123457: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>w<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; anchos, 95 módulos&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">match</span> <span class="fn">ean13_widths</span><span class="op">(</span><span class="str">&quot;5901234123458&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>w<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: aceptó un control equivocado&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;control equivocado: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">QR de C1-000123: 21x21 módulos (versión 1)
+
+
+
+
+        ██████████████  ████  ██    ██████████████
+        ██          ██      ██      ██          ██
+        ██  ██████  ██    ████  ██  ██  ██████  ██
+        ██  ██████  ██  ████  ████  ██  ██████  ██
+        ██  ██████  ██  ████    ██  ██  ██████  ██
+        ██          ██  ████████    ██          ██
+        ██████████████  ██  ██  ██  ██████████████
+                        ██████████
+        ██      ██  ████████████  ██████████    ██
+          ██████  ██  ██  ██  ████        ██    ██
+        ██    ██    ██      ████    ██████████████
+                        ████      ████████    ██
+        ██  ██  ████████    ██  ██████        ████
+                        ██████  ██████  ██    ██
+        ██████████████  ████    ████    ██████  ██
+        ██          ██      ██████    ██████
+        ██  ██████  ██  ██    ██    ██  ██  ██  ██
+        ██  ██████  ██    ████████    ████  ██████
+        ██  ██████  ██    ██████    ██  ████
+        ██          ██    ██      ████  ████    ██
+        ██████████████  ██      ██████      ██████
+
+
+
+
+400 bytes: invalid — qr: 400 bytes no entran en un QR de versión 10 con ese nivel de corrección (fase 1: versiones 1-10)
+Code 128 de C1-000123: 61 anchos
+2 1 1 2 1 4 1 3 1 3 2 1 1 2 3 2 2 1 1 2 2 1 3 2 1 1 3 1 4 1 2 1 2 2 2 2 2 2 2 1 2 2 3 1 2 1 3 1 3 1 1 1 2 3 2 3 3 1 1 1 2
+ancho total: 112 módulos = 224 puntos a 2 puntos por módulo
+SVG: &lt;svg viewBox="0 0 132 40"&gt;&lt;rect x="10" width="2" height="40"...
+EAN-13 5901234123457: 59 anchos, 95 módulos
+control equivocado: ean13: el dígito de control es 8 y debería ser 7</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>qr_matrix(texto, ecc)</code> elige la versión (tamaño) y la máscara solo, y falla únicamente cuando el contenido no entra — un <code>Result.Err</code>, nunca un QR que un lector no pueda decodificar. <code>QrEcc.M</code> recupera cerca del 15% de módulos dañados; <code>QrEcc.H</code> (cerca del 30%) es para papel térmico que se borra. La matriz no trae zona de silencio: el margen de 4 módulos que necesita un lector alrededor es cosa de quien dibuja, acá en <code>qr_as_text</code>.</p>
+<p><code>code128_widths</code> elige el juego de caracteres solo: <code>"C1-"</code> sale en el juego B (letras) y <code>"000123"</code> pasa al juego C, que empaqueta un par de dígitos por símbolo — la mitad del ancho del mismo tramo en B. Los anchos alternan barra y espacio empezando siempre por barra, que es lo que permite a <code>code128_svg</code> emitir un <code>&lt;rect&gt;</code> por cada ancho de índice par y saltear los espacios.</p>
+<p><code>ean13_widths</code> acepta 12 dígitos y calcula el de control, o 13 y lo valida — la segunda llamada acá recibe a propósito el equivocado y vuelve como un <code>Err</code> que nombra el dígito que encontró y el que esperaba, en vez de aceptar en silencio un código mal tipeado.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/115-form-repeated-keys.html"><span class="label">← Anterior</span><span class="doc-nav-name">Claves repetidas de formulario/query</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/117-serial-printer-wasm.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Web Serial: ticket de impresora térmica</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

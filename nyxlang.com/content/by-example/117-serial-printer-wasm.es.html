@@ -1,0 +1,12 @@
+<!-- title: Web Serial: ticket de impresora térmica | blurb: bytes ESC/POS directo a una impresora de punto de venta desde wasm32-wasi con await — sin diálogo de impresión, con corte y gaveta. -->
+<section data-part="intro">
+<p>Una impresora de punto de venta habla ESC/POS por puerto serie: un puñado de bytes de control para iniciar, cortar y abrir la gaveta de dinero, con texto plano en el medio. <code>std/browser_serial</code> la alcanza directo desde <code>wasm32-wasi</code> con <code>await</code>, sin pasar por el diálogo de impresión del sistema — el paso más lento de una venta, y uno que no puede cortar el papel ni abrir una gaveta. Los bytes cruzan como <code>Array&lt;int&gt;</code>, nunca como <code>String</code>: un <code>String</code> cruzaría el shim por <code>TextEncoder</code>/<code>TextDecoder</code> y corrompería en silencio los bytes de control que no son UTF-8 válido.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+ticket impreso: 33 bytes
+</section>
+<section data-part="explanation">
+<p><code>armar_ticket</code> arma a mano cuatro comandos ESC/POS: <code>ESC @</code> resetea la impresora, el texto del ticket sigue byte a byte (un String de Nyx ya es bytes — ver el gotcha en <code>LLM.md</code> §5), y después <code>GS V 66 0</code> corta el papel y <code>ESC p 0 25 250</code> pulsa el pin de la gaveta. Nada acá es codificación de texto: es la secuencia exacta de bytes que espera el firmware de la impresora.</p>
+<p><code>serial_authorized_ports()</code> se prueba PRIMERO, así un cliente que vuelve reconecta sin diálogo de permiso; <code>serial_request_port()</code>, que sí lo muestra, queda como respaldo para la primera visita. <code>serial_read(p, max, timeout_ms)</code> —no se usa en un ticket de solo impresión, pero hace falta para la respuesta de una impresora fiscal— puede devolver menos de <code>max</code> bytes cuando se cumple el plazo habiendo llegado al menos uno: una respuesta corta de la impresora sigue siendo válida, no es un error.</p>
+<p>Sin Web Serial —Firefox, Safari, o una página servida sin HTTPS/localhost— toda la cadena de llamadas devuelve <code>Err(kind: "io")</code>, que es exactamente la señal que usa <code>main</code> para caer a la impresión del sistema en vez de perder la venta: <code>"no se pudo imprimir por serial (io): volver a impresión del sistema"</code>. WebUSB, para impresoras que solo exponen esa interfaz, queda para una fase posterior.</p>
+</section>

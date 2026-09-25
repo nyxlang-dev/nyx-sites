@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nyx test --coverage — Nyx by example</title>
+<meta name="description" content="Which function in src/ no test called — homonyms from different modules never mix when measuring.">
+<link rel="canonical" href="https://nyxlang.com/by-example/111-nyx-test-coverage.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/111-nyx-test-coverage.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/111-nyx-test-coverage.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/111-nyx-test-coverage.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/111-nyx-test-coverage.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">111</span> / Systems</span></p>
+<h1 class="doc-title">nyx test --coverage</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>nyx test --coverage</code> (needs <code>llvm-profdata</code>, the same major version as <code>clang</code>) prints, after the run's summary, which functions in <code>src/</code> no test called — something a runner that only says pass/fail per file cannot answer. This recipe demonstrates the LANGUAGE guarantee that report leans on: two homonymous functions in different modules never mix when measured. The flag itself belongs to the tool, not to something callable from a Nyx program.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">111-nyx-test-coverage.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/111-nyx-test-coverage.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: qué función de src/ ninguna prueba llamó (`nyx test --coverage`).</span>
+<span class="cm">//</span>
+<span class="cm">// Un equipo con decenas de archivos de prueba no tenía forma de saber si una</span>
+<span class="cm">// función quedó sin ejercitar — el runner solo dice &quot;pasó/falló&quot; por archivo,</span>
+<span class="cm">// nunca &quot;esto de src/ nadie lo tocó&quot; (fricción real de un ERP en Nyx). Este</span>
+<span class="cm">// archivo demuestra el LENGUAJE (dos funciones `valor` homónimas en módulos</span>
+<span class="cm">// distintos no se mezclan al medir); la HERRAMIENTA (`nyx test --coverage`)</span>
+<span class="cm">// es un flag del runner de pruebas, no algo invocable desde un programa, así</span>
+<span class="cm">// que no se puede correr dentro de esta receta — se documenta con la salida</span>
+<span class="cm">// REAL de su fixture (`tests/tooling/coverage/`, run_coverage_tests.sh).</span>
+<span class="cm">//</span>
+<span class="cm">// Un proyecto real así:</span>
+<span class="cm">//   src/calc.nx:  pub fn sumar(a, b)        &lt;- la llama un test</span>
+<span class="cm">//                 pub fn no_llamada(n)      &lt;- ninguna prueba la llama</span>
+<span class="cm">//                 pub fn valor()            &lt;- ninguna prueba la llama</span>
+<span class="cm">//                 pub fn correr_en_fibra()  &lt;- llama a en_fibra() DENTRO de un spawn</span>
+<span class="cm">//   src/aux.nx:   pub fn valor()            &lt;- homónima de calc.valor; SÍ se llama</span>
+<span class="cm">//   src/otro.nx:  pub fn nadie()            &lt;- ningún archivo de tests/ lo importa</span>
+<span class="cm">//   tests/calc_test.nx:  importa calc, llama sumar() y correr_en_fibra()</span>
+<span class="cm">//   tests/calc2_test.nx: importa calc Y aux, llama solo aux.valor()</span>
+<span class="cm">//</span>
+<span class="cm">// `nyx test --coverage` (necesita llvm-profdata, misma versión mayor que</span>
+<span class="cm">// clang) imprime, tras el resumen de la corrida, exactamente esto — captura</span>
+<span class="cm">// real de `run_coverage_tests.sh`, caso &quot;informe&quot; (docs/TESTS.md, fila</span>
+<span class="cm">// &quot;Cobertura de nyx test&quot;):</span>
+<span class="cm">//</span>
+<span class="cm">//   == Cobertura de funciones (src/) ==</span>
+<span class="cm">//     src/aux.nx: 1/1 llamadas</span>
+<span class="cm">//     src/calc.nx: 3/5 llamadas</span>
+<span class="cm">//       src/calc.nx:9 no_llamada</span>
+<span class="cm">//       src/calc.nx:27 valor</span>
+<span class="cm">//     src/otro.nx: 0/1 llamadas (ninguna prueba lo importa)</span>
+<span class="cm">//       src/otro.nx:2 nadie</span>
+<span class="cm">//     Total: 4/7 funciones llamadas</span>
+<span class="cm">//</span>
+<span class="cm">// Notar lo que NO aparece: `sumar` (la llama un test), `correr_en_fibra` (la</span>
+<span class="cm">// llama un test) NI `en_fibra` (corre solo dentro del `spawn` de</span>
+<span class="cm">// correr_en_fibra, pero cuenta como llamada), y `aux.valor` (SÍ se llama,</span>
+<span class="cm">// aunque comparta nombre con `calc.valor`, que no). `main`, los `__test_N`</span>
+<span class="cm">// sintéticos y el prelude tampoco cuentan — la tabla es solo funciones de</span>
+<span class="cm">// src/ atribuibles a código de usuario.</span>
+<span class="cm">//</span>
+<span class="cm">// Límites (no son bugs, son el alcance de esta primera fase):</span>
+<span class="cm">//   - Solo funciones, no líneas ni ramas: un `if` que nunca tomó un lado</span>
+<span class="cm">//     sigue contando la función entera como llamada.</span>
+<span class="cm">//   - Corrió/no corrió, sin conteo de veces.</span>
+<span class="cm">//   - Solo target nativo (`--coverage --target wasm32-wasi` es error).</span>
+<span class="cm">//   - Una prueba que se cuelga (timeout), revienta o no compila NO deja</span>
+<span class="cm">//     perfil: sale aparte, bajo &quot;Sin perfil&quot;, y las funciones que SOLO esa</span>
+<span class="cm">//     prueba importaba quedan &quot;sin datos&quot; — nunca como &quot;no llamadas&quot;. Sin</span>
+<span class="cm">//     esto, matar un test con --timeout falsearía el informe.</span>
+<span class="cm">//   - `--coverage=lcov` además escribe `target/coverage.lcov`</span>
+<span class="cm">//     (SF/FN/FNDA/FNF/FNH) para un visor externo.</span>
+<span class="cm">//   - Cuesta tiempo: +13,6% en una suite real de 93 archivos de prueba</span>
+<span class="cm">//     (105m23s -&gt; 119m41s, medido el 2026-09-17 en 2 núcleos). Ahí cada</span>
+<span class="cm">//     archivo enlaza por separado y el enlace domina ese sobrecosto, así</span>
+<span class="cm">//     que una suite de un solo enlace pagará una fracción mayor.</span>
+<span class="cm">//</span>
+<span class="cm">// La parte que SÍ se ejecuta en esta receta: las dos `valor` homónimas de</span>
+<span class="cm">// arriba, para probar que llamar a la de un módulo nunca llama a la del otro</span>
+<span class="cm">// —la garantía de la que depende todo el informe de cobertura por módulo.</span>
+
+<span class="kw">fn</span> <span class="fn">calc_valor</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="num">1</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">aux_valor</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="num">2</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> de_calc<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">calc_valor</span><span class="op">()</span>
+    <span class="kw">let</span> de_aux<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">aux_valor</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span>de_calc <span class="op">==</span> <span class="num">1</span> <span class="kw">and</span> de_aux <span class="op">==</span> <span class="num">2</span><span class="op">,</span> <span class="str">&quot;las homónimas no se mezclan&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;calc.valor() = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>de_calc<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, aux.valor() = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>de_aux<span class="op">))</span>
+    <span class="fn">exit</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">calc.valor() = 1, aux.valor() = 2</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>calc_valor</code> and <code>aux_valor</code> play the role of two homonymous <code>valor()</code> functions in different modules (<code>src/calc.nx</code> and <code>src/aux.nx</code> in a real project). The <code>assert</code> confirms that calling one module's never calls the other's — the guarantee the whole per-module coverage report depends on.</p>
+<p>Against a real sample project, <code>nyx test --coverage</code> prints something like this after the summary: <code>src/calc.nx: 3/5 llamadas</code> with the list of uncalled lines, <code>src/otro.nx: 0/1 llamadas (ninguna prueba lo importa)</code>, and a total. It counts functions only, not lines or branches; a function that runs inside a <code>spawn</code> still counts as called, and a test file that crashes or times out leaves its functions marked "no data", never "not called" — killing a test with <code>--timeout</code> cannot skew the report.</p>
+<p>Measured on a real 93-file suite: +13.6% time (105m23s → 119m41s). <code>--coverage=lcov</code> also writes <code>target/coverage.lcov</code> for an external viewer.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/110-serve-sse.html"><span class="label">← Previous</span><span class="doc-nav-name">Server-Sent Events</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/112-include-bytes.html"><span class="label">Next →</span><span class="doc-nav-name">include_bytes</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

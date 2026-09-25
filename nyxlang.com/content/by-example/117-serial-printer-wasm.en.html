@@ -1,0 +1,12 @@
+<!-- title: Web Serial: thermal printer ticket | blurb: ESC/POS bytes straight to a POS printer from wasm32-wasi with await — no system print dialog, cut and cash drawer included. -->
+<section data-part="intro">
+<p>A point-of-sale printer speaks ESC/POS over a serial port: a handful of control bytes for init, cut and opening the cash drawer, plain text in between. <code>std/browser_serial</code> reaches it straight from <code>wasm32-wasi</code> with <code>await</code>, skipping the system's print dialog — the slowest step of a sale, and one that cannot cut paper or open a drawer. Bytes cross as <code>Array&lt;int&gt;</code>, never as a <code>String</code>: a <code>String</code> would cross the shim through <code>TextEncoder</code>/<code>TextDecoder</code> and silently corrupt control bytes that are not valid UTF-8.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+ticket impreso: 33 bytes
+</section>
+<section data-part="explanation">
+<p><code>armar_ticket</code> builds four ESC/POS commands by hand: <code>ESC @</code> resets the printer, the ticket text follows byte for byte (Nyx strings are already bytes — see the gotcha in <code>LLM.md</code> §5), then <code>GS V 66 0</code> cuts the paper and <code>ESC p 0 25 250</code> pulses the cash-drawer pin. Nothing here is text encoding: it is the exact byte sequence the printer's firmware expects.</p>
+<p><code>serial_authorized_ports()</code> is tried FIRST, so a returning customer reconnects with no permission dialog; <code>serial_request_port()</code>, which does show one, is the fallback for a first visit. <code>serial_read(p, max, timeout_ms)</code> — not used for a print-only ticket, but needed for a fiscal printer's replies — can return fewer than <code>max</code> bytes once the deadline hits and at least one arrived: a short reply from the printer is still valid, not an error.</p>
+<p>Without Web Serial — Firefox, Safari, or a page served without HTTPS/localhost — every call in the chain returns <code>Err(kind: "io")</code>, which is exactly the signal <code>main</code> uses to fall back to the system's print dialog instead of losing the sale: <code>"no se pudo imprimir por serial (io): volver a impresión del sistema"</code>. WebUSB, for printers that only expose that interface, is left for a later phase.</p>
+</section>

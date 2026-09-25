@@ -48,6 +48,7 @@
 <li class="step"><a class="step-link" href="/by-example/08-structs.html"><span class="step-num">08</span><span><span class="step-name">Structs</span><span class="step-note note">Defining data types with fields and attaching methods via <code>impl</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/09-enums.html"><span class="step-num">09</span><span><span class="step-name">Enums</span><span class="step-note note">Algebraic data types with data-carrying variants and exhaustive <code>match</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/10-closures.html"><span class="step-num">10</span><span><span class="step-name">Closures</span><span class="step-note note">First-class functions that capture their enclosing environment.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/107-for-continue.html"><span class="step-num">107</span><span><span class="step-name">continue in for</span><span class="step-note note">Skip to the next element inside a for loop — over an array and over a range.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -64,6 +65,9 @@
 <li class="step"><a class="step-link" href="/by-example/19-datetime.html"><span class="step-num">19</span><span><span class="step-name">Date and Time</span><span class="step-note note">Timestamps, formatted dates, and time measurement.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/20-spawn-channel.html"><span class="step-num">20</span><span><span class="step-name">Spawn &amp; Channel</span><span class="step-note note">Spawning threads and communicating via channels.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/101-file-errors-two-tier.html"><span class="step-num">101</span><span><span class="step-name">File Errors: Two Tiers</span><span class="step-note note"><code>Result</code> when the caller can react, panic when dying is the honest move.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/106-json-exact-numbers.html"><span class="step-num">106</span><span><span class="step-name">JSON: exact numbers</span><span class="step-note note">json_stringify re-emits every number exactly as it came in; json_as_float goes through a double and loses the extra zeros.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/116-barcode-qr.html"><span class="step-num">116</span><span><span class="step-name">Barcodes and QR codes</span><span class="step-note note">std/barcode returns data, not drawings — QR, Code 128 and EAN-13 in pure Nyx, the same program native and in wasm.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/118-pdf-invoice.html"><span class="step-num">118</span><span><span class="step-name">PDF invoice</span><span class="step-note note">a letter-size invoice in pure Nyx — right-aligned amounts, a table made of text+line, a PNG logo and a QR, native and in wasm.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -79,11 +83,13 @@
 <li class="step"><a class="step-link" href="/by-example/28-match-guard.html"><span class="step-num">28</span><span><span class="step-name">Match Guards</span><span class="step-note note">Adding conditions to match arms with <code>if</code> guards.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/29-iterator-map-filter.html"><span class="step-num">29</span><span><span class="step-name">Iterator: map and filter</span><span class="step-note note">Lazy transformations with <code>.iter().filter().map().collect()</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/30-iterator-fold.html"><span class="step-num">30</span><span><span class="step-name">Iterator: fold</span><span class="step-note note">Reducing a sequence to a single value with <code>fold</code>.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/105-struct-fn-field.html"><span class="step-num">105</span><span><span class="step-name">An Fn field in a struct</span><span class="step-note note">Bind the field to a variable before calling it — the receiver can be a local variable, a by-value parameter or a nested field.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
 <h2 class="ex-cat-name">Advanced</h2>
 <ol class="steps">
+<li class="step"><a class="step-link" href="/by-example/31-iterator-enumerate.html"><span class="step-num">31</span><span><span class="step-name">Iterator: enumerate()</span><span class="step-note note">Getting index and value pairs during iteration.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/32-iterator-take-skip.html"><span class="step-num">32</span><span><span class="step-name">Iterator: take() and skip()</span><span class="step-note note">Slicing sequences with <code>take</code> and <code>skip</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/33-recursion.html"><span class="step-num">33</span><span><span class="step-name">Recursion</span><span class="step-note note">Solving problems with functions that call themselves.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/34-sorting.html"><span class="step-num">34</span><span><span class="step-name">Sorting</span><span class="step-note note">Sorting arrays of integers and strings.</span></span></a></li>
@@ -94,6 +100,9 @@
 <li class="step"><a class="step-link" href="/by-example/39-random-uuid.html"><span class="step-num">39</span><span><span class="step-name">Random Numbers and UUID</span><span class="step-note note">Generating random numbers and unique identifiers.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/40-thread-spawn.html"><span class="step-num">40</span><span><span class="step-name">Thread Spawn</span><span class="step-note note">Running functions concurrently with <code>thread_spawn</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/102-template-flask-style.html"><span class="step-num">102</span><span><span class="step-name">Template Engine, Flask-Style</span><span class="step-note note">Interpolation, <code>#if</code>, <code>#each</code> and partials with <code>std/template</code>.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/109-await-fetch-wasm.html"><span class="step-num">109</span><span><span class="step-name">await in the browser</span><span class="step-note note">An async fn that waits on the JS host without splitting the flow into callbacks — wasm32-wasi with Asyncify.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/114-idb-offline-wasm.html"><span class="step-num">114</span><span><span class="step-name">Offline IndexedDB</span><span class="step-note note">A catalog and a sales queue that survive an F5 — await over IndexedDB, past localStorage's limit.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/117-serial-printer-wasm.html"><span class="step-num">117</span><span><span class="step-name">Web Serial: thermal printer ticket</span><span class="step-note note">ESC/POS bytes straight to a POS printer from wasm32-wasi with await — no system print dialog, cut and cash drawer included.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -114,6 +123,14 @@
 <li class="step"><a class="step-link" href="/by-example/53-websocket.html"><span class="step-num">53</span><span><span class="step-name">WebSocket</span><span class="step-note note">RFC 6455 framing, parsing, and handshake responses.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/55-sqlite.html"><span class="step-num">55</span><span><span class="step-name">SQLite</span><span class="step-note note">In-memory SQL database with <code>sqlite_open</code> and <code>sqlite_query</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/56-csv-write.html"><span class="step-num">56</span><span><span class="step-name">CSV Write</span><span class="step-note note">Creating and serializing CSV documents with <code>std/csv</code>.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/103-orm-sin-mapeo.html"><span class="step-num">103</span><span><span class="step-name">A model written once</span><span class="step-note note"><code>#[derive(Fields)]</code> and <code>std/postgres</code>: the struct is the only source of truth for the schema.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/104-postgres.html"><span class="step-num">104</span><span><span class="step-name">No driver in between</span><span class="step-note note"><code>std/postgres</code> speaks wire protocol v3 and SCRAM-SHA-256 in pure Nyx — connect, track migrations, and bind parameters without libpq.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/108-http-plazo-y-causa.html"><span class="step-num">108</span><span><span class="step-name">HTTP: deadline and cause</span><span class="step-note note">A client that gives up on time and tells WHY it failed: tls, timeout, connection.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/110-serve-sse.html"><span class="step-num">110</span><span><span class="step-name">Server-Sent Events</span><span class="step-note note">A channel that doesn't hold a worker: the route runs the full pipeline, then broadcasts to a room.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/113-smtp.html"><span class="step-num">113</span><span><span class="step-name">Sending mail with std/smtp</span><span class="step-note note">Message, attachment and dot-stuffing built in pure Nyx — STARTTLS on 587 or TLS from the greeting on 465.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/115-form-repeated-keys.html"><span class="step-num">115</span><span><span class="step-name">Repeated form/query keys</span><span class="step-note note">form_values/query_values recover every value of a repeated key — checkboxes, &lt;select multiple&gt; — where req.form silently keeps only the last.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/119-postgres-listen-notify.html"><span class="step-num">119</span><span><span class="step-name">LISTEN/NOTIFY as a live bus</span><span class="step-note note">PostgreSQL fans a notification out to every process's SSE rooms, only if it commits — no Redis in between.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/120-serve-idle-connections.html"><span class="step-num">120</span><span><span class="step-name">Idle keep-alive connections</span><span class="step-note note">workers is how many requests run at once, not how many connections stay open — an idle tab parks in the event loop and costs no thread.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -137,6 +154,8 @@
 <li class="step"><a class="step-link" href="/by-example/68-process-control.html"><span class="step-num">68</span><span><span class="step-name">Process Control</span><span class="step-note note">PID, working directory, terminal detection, and file stat.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/69-raw-terminal.html"><span class="step-num">69</span><span><span class="step-name">Raw Terminal</span><span class="step-note note">Character-by-character input with <code>raw_mode_enter</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/70-shebang-script.html"><span class="step-num">70</span><span><span class="step-name">Shebang Script</span><span class="step-note note">Running Nyx files as executable scripts with <code>#!/usr/bin/env nyx</code>.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/111-nyx-test-coverage.html"><span class="step-num">111</span><span><span class="step-name">nyx test --coverage</span><span class="step-note note">Which function in src/ no test called — homonyms from different modules never mix when measuring.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/112-include-bytes.html"><span class="step-num">112</span><span><span class="step-name">include_bytes</span><span class="step-note note">A binary resource that travels inside the executable, read at compile time — no dependence on the file reaching disk.</span></span></a></li>
 </ol>
 </section>
 <a class="callout" href="/docs/"><span><span class="callout-name">Nyx, step by step</span><span class="step-note note">Install it, write a first program, set up a project and hand it to an assistant.</span></span><span class="callout-go">Open →</span></a>
@@ -145,7 +164,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.31.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

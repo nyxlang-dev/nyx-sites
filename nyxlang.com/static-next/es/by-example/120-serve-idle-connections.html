@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conexiones keep-alive ociosas — Nyx por ejemplo</title>
+<meta name="description" content="workers es cuántos pedidos corren a la vez, no cuántas conexiones quedan abiertas — una pestaña ociosa se estaciona en el event loop y no cuesta un hilo.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/120-serve-idle-connections.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/120-serve-idle-connections.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/120-serve-idle-connections.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/120-serve-idle-connections.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/120-serve-idle-connections.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">120</span> / Redes</span></p>
+<h1 class="doc-title">Conexiones keep-alive ociosas</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>workers</code> en <code>serve_app(app, port, workers)</code> es cuántos pedidos se atienden AL MISMO TIEMPO, no cuántas conexiones retiene el servidor. Antes de este arreglo, un worker que terminaba una respuesta quedaba bloqueado leyendo el PRÓXIMO pedido de la conexión sin plazo — así que con N hilos, N pestañas de navegador quietas entre clics dejaban el servidor sin responder a nadie. Ahora, tras cada respuesta la conexión se estaciona en el event loop del runtime hasta que llega su próximo pedido, el mismo mecanismo que <code>std/serve</code> ya usaba para SSE.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">120-serve-idle-connections.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/120-serve-idle-connections.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// std/serve: idle keep-alive connections don&#x27;t hold worker threads</span>
+<span class="cm">// std/serve: las conexiones keep-alive ociosas no retienen hilos</span>
+<span class="cm">//</span>
+<span class="cm">// `workers` in serve_app(app, port, workers) is how many requests are handled</span>
+<span class="cm">// AT THE SAME TIME, not how many connections the server holds. After each</span>
+<span class="cm">// response the connection is parked in the runtime&#x27;s event loop until its next</span>
+<span class="cm">// request, so a browser between clicks costs no thread.</span>
+<span class="cm">//</span>
+<span class="cm">// Limits (environment variables, read when serve_app starts):</span>
+<span class="cm">//   NYX_HTTP_KEEPALIVE_SECS (15)  an idle keep-alive connection is closed after this</span>
+<span class="cm">//   NYX_HTTP_HEADER_SECS    (10)  time to receive a request&#x27;s whole header -&gt; 408</span>
+<span class="cm">//</span>
+<span class="cm">// This recipe opens more idle connections than there are workers and shows the</span>
+<span class="cm">// server still answers. It plays the clients with raw TCP sockets so it can run</span>
+<span class="cm">// (and finish) on its own.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">hello</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;hola&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">connect_retry</span><span class="op">(</span>port<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> tries<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> tries <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+            <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span>
+        <span class="op">}</span>
+        tries <span class="op">=</span> tries <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&gt;=</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> fd
+<span class="op">}</span>
+
+<span class="cm">// One GET on an open connection; true if the answer is a 200.</span>
+<span class="kw">fn</span> <span class="fn">get_ok</span><span class="op">(</span>fd<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;GET / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> resp<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="kw">return</span> resp<span class="op">.</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;HTTP/1.1 200&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18212</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/&quot;</span><span class="op">,</span> hello<span class="op">)</span>
+
+    <span class="cm">// Only 2 workers, on purpose. The server runs in a detached goroutine and</span>
+    <span class="cm">// dies with the process.</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> port<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Five connections (more than the workers): each asks for a page and then</span>
+    <span class="cm">// stays open without asking for anything else, like a browser tab.</span>
+    <span class="kw">var</span> idle<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">connect_retry</span><span class="op">(</span>port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">or</span> <span class="op">!</span><span class="fn">get_ok</span><span class="op">(</span>fd<span class="op">)</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;could not open idle connection &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        idle<span class="op">.</span><span class="fn">push</span><span class="op">(</span>fd<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;idle connections parked: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">serve_idle_connections</span><span class="op">()))</span>
+
+    <span class="cm">// A new client is still answered right away: no worker is stuck waiting</span>
+    <span class="cm">// on an idle connection.</span>
+    <span class="kw">let</span> fresh<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">connect_retry</span><span class="op">(</span>port<span class="op">)</span>
+    <span class="kw">if</span> fresh <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">or</span> <span class="op">!</span><span class="fn">get_ok</span><span class="op">(</span>fresh<span class="op">)</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;the new client got no answer&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;new client answered while 5 connections sit idle&quot;</span><span class="op">)</span>
+
+    <span class="cm">// And an idle connection that comes back is served by whichever worker is free.</span>
+    <span class="kw">let</span> first<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> idle<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">if</span> <span class="op">!</span><span class="fn">get_ok</span><span class="op">(</span>first<span class="op">)</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;the idle connection got no answer&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;idle connection came back and was answered&quot;</span><span class="op">)</span>
+
+    <span class="fn">tcp_close</span><span class="op">(</span>fresh<span class="op">)</span>
+    i <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> idle<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> idle<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18212 with 2 workers
+idle connections parked: 5
+new client answered while 5 connections sit idle
+idle connection came back and was answered</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Esta receta arranca un servidor con solo 2 <code>workers</code> y abre 5 conexiones keep-alive que piden una página cada una y después se quedan quietas, como 5 pestañas de navegador. <code>serve_idle_connections()</code> —un gancho de depuración, no algo que llame un handler— confirma que las 5 están estacionadas, más del doble de los workers, y que ninguno quedó atascado en alguna de ellas.</p>
+<p>Un cliente nuevo se sigue respondiendo de inmediato: estacionar una conexión ociosa libera su worker por completo, no reserva uno "por si acaso". Y una conexión ociosa que después manda un pedido nuevo la atiende el worker que esté libre en ese momento — las conexiones no quedan fijadas al worker que las atendió la primera vez.</p>
+<p>Dos variables de entorno que se leen al arrancar <code>serve_app</code> ponen el límite a todo esto: <code>NYX_HTTP_KEEPALIVE_SECS</code> (15 por omisión) cierra una conexión que queda ociosa ese tiempo, y <code>NYX_HTTP_HEADER_SECS</code> (10) es el plazo para recibir la cabecera completa de un pedido — pasado ese tiempo, un <code>408</code> y el cierre, que es lo que evita que un cliente estilo slowloris (uno que abre una conexión y gotea bytes para siempre) retenga una para siempre.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/119-postgres-listen-notify.html"><span class="label">← Anterior</span><span class="doc-nav-name">LISTEN/NOTIFY como bus en vivo</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

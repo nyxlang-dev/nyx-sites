@@ -1,0 +1,15 @@
+<!-- title: Idle keep-alive connections | blurb: workers is how many requests run at once, not how many connections stay open — an idle tab parks in the event loop and costs no thread. -->
+<section data-part="intro">
+<p><code>workers</code> in <code>serve_app(app, port, workers)</code> is how many requests are handled AT THE SAME TIME, not how many connections the server holds. Before this fix, a worker that finished a response stayed blocked reading the connection's NEXT request with no deadline — so with N threads, N browser tabs sitting quietly between clicks left the server answering nobody. Now, after each response the connection is parked in the runtime's event loop until its next request, the same mechanism <code>std/serve</code> already used for SSE.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18212 with 2 workers
+idle connections parked: 5
+new client answered while 5 connections sit idle
+idle connection came back and was answered
+</section>
+<section data-part="explanation">
+<p>This recipe starts a server with only 2 <code>workers</code> and opens 5 keep-alive connections that each ask for one page and then go quiet, like 5 browser tabs. <code>serve_idle_connections()</code> — a debug hook, not something a handler calls — confirms all 5 are parked, more than double the worker count, and no worker is stuck on any of them.</p>
+<p>A brand-new client is still answered right away: parking an idle connection frees its worker completely, it does not reserve one "just in case". And an idle connection that later sends a new request is picked up by whichever worker happens to be free — connections are not pinned to the worker that first served them.</p>
+<p>Two environment variables read when <code>serve_app</code> starts bound how long this can go on: <code>NYX_HTTP_KEEPALIVE_SECS</code> (15 by default) closes a connection that stays idle that long, and <code>NYX_HTTP_HEADER_SECS</code> (10) is the time allowed to receive a request's full header — past it, a <code>408</code> and a close, which is what keeps a slowloris-style client (one that opens a connection and trickles bytes forever) from tying one up indefinitely.</p>
+</section>

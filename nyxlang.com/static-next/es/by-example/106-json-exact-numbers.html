@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JSON: números exactos — Nyx por ejemplo</title>
+<meta name="description" content="json_stringify reemite cada número tal como vino; json_as_float pasa por un double y pierde los ceros de más.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/106-json-exact-numbers.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/106-json-exact-numbers.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/106-json-exact-numbers.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/106-json-exact-numbers.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/106-json-exact-numbers.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">106</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">JSON: números exactos</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>json_stringify</code> sobre un nodo reemite el número EXACTO tal como llegó en el texto de origen, ceros de más incluidos. <code>json_as_float</code> en cambio pasa por un <code>double</code> y después <code>float_to_string</code> devuelve la forma mínima que vuelve a ese mismo double — así que <code>19.90</code> puede volver como <code>19.9</code>. Para mostrar un precio con un ancho fijo de decimales está <code>float_to_fixed</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">106-json-exact-numbers.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/106-json-exact-numbers.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// JSON: json_stringify sobre un nodo reemite el número EXACTO tal como vino</span>
+<span class="cm">// (con sus ceros de más incluidos), a diferencia de json_as_float +</span>
+<span class="cm">// float_to_string, que pasa por un double y devuelve la forma MÍNIMA que</span>
+<span class="cm">// vuelve a ese mismo double. float_to_fixed sirve para volver a un ancho</span>
+<span class="cm">// fijo de decimales (precios).</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/json&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/math_ext&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> doc<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;{\&quot;precio\&quot;: 19.90, \&quot;embedding\&quot;: [0.013426971, 0.1]}&quot;</span>
+    <span class="kw">let</span> parsed<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_parse</span><span class="op">(</span>doc<span class="op">)</span>
+
+    <span class="cm">// El documento completo reemitido: cada número, tal como vino.</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>parsed<span class="op">))</span>
+
+    <span class="kw">let</span> precio_node<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_get</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;precio&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>precio_node<span class="op">))</span>          <span class="cm">// texto exacto: conserva el cero</span>
+
+    <span class="kw">let</span> embedding_node<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">json_get</span><span class="op">(</span>parsed<span class="op">,</span> <span class="str">&quot;embedding&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">json_stringify</span><span class="op">(</span>embedding_node<span class="op">))</span>       <span class="cm">// literal exacto, sirve para pgvector</span>
+
+    <span class="cm">// json_as_float + float_to_string: pasa por un double.</span>
+    <span class="kw">let</span> precio<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="fn">json_as_float</span><span class="op">(</span>precio_node<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">float_to_string</span><span class="op">(</span>precio<span class="op">))</span>              <span class="cm">// perdió el cero de más</span>
+
+    <span class="cm">// Ancho fijo de decimales para mostrar el precio de nuevo:</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">float_to_fixed</span><span class="op">(</span>precio<span class="op">,</span> <span class="num">2</span><span class="op">))</span>
+
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">{"precio":19.90,"embedding":[0.013426971,0.1]}
+19.90
+[0.013426971,0.1]
+19.9
+19.90</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>El documento completo reemitido conserva cada número tal como estaba escrito: <code>19.90</code> sigue siendo <code>19.90</code>, no <code>19.9</code>. Lo mismo pasa al reemitir un nodo suelto con <code>json_stringify(precio_node)</code>: es texto exacto, no una vuelta por punto flotante.</p>
+<p><code>embedding_node</code> muestra por qué esto importa más allá de la estética: un array de flotantes de alta precisión —el caso típico de un embedding para <code>pgvector</code>— necesita conservar cada dígito para no perder precisión en la ida y vuelta.</p>
+<p><code>json_as_float(precio_node)</code> sí pasa por un <code>double</code>, y <code>float_to_string</code> imprime la representación mínima que redondea de vuelta al mismo valor: el cero de más se pierde. <code>float_to_fixed(precio, 2)</code> lo recupera para mostrar, forzando dos decimales sin depender de qué trajo el JSON original.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/105-struct-fn-field.html"><span class="label">← Anterior</span><span class="doc-nav-name">Campo Fn en un struct</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/107-for-continue.html"><span class="label">Siguiente →</span><span class="doc-nav-name">continue en for</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
