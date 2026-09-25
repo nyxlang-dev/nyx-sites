@@ -66,8 +66,6 @@
 <li class="step"><a class="step-link" href="/by-example/20-spawn-channel.html"><span class="step-num">20</span><span><span class="step-name">Spawn &amp; Channel</span><span class="step-note note">Spawning threads and communicating via channels.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/101-file-errors-two-tier.html"><span class="step-num">101</span><span><span class="step-name">File Errors: Two Tiers</span><span class="step-note note"><code>Result</code> when the caller can react, panic when dying is the honest move.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/106-json-exact-numbers.html"><span class="step-num">106</span><span><span class="step-name">JSON: exact numbers</span><span class="step-note note">json_stringify re-emits every number exactly as it came in; json_as_float goes through a double and loses the extra zeros.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/116-barcode-qr.html"><span class="step-num">116</span><span><span class="step-name">Barcodes and QR codes</span><span class="step-note note">std/barcode returns data, not drawings — QR, Code 128 and EAN-13 in pure Nyx, the same program native and in wasm.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/118-pdf-invoice.html"><span class="step-num">118</span><span><span class="step-name">PDF invoice</span><span class="step-note note">a letter-size invoice in pure Nyx — right-aligned amounts, a table made of text+line, a PNG logo and a QR, native and in wasm.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -102,7 +100,6 @@
 <li class="step"><a class="step-link" href="/by-example/102-template-flask-style.html"><span class="step-num">102</span><span><span class="step-name">Template Engine, Flask-Style</span><span class="step-note note">Interpolation, <code>#if</code>, <code>#each</code> and partials with <code>std/template</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/109-await-fetch-wasm.html"><span class="step-num">109</span><span><span class="step-name">await in the browser</span><span class="step-note note">An async fn that waits on the JS host without splitting the flow into callbacks — wasm32-wasi with Asyncify.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/114-idb-offline-wasm.html"><span class="step-num">114</span><span><span class="step-name">Offline IndexedDB</span><span class="step-note note">A catalog and a sales queue that survive an F5 — await over IndexedDB, past localStorage's limit.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/117-serial-printer-wasm.html"><span class="step-num">117</span><span><span class="step-name">Web Serial: thermal printer ticket</span><span class="step-note note">ESC/POS bytes straight to a POS printer from wasm32-wasi with await — no system print dialog, cut and cash drawer included.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -129,8 +126,6 @@
 <li class="step"><a class="step-link" href="/by-example/110-serve-sse.html"><span class="step-num">110</span><span><span class="step-name">Server-Sent Events</span><span class="step-note note">A channel that doesn't hold a worker: the route runs the full pipeline, then broadcasts to a room.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/113-smtp.html"><span class="step-num">113</span><span><span class="step-name">Sending mail with std/smtp</span><span class="step-note note">Message, attachment and dot-stuffing built in pure Nyx — STARTTLS on 587 or TLS from the greeting on 465.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/115-form-repeated-keys.html"><span class="step-num">115</span><span><span class="step-name">Repeated form/query keys</span><span class="step-note note">form_values/query_values recover every value of a repeated key — checkboxes, &lt;select multiple&gt; — where req.form silently keeps only the last.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/119-postgres-listen-notify.html"><span class="step-num">119</span><span><span class="step-name">LISTEN/NOTIFY as a live bus</span><span class="step-note note">PostgreSQL fans a notification out to every process's SSE rooms, only if it commits — no Redis in between.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/120-serve-idle-connections.html"><span class="step-num">120</span><span><span class="step-name">Idle keep-alive connections</span><span class="step-note note">workers is how many requests run at once, not how many connections stay open — an idle tab parks in the event loop and costs no thread.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -164,7 +159,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

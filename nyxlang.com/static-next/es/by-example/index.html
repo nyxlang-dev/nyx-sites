@@ -66,8 +66,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/20-spawn-channel.html"><span class="step-num">20</span><span><span class="step-name">Spawn y Channel</span><span class="step-note note">Crear threads y comunicarse mediante channels.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/101-file-errors-two-tier.html"><span class="step-num">101</span><span><span class="step-name">Errores de archivo: dos niveles</span><span class="step-note note"><code>Result</code> cuando quien llama puede reaccionar, panic cuando morir es lo honesto.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/106-json-exact-numbers.html"><span class="step-num">106</span><span><span class="step-name">JSON: números exactos</span><span class="step-note note">json_stringify reemite cada número tal como vino; json_as_float pasa por un double y pierde los ceros de más.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/116-barcode-qr.html"><span class="step-num">116</span><span><span class="step-name">Códigos de barras y QR</span><span class="step-note note">std/barcode devuelve datos, no dibujos — QR, Code 128 y EAN-13 en Nyx puro, el mismo programa nativo y en wasm.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/118-pdf-invoice.html"><span class="step-num">118</span><span><span class="step-name">Factura en PDF</span><span class="step-note note">una factura tamaño carta en Nyx puro — montos alineados a la derecha, una tabla hecha con text+line, un logo PNG y un QR, nativo y en wasm.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -102,7 +100,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/102-template-flask-style.html"><span class="step-num">102</span><span><span class="step-name">Motor de templates estilo Flask</span><span class="step-note note">Interpolación, <code>#if</code>, <code>#each</code> y partials con <code>std/template</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/109-await-fetch-wasm.html"><span class="step-num">109</span><span><span class="step-name">await en el navegador</span><span class="step-note note">Una async fn que espera al anfitrión JS sin partir el flujo en callbacks — wasm32-wasi con Asyncify.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/114-idb-offline-wasm.html"><span class="step-num">114</span><span><span class="step-name">IndexedDB sin conexión</span><span class="step-note note">Un catálogo y una cola de ventas que sobreviven a un F5 — await sobre IndexedDB, sin el límite de localStorage.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/117-serial-printer-wasm.html"><span class="step-num">117</span><span><span class="step-name">Web Serial: ticket de impresora térmica</span><span class="step-note note">bytes ESC/POS directo a una impresora de punto de venta desde wasm32-wasi con await — sin diálogo de impresión, con corte y gaveta.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -129,8 +126,6 @@
 <li class="step"><a class="step-link" href="/es/by-example/110-serve-sse.html"><span class="step-num">110</span><span><span class="step-name">Eventos del servidor (SSE)</span><span class="step-note note">Un canal que no ocupa un worker: la ruta pasa por el pipeline entero y después difunde a un room.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/113-smtp.html"><span class="step-num">113</span><span><span class="step-name">Correo saliente con std/smtp</span><span class="step-note note">Mensaje, adjunto y dot-stuffing armados en Nyx puro — STARTTLS en 587 o TLS desde el saludo en 465.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/115-form-repeated-keys.html"><span class="step-num">115</span><span><span class="step-name">Claves repetidas de formulario/query</span><span class="step-note note">form_values/query_values recuperan todos los valores de una clave repetida — casillas, &lt;select multiple&gt; — donde req.form se queda callado con la última.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/119-postgres-listen-notify.html"><span class="step-num">119</span><span><span class="step-name">LISTEN/NOTIFY como bus en vivo</span><span class="step-note note">PostgreSQL reparte una notificación a las salas SSE de todos los procesos, solo si hace commit — sin Redis en el medio.</span></span></a></li>
-<li class="step"><a class="step-link" href="/es/by-example/120-serve-idle-connections.html"><span class="step-num">120</span><span><span class="step-name">Conexiones keep-alive ociosas</span><span class="step-note note">workers es cuántos pedidos corren a la vez, no cuántas conexiones quedan abiertas — una pestaña ociosa se estaciona en el event loop y no cuesta un hilo.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -164,7 +159,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
