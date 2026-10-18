@@ -1,0 +1,11 @@
+<!-- title: HTTPS a un sitio con la cadena mal armada | blurb: HttpOpts.cas_extra suma el certificado intermedio que falta para UNA petición, sin apagar la verificación. -->
+<section data-part="intro">
+<p>Pasa más de lo que parece (sitios de gobierno, bancos): el servidor envía un intermedio que no corresponde a su certificado, y la verificación contra las CAs del sistema falla con <q>unable to get local issuer certificate</q> (código 20). El intermedio correcto es público. <code>HttpOpts.cas_extra</code> lo SUMA a las CAs del sistema solo para esa petición, así que se llega al sitio sin apagar nunca la verificación.</p>
+</section>
+<section data-part="output">
+rechazado antes del handshake: invalid 22
+</section>
+<section data-part="explanation">
+<p>La cadena y el nombre se siguen verificando igual que antes, y el resto del proceso — otras peticiones, <code>std/postgres</code> — conserva la confianza que tenía. El valor es el CONTENIDO PEM (uno o varios certificados), no una ruta, de modo que puede venir de <code>include_bytes</code> o de <code>read_file</code>.</p>
+<p>La receta no necesita red: un servidor TCP local acepta la conexión, y el programa muestra que un <code>cas_extra</code> que no trae ningún certificado se rechaza como <code>invalid</code> (22) ANTES del handshake, en lugar de pasar en silencio como <q>no hacía falta</q>. Un paso silencioso sería lo peor aquí: se creería que una CA extra está vigente cuando no lo está.</p>
+</section>

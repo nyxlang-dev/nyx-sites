@@ -1,0 +1,12 @@
+<!-- title: An .xlsx bulk-upload template with dropdowns | blurb: validate_list and validate_list_range restrict a column to allowed values; xlsx_fill marks rejected rows. -->
+<section data-part="intro">
+<p>An ERP gives its users a catalogue template to fill in and upload again. If the <q>Unidad</q> column only accepts UND, KG or LT, a dropdown in the cell stops anyone typing another value and the upload rejects far fewer rows. In the file that comes back, the rejected rows are marked with a fill color.</p>
+</section>
+<section data-part="output">
+plantilla: 3213 bytes, empieza con PK
+para escribirla: nyx run -- plantilla.xlsx
+</section>
+<section data-part="explanation">
+<p><code>validate_list(range, values)</code> is a fixed list. Excel stores it inside the formula, so there is a 255-character cap in total, and the values cannot contain commas or quotes; if it does not fit, <code>xlsx_write</code> returns an <code>Err</code>. <code>validate_list_range(range, source)</code> takes the list from a range instead — here the <q>Listas</q> tab — with no length cap. <code>xlsx_fill(cell, "RRGGBB")</code> gives a solid fill and chains with <code>xlsx_bold</code>.</p>
+<p>Errors, such as a color that is not 6 hex digits, come out of <code>xlsx_write</code>. Run it with <code>nyx run -- plantilla.xlsx</code> to write the file; with no argument it only reports the size.</p>
+</section>

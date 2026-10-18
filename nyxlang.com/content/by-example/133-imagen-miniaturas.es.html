@@ -1,0 +1,22 @@
+<!-- title: Miniaturas de la foto de un producto | blurb: std/image decodifica con la mayor reducción posible, saca varios tamaños de una decodificación y aplana la transparencia sobre blanco. -->
+<section data-part="intro">
+<p>Un comercio sube desde el teléfono la foto de un producto — 3 a 5 MB, 12 megapíxeles, a veces girada con la orientación EXIF — y el sistema la tiene que servir chica: unos 600 px para la ficha, unos 200 px para la lista, en JPEG, sin la ubicación de la foto. <code>std/image</code> es Nyx puro, nativo y <code>wasm32-wasi</code>, así que no hace falta libjpeg ni ImageMagick. La foto de ejemplo se fabrica dentro de la receta con <code>image_encode_jpeg</code>; en la vida real son los bytes del multipart que llegó.</p>
+</section>
+<section data-part="output">
+original: jpeg 1600x1200, 140360 bytes
+ficha: jpeg 600x450, 13167 bytes
+tamaño 0: jpeg 600x450, 13167 bytes
+tamaño 1: jpeg 200x150, 3175 bytes
+tamaño 2: jpeg 80x60, 1366 bytes
+calidad 95: 8025 bytes
+calidad 80: 3168 bytes
+calidad 60: 2504 bytes
+calidad 40: 2174 bytes
+logo: jpeg 64x64 (sobre blanco)
+rechazada (invalid): image_thumbnail: no parece una imagen JPEG ni PNG (firma desconocida)
+rechazada (invalid): image_thumbnail: la calidad va de 1 a 100 (llegó 101)
+</section>
+<section data-part="explanation">
+<p><code>image_thumbnail</code> decodifica, achica y codifica en UN paso, decodificando con la mayor reducción posible (1/2, 1/4 o 1/8), así que una foto de 12 MP no se decodifica entera. <code>image_thumbnails</code> saca varios tamaños de UNA sola decodificación — la ficha, la lista y una de 80 px. La calidad va de 1 a 100 (<code>image_default_quality()</code> es 80) y su efecto en los bytes se ve en las cuatro líneas de <q>calidad</q>.</p>
+<p>Un PNG con transparencia, el logo, sale compuesto sobre blanco, que es lo que un JPEG puede guardar; para otro fondo se llama <code>image_flatten</code> antes de codificar. Los errores son un <code>Result</code> con kind: <code>"invalid"</code> (un parámetro o un tope), <code>"parse"</code> (archivo dañado) y <code>"unsupported"</code> (HEIC, WebP, JPEG progresivo...). Los dos rechazos del final de la salida son <code>invalid</code>.</p>
+</section>

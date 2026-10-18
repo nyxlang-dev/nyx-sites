@@ -1,0 +1,12 @@
+<!-- title: Un PDF que calca una hoja preimpresa | blurb: std/pdf fase 2: grosor de línea, sombreado gris y en color, Times y Courier, texto girado, estado gráfico por página. -->
+<section data-part="intro">
+<p>Un ERP llena formularios que el negocio ya imprime en papel con marco, encabezados sombreados y rótulos laterales, y etiquetas con texto en Courier. El programa tiene que dibujar encima lo mismo que trae el papel. Esta es la segunda fase de <code>std/pdf</code>, que escribe un PDF de verdad en Nyx puro.</p>
+</section>
+<section data-part="output">
+preimpreso: 13458 bytes, empieza con %PDF-1.4
+para escribirlo: nyx run -- preimpreso.pdf
+</section>
+<section data-part="explanation">
+<p>La receta usa el grosor de línea (<code>d.line_width</code>, en mm) para un marco grueso y divisiones finas; sombreado en gris (<code>d.gray</code>) y en color (<code>d.color</code>) para el encabezado de una tabla, con la vuelta a negro para escribir encima; las 12 fuentes de texto estándar, con Times y Courier en negrita y cursiva; y texto girado (<code>d.text_rotated</code>) para el rótulo del margen — 90 grados sube por el borde izquierdo, 270 baja.</p>
+<p>El estado gráfico vale PARA LO QUE SE DIBUJA DESPUÉS en esa página, y cada página nueva arranca otra vez en negro con el trazo de 1 pt. Con <code>nyx run -- preimpreso.pdf</code> se escribe el archivo; sin argumento solo informa el tamaño y la cabecera <code>%PDF-1.4</code>.</p>
+</section>

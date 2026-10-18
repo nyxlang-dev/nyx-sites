@@ -104,6 +104,8 @@
     <span class="cm">//       Result.Ok(c0) =&gt; {</span>
     <span class="cm">//           match smtp_starttls(c0, &quot;miempresa.com&quot;) {</span>
     <span class="cm">//               Result.Ok(c) =&gt; {</span>
+    <span class="cm">//                   // Gmail / Microsoft 365 piden OAuth2 en vez de clave:</span>
+    <span class="cm">//                   //   smtp_auth_xoauth2(c, &quot;usuario@empresa.com&quot;, token_de_acceso)</span>
     <span class="cm">//                   match smtp_auth_plain(c, &quot;usuario&quot;, &quot;clave&quot;) {</span>
     <span class="cm">//                       Result.Ok(_x) =&gt; {</span>
     <span class="cm">//                           match smtp_send(c, msg) {</span>
@@ -194,7 +196,7 @@ protocol   → el servidor cortó o contestó algo inesperado</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

@@ -1,0 +1,12 @@
+<!-- title: Shadowing a name inside a block | blurb: A name redeclared in an if, loop, match arm or try is another variable that disappears at the closing brace. -->
+<!-- not-a-version: 0.35.0 — es la última versión del lenguaje con el comportamiento anterior, no la del toolchain -->
+<section data-part="intro">
+<p>A name redeclared inside a block — <code>if</code>, <code>else</code>, <code>while</code>, <code>for</code>, a <code>match</code> arm, <code>try</code>/<code>catch</code> — is ANOTHER variable. It lives until the block closes and, on the way out, the name goes back to being the outer variable, with its value and its type. Up to 0.35.0 the inner one hid the outer one until the end of the function; from 0.36 on it behaves as described.</p>
+</section>
+<section data-part="output">
+ok
+</section>
+<section data-part="explanation">
+<p>The recipe covers three things: shadowing in an <code>if</code> with a DIFFERENT type and with the SAME type; the variable of a <code>for q in ...</code> and the binding of an <code>Option.Some(q) =></code> pattern; and the right way to get a value OUT of a block — declare it outside and assign inside. It prints <code>ok</code> when every outer value came back intact.</p>
+<p>One limit to remember: in the same scope there is no block, so <code>let x = x + 1</code> keeps replacing the previous <code>x</code>, as before.</p>
+</section>

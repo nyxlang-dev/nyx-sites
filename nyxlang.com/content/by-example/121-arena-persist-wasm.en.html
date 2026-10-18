@@ -1,0 +1,12 @@
+<!-- title: Keep a value across wasm events | blurb: arena_persist copies a String or Array out of the per-event arena so a later event reads it intact — the fix for silently recycled memory. -->
+<section data-part="intro">
+<p>With the per-event arena on (<code>runNyxWasm(bytes, { arena: true })</code>) everything a handler allocates is thrown away when the event ends. A <code>String</code> or <code>Array</code> built in one event and stored in a global would be read by the next event as recycled memory — silently, with no error. <code>arena_persist(x)</code> copies the value into the persistent region first, so what you keep on purpose survives and everything else is still reclaimed.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+listo: la página llama a al_escanear y a al_cobrar
+cobrando SKU-7 a 10.5 (sin hielo)
+</section>
+<section data-part="explanation">
+<p>It accepts a <code>String</code> or an <code>Array</code> of <code>String</code>, <code>int</code>, <code>float</code> and <code>bool</code> — including arrays of those, so a ticket line with its modifiers is copied whole, as <code>g_ticket</code> shows. A struct, a <code>Map</code>, an <code>Fn</code> or an <code>Array&lt;Struct&gt;</code> is a compile error (<code>NYX1039</code>): at run time they do not carry a description of what they contain, so persist their fields one by one and rebuild the value where you use it.</p>
+<p><code>arena_persist</code> is a builtin, so nothing is imported for it, and on a native build it is the identity function (there is no arena). That is what lets the logic around it run under <code>nyx test</code>. <code>arena_stats()</code>, from <code>std/wasm_mem</code> and wasm-only, returns the persistent bytes and the current turn's, which is how a long-lived page watches for unbounded growth. This is a browser recipe — it is built with <code>nyx build --target wasm32-wasi</code> and the page calls its exports — so the output above is illustrative.</p>
+</section>

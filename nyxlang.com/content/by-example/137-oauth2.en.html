@@ -1,0 +1,19 @@
+<!-- title: OAuth2 for a Gmail or Microsoft 365 mailbox | blurb: std/oauth2 builds the PKCE login URL, renews tokens and supports device code — the token imap_auth_xoauth2 and smtp_auth_xoauth2 expect. -->
+<section data-part="intro">
+<p>The help desk of an ERP reads <code>soporte@miempresa.com</code> over IMAP and replies over SMTP in the same thread (recipe 134). Gmail and Microsoft 365 no longer accept user and password: they ask for an OAuth2 token, and <code>imap_auth_xoauth2</code> / <code>smtp_auth_xoauth2</code> take it ready-made. This recipe shows how to OBTAIN and RENEW it with <code>std/oauth2</code>.</p>
+</section>
+<section data-part="output">
+verifier:  43 chars (nunca va en la URL)
+challenge: Ca1b8dxuQcQpOTx8Oa5bYK4WtRle2nX_vmskhHRHLus
+state:     dZjnHOiUwioDhbPBo0PjMXWODt_p2mmT
+URL para el navegador:
+  https://accounts.google.com/o/oauth2/v2/auth?response_type=code&amp;client_id=mi-client-id.apps.googleusercontent.com&amp;redirect_uri=http%3A%2F%2F127.0.0.1%3A8080%2Foauth2%2Fcallback&amp;scope=https%3A%2F%2Fmail.google.com%2F&amp;state=dZjnHOiUwioDhbPBo0PjMXWODt_p2mmT&amp;code_challenge=Ca1b8dxuQcQpOTx8Oa5bYK4WtRle2nX_vmskhHRHLus&amp;code_challenge_method=S256&amp;access_type=offline&amp;prompt=consent
+token vigente por ahora
+auth       → el proveedor dijo: invalid_grant: Token has been expired or revoked.
+pending    → la persona no autorizó todavía; esperar 5 s
+protocol   → la respuesta no es la de un endpoint OAuth2 (¿proxy? ¿URL equivocada?)
+</section>
+<section data-part="explanation">
+<p>Three flows. The first time, a person authorizes in the browser: PKCE plus <code>state</code>, the authorization URL, and the exchange of the code. Every other time, renew before it expires and store the <code>refresh_token</code>. And on a server with no browser, device code: <q>open this URL and type this code</q>.</p>
+<p>What runs here without a network is PKCE, the <code>state</code> and the authorization URL; the verifier, the challenge and the state are random, so those three values differ on every run. The functions that talk to Google compile and link but are NOT called, because they need a real <code>client_id</code>. The last lines show how each error kind reads: <code>auth</code> carries the provider's own reason, <code>pending</code> means the person has not authorized yet and tells you how long to wait, and <code>protocol</code> means the answer is not an OAuth2 endpoint's.</p>
+</section>

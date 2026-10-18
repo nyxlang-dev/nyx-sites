@@ -1,0 +1,12 @@
+<!-- title: Una plantilla .xlsx de carga masiva con listas desplegables | blurb: validate_list y validate_list_range restringen una columna a valores permitidos; xlsx_fill marca las filas rechazadas. -->
+<section data-part="intro">
+<p>Un ERP entrega a sus usuarios una plantilla de catálogo para llenar y volver a subir. Si la columna <q>Unidad</q> solo acepta UND, KG o LT, una lista desplegable en la celda impide escribir otro valor y la carga rechaza muchas menos filas. Y en el archivo que vuelve, las filas rechazadas se marcan con un color de relleno.</p>
+</section>
+<section data-part="output">
+plantilla: 3213 bytes, empieza con PK
+para escribirla: nyx run -- plantilla.xlsx
+</section>
+<section data-part="explanation">
+<p><code>validate_list(rango, valores)</code> es una lista fija. Excel la guarda dentro de la fórmula, así que hay un tope de 255 caracteres en total, y los valores no pueden llevar comas ni comillas; si no cabe, <code>xlsx_write</code> devuelve <code>Err</code>. <code>validate_list_range(rango, origen)</code> toma la lista de un rango — aquí la pestaña <q>Listas</q> — sin tope de largo. <code>xlsx_fill(celda, "RRGGBB")</code> da un relleno sólido y se encadena con <code>xlsx_bold</code>.</p>
+<p>Los errores, como un color que no sea de 6 dígitos hex, salen de <code>xlsx_write</code>. Con <code>nyx run -- plantilla.xlsx</code> se escribe el archivo; sin argumento solo informa el tamaño.</p>
+</section>

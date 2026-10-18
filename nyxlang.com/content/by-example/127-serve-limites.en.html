@@ -1,0 +1,19 @@
+<!-- title: Body caps and rate limits in std/serve | blurb: A body cap per route (413) and a request limiter per origin (429 with Retry-After), shared by all workers. -->
+<section data-part="intro">
+<p>Two guards against abuse. A body cap per route in bytes: the global cap is <code>NYX_HTTP_MAX_BODY</code> (1 MiB) and a route can be stricter or looser — <code>app_max_body(app, "POST", "/contacto", 16384)</code> for a contact form, 8 MiB for photos. Over the cap the answer is <code>413</code>. The recipe plays the client with raw TCP sockets so it can run on its own.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18214 with 2 workers
+100-byte form:  200
+101-byte form:  413
+client ana, request 1: 200
+client ana, request 2: 200
+client ana, request 3: 200
+client ana, request 4: 200
+client ana, request 5: 429
+client beto, request 1: 200
+</section>
+<section data-part="explanation">
+<p>The parser reads up to the largest cap declared by ANY route before a route can refuse, so raise a cap only where it is needed. The request limiter counts per origin in a fixed window and is SHARED by every worker of the process (they are threads of one process, guarded by a mutex): <code>app_rate_limit(app, 120, 60)</code> for the whole app, <code>app_route_rate_limit(app, "POST", "/contacto", 5, 60)</code> for one route. Over the limit the answer is <code>429</code> with <code>Retry-After</code> set to the seconds until the window closes — see request 5 of client <q>ana</q>, while <q>beto</q> still gets <code>200</code>.</p>
+<p>The origin is the client's IP, and behind a reverse proxy every request comes from the proxy; count by another key with <code>app_rate_limit_key(app, fn)</code>, for example <code>rate_key_forwarded_for</code> (the first <code>X-Forwarded-For</code>) or a user id. An empty key exempts the request. Counts are per process: two instances behind a balancer count separately.</p>
+</section>

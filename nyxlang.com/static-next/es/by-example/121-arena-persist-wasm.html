@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardar un valor entre eventos wasm — Nyx por ejemplo</title>
+<meta name="description" content="arena_persist copia un String o Array fuera de la arena por evento para que otro evento lo lea intacto — el arreglo para la memoria reciclada en silencio.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/121-arena-persist-wasm.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/121-arena-persist-wasm.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/121-arena-persist-wasm.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/121-arena-persist-wasm.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/121-arena-persist-wasm.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">121</span> / Avanzado</span></p>
+<h1 class="doc-title">Guardar un valor entre eventos wasm</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Con la arena por evento encendida (<code>runNyxWasm(bytes, { arena: true })</code>) todo lo que un handler aloca se descarta al terminar el evento. Un <code>String</code> o un <code>Array</code> armado en un evento y guardado en un global se leería en el evento siguiente como memoria reciclada, en silencio y sin ningún error. <code>arena_persist(x)</code> lo copia antes a la región persistente: lo que se guarda a propósito sobrevive y todo lo demás se sigue recuperando.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">121-arena-persist-wasm.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/121-arena-persist-wasm.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 121 — wasm: guardar entre eventos un valor que nació en un evento</span>
+<span class="cm">// wasm: keep a value born in one event for the next ones</span>
+<span class="cm">//</span>
+<span class="cm">// Target wasm32-wasi (corre en el navegador, o bajo node con</span>
+<span class="cm">// examples/browser/run-node.mjs). Con la arena por evento encendida</span>
+<span class="cm">// (`runNyxWasm(bytes, { arena: true })`), todo lo que un handler aloca se</span>
+<span class="cm">// descarta al terminar el evento. Un String o un Array armado en un evento y</span>
+<span class="cm">// guardado en un global se leería en el evento siguiente como memoria</span>
+<span class="cm">// reciclada, en silencio.</span>
+<span class="cm">//</span>
+<span class="cm">// arena_persist(x) lo copia a la región persistente:</span>
+<span class="cm">//   - acepta un String, o un Array de String/int/float/bool (y arrays de</span>
+<span class="cm">//     esos: una línea de ticket con sus modificadores se copia entera);</span>
+<span class="cm">//   - un struct, un Map, un Fn o un Array&lt;Struct&gt; es NYX1039 al compilar: no</span>
+<span class="cm">//     llevan en tiempo de ejecución la descripción de lo que contienen.</span>
+<span class="cm">//     Persiste sus campos uno por uno y reconstruye el valor donde se usa;</span>
+<span class="cm">//   - es un builtin: no hace falta importar nada, y en nativo es la identidad</span>
+<span class="cm">//     (no hay arena), así que la lógica que lo usa corre con `nyx test`.</span>
+<span class="cm">//</span>
+<span class="cm">// arena_stats() (import &quot;std/wasm_mem&quot;, solo wasm) da los bytes persistentes</span>
+<span class="cm">// y los del turno, para vigilar que una página larga no crezca sin control.</span>
+<span class="cm">//</span>
+<span class="cm">// Construir:  nyx build --target wasm32-wasi</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/wasm_mem&quot;</span>
+
+<span class="kw">var</span> g_ultimo_codigo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+<span class="kw">var</span> g_ticket<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+
+<span class="cm">// Cada escaneo arma un String y una línea de ticket DURANTE el evento.</span>
+#<span class="op">[</span>export_name <span class="op">=</span> <span class="str">&quot;al_escanear&quot;</span><span class="op">]</span>
+<span class="kw">fn</span> <span class="fn">al_escanear</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">let</span> codigo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;SKU-&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">)</span>
+    g_ultimo_codigo <span class="op">=</span> <span class="fn">arena_persist</span><span class="op">(</span>codigo<span class="op">)</span>
+    <span class="kw">let</span> modificadores<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;sin hielo&quot;</span><span class="op">,</span> <span class="str">&quot;grande&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> linea<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span>codigo<span class="op">,</span> <span class="fn">int_to_float</span><span class="op">(</span>n<span class="op">)</span> <span class="op">*</span> <span class="num">1.5</span><span class="op">,</span> n <span class="op">%</span> <span class="num">2</span> <span class="op">==</span> <span class="num">0</span><span class="op">,</span> modificadores<span class="op">]</span>
+    g_ticket <span class="op">=</span> <span class="fn">arena_persist</span><span class="op">(</span>linea<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// Un evento posterior lee lo guardado: sigue intacto.</span>
+#<span class="op">[</span>export_name <span class="op">=</span> <span class="str">&quot;al_cobrar&quot;</span><span class="op">]</span>
+<span class="kw">fn</span> <span class="fn">al_cobrar</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> precio<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> g_ticket<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+    <span class="kw">let</span> mods<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> g_ticket<span class="op">[</span><span class="num">3</span><span class="op">]</span>
+    <span class="kw">let</span> primero<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> mods<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;cobrando &quot;</span> <span class="op">+</span> g_ultimo_codigo <span class="op">+</span> <span class="str">&quot; a &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>precio<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> primero <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> g_ultimo_codigo<span class="op">.</span><span class="fn">length</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="cm">// Diagnóstico: lo persistido solo crece con lo que se guarda a propósito.</span>
+#<span class="op">[</span>export_name <span class="op">=</span> <span class="str">&quot;memoria&quot;</span><span class="op">]</span>
+<span class="kw">fn</span> <span class="fn">memoria</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> st<span class="op">:</span> <span class="ty">ArenaStats</span> <span class="op">=</span> <span class="fn">arena_stats</span><span class="op">()</span>
+    <span class="kw">return</span> st<span class="op">.</span>persistent
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;listo: la página llama a al_escanear y a al_cobrar&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">listo: la página llama a al_escanear y a al_cobrar
+cobrando SKU-7 a 10.5 (sin hielo)</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Acepta un <code>String</code> o un <code>Array</code> de <code>String</code>, <code>int</code>, <code>float</code> y <code>bool</code> — incluso arrays de esos, así que una línea de ticket con sus modificadores se copia entera, como muestra <code>g_ticket</code>. Un struct, un <code>Map</code>, un <code>Fn</code> o un <code>Array&lt;Struct&gt;</code> es un error de compilación (<code>NYX1039</code>): en tiempo de ejecución no llevan la descripción de lo que contienen, así que se persisten sus campos uno por uno y el valor se reconstruye donde se usa.</p>
+<p><code>arena_persist</code> es un builtin, de modo que no se importa nada, y en nativo es la identidad (no hay arena). Eso permite que la lógica que lo rodea corra con <code>nyx test</code>. <code>arena_stats()</code>, de <code>std/wasm_mem</code> y solo para wasm, devuelve los bytes persistentes y los del turno, que es como una página de larga vida vigila que no crezca sin control. Esta es una receta de navegador — se construye con <code>nyx build --target wasm32-wasi</code> y la página llama a sus exports — así que la salida de arriba es ilustrativa.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/120-serve-idle-connections.html"><span class="label">← Anterior</span><span class="doc-nav-name">Conexiones keep-alive ociosas</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/122-https-intermedio-extra.html"><span class="label">Siguiente →</span><span class="doc-nav-name">HTTPS a un sitio con la cadena mal armada</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

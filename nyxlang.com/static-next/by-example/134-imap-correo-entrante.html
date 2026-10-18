@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turn incoming mail into cases — Nyx by example</title>
+<meta name="description" content="std/imap, std/mime and a UID checkpoint tie a customer&#x27;s reply back to the quotation thread it answers.">
+<link rel="canonical" href="https://nyxlang.com/by-example/134-imap-correo-entrante.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/134-imap-correo-entrante.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/134-imap-correo-entrante.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/134-imap-correo-entrante.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/134-imap-correo-entrante.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">134</span> / Networking</span></p>
+<h1 class="doc-title">Turn incoming mail into cases</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A help desk sends quotations by email (<code>std/smtp</code>) and needs the customer's REPLY to return to the thread of that conversation. For that you read the mailbox (<code>std/imap</code>), parse each message (<code>std/mime</code>) and tie the reply to the original through <code>In-Reply-To</code> / <code>References</code>, which hold the Message-ID the system saved when it sent.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">134-imap-correo-entrante.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/134-imap-correo-entrante.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: convertir en casos los correos de una casilla y enhebrar la respuesta</span>
+<span class="cm">// del cliente.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: una mesa de ayuda manda cotizaciones por correo (std/smtp) y necesita que</span>
+<span class="cm">// la RESPUESTA del cliente vuelva al hilo de esa conversación. Para eso hay que leer la</span>
+<span class="cm">// casilla (std/imap), analizar cada mensaje (std/mime) y atar la respuesta al envío por</span>
+<span class="cm">// `In-Reply-To` / `References`, que contienen el Message-ID que el sistema guardó al enviar.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. el sondeo real contra un buzón: conexión verificada, LOGIN, punto de avance por UID y marcar</span>
+<span class="cm">//      leído (la función `sondear`, que compila y enlaza pero NO se llama: un buzón de</span>
+<span class="cm">//      verdad necesita credenciales y esta receta corre sola bajo `make test-examples`);</span>
+<span class="cm">//   2. por qué el punto de avance es por UID y no «los no leídos»;</span>
+<span class="cm">//   3. lo que sí corre acá, sin red: el analizador de respuestas de IMAP y std/mime sobre</span>
+<span class="cm">//      la respuesta de un servidor, y la decisión de a qué caso pertenece cada mensaje;</span>
+<span class="cm">//   4. los errores tipados y qué hacer con cada uno.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/imap&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/mime&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// ── 1. El sondeo real ────────────────────────────────────────────────────</span>
+<span class="cm">// Se llama cada 30-120 s desde un temporizador (un CRM no necesita IDLE). `punto_v` y</span>
+<span class="cm">// `punto_uid` los guarda la aplicación entre llamadas: (0, 0) la primera vez.</span>
+<span class="cm">// Devuelve el punto de avance nuevo para guardar. La clave viene de la configuración, nunca del</span>
+<span class="cm">// código.</span>
+<span class="kw">fn</span> <span class="fn">sondear</span><span class="op">(</span>host<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> usuario<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> clave<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> punto_v<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> punto_uid<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> ids_enviados<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="cm">// 993 con TLS implícito, VERIFICANDO cadena y nombre contra las CAs del sistema.</span>
+    <span class="cm">// Para el 143: imap_connect_starttls. Las variantes `_insecure` son solo para</span>
+    <span class="cm">// desarrollo, y lo dicen en el nombre.</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">ImapConn</span> <span class="op">=</span> <span class="fn">imap_connect_tls</span><span class="op">(</span>host<span class="op">,</span> <span class="num">993</span><span class="op">,</span> <span class="fn">imap_opts</span><span class="op">())?</span>
+
+    <span class="cm">// LOGIN sirve para cPanel/Dovecot y para una clave de aplicación de Gmail. Con OAuth2</span>
+    <span class="cm">// (Gmail, Microsoft 365) el token lo trae la aplicación: imap_auth_xoauth2(c, usuario,</span>
+    <span class="cm">// token). Nunca viajan en claro: sobre un canal sin cifrar fallan antes de mandarlas.</span>
+    <span class="kw">let</span> a<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">imap_login</span><span class="op">(</span>c<span class="op">,</span> usuario<span class="op">,</span> clave<span class="op">)?</span>
+    <span class="kw">let</span> mb<span class="op">:</span> <span class="ty">ImapMailbox</span> <span class="op">=</span> <span class="fn">imap_select</span><span class="op">(</span>c<span class="op">,</span> <span class="str">&quot;INBOX&quot;</span><span class="op">)?</span>
+
+    <span class="cm">// Punto de avance por UID, NO `imap_search_unseen`: `\Seen` es estado compartido con quien abra el</span>
+    <span class="cm">// buzón desde su teléfono; si la respuesta del cliente se lee ahí primero, UNSEEN ya no</span>
+    <span class="cm">// la devuelve y el sistema nunca se entera. Aquí se piden «los UID mayores que el último</span>
+    <span class="cm">// que procesé» y no se toca ninguna marca.</span>
+    <span class="kw">var</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> punto_v
+    <span class="kw">var</span> ultimo<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> punto_uid
+    <span class="kw">match</span> <span class="fn">imap_fetch_since</span><span class="op">(</span>c<span class="op">,</span> v<span class="op">,</span> ultimo<span class="op">,</span> <span class="num">50</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            v <span class="op">=</span> r<span class="op">.</span>uidvalidity
+            <span class="kw">for</span> m<span class="op">:</span> <span class="ty">ImapMessage</span> <span class="kw">in</span> r<span class="op">.</span>messages <span class="op">{</span>
+                <span class="kw">let</span> destino<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">decidir</span><span class="op">(</span>m<span class="op">.</span>mail<span class="op">,</span> ids_enviados<span class="op">)</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;UID &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>m<span class="op">.</span>uid<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> destino<span class="op">)</span>
+                <span class="cm">// m.truncated: un mensaje enorme (o con demasiadas partes) igual trae su</span>
+                <span class="cm">// asunto, remitente e In-Reply-To; solo falta el cuerpo. Se puede enhebrar.</span>
+                <span class="cm">// Marcar leído es OPCIONAL y aparte (el protocolo no lo hace solo):</span>
+                <span class="cm">//   let _s: int = imap_mark_seen(c, m.uid)?</span>
+            <span class="op">}</span>
+            ultimo <span class="op">=</span> r<span class="op">.</span>last_uid
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;stale&quot;</span> <span class="op">{</span>
+                <span class="cm">// UIDVALIDITY cambió (se recreó el buzón): los UID guardados ya no</span>
+                <span class="cm">// significan nada. e.code trae el valor nuevo; se reescanea por Message-ID</span>
+                <span class="cm">// (que además evita procesar dos veces un mensaje).</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;el buzón cambió de UIDVALIDITY a &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">))</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">imap_logout</span><span class="op">(</span>c<span class="op">)</span>
+                <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">imap_logout</span><span class="op">(</span>c<span class="op">)</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>ultimo<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// ── 3. La decisión de a qué caso pertenece un mensaje ───────────────────</span>
+<span class="cm">// No es una respuesta del cliente: un rebote (el correo no llegó) o una autorrespuesta</span>
+<span class="cm">// («estoy de vacaciones»). Tratarlos como respuesta contamina el hilo y puede armar lazos.</span>
+<span class="cm">// Si no, se busca el id de algún mensaje que el sistema envió en In-Reply-To o References.</span>
+<span class="kw">fn</span> <span class="fn">decidir</span><span class="op">(</span>m<span class="op">:</span> <span class="ty">MimeMessage</span><span class="op">,</span> ids_enviados<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> m<span class="op">.</span>is_bounce <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;rebote de &quot;</span> <span class="op">+</span> m<span class="op">.</span>bounce<span class="op">.</span>original_message_id <span class="op">+</span> <span class="str">&quot; (no es del cliente)&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> m<span class="op">.</span>is_auto_reply <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;autorrespuesta (&quot;</span> <span class="op">+</span> m<span class="op">.</span>auto_kind <span class="op">+</span> <span class="str">&quot;), se ignora&quot;</span> <span class="op">}</span>
+    <span class="kw">var</span> candidatos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">for</span> id<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> m<span class="op">.</span>in_reply_to <span class="op">{</span> candidatos<span class="op">.</span><span class="fn">push</span><span class="op">(</span>id<span class="op">)</span> <span class="op">}</span>
+    <span class="kw">for</span> id<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> m<span class="op">.</span>references <span class="op">{</span> candidatos<span class="op">.</span><span class="fn">push</span><span class="op">(</span>id<span class="op">)</span> <span class="op">}</span>
+    <span class="kw">for</span> cand<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> candidatos <span class="op">{</span>
+        <span class="kw">for</span> conocido<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> ids_enviados <span class="op">{</span>
+            <span class="kw">if</span> cand <span class="op">==</span> conocido <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;respuesta al envío &quot;</span> <span class="op">+</span> conocido <span class="op">+</span> <span class="str">&quot;: «&quot;</span> <span class="op">+</span> m<span class="op">.</span>subject <span class="op">+</span> <span class="str">&quot;»&quot;</span> <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;caso nuevo: «&quot;</span> <span class="op">+</span> m<span class="op">.</span>subject <span class="op">+</span> <span class="str">&quot;»&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// Lo que un servidor contesta a `UID FETCH 5 (BODY.PEEK[])`: la línea, el literal de N</span>
+<span class="cm">// bytes (que puede traer cualquier cosa, CRLF incluido) y el cierre.</span>
+<span class="kw">fn</span> <span class="fn">respuesta_de_ejemplo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> correo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;From: Cliente &lt;cliente@empresa.cl&gt;\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;To: casos@miempresa.cl\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Subject: =?UTF-8?Q?Re:_Cotizaci=C3=B3n_123?=\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Message-ID: &lt;resp-5@empresa.cl&gt;\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;In-Reply-To: &lt;caso-123@nyxerp.cl&gt;\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;References: &lt;inicio@nyxerp.cl&gt; &lt;caso-123@nyxerp.cl&gt;\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Content-Type: text/plain; charset=utf-8\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Content-Transfer-Encoding: quoted-printable\r\n\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Hola, acepto la cotizaci=C3=B3n.\r\n&quot;</span>
+    <span class="kw">return</span> <span class="str">&quot;* 2 FETCH (UID 5 BODY[] {&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>correo<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;}\r\n&quot;</span> <span class="op">+</span> correo <span class="op">+</span> <span class="str">&quot;)\r\n&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">rebote_de_ejemplo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="str">&quot;From: MAILER-DAEMON@mx.empresa.cl\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Subject: Undelivered Mail Returned to Sender\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Message-ID: &lt;rebote-1@mx.empresa.cl&gt;\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Content-Type: multipart/report; report-type=delivery-status; boundary=\&quot;B\&quot;\r\n\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;--B\r\nContent-Type: text/plain\r\n\r\nNo se pudo entregar.\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;--B\r\nContent-Type: message/delivery-status\r\n\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Reporting-MTA: dns; mx.empresa.cl\r\n\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Final-Recipient: rfc822; nadie@empresa.cl\r\nAction: failed\r\nStatus: 5.1.1\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;--B\r\nContent-Type: text/rfc822-headers\r\n\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;Message-ID: &lt;caso-124@nyxerp.cl&gt;\r\nSubject: Cotizacion 124\r\n&quot;</span> <span class="op">+</span>
+        <span class="str">&quot;--B--\r\n&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">analizar</span><span class="op">(</span>correo_crudo<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">MimeMessage</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">mime_parse</span><span class="op">(</span>correo_crudo<span class="op">,</span> <span class="fn">mime_limits</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> m <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no es un correo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">)</span>
+            <span class="fn">exit</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">analizar</span><span class="op">(</span>correo_crudo<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Los ids que el sistema guardó al ENVIAR (smtp_message_id del mensaje armado).</span>
+    <span class="kw">let</span> ids_enviados<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;&lt;caso-123@nyxerp.cl&gt;&quot;</span><span class="op">,</span> <span class="str">&quot;&lt;caso-124@nyxerp.cl&gt;&quot;</span><span class="op">]</span>
+
+    <span class="cm">// ── El analizador de IMAP, sin red ───────────────────────────────────</span>
+    <span class="cm">// La respuesta mezcla una línea, un literal de N bytes y un cierre. imap_parse_response</span>
+    <span class="cm">// la interpreta: `* 2 FETCH (...)` → verbo FETCH, número 2, una lista con los datos.</span>
+    <span class="kw">match</span> <span class="fn">imap_parse_response</span><span class="op">(</span><span class="fn">respuesta_de_ejemplo</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;respuesta: &quot;</span> <span class="op">+</span> r<span class="op">.</span>name <span class="op">+</span> <span class="str">&quot; del mensaje &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>num<span class="op">))</span>
+            <span class="kw">let</span> datos<span class="op">:</span> <span class="ty">ImapVal</span> <span class="op">=</span> r<span class="op">.</span>items<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+            <span class="cm">// La lista alterna nombre y valor: UID 5 BODY[] &lt;el correo&gt;.</span>
+            <span class="kw">let</span> uid<span class="op">:</span> <span class="ty">ImapVal</span> <span class="op">=</span> datos<span class="op">.</span>items<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+            <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">ImapVal</span> <span class="op">=</span> datos<span class="op">.</span>items<span class="op">[</span><span class="num">3</span><span class="op">]</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;UID &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>uid<span class="op">.</span>num<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>cuerpo<span class="op">.</span>text<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes de correo&quot;</span><span class="op">)</span>
+            <span class="kw">let</span> m<span class="op">:</span> <span class="ty">MimeMessage</span> <span class="op">=</span> <span class="fn">analizar</span><span class="op">(</span>cuerpo<span class="op">.</span>text<span class="op">)</span>
+            <span class="fn">println</span><span class="op">(</span><span class="fn">decidir</span><span class="op">(</span>m<span class="op">,</span> ids_enviados<span class="op">))</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;cuerpo: &quot;</span> <span class="op">+</span> m<span class="op">.</span>text<span class="op">.</span><span class="fn">trim</span><span class="op">())</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;respuesta ilegible: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Un rebote y un correo sin relación con nada enviado.</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">decidir</span><span class="op">(</span><span class="fn">analizar</span><span class="op">(</span><span class="fn">rebote_de_ejemplo</span><span class="op">()),</span> ids_enviados<span class="op">))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">decidir</span><span class="op">(</span><span class="fn">analizar</span><span class="op">(</span><span class="str">&quot;From: x@y.cl\r\nSubject: Hola\r\n\r\nQuiero comprar\r\n&quot;</span><span class="op">),</span> ids_enviados<span class="op">))</span>
+
+    <span class="cm">// ── 4. Qué hacer con cada error ──────────────────────────────────────</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;— qué hacer con cada error —&quot;</span><span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;auth&quot;</span><span class="op">,</span> <span class="str">&quot;rechazada&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">62</span><span class="op">,</span> <span class="str">&quot;tls&quot;</span><span class="op">,</span> <span class="str">&quot;nombre&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">110</span><span class="op">,</span> <span class="str">&quot;timeout&quot;</span><span class="op">,</span> <span class="str">&quot;plazo&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;stale&quot;</span><span class="op">,</span> <span class="str">&quot;uidvalidity&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;protocol&quot;</span><span class="op">,</span> <span class="str">&quot;respuesta ilegible&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;connection&quot;</span><span class="op">,</span> <span class="str">&quot;cortó&quot;</span><span class="op">)))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// Cada `kind` pide una acción distinta; por eso vale la pena que el error sea tipado.</span>
+<span class="kw">fn</span> <span class="fn">explicar</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">Error</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;auth&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;auth       → revisar usuario y clave (o renovar el token OAuth2)&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;tls&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;tls        → el certificado no verifica: NO bajar la guardia, avisar&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;timeout&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;timeout    → el servidor no contestó: cerrar y reintentar en el próximo sondeo&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;stale&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;stale      → UIDVALIDITY cambió: reescanear por Message-ID&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;protocol&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;protocol   → servidor raro o hostil: la conexión se cerró; no marcar nada y reintentar&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;connection&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;connection → red caída o servidor cortó: reconectar&quot;</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;desconocido&quot;</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">respuesta: FETCH del mensaje 2
+UID 5, 349 bytes de correo
+respuesta al envío &lt;caso-123@nyxerp.cl&gt;: «Re: Cotización 123»
+cuerpo: Hola, acepto la cotización.
+rebote de &lt;caso-124@nyxerp.cl&gt; (no es del cliente)
+caso nuevo: «Hola»
+
+— qué hacer con cada error —
+auth       → revisar usuario y clave (o renovar el token OAuth2)
+tls        → el certificado no verifica: NO bajar la guardia, avisar
+timeout    → el servidor no contestó: cerrar y reintentar en el próximo sondeo
+stale      → UIDVALIDITY cambió: reescanear por Message-ID
+protocol   → servidor raro o hostil: la conexión se cerró; no marcar nada y reintentar
+connection → red caída o servidor cortó: reconectar</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The real polling against a mailbox is the function <code>sondear</code>: verified connection, LOGIN, a UID checkpoint and mark-as-read. It compiles and links but is NOT called, because a real mailbox needs credentials and the recipe has to run on its own. The checkpoint is by UID, not <q>the unread ones</q>: <code>\Seen</code> is state shared with whoever else opens the mailbox, so a person reading mail would make cases vanish.</p>
+<p>What does run, with no network, is IMAP's response parser and <code>std/mime</code> over a server reply, plus the decision of which case each message belongs to: a reply to a sent quotation, a bounce that is not the customer's, or a new case. The last block lists the typed errors and what to do with each — <code>auth</code>, <code>tls</code> (do NOT lower your guard), <code>timeout</code>, <code>stale</code> (UIDVALIDITY changed), <code>protocol</code> and <code>connection</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/133-imagen-miniaturas.html"><span class="label">← Previous</span><span class="doc-nav-name">Product photo thumbnails</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/135-sombreado-en-bloque.html"><span class="label">Next →</span><span class="doc-nav-name">Shadowing a name inside a block</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!-- title: Armar y leer un archivo .zip | blurb: std/zip en Nyx puro, sin zlib: DEFLATE por entrada, CRC-32 verificado al leer, topes contra bombas zip. -->
+<section data-part="intro">
+<p>Un ERP empaqueta varios reportes en un solo <code>.zip</code> para adjuntarlo a un correo, y recibe zips de afuera — de un banco, de un contador — que hay que abrir. <code>std/zip</code> es Nyx puro, sin zlib, así que el mismo programa corre en el servidor y compilado a <code>wasm32-wasi</code>. Todo ocurre en memoria; la receta no escribe archivos.</p>
+</section>
+<section data-part="output">
+zip armado: 1361 bytes
+entrada: ventas.csv
+entrada: notas/lea-me.txt
+tiene ventas.csv
+contenido: Cierre de septiembre.
+ventas.csv: 3073 bytes descomprimidos
+rechazado: zip: no es un zip (falta el fin del directorio central)
+</section>
+<section data-part="explanation">
+<p><code>zip_writer()</code>, <code>add(nombre, datos)</code> y <code>finish()</code> producen los bytes del archivo; cada entrada va con DEFLATE salvo que comprimir la agrande. Leer son dos pasos: <code>zip_read()</code> carga el índice (el directorio central) y <code>entry(nombre)</code> descomprime UNA entrada y verifica su CRC-32, de modo que una entrada dañada es un error y no datos equivocados.</p>
+<p>Un archivo que llega de afuera no se lee sin límites: <code>ZipReadOpts</code> acota lo que una bomba zip puede hacerle al programa. Y unos bytes que no son un zip vuelven como <code>Err</code> — la última línea de la salida — nunca como datos a medias.</p>
+</section>

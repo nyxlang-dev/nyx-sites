@@ -1,0 +1,22 @@
+<!-- title: Check SPF, DKIM and DMARC before sending mail | blurb: std/dns reads TXT and CNAME records and tells NXDOMAIN from NODATA; the checking logic is pure and testable without a network. -->
+<section data-part="intro">
+<p>An application that will email invoices wants to check, by itself, that the sender's domain has its DNS records in order — and to show the administrator what is missing instead of letting messages land in spam. SPF is a TXT record of the domain starting with <code>v=spf1</code>; DKIM is the CNAME (or TXT) of <code>&lt;selector&gt;._domainkey.&lt;domain&gt;</code>; DMARC is a TXT record of <code>_dmarc.&lt;domain&gt;</code> starting with <code>v=DMARC1</code>.</p>
+</section>
+<section data-part="output">
+== dominio completo
+SPF: ok (v=spf1 include:_spf.proveedor.com -all)
+DKIM: ok (apunta a sel1.dkim.proveedor.com)
+DMARC: ok (p=reject)
+== dominio a medias
+SPF: ok (v=spf1 -all)
+DKIM: falta el registro del selector
+DMARC: presente pero p=none (solo monitorea, no protege)
+== sin nada
+SPF: falta el registro TXT 'v=spf1 ...' del dominio
+DKIM: falta el registro del selector
+DMARC: falta el registro TXT de _dmarc
+</section>
+<section data-part="explanation">
+<p><code>dns_txt</code> returns ONE element per record (the 255-byte strings of a long record already come joined), so looking for the prefix is enough. <code>dns_is_nxdomain</code> and <code>dns_is_nodata</code> tell <q>the name does not exist</q> from <q>it exists but published no such record</q>, without reading messages. The checks themselves are pure functions over the records, kept apart from the network query, which is why the demo can run three domains — complete, half-configured and empty — without any DNS.</p>
+<p>The module gives the records, not the verdict: evaluating an SPF <code>include:</code> or DKIM alignment is the caller's job. With no arguments, <code>nyx run</code> runs the demonstration; <code>nyx run -- midominio.com sel1</code> queries the system's real DNS. Without a <code>nameserver</code> in <code>/etc/resolv.conf</code> (or on a system without that file), call <code>dns_set_server("ip")</code> first.</p>
+</section>

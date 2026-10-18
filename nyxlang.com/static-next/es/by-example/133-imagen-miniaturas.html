@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miniaturas de la foto de un producto — Nyx por ejemplo</title>
+<meta name="description" content="std/image decodifica con la mayor reducción posible, saca varios tamaños de una decodificación y aplana la transparencia sobre blanco.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/133-imagen-miniaturas.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/133-imagen-miniaturas.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/133-imagen-miniaturas.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/133-imagen-miniaturas.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/133-imagen-miniaturas.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">133</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Miniaturas de la foto de un producto</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un comercio sube desde el teléfono la foto de un producto — 3 a 5 MB, 12 megapíxeles, a veces girada con la orientación EXIF — y el sistema la tiene que servir chica: unos 600 px para la ficha, unos 200 px para la lista, en JPEG, sin la ubicación de la foto. <code>std/image</code> es Nyx puro, nativo y <code>wasm32-wasi</code>, así que no hace falta libjpeg ni ImageMagick. La foto de ejemplo se fabrica dentro de la receta con <code>image_encode_jpeg</code>; en la vida real son los bytes del multipart que llegó.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">133-imagen-miniaturas.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/133-imagen-miniaturas.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: miniaturas de la foto de un producto con std/image.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un comercio sube desde el teléfono la foto de un producto (3-5 MB, 12</span>
+<span class="cm">// megapíxeles, a veces girada con la orientación EXIF) y el sistema la tiene que servir</span>
+<span class="cm">// chica: ~600 px para la ficha, ~200 px para la lista, en JPEG, sin la ubicación de la foto.</span>
+<span class="cm">// std/image es Nyx puro (nativo y wasm32-wasi): no hace falta libjpeg ni ImageMagick.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - image_thumbnail: decodificar + achicar + codificar en UN paso. Decodifica con la mayor</span>
+<span class="cm">//     reducción posible (1/2, 1/4 o 1/8), así que una foto de 12 MP no se decodifica entera;</span>
+<span class="cm">//   - image_thumbnails: varios tamaños de UNA sola decodificación (la de la ficha, la de la</span>
+<span class="cm">//     lista y una de 80 px);</span>
+<span class="cm">//   - la calidad (1-100; image_default_quality() es 80) y su efecto en los bytes;</span>
+<span class="cm">//   - un PNG con transparencia (el logo) sale compuesto sobre blanco, que es lo que un JPEG</span>
+<span class="cm">//     puede guardar; para otro fondo se llama image_flatten antes de codificar;</span>
+<span class="cm">//   - los errores son Result con kind: &quot;invalid&quot; (parámetro o tope), &quot;parse&quot; (archivo dañado),</span>
+<span class="cm">//     &quot;unsupported&quot; (HEIC, WebP, JPEG progresivo...);</span>
+<span class="cm">//   - la foto de ejemplo se fabrica acá mismo con image_encode_jpeg para que la receta no</span>
+<span class="cm">//     dependa de un archivo: en la vida real son los bytes del `multipart` que llegó.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/image&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Una &quot;foto&quot; sintética: un degradado de color con un círculo, de ancho x alto píxeles.</span>
+<span class="kw">fn</span> <span class="fn">foto_de_prueba</span><span class="op">(</span>ancho<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> alto<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Image</span> <span class="op">{</span>
+    <span class="kw">var</span> filas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">var</span> y<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> y <span class="op">&lt;</span> alto <span class="op">{</span>
+        <span class="kw">var</span> px<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+        <span class="kw">var</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> x <span class="op">&lt;</span> ancho <span class="op">{</span>
+            <span class="kw">var</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="op">(</span>x <span class="op">*</span> <span class="num">255</span><span class="op">)</span> <span class="op">/</span> ancho
+            <span class="kw">var</span> g<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="op">(</span>y <span class="op">*</span> <span class="num">255</span><span class="op">)</span> <span class="op">/</span> alto
+            <span class="kw">var</span> b<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">128</span>
+            <span class="kw">let</span> dx<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> x <span class="op">-</span> ancho <span class="op">/</span> <span class="num">2</span>
+            <span class="kw">let</span> dy<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> y <span class="op">-</span> alto <span class="op">/</span> <span class="num">2</span>
+            <span class="kw">if</span> dx <span class="op">*</span> dx <span class="op">+</span> dy <span class="op">*</span> dy <span class="op">&lt;</span> <span class="op">(</span>alto <span class="op">/</span> <span class="num">3</span><span class="op">)</span> <span class="op">*</span> <span class="op">(</span>alto <span class="op">/</span> <span class="num">3</span><span class="op">)</span> <span class="op">{</span>
+                r <span class="op">=</span> <span class="num">240</span>
+                g <span class="op">=</span> <span class="num">200</span>
+                b <span class="op">=</span> <span class="num">40</span>
+            <span class="op">}</span>
+            px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>r<span class="op">)</span>
+            px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>g<span class="op">)</span>
+            px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>b<span class="op">)</span>
+            x <span class="op">=</span> x <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+        filas<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">string_from_bytes</span><span class="op">(</span>px<span class="op">,</span> <span class="num">0</span><span class="op">,</span> ancho <span class="op">*</span> <span class="num">3</span><span class="op">))</span>
+        y <span class="op">=</span> y <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Image</span> <span class="op">{</span> width<span class="op">:</span> ancho<span class="op">,</span> height<span class="op">:</span> alto<span class="op">,</span> channels<span class="op">:</span> <span class="num">3</span><span class="op">,</span> rows<span class="op">:</span> filas<span class="op">,</span> icc<span class="op">:</span> <span class="str">&quot;&quot;</span><span class="op">,</span> reduction<span class="op">:</span> <span class="num">1</span> <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">medidas</span><span class="op">(</span>bytes<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">image_info</span><span class="op">(</span>bytes<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>i<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> i<span class="op">.</span>format <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">.</span>width<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">.</span>height<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// La foto &quot;del teléfono&quot;: 1600 x 1200 a calidad alta.</span>
+    <span class="kw">var</span> original<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">match</span> <span class="fn">image_encode_jpeg</span><span class="op">(</span><span class="fn">foto_de_prueba</span><span class="op">(</span><span class="num">1600</span><span class="op">,</span> <span class="num">1200</span><span class="op">),</span> <span class="num">92</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>b<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> original <span class="op">=</span> b <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo armar la foto: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;original: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>original<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>original<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+
+    <span class="cm">// 1. Una miniatura: cabe en 600 x 600 conservando la proporción (nunca agranda).</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span>original<span class="op">,</span> <span class="num">600</span><span class="op">,</span> <span class="num">600</span><span class="op">,</span> <span class="fn">image_default_quality</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;ficha: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>t<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 2. Tres tamaños de una sola decodificación: se piden de mayor a menor.</span>
+    <span class="kw">let</span> tamanos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[[</span><span class="num">600</span><span class="op">,</span> <span class="num">600</span><span class="op">],</span> <span class="op">[</span><span class="num">200</span><span class="op">,</span> <span class="num">200</span><span class="op">],</span> <span class="op">[</span><span class="num">80</span><span class="op">,</span> <span class="num">80</span><span class="op">]]</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnails</span><span class="op">(</span>original<span class="op">,</span> tamanos<span class="op">,</span> <span class="num">80</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>salidas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">for</span> s<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> salidas <span class="op">{</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;tamaño &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>s<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>s<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 3. La calidad: menos calidad, menos bytes. Para una lista con datos móviles caros, 60-70.</span>
+    <span class="kw">for</span> q<span class="op">:</span> <span class="ty">int</span> <span class="kw">in</span> <span class="op">[</span><span class="num">95</span><span class="op">,</span> <span class="num">80</span><span class="op">,</span> <span class="num">60</span><span class="op">,</span> <span class="num">40</span><span class="op">]</span> <span class="op">{</span>
+        <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span>original<span class="op">,</span> <span class="num">200</span><span class="op">,</span> <span class="num">200</span><span class="op">,</span> q<span class="op">)</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;calidad &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>q<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span> <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 4. Un logo PNG con transparencia: el JPEG no guarda alfa, sale sobre blanco.</span>
+    <span class="kw">let</span> logo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;examples/by-example/assets/logo-tornillo.png&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span>logo<span class="op">,</span> <span class="num">64</span><span class="op">,</span> <span class="num">64</span><span class="op">,</span> <span class="num">90</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;logo: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>t<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; (sobre blanco)&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 5. Lo que no es una foto se rechaza con un motivo, sin abortar.</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span><span class="str">&quot;esto no es una imagen&quot;</span><span class="op">,</span> <span class="num">200</span><span class="op">,</span> <span class="num">200</span><span class="op">,</span> <span class="num">80</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;???&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;rechazada (&quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;): &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span>original<span class="op">,</span> <span class="num">200</span><span class="op">,</span> <span class="num">200</span><span class="op">,</span> <span class="num">101</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;???&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;rechazada (&quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;): &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">original: jpeg 1600x1200, 140360 bytes
+ficha: jpeg 600x450, 13167 bytes
+tamaño 0: jpeg 600x450, 13167 bytes
+tamaño 1: jpeg 200x150, 3175 bytes
+tamaño 2: jpeg 80x60, 1366 bytes
+calidad 95: 8025 bytes
+calidad 80: 3168 bytes
+calidad 60: 2504 bytes
+calidad 40: 2174 bytes
+logo: jpeg 64x64 (sobre blanco)
+rechazada (invalid): image_thumbnail: no parece una imagen JPEG ni PNG (firma desconocida)
+rechazada (invalid): image_thumbnail: la calidad va de 1 a 100 (llegó 101)</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>image_thumbnail</code> decodifica, achica y codifica en UN paso, decodificando con la mayor reducción posible (1/2, 1/4 o 1/8), así que una foto de 12 MP no se decodifica entera. <code>image_thumbnails</code> saca varios tamaños de UNA sola decodificación — la ficha, la lista y una de 80 px. La calidad va de 1 a 100 (<code>image_default_quality()</code> es 80) y su efecto en los bytes se ve en las cuatro líneas de <q>calidad</q>.</p>
+<p>Un PNG con transparencia, el logo, sale compuesto sobre blanco, que es lo que un JPEG puede guardar; para otro fondo se llama <code>image_flatten</code> antes de codificar. Los errores son un <code>Result</code> con kind: <code>"invalid"</code> (un parámetro o un tope), <code>"parse"</code> (archivo dañado) y <code>"unsupported"</code> (HEIC, WebP, JPEG progresivo...). Los dos rechazos del final de la salida son <code>invalid</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/132-browser-fetch-red-local.html"><span class="label">← Anterior</span><span class="doc-nav-name">Una PWA que habla con un servidor de la red local</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/134-imap-correo-entrante.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Convertir el correo entrante en casos</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

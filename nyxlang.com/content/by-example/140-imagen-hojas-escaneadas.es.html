@@ -1,0 +1,16 @@
+<!-- title: Miniaturas de hojas escaneadas | blurb: std/image sobre escaneos tamaño carta: casi no hay reducción, así que importa el modo de compilación. -->
+<section data-part="intro">
+<p>Un ERP recibe hojas escaneadas (1275 x 1650 a 150 ppp, 2550 x 3300 a 300 ppp) y genera una versión liviana de cada una al subirla. Una hoja NO es una foto de 12 megapíxeles: la <q>miniatura</q> que se quiere es de 1600 px de lado, casi el tamaño de origen. Eso cambia qué esperar de <code>std/image</code>. La hoja de ejemplo se fabrica dentro de la receta — papel blanco con renglones de <q>texto</q> — para no necesitar ningún archivo.</p>
+</section>
+<section data-part="output">
+hoja: jpeg 1275x1650, 199862 bytes
+guardar: jpeg 1236x1600, 208944 bytes
+destino 1600: decodifica a 1275x1650 (reducción 1/1)
+destino 300: decodifica a 638x825 (reducción 1/2)
+salida: jpeg 1236x1600, 208944 bytes
+salida: jpeg 232x300, 23637 bytes
+</section>
+<section data-part="explanation">
+<p>La decodificación reducida (1/2, 1/4, 1/8) que usan las fotos no entra aquí: la regla es reducir mientras queden al menos el doble de píxeles que el destino, y 1650 a 1600 no deja margen para reducir nada. Se decodifica la hoja entera, se achica poco (Lanczos3, byte a byte igual a Pillow) y se vuelve a codificar, así que el trabajo es proporcional a la hoja, no al destino. Para una vista previa chica — digamos 300 px — sí hay reducción: la hoja se decodifica a 1/2, como muestra la salida.</p>
+<p>Por eso importa cómo se compila. <code>nyx build</code> sin <code>--release</code> no optimiza (<code>-O0</code>), y <code>nyx build --release</code> pasa <code>-O2</code>. Medido en la hoja de 1275 x 1650 (aarch64, CPU), <code>image_thumbnail(hoja, 1600, 1600, 80)</code> tarda cerca de 1,0 s en <code>-O0</code> y cerca de 0,25 s en <code>-O2</code>; la hoja de 2550 x 3300 cuesta unas cuatro veces eso. Antes del trabajo de velocidad de imagen, la misma llamada tardaba 3,6 s en <code>-O0</code>.</p>
+</section>

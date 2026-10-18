@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un PDF que calca una hoja preimpresa — Nyx por ejemplo</title>
+<meta name="description" content="std/pdf fase 2: grosor de línea, sombreado gris y en color, Times y Courier, texto girado, estado gráfico por página.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/139-pdf-preimpreso.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/139-pdf-preimpreso.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/139-pdf-preimpreso.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/139-pdf-preimpreso.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/139-pdf-preimpreso.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">139</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Un PDF que calca una hoja preimpresa</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un ERP llena formularios que el negocio ya imprime en papel con marco, encabezados sombreados y rótulos laterales, y etiquetas con texto en Courier. El programa tiene que dibujar encima lo mismo que trae el papel. Esta es la segunda fase de <code>std/pdf</code>, que escribe un PDF de verdad en Nyx puro.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">139-pdf-preimpreso.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/139-pdf-preimpreso.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un documento que calca una hoja preimpresa (std/pdf, fase 2).</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP llena formularios que el negocio ya imprime en papel con</span>
+<span class="cm">// marco, encabezados sombreados y rótulos laterales; y etiquetas con texto en</span>
+<span class="cm">// Courier. Hace falta dibujar encima lo mismo que trae el papel.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - el grosor de línea (d.line_width, en mm): marco grueso, divisiones finas;</span>
+<span class="cm">//   - sombreado en gris (d.gray) y en color (d.color): el encabezado de una</span>
+<span class="cm">//     tabla, y la vuelta a negro para escribir encima;</span>
+<span class="cm">//   - las 12 fuentes de texto estándar: Times y Courier en negrita y cursiva;</span>
+<span class="cm">//   - texto girado (d.text_rotated) para el rótulo del margen: 90 grados sube</span>
+<span class="cm">//     por el borde izquierdo, 270 baja;</span>
+<span class="cm">//   - que el estado gráfico vale PARA LO QUE SE DIBUJA DESPUÉS en esa página, y</span>
+<span class="cm">//     cada página nueva arranca otra vez en negro con el trazo de 1 pt.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run -- preimpreso.pdf   (sin argumento solo informa el tamaño)</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/pdf&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">preimpreso</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> d<span class="op">:</span> <span class="ty">Pdf</span> <span class="op">=</span> <span class="fn">pdf_new</span><span class="op">(</span><span class="ty">PdfPageSize</span><span class="op">.</span><span class="ty">Letter</span><span class="op">,</span> <span class="num">0.0</span><span class="op">,</span> <span class="num">0.0</span><span class="op">)</span>
+
+    <span class="cm">// Marco exterior grueso (0,6 mm) y divisiones finas (0,15 mm).</span>
+    d<span class="op">.</span><span class="fn">line_width</span><span class="op">(</span><span class="num">0.6</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span><span class="num">15.0</span><span class="op">,</span> <span class="num">15.0</span><span class="op">,</span> <span class="num">185.9</span><span class="op">,</span> <span class="num">120.0</span><span class="op">,</span> <span class="kw">false</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line_width</span><span class="op">(</span><span class="num">0.15</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">15.0</span><span class="op">,</span> <span class="num">45.0</span><span class="op">,</span> <span class="num">200.9</span><span class="op">,</span> <span class="num">45.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">15.0</span><span class="op">,</span> <span class="num">55.0</span><span class="op">,</span> <span class="num">200.9</span><span class="op">,</span> <span class="num">55.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">110.0</span><span class="op">,</span> <span class="num">45.0</span><span class="op">,</span> <span class="num">110.0</span><span class="op">,</span> <span class="num">135.0</span><span class="op">)</span>
+
+    <span class="cm">// Encabezado sombreado en gris claro: se rellena primero y el texto va encima,</span>
+    <span class="cm">// en negro (el relleno y el texto comparten color, así que se vuelve a negro).</span>
+    d<span class="op">.</span><span class="fn">gray</span><span class="op">(</span><span class="num">0.85</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span><span class="num">15.3</span><span class="op">,</span> <span class="num">45.3</span><span class="op">,</span> <span class="num">185.3</span><span class="op">,</span> <span class="num">9.4</span><span class="op">,</span> <span class="kw">true</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">gray</span><span class="op">(</span><span class="num">0.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">51.5</span><span class="op">,</span> <span class="str">&quot;Concepto&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">112.0</span><span class="op">,</span> <span class="num">51.5</span><span class="op">,</span> <span class="str">&quot;Observación&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBoldOblique</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+
+    <span class="cm">// Título en Times, con un filete de color debajo.</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">28.0</span><span class="op">,</span> <span class="str">&quot;Orden de entrega&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesBold</span><span class="op">,</span> <span class="num">20.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">38.0</span><span class="op">,</span> <span class="str">&quot;Original para el cliente&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesItalic</span><span class="op">,</span> <span class="num">11.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">color</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">90</span><span class="op">,</span> <span class="num">160</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line_width</span><span class="op">(</span><span class="num">0.8</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">31.0</span><span class="op">,</span> <span class="num">90.0</span><span class="op">,</span> <span class="num">31.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">color</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+
+    <span class="cm">// Filas con Courier: ancho fijo, las columnas de cifras quedan alineadas.</span>
+    d<span class="op">.</span><span class="fn">line_width</span><span class="op">(</span><span class="num">0.15</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">63.0</span><span class="op">,</span> <span class="str">&quot;0001  Tornillo 1/4 x 2&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Courier</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">69.0</span><span class="op">,</span> <span class="str">&quot;0002  Tuerca hex 1/4&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Courier</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">75.0</span><span class="op">,</span> <span class="str">&quot;0003  Arandela plana&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">CourierOblique</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">81.0</span><span class="op">,</span> <span class="str">&quot;TOTAL 3 renglones&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">CourierBold</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">112.0</span><span class="op">,</span> <span class="num">63.0</span><span class="op">,</span> <span class="str">&quot;Entregar en almacén&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesRoman</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">112.0</span><span class="op">,</span> <span class="num">69.0</span><span class="op">,</span> <span class="str">&quot;Frágil&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesBoldItalic</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+
+    <span class="cm">// Rótulo del margen izquierdo, girado 90 grados: arranca abajo (y = 130) y</span>
+    <span class="cm">// sube. En el margen derecho, el mismo texto girado 270 baja.</span>
+    d<span class="op">.</span><span class="fn">text_rotated</span><span class="op">(</span><span class="num">10.0</span><span class="op">,</span> <span class="num">130.0</span><span class="op">,</span> <span class="str">&quot;ORIGINAL - CLIENTE&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">8.0</span><span class="op">,</span> <span class="num">90.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text_rotated</span><span class="op">(</span><span class="num">206.0</span><span class="op">,</span> <span class="num">20.0</span><span class="op">,</span> <span class="str">&quot;ORIGINAL - CLIENTE&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">8.0</span><span class="op">,</span> <span class="num">270.0</span><span class="op">)</span>
+
+    <span class="cm">// Segunda página: vuelve a empezar en negro con el trazo por omisión.</span>
+    d<span class="op">.</span><span class="fn">add_page</span><span class="op">(</span><span class="ty">PdfPageSize</span><span class="op">.</span><span class="ty">Letter</span><span class="op">,</span> <span class="num">0.0</span><span class="op">,</span> <span class="num">0.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">25.0</span><span class="op">,</span> <span class="str">&quot;Copia sin sombreado&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">CourierBoldOblique</span><span class="op">,</span> <span class="num">12.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">18.0</span><span class="op">,</span> <span class="num">28.0</span><span class="op">,</span> <span class="num">120.0</span><span class="op">,</span> <span class="num">28.0</span><span class="op">)</span>
+
+    <span class="kw">return</span> d<span class="op">.</span><span class="fn">bytes</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">preimpreso</span><span class="op">()</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>pdf<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+            <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">let</span> ruta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+                <span class="fn">write_file</span><span class="op">(</span>ruta<span class="op">,</span> pdf<span class="op">)</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;preimpreso escrito en &quot;</span> <span class="op">+</span> ruta <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pdf<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes)&quot;</span><span class="op">)</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;preimpreso: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pdf<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes, empieza con &quot;</span> <span class="op">+</span> pdf<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">8</span><span class="op">))</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;para escribirlo: nyx run -- preimpreso.pdf&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo armar el preimpreso: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">preimpreso: 13458 bytes, empieza con %PDF-1.4
+para escribirlo: nyx run -- preimpreso.pdf</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La receta usa el grosor de línea (<code>d.line_width</code>, en mm) para un marco grueso y divisiones finas; sombreado en gris (<code>d.gray</code>) y en color (<code>d.color</code>) para el encabezado de una tabla, con la vuelta a negro para escribir encima; las 12 fuentes de texto estándar, con Times y Courier en negrita y cursiva; y texto girado (<code>d.text_rotated</code>) para el rótulo del margen — 90 grados sube por el borde izquierdo, 270 baja.</p>
+<p>El estado gráfico vale PARA LO QUE SE DIBUJA DESPUÉS en esa página, y cada página nueva arranca otra vez en negro con el trazo de 1 pt. Con <code>nyx run -- preimpreso.pdf</code> se escribe el archivo; sin argumento solo informa el tamaño y la cabecera <code>%PDF-1.4</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/138-xlsx-plantilla.html"><span class="label">← Anterior</span><span class="doc-nav-name">Una plantilla .xlsx de carga masiva con listas desplegables</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/140-imagen-hojas-escaneadas.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Miniaturas de hojas escaneadas</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

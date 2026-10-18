@@ -1,0 +1,24 @@
+<!-- title: Turn incoming mail into cases | blurb: std/imap, std/mime and a UID checkpoint tie a customer's reply back to the quotation thread it answers. -->
+<section data-part="intro">
+<p>A help desk sends quotations by email (<code>std/smtp</code>) and needs the customer's REPLY to return to the thread of that conversation. For that you read the mailbox (<code>std/imap</code>), parse each message (<code>std/mime</code>) and tie the reply to the original through <code>In-Reply-To</code> / <code>References</code>, which hold the Message-ID the system saved when it sent.</p>
+</section>
+<section data-part="output">
+respuesta: FETCH del mensaje 2
+UID 5, 349 bytes de correo
+respuesta al envío &lt;caso-123@nyxerp.cl&gt;: «Re: Cotización 123»
+cuerpo: Hola, acepto la cotización.
+rebote de &lt;caso-124@nyxerp.cl&gt; (no es del cliente)
+caso nuevo: «Hola»
+
+— qué hacer con cada error —
+auth       → revisar usuario y clave (o renovar el token OAuth2)
+tls        → el certificado no verifica: NO bajar la guardia, avisar
+timeout    → el servidor no contestó: cerrar y reintentar en el próximo sondeo
+stale      → UIDVALIDITY cambió: reescanear por Message-ID
+protocol   → servidor raro o hostil: la conexión se cerró; no marcar nada y reintentar
+connection → red caída o servidor cortó: reconectar
+</section>
+<section data-part="explanation">
+<p>The real polling against a mailbox is the function <code>sondear</code>: verified connection, LOGIN, a UID checkpoint and mark-as-read. It compiles and links but is NOT called, because a real mailbox needs credentials and the recipe has to run on its own. The checkpoint is by UID, not <q>the unread ones</q>: <code>\Seen</code> is state shared with whoever else opens the mailbox, so a person reading mail would make cases vanish.</p>
+<p>What does run, with no network, is IMAP's response parser and <code>std/mime</code> over a server reply, plus the decision of which case each message belongs to: a reply to a sent quotation, a bounce that is not the customer's, or a new case. The last block lists the typed errors and what to do with each — <code>auth</code>, <code>tls</code> (do NOT lower your guard), <code>timeout</code>, <code>stale</code> (UIDVALIDITY changed), <code>protocol</code> and <code>connection</code>.</p>
+</section>

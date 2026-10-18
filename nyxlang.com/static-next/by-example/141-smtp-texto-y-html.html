@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An email with a text AND an HTML version — Nyx by example</title>
+<meta name="description" content="smtp_message_alternative builds multipart/alternative, combines with attachments and does not invent the text for you.">
+<link rel="canonical" href="https://nyxlang.com/by-example/141-smtp-texto-y-html.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/141-smtp-texto-y-html.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/141-smtp-texto-y-html.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/141-smtp-texto-y-html.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/141-smtp-texto-y-html.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">141</span> / Networking</span></p>
+<h1 class="doc-title">An email with a text AND an HTML version</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>An ERP used to send its invoices as HTML only, and spam filters punished them: a message with no text part is a classic signal (SpamAssassin calls it <code>MIME_HTML_ONLY</code>). The fix is <code>multipart/alternative</code> — the same information in two versions, with the mail client showing the best one it understands. The recipe opens no connection, so it runs on its own.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">141-smtp-texto-y-html.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/141-smtp-texto-y-html.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un correo con versión de texto Y versión HTML.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP mandaba sus facturas solo en HTML y los filtros de spam</span>
+<span class="cm">// las castigaban. Un mensaje sin parte de texto es una señal clásica</span>
+<span class="cm">// (SpamAssassin: MIME_HTML_ONLY). La salida es multipart/alternative: la misma</span>
+<span class="cm">// información en dos versiones, y el cliente de correo muestra la mejor que</span>
+<span class="cm">// entiende.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra esta receta:</span>
+<span class="cm">//   1. smtp_message_alternative(de, para, asunto, texto, html);</span>
+<span class="cm">//   2. que se combina con smtp_attach: queda multipart/mixed &gt; alternative;</span>
+<span class="cm">//   3. que el texto NO se inventa solo: si solo hay HTML, mime_html_to_text</span>
+<span class="cm">//      (std/mime) arma uno aproximado, y es decisión de quien llama usarlo;</span>
+<span class="cm">//   4. la estructura que viaja, vista con smtp_render (función pura).</span>
+<span class="cm">//</span>
+<span class="cm">// NO abre ninguna conexión: corre sola bajo `make test-examples`.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/smtp&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/mime&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> html<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&lt;h1&gt;Factura de septiembre&lt;/h1&gt;\n&lt;p&gt;Estimado cliente: adjuntamos su factura.&lt;/p&gt;\n&lt;p&gt;Total: &lt;b&gt;$ 1.250&lt;/b&gt;&lt;/p&gt;&quot;</span>
+
+    <span class="cm">// Texto escrito a mano: lo mejor. Si no se tiene, una aproximación:</span>
+    <span class="cm">//   let texto: String = mime_html_to_text(html)</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Factura de septiembre\n\nEstimado cliente: adjuntamos su factura.\nTotal: $ 1.250&quot;</span>
+
+    <span class="kw">var</span> msg<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">smtp_message_alternative</span><span class="op">(</span>
+        <span class="str">&quot;facturacion@miempresa.com&quot;</span><span class="op">,</span>
+        <span class="op">[</span><span class="str">&quot;cliente@ejemplo.com&quot;</span><span class="op">],</span>
+        <span class="str">&quot;Factura de septiembre&quot;</span><span class="op">,</span>
+        texto<span class="op">,</span>
+        html<span class="op">)</span>
+    msg <span class="op">=</span> <span class="fn">smtp_attach</span><span class="op">(</span>msg<span class="op">,</span> <span class="str">&quot;factura.pdf&quot;</span><span class="op">,</span> <span class="str">&quot;application/pdf&quot;</span><span class="op">,</span> <span class="str">&quot;%PDF-1.4 (ejemplo)&quot;</span><span class="op">)</span>
+
+    <span class="kw">let</span> raw<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">smtp_render</span><span class="op">(</span>msg<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;— estructura MIME que viaja —&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> lineas<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> raw<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> fin<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> raw<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;\r\n&quot;</span><span class="op">,</span> i<span class="op">)</span>
+        <span class="kw">if</span> fin <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+        <span class="kw">let</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> raw<span class="op">.</span><span class="fn">substring</span><span class="op">(</span>i<span class="op">,</span> fin<span class="op">)</span>
+        <span class="kw">if</span> linea<span class="op">.</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;Content-Type:&quot;</span><span class="op">)</span> <span class="op">||</span> linea<span class="op">.</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;Content-Transfer-Encoding:&quot;</span><span class="op">)</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> linea<span class="op">)</span>
+            lineas <span class="op">=</span> lineas <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+        i <span class="op">=</span> fin <span class="op">+</span> <span class="num">2</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Lo que un cliente ve al leerlo: las dos partes y el adjunto.</span>
+    <span class="kw">match</span> <span class="fn">mime_parse</span><span class="op">(</span>raw<span class="op">,</span> <span class="fn">mime_limits</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>p<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;texto : &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p<span class="op">.</span>text<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;html  : &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p<span class="op">.</span>html<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;adjuntos: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>p<span class="op">.</span>attachments<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo leer el mensaje armado&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Enviarlo es igual que cualquier otro mensaje: smtp_send(c, msg). Un texto</span>
+    <span class="cm">// vacío se rechaza con Err(&quot;invalid&quot;) antes de abrir el diálogo SMTP.</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">— estructura MIME que viaja —
+  Content-Type: multipart/mixed; boundary="=_nyx_1792350867_3523985490351435988"
+  Content-Type: multipart/alternative; boundary="=_nyx_alt_1792350867_6362569340132166581"
+  Content-Type: text/plain; charset=utf-8
+  Content-Transfer-Encoding: quoted-printable
+  Content-Type: text/html; charset=utf-8
+  Content-Transfer-Encoding: quoted-printable
+  Content-Type: application/pdf
+  Content-Transfer-Encoding: base64
+
+texto : 78 bytes
+html  : 107 bytes
+adjuntos: 1</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>smtp_message_alternative(from, to, subject, text, html)</code> builds it. It combines with <code>smtp_attach</code>, and the structure becomes <code>multipart/mixed</code> containing the <code>alternative</code>, then the attachment, as the first lines of output show. The boundaries carry a timestamp and random digits, so they change on every run.</p>
+<p>The text is NOT invented for you: if there is only HTML, <code>mime_html_to_text</code> (from <code>std/mime</code>) produces an approximate one, and whether to use it is the caller's decision. The structure that travels is shown with <code>smtp_render</code>, a pure function.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/140-imagen-hojas-escaneadas.html"><span class="label">← Previous</span><span class="doc-nav-name">Thumbnails of scanned sheets</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/142-dns-spf-dkim-dmarc.html"><span class="label">Next →</span><span class="doc-nav-name">Check SPF, DKIM and DMARC before sending mail</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

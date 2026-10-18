@@ -1,0 +1,13 @@
+<!-- title: Una PWA que habla con un servidor de la red local | blurb: Permiso de red local más un plazo en fetch y SSE, para que una tablet no espere minutos a un servidor apagado. -->
+<section data-part="intro">
+<p>Las tablets de un local tienen la aplicación instalada (una PWA) y hablan con un servidor que está en la misma red, para seguir funcionando aunque se caiga internet. Es una receta de navegador para <code>wasm32-wasi</code>: se construye con <code>nyx build --target wasm32-wasi</code> y usa el DOM, así que no puede correr en nativo y la salida de arriba es ilustrativa.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+#estado: enviando...
+#estado: el servidor local no responde: se guarda para más tarde
+#red: sin servidor local (timeout)
+</section>
+<section data-part="explanation">
+<p>Chrome pide el permiso de red local (Local Network Access, antes Private Network Access) para que una página hable con un equipo de la LAN. Se activa con <code>targetAddressSpace</code> en fetch — el tercer argumento <code>"local"</code> de estas funciones; <code>""</code> es no pedirlo, y un navegador que no conoce el campo lo ignora, así que nunca rompe el pedido. El servidor también tiene que cooperar: CORS y, si el navegador manda un preflight de red local, contestarlo. Esa parte no se pudo verificar contra un Chrome real desde el repositorio; los tests fijan que el shim pasa el campo y que el plazo aborta el pedido.</p>
+<p>Contra un equipo apagado, un fetch espera minutos. El plazo (en ms, 3000 aquí) lo aborta y devuelve un <code>Err</code> con kind <code>"timeout"</code>, o <code>"connection"</code> si no hubo respuesta alguna, que <code>enviar_pedido</code> convierte en un mensaje en vez de dejar la tablet colgada. En SSE el plazo es para CONECTAR, no para la vida del canal: si vence, o la conexión falla, el manejador recibe UNA vez el evento <code>"nyx-error"</code> con dato <code>"timeout"</code> o <code>"connection"</code>, y el canal se cierra solo. Como el programa espera al anfitrión, <code>nyx build</code> necesita <code>binaryen</code> (o <code>NYX_WASM_OPT</code>).</p>
+</section>

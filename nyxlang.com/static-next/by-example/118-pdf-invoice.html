@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF invoice — Nyx by example</title>
+<meta name="description" content="a letter-size invoice in pure Nyx — right-aligned amounts, a table made of text+line, a PNG logo and a QR, native and in wasm.">
+<link rel="canonical" href="https://nyxlang.com/by-example/118-pdf-invoice.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/118-pdf-invoice.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/118-pdf-invoice.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/118-pdf-invoice.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/118-pdf-invoice.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">118</span> / Input, output and data</span></p>
+<h1 class="doc-title">PDF invoice</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>std/pdf</code> writes a real PDF in pure Nyx, letter size here, with positions in MILLIMETRES from the top-left corner — the module does the conversion to points and the vertical flip PDF expects. This recipe builds a full invoice: an issuer header with a PNG logo, a buyer block, a line-item table made of <code>text</code> and <code>line</code> calls (the spec is explicit that a table is a recipe, not a function of the module, because its layout decisions belong to the caller), right-aligned totals with <code>16%</code> tax, and a QR from <code>std/barcode</code> drawn module by module with <code>rect</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">118-pdf-invoice.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/118-pdf-invoice.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: una factura en PDF, tamaño carta.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP emite la factura de una venta como PDF de verdad, para</span>
+<span class="cm">// imprimirla en carta (Providencia 00071 en Venezuela) o adjuntarla a un correo</span>
+<span class="cm">// con std/smtp. std/pdf es Nyx puro: el mismo programa corre en el servidor y</span>
+<span class="cm">// compilado a wasm32-wasi.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - posiciones en MILÍMETROS desde la esquina de ARRIBA a la izquierda (el</span>
+<span class="cm">//     módulo hace la cuenta a puntos y el volteo de PDF);</span>
+<span class="cm">//   - montos alineados a la derecha con pdf_text_width (x = borde - ancho);</span>
+<span class="cm">//   - una tabla hecha con text + line (spec std-pdf D-5: la tabla es una</span>
+<span class="cm">//     receta, no una función del módulo, porque sus decisiones son del programa);</span>
+<span class="cm">//   - un logo PNG con transparencia (include_bytes: viaja dentro del binario);</span>
+<span class="cm">//   - el QR de la factura, de std/barcode, dibujado módulo a módulo con rect;</span>
+<span class="cm">//   - los errores: bytes() devuelve Err si algo no se pudo dibujar tal cual.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run -- factura.pdf   (sin argumento solo informa el tamaño)</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/pdf&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/barcode&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Monto en céntimos -&gt; &quot;1.234,56&quot; (separadores venezolanos). Se trabaja en</span>
+<span class="cm">// enteros: los montos nunca pasan por float.</span>
+<span class="kw">fn</span> <span class="fn">monto</span><span class="op">(</span>centimos<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> ent<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> centimos <span class="op">/</span> <span class="num">100</span>
+    <span class="kw">let</span> cts<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> centimos <span class="op">%</span> <span class="num">100</span>
+    <span class="kw">var</span> s<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">int_to_string</span><span class="op">(</span>ent<span class="op">)</span>
+    <span class="kw">var</span> out<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">while</span> s<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">3</span> <span class="op">{</span>
+        out <span class="op">=</span> <span class="str">&quot;.&quot;</span> <span class="op">+</span> s<span class="op">.</span><span class="fn">substring</span><span class="op">(</span>s<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">3</span><span class="op">,</span> s<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> out
+        s <span class="op">=</span> s<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> s<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">3</span><span class="op">)</span>
+    <span class="op">}</span>
+    out <span class="op">=</span> s <span class="op">+</span> out
+    <span class="kw">var</span> c<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">int_to_string</span><span class="op">(</span>cts<span class="op">)</span>
+    <span class="kw">if</span> cts <span class="op">&lt;</span> <span class="num">10</span> <span class="op">{</span> c <span class="op">=</span> <span class="str">&quot;0&quot;</span> <span class="op">+</span> c <span class="op">}</span>
+    <span class="kw">return</span> out <span class="op">+</span> <span class="str">&quot;,&quot;</span> <span class="op">+</span> c
+<span class="op">}</span>
+
+<span class="cm">// Texto alineado a la derecha: termina exactamente en `derecha` mm.</span>
+<span class="kw">fn</span> <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">:</span> <span class="ty">Pdf</span><span class="op">,</span> derecha<span class="op">:</span> <span class="ty">float</span><span class="op">,</span> y<span class="op">:</span> <span class="ty">float</span><span class="op">,</span> s<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> f<span class="op">:</span> <span class="ty">PdfFont</span><span class="op">,</span> pt<span class="op">:</span> <span class="ty">float</span><span class="op">)</span> <span class="op">{</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>derecha <span class="op">-</span> <span class="fn">pdf_text_width</span><span class="op">(</span>s<span class="op">,</span> f<span class="op">,</span> pt<span class="op">),</span> y<span class="op">,</span> s<span class="op">,</span> f<span class="op">,</span> pt<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// El QR, uno oscuro = un rectángulo. Los módulos oscuros seguidos de una fila</span>
+<span class="cm">// van en UN rectángulo: menos operadores, y ninguna rendija entre ellos.</span>
+<span class="kw">fn</span> <span class="fn">dibujar_qr</span><span class="op">(</span>d<span class="op">:</span> <span class="ty">Pdf</span><span class="op">,</span> m<span class="op">:</span> <span class="ty">Array</span><span class="op">,</span> x<span class="op">:</span> <span class="ty">float</span><span class="op">,</span> y<span class="op">:</span> <span class="ty">float</span><span class="op">,</span> modulo<span class="op">:</span> <span class="ty">float</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">var</span> r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> r <span class="op">&lt;</span> m<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> fila<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> m<span class="op">[</span>r<span class="op">]</span>
+        <span class="kw">var</span> c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> c <span class="op">&lt;</span> fila<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+            <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fila<span class="op">[</span>c<span class="op">]</span>
+            <span class="kw">if</span> v <span class="op">==</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">var</span> fin<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> c
+                <span class="kw">while</span> fin <span class="op">+</span> <span class="num">1</span> <span class="op">&lt;</span> fila<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                    <span class="kw">let</span> sig<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fila<span class="op">[</span>fin <span class="op">+</span> <span class="num">1</span><span class="op">]</span>
+                    <span class="kw">if</span> sig <span class="op">!=</span> <span class="num">1</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+                    fin <span class="op">=</span> fin <span class="op">+</span> <span class="num">1</span>
+                <span class="op">}</span>
+                <span class="kw">let</span> ancho<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="fn">int_to_float</span><span class="op">(</span>fin <span class="op">-</span> c <span class="op">+</span> <span class="num">1</span><span class="op">)</span> <span class="op">*</span> modulo
+                d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span>x <span class="op">+</span> <span class="fn">int_to_float</span><span class="op">(</span>c<span class="op">)</span> <span class="op">*</span> modulo<span class="op">,</span> y <span class="op">+</span> <span class="fn">int_to_float</span><span class="op">(</span>r<span class="op">)</span> <span class="op">*</span> modulo<span class="op">,</span> ancho<span class="op">,</span> modulo<span class="op">,</span> <span class="kw">true</span><span class="op">)</span>
+                c <span class="op">=</span> fin <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                c <span class="op">=</span> c <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        r <span class="op">=</span> r <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">factura</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> izq<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">15.0</span>
+    <span class="kw">let</span> der<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">200.9</span>          <span class="cm">// 215.9 mm de carta menos 15 de margen</span>
+    <span class="kw">var</span> d<span class="op">:</span> <span class="ty">Pdf</span> <span class="op">=</span> <span class="fn">pdf_new</span><span class="op">(</span><span class="ty">PdfPageSize</span><span class="op">.</span><span class="ty">Letter</span><span class="op">,</span> <span class="num">0.0</span><span class="op">,</span> <span class="num">0.0</span><span class="op">)</span>
+
+    <span class="cm">// ── Encabezado del emisor ──────────────────────────────────────────────</span>
+    <span class="cm">// Alto 0: se calcula con la proporción del PNG (cuadrado, 22 x 22 mm).</span>
+    <span class="cm">// `let` y no la llamada suelta: el `?` de una llamada que devuelve algo se</span>
+    <span class="cm">// liga siempre (LLM.md §5.2).</span>
+    <span class="kw">let</span> logo<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> d<span class="op">.</span><span class="fn">image_png</span><span class="op">(</span>izq<span class="op">,</span> <span class="num">12.0</span><span class="op">,</span> <span class="num">22.0</span><span class="op">,</span> <span class="num">0.0</span><span class="op">,</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;examples/by-example/assets/logo-tornillo.png&quot;</span><span class="op">))?</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">41.0</span><span class="op">,</span> <span class="num">18.0</span><span class="op">,</span> <span class="str">&quot;Ferretería El Tornillo, C.A.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">14.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">41.0</span><span class="op">,</span> <span class="num">24.0</span><span class="op">,</span> <span class="str">&quot;RIF J-29643190-6&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">41.0</span><span class="op">,</span> <span class="num">28.5</span><span class="op">,</span> <span class="str">&quot;Av. Bolívar, Local 12, Maracay, estado Aragua&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">41.0</span><span class="op">,</span> <span class="num">33.0</span><span class="op">,</span> <span class="str">&quot;Teléfono (0243) 555-0123 · ventas@eltornillo.com.ve&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der<span class="op">,</span> <span class="num">18.0</span><span class="op">,</span> <span class="str">&quot;FACTURA&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">16.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der<span class="op">,</span> <span class="num">24.0</span><span class="op">,</span> <span class="str">&quot;N° de factura: 00000123&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der<span class="op">,</span> <span class="num">28.5</span><span class="op">,</span> <span class="str">&quot;N° de control: 00-00000123&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der<span class="op">,</span> <span class="num">33.0</span><span class="op">,</span> <span class="str">&quot;Fecha de emisión: 24/09/2026&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span>izq<span class="op">,</span> <span class="num">38.0</span><span class="op">,</span> der<span class="op">,</span> <span class="num">38.0</span><span class="op">)</span>
+
+    <span class="cm">// ── Comprador ──────────────────────────────────────────────────────────</span>
+    <span class="cm">// Un nombre que llega de la base de datos puede traer un carácter que las</span>
+    <span class="cm">// fuentes estándar no tienen (un emoji, otro alfabeto): text() lo haría</span>
+    <span class="cm">// fallar en bytes(). pdf_text_supported lo pregunta antes.</span>
+    <span class="kw">var</span> cliente<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Construcciones Señor de la Montaña, C.A.&quot;</span>
+    <span class="kw">if</span> <span class="kw">not</span> <span class="fn">pdf_text_supported</span><span class="op">(</span>cliente<span class="op">)</span> <span class="op">{</span> cliente <span class="op">=</span> <span class="str">&quot;(razón social con caracteres no imprimibles)&quot;</span> <span class="op">}</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq<span class="op">,</span> <span class="num">45.0</span><span class="op">,</span> <span class="str">&quot;Razón social:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">45.0</span><span class="op">,</span> <span class="num">45.0</span><span class="op">,</span> cliente<span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq<span class="op">,</span> <span class="num">50.0</span><span class="op">,</span> <span class="str">&quot;RIF:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">45.0</span><span class="op">,</span> <span class="num">50.0</span><span class="op">,</span> <span class="str">&quot;J-40123456-7&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq<span class="op">,</span> <span class="num">55.0</span><span class="op">,</span> <span class="str">&quot;Domicilio fiscal:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">45.0</span><span class="op">,</span> <span class="num">55.0</span><span class="op">,</span> <span class="str">&quot;Calle Páez, Edif. Aurora, piso 3, Valencia&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+
+    <span class="cm">// ── Renglones ──────────────────────────────────────────────────────────</span>
+    <span class="cm">// Columnas: código y descripción a la izquierda; cantidad, precio y total</span>
+    <span class="cm">// alineados a la derecha en su borde.</span>
+    <span class="kw">let</span> codigos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;T-0012&quot;</span><span class="op">,</span> <span class="str">&quot;C-2210&quot;</span><span class="op">,</span> <span class="str">&quot;P-0450&quot;</span><span class="op">,</span> <span class="str">&quot;H-1001&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> descripciones<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Tornillo autorroscante 8 x 1\&quot; (caja de 100)&quot;</span><span class="op">,</span> <span class="str">&quot;Cemento gris tipo I, saco de 42,5 kg&quot;</span><span class="op">,</span>
+                                <span class="str">&quot;Pintura de caucho blanca, galón&quot;</span><span class="op">,</span> <span class="str">&quot;Martillo de uña, mango de fibra&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> cantidades<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">3</span><span class="op">,</span> <span class="num">10</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">1</span><span class="op">]</span>
+    <span class="kw">let</span> precios<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1250</span><span class="op">,</span> <span class="num">8990</span><span class="op">,</span> <span class="num">15475</span><span class="op">,</span> <span class="num">12000</span><span class="op">]</span>    <span class="cm">// céntimos</span>
+    <span class="kw">let</span> col_cant<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">128.0</span>
+    <span class="kw">let</span> col_precio<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">160.0</span>
+    <span class="kw">var</span> y<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">66.0</span>
+    d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span>izq<span class="op">,</span> y <span class="op">-</span> <span class="num">5.0</span><span class="op">,</span> der <span class="op">-</span> izq<span class="op">,</span> <span class="num">7.0</span><span class="op">,</span> <span class="kw">false</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq <span class="op">+</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Código&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">38.0</span><span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Descripción&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_cant<span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Cant.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_precio<span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Precio unit.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der <span class="op">-</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Total Bs.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="kw">var</span> base<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> codigos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        y <span class="op">=</span> y <span class="op">+</span> <span class="num">7.0</span>
+        <span class="kw">let</span> cod<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> codigos<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> desc<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> descripciones<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> cant<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> cantidades<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> precio<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> precios<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> total<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> cant <span class="op">*</span> precio
+        base <span class="op">=</span> base <span class="op">+</span> total
+        d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq <span class="op">+</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> cod<span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+        d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">38.0</span><span class="op">,</span> y<span class="op">,</span> desc<span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+        <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_cant<span class="op">,</span> y<span class="op">,</span> <span class="fn">int_to_string</span><span class="op">(</span>cant<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+        <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_precio<span class="op">,</span> y<span class="op">,</span> <span class="fn">monto</span><span class="op">(</span>precio<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+        <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der <span class="op">-</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="fn">monto</span><span class="op">(</span>total<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+        d<span class="op">.</span><span class="fn">line</span><span class="op">(</span>izq<span class="op">,</span> y <span class="op">+</span> <span class="num">2.0</span><span class="op">,</span> der<span class="op">,</span> y <span class="op">+</span> <span class="num">2.0</span><span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+
+    <span class="cm">// ── Totales ────────────────────────────────────────────────────────────</span>
+    <span class="cm">// IVA al 16 %, redondeado al céntimo (mitad hacia arriba) en enteros.</span>
+    <span class="kw">let</span> iva<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">mul_div_round</span><span class="op">(</span>base<span class="op">,</span> <span class="num">16</span><span class="op">,</span> <span class="num">100</span><span class="op">,</span> <span class="ty">RoundMode</span><span class="op">.</span><span class="ty">HalfUp</span><span class="op">)</span>
+    y <span class="op">=</span> y <span class="op">+</span> <span class="num">9.0</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_precio<span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;Base imponible (16 %):&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der <span class="op">-</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="fn">monto</span><span class="op">(</span>base<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    y <span class="op">=</span> y <span class="op">+</span> <span class="num">5.0</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_precio<span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;IVA 16 %:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der <span class="op">-</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="fn">monto</span><span class="op">(</span>iva<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    y <span class="op">=</span> y <span class="op">+</span> <span class="num">7.0</span>
+    d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">130.0</span><span class="op">,</span> y <span class="op">-</span> <span class="num">4.5</span><span class="op">,</span> der<span class="op">,</span> y <span class="op">-</span> <span class="num">4.5</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> col_precio<span class="op">,</span> y<span class="op">,</span> <span class="str">&quot;TOTAL A PAGAR Bs.:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">11.0</span><span class="op">)</span>
+    <span class="fn">texto_der</span><span class="op">(</span>d<span class="op">,</span> der <span class="op">-</span> <span class="num">2.0</span><span class="op">,</span> y<span class="op">,</span> <span class="fn">monto</span><span class="op">(</span>base <span class="op">+</span> iva<span class="op">),</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">11.0</span><span class="op">)</span>
+
+    <span class="cm">// ── QR con los datos de la factura ─────────────────────────────────────</span>
+    <span class="cm">// 0,8 mm por módulo; la zona de silencio (4 módulos) queda en blanco.</span>
+    <span class="kw">let</span> datos<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;FAC 00000123|CTRL 00-00000123|J-29643190-6|24/09/2026|&quot;</span> <span class="op">+</span> <span class="fn">monto</span><span class="op">(</span>base <span class="op">+</span> iva<span class="op">)</span>
+    <span class="kw">let</span> m<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">qr_matrix</span><span class="op">(</span>datos<span class="op">,</span> <span class="ty">QrEcc</span><span class="op">.</span><span class="ty">M</span><span class="op">)?</span>
+    <span class="fn">dibujar_qr</span><span class="op">(</span>d<span class="op">,</span> m<span class="op">,</span> izq <span class="op">+</span> <span class="num">3.2</span><span class="op">,</span> y <span class="op">+</span> <span class="num">12.0</span><span class="op">,</span> <span class="num">0.8</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq <span class="op">+</span> <span class="num">35.0</span><span class="op">,</span> y <span class="op">+</span> <span class="num">20.0</span><span class="op">,</span> <span class="str">&quot;Escanee para verificar los datos de esta factura.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">8.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span>izq <span class="op">+</span> <span class="num">35.0</span><span class="op">,</span> y <span class="op">+</span> <span class="num">25.0</span><span class="op">,</span> <span class="str">&quot;Documento emitido por medios digitales. Sin tachaduras ni enmiendas.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesRoman</span><span class="op">,</span> <span class="num">8.0</span><span class="op">)</span>
+
+    <span class="kw">return</span> d<span class="op">.</span><span class="fn">bytes</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">factura</span><span class="op">()</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>pdf<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+            <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">let</span> ruta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+                <span class="fn">write_file</span><span class="op">(</span>ruta<span class="op">,</span> pdf<span class="op">)</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;factura escrita en &quot;</span> <span class="op">+</span> ruta <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pdf<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes)&quot;</span><span class="op">)</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;factura: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pdf<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes, empieza con &quot;</span> <span class="op">+</span> pdf<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">8</span><span class="op">))</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;para escribirla: nyx run -- factura.pdf&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo armar la factura: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">factura: 26456 bytes, empieza con %PDF-1.4
+para escribirla: nyx run -- factura.pdf</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Every amount is worked in CENTS, as an <code>int</code> — never a <code>float</code> — and <code>monto</code> formats it with Venezuelan separators (<code>.</code> for thousands, <code>,</code> for the decimal pair). <code>mul_div_round(base, 16, 100, RoundMode.HalfUp)</code> computes the tax with the rounding rule spelled out, instead of trusting whatever a <code>float</code> multiplication happens to land on for a specific amount.</p>
+<p><code>texto_der</code> right-aligns a piece of text against a fixed edge by measuring it first with <code>pdf_text_width(s, f, pt)</code> and placing it at <code>edge - width</code> — the same primitive lines up every column of the table and every total without a single hardcoded x per row. <code>pdf_text_supported(cliente)</code> is asked BEFORE drawing a name that could carry a character outside the standard fonts' coverage (an emoji, another alphabet): <code>text()</code> would fail turning the document into <code>bytes()</code>, so the recipe substitutes a safe placeholder instead of letting the whole invoice fail on one field.</p>
+<p>The logo comes from <code>include_bytes(...)</code>, so the PNG travels inside the compiled binary — no file to ship alongside it, in native or in <code>wasm32-wasi</code>. The QR at the bottom is <code>std/barcode</code>'s <code>qr_matrix</code>, walked row by row: consecutive dark modules in a row become ONE <code>rect</code> instead of one per module, so there is no seam between them and fewer drawing operations. <code>d.bytes()</code> is the single point that can fail — anything that could not be drawn exactly as asked comes back as an <code>Err</code>, not a silently wrong PDF.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/117-serial-printer-wasm.html"><span class="label">← Previous</span><span class="doc-nav-name">Web Serial: thermal printer ticket</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/119-postgres-listen-notify.html"><span class="label">Next →</span><span class="doc-nav-name">LISTEN/NOTIFY as a live bus</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

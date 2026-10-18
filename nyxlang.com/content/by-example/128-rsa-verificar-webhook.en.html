@@ -1,0 +1,13 @@
+<!-- title: Verify a signed payment webhook | blurb: std/rsa checks an RSA-SHA256 signature against the provider's public key: PKCS#1 v1.5 or PSS, true, false or an error. -->
+<section data-part="intro">
+<p>A payment processor announces a payment with a POST whose body is signed with RSA; the signature arrives in base64 in a header. HMAC is not enough here because the provider does not share a secret: it publishes its PUBLIC KEY (PEM) and you verify with that. <code>std/rsa</code> does it through OpenSSL.</p>
+</section>
+<section data-part="output">
+aviso genuino: aceptado
+cuerpo alterado: rechazado
+no se pudo verificar: rsa: la clave pública PEM no se pudo leer o no es RSA
+</section>
+<section data-part="explanation">
+<p>Three entry points: <code>rsa_sha256_verify_b64(pem, body, signature_base64)</code> for PKCS#1 v1.5, the common case; <code>rsa_sha256_verify(pem, body, raw_signature)</code> for the same signature as bytes; and <code>rsa_pss_sha256_verify(pem, body, raw_signature)</code> for RSASSA-PSS. The answer has three outcomes: <code>Ok(true)</code>, a valid signature; <code>Ok(false)</code>, the notice is NOT from the provider (altered data or someone else's key); and <code>Err</code>, it could not even be attempted, as with an unreadable PEM — the three lines of output.</p>
+<p>Verify the EXACT body received, byte for byte, BEFORE parsing it. The data in the recipe are the repository's test fixtures, made with the <code>openssl</code> CLI; in a real program the key comes from <code>read_file("proveedor.pem")</code> and the body and signature from the incoming request.</p>
+</section>

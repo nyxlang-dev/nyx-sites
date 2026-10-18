@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Body caps and rate limits in std/serve — Nyx by example</title>
+<meta name="description" content="A body cap per route (413) and a request limiter per origin (429 with Retry-After), shared by all workers.">
+<link rel="canonical" href="https://nyxlang.com/by-example/127-serve-limites.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/127-serve-limites.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/127-serve-limites.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/127-serve-limites.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/127-serve-limites.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">127</span> / Networking</span></p>
+<h1 class="doc-title">Body caps and rate limits in std/serve</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Two guards against abuse. A body cap per route in bytes: the global cap is <code>NYX_HTTP_MAX_BODY</code> (1 MiB) and a route can be stricter or looser — <code>app_max_body(app, "POST", "/contacto", 16384)</code> for a contact form, 8 MiB for photos. Over the cap the answer is <code>413</code>. The recipe plays the client with raw TCP sockets so it can run on its own.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">127-serve-limites.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/127-serve-limites.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// std/serve limits: a body cap per route and a request limiter per origin</span>
+<span class="cm">// Límites de std/serve: tope de cuerpo por ruta y limitador de peticiones por origen</span>
+<span class="cm">//</span>
+<span class="cm">// Body cap per route (bytes). The global cap is NYX_HTTP_MAX_BODY (1 MiB); a route</span>
+<span class="cm">// can be stricter or looser:</span>
+<span class="cm">//</span>
+<span class="cm">//   app_max_body(app, &quot;POST&quot;, &quot;/contacto&quot;, 16384)     // a contact form: 16 KiB</span>
+<span class="cm">//   app_max_body(app, &quot;POST&quot;, &quot;/foto&quot;, 8388608)       // photos: 8 MiB</span>
+<span class="cm">//</span>
+<span class="cm">// Over the cap: 413. The parser reads up to the largest cap declared by any route</span>
+<span class="cm">// before a route can refuse, so raise a cap only where it is needed.</span>
+<span class="cm">//</span>
+<span class="cm">// Request limiter per origin (fixed window), SHARED by all the workers of the</span>
+<span class="cm">// process (they are threads of one process, guarded by a mutex):</span>
+<span class="cm">//</span>
+<span class="cm">//   app_rate_limit(app, 120, 60)                       // whole app: 120 per minute</span>
+<span class="cm">//   app_route_rate_limit(app, &quot;POST&quot;, &quot;/contacto&quot;, 5, 60)   // one route: 5 per minute</span>
+<span class="cm">//</span>
+<span class="cm">// Over the limit: 429 with `Retry-After: &lt;seconds until the window closes&gt;`. The</span>
+<span class="cm">// origin is the client&#x27;s IP; behind a reverse proxy every request comes from the</span>
+<span class="cm">// proxy, so count by another key with app_rate_limit_key(app, fn), for example</span>
+<span class="cm">// rate_key_forwarded_for (first X-Forwarded-For) or a user id. An empty key</span>
+<span class="cm">// exempts the request. Counts are per process: two instances behind a balancer</span>
+<span class="cm">// count separately.</span>
+<span class="cm">//</span>
+<span class="cm">// This recipe plays the client with raw TCP sockets so it can run on its own.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">recibir</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;got &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>req<span class="op">.</span>body<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">ping</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;pong&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// The origin is named by a header so the recipe can play several clients from</span>
+<span class="cm">// one machine. A real app would use rate_key_forwarded_for or the default (the IP).</span>
+<span class="kw">fn</span> <span class="fn">origen</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">http_find_header</span><span class="op">(</span>req<span class="op">.</span>headers_flat<span class="op">,</span> <span class="str">&quot;X-Client&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// One request; the status code of the answer (0 = no answer).</span>
+<span class="kw">fn</span> <span class="fn">pedir</span><span class="op">(</span>port<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> method<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> path<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> client<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> body<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> tries<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> tries <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span> <span class="op">}</span>
+        tries <span class="op">=</span> tries <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">return</span> <span class="num">0</span> <span class="op">}</span>
+    <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
+    <span class="kw">var</span> req<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> method <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> path <span class="op">+</span> <span class="str">&quot; HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n&quot;</span>
+    <span class="kw">if</span> client<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> req <span class="op">=</span> req <span class="op">+</span> <span class="str">&quot;X-Client: &quot;</span> <span class="op">+</span> client <span class="op">+</span> <span class="str">&quot;\r\n&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> method <span class="op">==</span> <span class="str">&quot;POST&quot;</span> <span class="op">{</span> req <span class="op">=</span> req <span class="op">+</span> <span class="str">&quot;Content-Length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>body<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;\r\n&quot;</span> <span class="op">}</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> req <span class="op">+</span> <span class="str">&quot;\r\n&quot;</span> <span class="op">+</span> body<span class="op">)</span>
+    <span class="kw">let</span> resp<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">if</span> resp<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&lt;</span> <span class="num">12</span> <span class="op">{</span> <span class="kw">return</span> <span class="num">0</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">string_to_int_or</span><span class="op">(</span>resp<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">9</span><span class="op">,</span> <span class="num">12</span><span class="op">),</span> <span class="num">0</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18214</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/ping&quot;</span><span class="op">,</span> ping<span class="op">)</span>
+    <span class="fn">app_post</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/contacto&quot;</span><span class="op">,</span> recibir<span class="op">)</span>
+
+    <span class="fn">app_max_body</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;POST&quot;</span><span class="op">,</span> <span class="str">&quot;/contacto&quot;</span><span class="op">,</span> <span class="num">100</span><span class="op">)</span>
+    <span class="fn">app_rate_limit_key</span><span class="op">(</span>app<span class="op">,</span> origen<span class="op">)</span>
+    <span class="fn">app_rate_limit</span><span class="op">(</span>app<span class="op">,</span> <span class="num">4</span><span class="op">,</span> <span class="num">60</span><span class="op">)</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> port<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;100-byte form:  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;POST&quot;</span><span class="op">,</span> <span class="str">&quot;/contacto&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789&quot;</span><span class="op">)))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;101-byte form:  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;POST&quot;</span><span class="op">,</span> <span class="str">&quot;/contacto&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890&quot;</span><span class="op">)))</span>
+
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">5</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;client ana, request &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;/ping&quot;</span><span class="op">,</span> <span class="str">&quot;ana&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;client beto, request 1: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;/ping&quot;</span><span class="op">,</span> <span class="str">&quot;beto&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18214 with 2 workers
+100-byte form:  200
+101-byte form:  413
+client ana, request 1: 200
+client ana, request 2: 200
+client ana, request 3: 200
+client ana, request 4: 200
+client ana, request 5: 429
+client beto, request 1: 200</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The parser reads up to the largest cap declared by ANY route before a route can refuse, so raise a cap only where it is needed. The request limiter counts per origin in a fixed window and is SHARED by every worker of the process (they are threads of one process, guarded by a mutex): <code>app_rate_limit(app, 120, 60)</code> for the whole app, <code>app_route_rate_limit(app, "POST", "/contacto", 5, 60)</code> for one route. Over the limit the answer is <code>429</code> with <code>Retry-After</code> set to the seconds until the window closes — see request 5 of client <q>ana</q>, while <q>beto</q> still gets <code>200</code>.</p>
+<p>The origin is the client's IP, and behind a reverse proxy every request comes from the proxy; count by another key with <code>app_rate_limit_key(app, fn)</code>, for example <code>rate_key_forwarded_for</code> (the first <code>X-Forwarded-For</code>) or a user id. An empty key exempts the request. Counts are per process: two instances behind a balancer count separately.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/126-serve-gzip.html"><span class="label">← Previous</span><span class="doc-nav-name">Automatic gzip in std/serve</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/128-rsa-verificar-webhook.html"><span class="label">Next →</span><span class="doc-nav-name">Verify a signed payment webhook</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

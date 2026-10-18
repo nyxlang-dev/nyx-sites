@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build and read a .zip file — Nyx by example</title>
+<meta name="description" content="std/zip in pure Nyx, no zlib: DEFLATE per entry, CRC-32 checked on read, limits against zip bombs.">
+<link rel="canonical" href="https://nyxlang.com/by-example/123-zip-crear-y-leer.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/123-zip-crear-y-leer.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/123-zip-crear-y-leer.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/123-zip-crear-y-leer.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/123-zip-crear-y-leer.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">123</span> / Input, output and data</span></p>
+<h1 class="doc-title">Build and read a .zip file</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>An ERP packs several reports into one <code>.zip</code> to attach to an email, and receives zips from outside — a bank, an accountant — that have to be opened. <code>std/zip</code> is pure Nyx with no zlib, so the same program runs on the server and compiled to <code>wasm32-wasi</code>. Everything here happens in memory; the recipe writes no files.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">123-zip-crear-y-leer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/123-zip-crear-y-leer.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: armar y leer un archivo .zip.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP empaqueta varios reportes en un solo .zip para</span>
+<span class="cm">// adjuntarlo a un correo, y recibe zips de afuera (de un banco, de un</span>
+<span class="cm">// contador) que hay que abrir. std/zip es Nyx puro, sin zlib: el mismo</span>
+<span class="cm">// programa corre en el servidor y compilado a wasm32-wasi.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - zip_writer() + add(nombre, datos) + finish(): los bytes del .zip. Cada</span>
+<span class="cm">//     entrada va con DEFLATE salvo que comprimir la agrande;</span>
+<span class="cm">//   - zip_read() lee el índice (directorio central); entry(nombre) descomprime</span>
+<span class="cm">//     UNA entrada y verifica su CRC-32;</span>
+<span class="cm">//   - los topes contra bombas zip (ZipReadOpts): un archivo que llega de</span>
+<span class="cm">//     afuera no se lee sin límites;</span>
+<span class="cm">//   - un zip que no es zip da Err, no datos a medias.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run (todo en memoria; no escribe archivos)</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/zip&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">armar</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> w<span class="op">:</span> <span class="ty">ZipWriter</span> <span class="op">=</span> <span class="fn">zip_writer</span><span class="op">()</span>
+    <span class="kw">var</span> ventas<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;fecha,monto\n&quot;</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;=</span> <span class="num">200</span> <span class="op">{</span>
+        ventas <span class="op">=</span> ventas <span class="op">+</span> <span class="str">&quot;2026-09-&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="num">1</span> <span class="op">+</span> i <span class="op">%</span> <span class="num">28</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;,&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i <span class="op">*</span> <span class="num">15</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    w<span class="op">.</span><span class="fn">add</span><span class="op">(</span><span class="str">&quot;ventas.csv&quot;</span><span class="op">,</span> ventas<span class="op">)</span>              <span class="cm">// se repite mucho: DEFLATE lo achica</span>
+    w<span class="op">.</span><span class="fn">add</span><span class="op">(</span><span class="str">&quot;notas/lea-me.txt&quot;</span><span class="op">,</span> <span class="str">&quot;Cierre de septiembre.\n&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> w<span class="op">.</span><span class="fn">finish</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> bytes<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">armar</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;zip armado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>bytes<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Lo que llega de afuera se lee con topes. Los de por omisión (64 MB de</span>
+    <span class="cm">// zip, 256 MB por entrada, 512 MB en total) se pueden ajustar.</span>
+    <span class="kw">var</span> opts<span class="op">:</span> <span class="ty">ZipReadOpts</span> <span class="op">=</span> <span class="fn">zip_read_opts</span><span class="op">()</span>
+    opts<span class="op">.</span>max_entry <span class="op">=</span> <span class="num">1024</span> <span class="op">*</span> <span class="num">1024</span>
+    <span class="kw">match</span> <span class="fn">zip_read</span><span class="op">(</span>bytes<span class="op">,</span> opts<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>z<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">var</span> arch<span class="op">:</span> <span class="ty">ZipArchive</span> <span class="op">=</span> z
+            <span class="kw">for</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> arch<span class="op">.</span><span class="fn">names</span><span class="op">()</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;entrada: &quot;</span> <span class="op">+</span> nombre<span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">if</span> arch<span class="op">.</span><span class="fn">has</span><span class="op">(</span><span class="str">&quot;ventas.csv&quot;</span><span class="op">)</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;tiene ventas.csv&quot;</span><span class="op">)</span> <span class="op">}</span>
+            <span class="kw">match</span> arch<span class="op">.</span><span class="fn">entry</span><span class="op">(</span><span class="str">&quot;notas/lea-me.txt&quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>txt<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;contenido: &quot;</span> <span class="op">+</span> txt<span class="op">.</span><span class="fn">trim</span><span class="op">())</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo leer la entrada: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+                    <span class="kw">return</span> <span class="num">1</span>
+                <span class="op">}</span>
+            <span class="op">}</span>
+            <span class="kw">match</span> arch<span class="op">.</span><span class="fn">entry</span><span class="op">(</span><span class="str">&quot;ventas.csv&quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>csv<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ventas.csv: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>csv<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes descomprimidos&quot;</span><span class="op">)</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo leer la entrada: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+                    <span class="kw">return</span> <span class="num">1</span>
+                <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;zip inválido: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Un archivo que no es zip: Err con el motivo.</span>
+    <span class="kw">match</span> <span class="fn">zip_read</span><span class="op">(</span><span class="str">&quot;esto no es un zip&quot;</span><span class="op">,</span> <span class="fn">zip_read_opts</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: lo aceptó&quot;</span><span class="op">)</span> <span class="kw">return</span> <span class="num">1</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;rechazado: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">zip armado: 1361 bytes
+entrada: ventas.csv
+entrada: notas/lea-me.txt
+tiene ventas.csv
+contenido: Cierre de septiembre.
+ventas.csv: 3073 bytes descomprimidos
+rechazado: zip: no es un zip (falta el fin del directorio central)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>zip_writer()</code>, <code>add(name, data)</code> and <code>finish()</code> produce the bytes of the archive; each entry goes in with DEFLATE unless compressing would make it bigger. Reading is two steps: <code>zip_read()</code> loads the index (the central directory) and <code>entry(name)</code> decompresses ONE entry and verifies its CRC-32, so a corrupted entry is an error and not wrong data.</p>
+<p>A file that arrives from outside is not read without limits: <code>ZipReadOpts</code> caps what a zip bomb can make the program do. And bytes that are not a zip at all come back as an <code>Err</code> — the last line of the output — never as half-read data.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/122-https-intermedio-extra.html"><span class="label">← Previous</span><span class="doc-nav-name">HTTPS to a site with a broken chain</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/124-xlsx-escribir-libro.html"><span class="label">Next →</span><span class="doc-nav-name">A purchase ledger as .xlsx</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

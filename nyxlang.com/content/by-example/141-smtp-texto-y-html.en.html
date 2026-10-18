@@ -1,0 +1,23 @@
+<!-- title: An email with a text AND an HTML version | blurb: smtp_message_alternative builds multipart/alternative, combines with attachments and does not invent the text for you. -->
+<section data-part="intro">
+<p>An ERP used to send its invoices as HTML only, and spam filters punished them: a message with no text part is a classic signal (SpamAssassin calls it <code>MIME_HTML_ONLY</code>). The fix is <code>multipart/alternative</code> — the same information in two versions, with the mail client showing the best one it understands. The recipe opens no connection, so it runs on its own.</p>
+</section>
+<section data-part="output">
+— estructura MIME que viaja —
+  Content-Type: multipart/mixed; boundary="=_nyx_1792350867_3523985490351435988"
+  Content-Type: multipart/alternative; boundary="=_nyx_alt_1792350867_6362569340132166581"
+  Content-Type: text/plain; charset=utf-8
+  Content-Transfer-Encoding: quoted-printable
+  Content-Type: text/html; charset=utf-8
+  Content-Transfer-Encoding: quoted-printable
+  Content-Type: application/pdf
+  Content-Transfer-Encoding: base64
+
+texto : 78 bytes
+html  : 107 bytes
+adjuntos: 1
+</section>
+<section data-part="explanation">
+<p><code>smtp_message_alternative(from, to, subject, text, html)</code> builds it. It combines with <code>smtp_attach</code>, and the structure becomes <code>multipart/mixed</code> containing the <code>alternative</code>, then the attachment, as the first lines of output show. The boundaries carry a timestamp and random digits, so they change on every run.</p>
+<p>The text is NOT invented for you: if there is only HTML, <code>mime_html_to_text</code> (from <code>std/mime</code>) produces an approximate one, and whether to use it is the caller's decision. The structure that travels is shown with <code>smtp_render</code>, a pure function.</p>
+</section>

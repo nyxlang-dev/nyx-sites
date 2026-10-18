@@ -1,0 +1,18 @@
+<!-- title: Leer una hoja .xlsx | blurb: xlsx_read devuelve cada celda con su tipo, fechas ISO, los huecos como celdas vacías y topes por omisión contra bombas zip. -->
+<section data-part="intro">
+<p>Un banco manda el estado de cuenta en Excel y el ERP lo concilia. Para no depender de un archivo de entrada, la receta arma primero un libro con <code>xlsx_write</code> y después lo lee como si viniera de afuera.</p>
+</section>
+<section data-part="output">
+hoja Movimientos: 4 filas
+Fecha | Descripción | Monto | 
+2026-09-01 | Depósito | 1234.50 | 
+2026-09-03 | Comisión | -12.75 | 
+2026-09-10 | - | 80.00 | 
+C2 es number, vale 1234.5, formato 0.00
+A3 es date: 2026-09-03
+B4 es empty
+</section>
+<section data-part="explanation">
+<p><code>xlsx_read(bytes, xlsx_read_opts())</code> trae topes por omisión contra bombas zip y libros gigantes (archivo, partes, total descomprimido, celdas). Cada celda trae su TIPO — <code>text</code>, <code>number</code>, <code>date</code>, <code>bool</code>, <code>error</code> o <code>empty</code> — además de su <code>text</code>, de modo que un importe se lee tal cual está escrito, y su <code>number</code>. Las fechas salen en ISO, con la época 1900 o 1904 del libro ya aplicada.</p>
+<p><code>rows[f][c]</code> es la celda de la fila <code>f+1</code>, columna <code>c+1</code>. Los huecos son celdas de tipo <code>empty</code>, así <q>C7</q> cae donde debe, y <code>xlsx_cell(hoja, "B3")</code> pide una por su nombre — mira las tres últimas líneas de la salida. Las FÓRMULAS no se evalúan: se lee el valor que el archivo trae en caché. <code>xlsx_sheet(libro, nombre)</code> busca una hoja por nombre y devuelve un <code>Option</code>.</p>
+</section>

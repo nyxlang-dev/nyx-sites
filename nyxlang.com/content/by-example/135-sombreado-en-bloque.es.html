@@ -1,0 +1,12 @@
+<!-- title: Sombrear un nombre dentro de un bloque | blurb: Un nombre redeclarado en un if, un ciclo, un brazo de match o un try es otra variable que desaparece al cerrar la llave. -->
+<!-- not-a-version: 0.35.0 — es la última versión del lenguaje con el comportamiento anterior, no la del toolchain -->
+<section data-part="intro">
+<p>Un nombre redeclarado dentro de un bloque — <code>if</code>, <code>else</code>, <code>while</code>, <code>for</code>, un brazo de <code>match</code>, <code>try</code>/<code>catch</code> — es OTRA variable. Vive hasta el cierre del bloque y, al salir, el nombre vuelve a ser la variable de afuera, con su valor y su tipo. Hasta la 0.35.0 la interna tapaba a la de afuera hasta el final de la función; desde la 0.36 se comporta como se describe.</p>
+</section>
+<section data-part="output">
+ok
+</section>
+<section data-part="explanation">
+<p>La receta cubre tres cosas: el sombreado en un <code>if</code> con OTRO tipo y con el MISMO tipo; la variable de un <code>for q in ...</code> y el binding de un patrón <code>Option.Some(q) =></code>; y la forma correcta de SACAR un valor de un bloque — declararlo afuera y asignarlo adentro. Imprime <code>ok</code> cuando todos los valores de afuera volvieron intactos.</p>
+<p>Un límite que conviene recordar: en el mismo alcance no hay bloque, de modo que <code>let x = x + 1</code> sigue reemplazando al <code>x</code> anterior, como antes.</p>
+</section>

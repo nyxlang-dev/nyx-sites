@@ -1,0 +1,11 @@
+<!-- title: HTTPS to a site with a broken chain | blurb: HttpOpts.cas_extra adds the missing intermediate certificate for ONE request, without turning verification off. -->
+<section data-part="intro">
+<p>It happens more than it should (government sites, banks): the server sends an intermediate certificate that does not match its own, and verification against the system CAs fails with <q>unable to get local issuer certificate</q> (code 20). The right intermediate is public. <code>HttpOpts.cas_extra</code> ADDS it to the system CAs for that one request, so you reach the site without ever disabling verification.</p>
+</section>
+<section data-part="output">
+rechazado antes del handshake: invalid 22
+</section>
+<section data-part="explanation">
+<p>The chain and the host name are still verified exactly as before, and the rest of the process — other requests, <code>std/postgres</code> — keeps the trust it had. The value is the PEM CONTENT (one or several certificates), not a path, so it can come from <code>include_bytes</code> or <code>read_file</code>.</p>
+<p>The recipe needs no network: a local TCP server accepts the connection, and the program shows that a <code>cas_extra</code> carrying no certificate at all is rejected as <code>invalid</code> (22) BEFORE the handshake, instead of passing silently as <q>it was not needed</q>. A silent pass would be the worst outcome here — you would believe an extra CA was in force when none was.</p>
+</section>

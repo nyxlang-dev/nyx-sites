@@ -1,0 +1,14 @@
+<!-- title: Upload a binary file as multipart | blurb: multipart_build and try_http_post_multipart send text fields plus a binary file, and a local server proves the bytes arrive intact. -->
+<section data-part="intro">
+<p>Sending a quotation as a PDF to an API such as WhatsApp Business means <code>multipart/form-data</code>: text fields plus the file. <code>multipart_field</code> and <code>multipart_file</code> build the parts, and the file is BINARY — here it carries NUL bytes and line breaks inside, and travels untouched.</p>
+</section>
+<section data-part="output">
+content-type: multipart/form-data; boundary=
+status: 200
+el servidor recibió: messaging_product=8 bytes; file=26 bytes; 
+enviados: 26 bytes de PDF
+</section>
+<section data-part="explanation">
+<p><code>multipart_build</code> picks a random boundary that does not occur in the content and returns the body together with the full <code>Content-Type</code>; the output shows only the first 30 characters of it, because the boundary changes on every run. <code>try_http_post_multipart</code> sends it with the HTTP client, adding the <code>Content-Type</code> with the boundary and computing <code>Content-Length</code> in bytes.</p>
+<p>So that it runs without a network, the recipe starts its own local server, which re-reads the POST with <code>multipart_parse</code> and checks the bytes it received: <code>messaging_product</code> is 8 bytes and the file is 26, the same as was sent. With a real API only the URL and the headers change: <code>try_http_post_multipart("https://graph.facebook.com/v20.0/ID/media", mp, ["Authorization", "Bearer TOKEN"])</code>.</p>
+</section>

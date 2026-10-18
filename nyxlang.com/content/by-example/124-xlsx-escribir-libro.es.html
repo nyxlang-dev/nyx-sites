@@ -1,0 +1,12 @@
+<!-- title: Un libro contable en .xlsx | blurb: std/xlsx escribe un libro de verdad en Nyx puro: celdas con tipo, celdas combinadas, encabezado fijo, autofiltro y separador de miles. -->
+<section data-part="intro">
+<p>Un ERP entrega el libro de compras del mes en Excel. <code>std/xlsx</code> escribe un <code>.xlsx</code> genuino — un zip con XML adentro, en Nyx puro, así que corre igual en el servidor y en <code>wasm32-wasi</code> — que abren Excel, LibreOffice y openpyxl.</p>
+</section>
+<section data-part="output">
+libro: 3375 bytes, empieza con PK
+para escribirlo: nyx run -- libro.xlsx
+</section>
+<section data-part="explanation">
+<p>Una hoja es una lista de filas de celdas, armada con <code>xlsx_sheet_new</code> y <code>row()</code>. Las celdas tienen un constructor por tipo: <code>xlsx_text</code>, <code>xlsx_number(valor, decimales)</code>, <code>xlsx_int</code>, <code>xlsx_date("AAAA-MM-DD")</code>, <code>xlsx_bool</code>, <code>xlsx_blank</code> y <code>xlsx_bold</code>. Encima vienen el ancho de columna (<code>col_width</code>), las celdas combinadas (<code>merge</code>), un encabezado que no se mueve al bajar (<code>freeze</code>), un autofiltro sobre la tabla y los montos con separador de miles mediante <code>xlsx_number_fmt</code> y <code>"#,##0.00"</code>.</p>
+<p>El total se calcula en el programa: las fórmulas NO se escriben, se escribe el valor. Y los errores — un nombre de hoja repetido, una fecha inválida — salen de <code>xlsx_write</code> como <code>Err</code>, no antes. Con <code>nyx run -- libro.xlsx</code> se escribe el archivo; sin argumento solo informa el tamaño, que es lo que se ve arriba.</p>
+</section>

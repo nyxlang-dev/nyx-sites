@@ -1,0 +1,15 @@
+<!-- title: gzip automático en std/serve | blurb: Las respuestas de texto de 1 KiB o más salen comprimidas cuando el cliente manda Accept-Encoding: gzip — sin escribir código. -->
+<section data-part="intro">
+<p>No hay nada que escribir: si la petición trae <code>Accept-Encoding: gzip</code>, el cuerpo es texto (<code>text/*</code>, JSON, JavaScript, XML, SVG), mide al menos 1024 bytes y el handler no puso su propio <code>Content-Encoding</code>, <code>std/serve</code> lo comprime. La receta hace de cliente con un socket TCP crudo para poder correr sola, y comprueba que el cuerpo comprimido descomprime al llano.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18213 with 2 workers
+plain body:      11906 bytes
+compressed body: 1228 bytes
+Content-Encoding: gzip
+decompressed body equals the plain one
+</section>
+<section data-part="explanation">
+<p>El servidor agrega <code>Content-Encoding: gzip</code>, <code>Vary: Accept-Encoding</code> y el <code>Content-Length</code> correcto, en bytes del cuerpo comprimido. Viene ENCENDIDO por omisión; <code>app_compress(app, false)</code> lo apaga y <code>app_compress_limits(app, 2048, 4194304)</code> mueve la ventana de tamaño a cuerpos de 2 KiB a 4 MiB.</p>
+<p>Los cuerpos comprimidos se guardan en caché por el sha256 del cuerpo, así que una página estática o una hoja de estilos se comprime una sola vez, no en cada petición. El códec es el DEFLATE de <code>std/zip</code> (Huffman fijo, Nyx puro), y <code>zip_gzip</code> / <code>zip_gunzip</code> están para usarlos a mano. El servidor arranca en el mismo proceso, en un puerto local, y termina con el programa.</p>
+</section>

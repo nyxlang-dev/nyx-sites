@@ -1,0 +1,12 @@
+<!-- title: defer corre al cerrar su bloque | blurb: defer se dispara al salir del bloque donde está escrito — caída al final, return, ?, break o continue — en orden LIFO. -->
+<!-- not-a-version: 0.35.0 — es la última versión del lenguaje con el comportamiento anterior, no la del toolchain -->
+<section data-part="intro">
+<p>Un <code>defer</code> se ejecuta cuando el control SALE DEL BLOQUE donde está escrito: al caer al final, por <code>return</code>, por <code>?</code> con <code>Err</code>, por <code>break</code> o por <code>continue</code>. Hasta la 0.35.0 solo corría el del nivel superior de la función, y el <code>defer</code> de un bloque se descartaba en silencio; desde la 0.36 corre.</p>
+</section>
+<section data-part="output">
+ok
+</section>
+<section data-part="explanation">
+<p>Se muestran cuatro cosas. Un <code>defer</code> dentro de un loop libera algo en CADA iteración. Un <code>defer</code> dentro de un <code>if</code> con <code>return</code> temprano corre igual. El orden es LIFO dentro de un bloque y de adentro hacia afuera entre bloques anidados. Y el cuerpo de un <code>defer</code> ve los valores AL SALIR, no en el momento en que se declaró. El programa imprime <code>ok</code> cuando se cumplen todas.</p>
+<p>El límite: un <code>throw</code> que sale de la función no corre sus <code>defer</code>. Si necesitas la limpieza, usa <code>Result</code> y <code>?</code>.</p>
+</section>

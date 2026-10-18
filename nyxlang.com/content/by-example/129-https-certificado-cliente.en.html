@@ -1,0 +1,11 @@
+<!-- title: HTTPS with a client certificate | blurb: Mutual TLS per request: HttpOpts presents your certificate and key, validated BEFORE connecting. -->
+<section data-part="intro">
+<p>Some banks and payment providers require the merchant to identify itself with its own certificate on top of an API key: the server asks for the certificate during the handshake and cuts the connection if none it accepts arrives. <code>HttpOpts</code> presents it PER REQUEST with <code>http_opts_client_cert(opts, cert_pem, key_pem)</code>.</p>
+</section>
+<section data-part="output">
+rechazado antes de conectar: invalid 22
+</section>
+<section data-part="explanation">
+<p>Certificate and private key are PEM CONTENT, not paths — bring them with <code>read_file</code> or <code>include_bytes</code>. The certificate goes first, with any intermediates after it in the same text, and the key cannot have a passphrase. Everything is validated BEFORE connecting: one without the other, an unreadable PEM, or a key that does not match the certificate give <code>Err invalid 22</code> without opening the socket. That is what the recipe shows, even against a closed port.</p>
+<p>It only applies to that request; the rest of the process presents nothing. When the bank uses a private CA it combines with <code>cas_extra</code> (recipe 122): <code>o.cas_extra = read_file("certs/ca-banco.pem")</code>. The recipe needs no network, so the output is the early rejection and nothing more.</p>
+</section>

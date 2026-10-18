@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTPS with a client certificate — Nyx by example</title>
+<meta name="description" content="Mutual TLS per request: HttpOpts presents your certificate and key, validated BEFORE connecting.">
+<link rel="canonical" href="https://nyxlang.com/by-example/129-https-certificado-cliente.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/129-https-certificado-cliente.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/129-https-certificado-cliente.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/129-https-certificado-cliente.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/129-https-certificado-cliente.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">129</span> / Networking</span></p>
+<h1 class="doc-title">HTTPS with a client certificate</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Some banks and payment providers require the merchant to identify itself with its own certificate on top of an API key: the server asks for the certificate during the handshake and cuts the connection if none it accepts arrives. <code>HttpOpts</code> presents it PER REQUEST with <code>http_opts_client_cert(opts, cert_pem, key_pem)</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">129-https-certificado-cliente.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/129-https-certificado-cliente.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: HTTPS con certificado de cliente (TLS mutuo).</span>
+<span class="cm">//</span>
+<span class="cm">// Algunos bancos y pasarelas de pago exigen que el comercio se identifique con</span>
+<span class="cm">// un certificado propio ademas de su clave de API: el servidor pide el</span>
+<span class="cm">// certificado durante el handshake y corta la conexion si no llega uno que</span>
+<span class="cm">// acepte. HttpOpts lo presenta POR PETICION:</span>
+<span class="cm">//   - http_opts_client_cert(opts, cert_pem, key_pem): certificado y clave</span>
+<span class="cm">//     privada como CONTENIDO PEM (no rutas: se traen con read_file o</span>
+<span class="cm">//     include_bytes). El certificado va primero; si hay intermedios, a</span>
+<span class="cm">//     continuacion en el mismo texto. La clave no puede tener contrasena.</span>
+<span class="cm">//   - Se validan ANTES de conectar: uno sin el otro, PEM ilegible o una clave que</span>
+<span class="cm">//     no corresponde al certificado dan Err invalid 22 sin abrir el socket.</span>
+<span class="cm">//   - Solo vale para esa peticion: el resto del proceso no presenta nada.</span>
+<span class="cm">//   - Se combina con cas_extra cuando el banco usa una CA privada:</span>
+<span class="cm">//         o.cas_extra = read_file(&quot;certs/ca-banco.pem&quot;)</span>
+<span class="cm">//</span>
+<span class="cm">// La receta corre sin red: muestra la validacion previa (los errores salen sin</span>
+<span class="cm">// conectar, aun contra un puerto cerrado).</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">consultar_saldo</span><span class="op">(</span>url<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> cert_pem<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> key_pem<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> o<span class="op">:</span> <span class="ty">HttpOpts</span> <span class="op">=</span> <span class="fn">http_opts_client_cert</span><span class="op">(</span><span class="fn">http_opts</span><span class="op">(),</span> cert_pem<span class="op">,</span> key_pem<span class="op">)</span>
+    <span class="kw">return</span> <span class="fn">try_http_request_opts</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> url<span class="op">,</span> <span class="op">[],</span> <span class="str">&quot;&quot;</span><span class="op">,</span> o<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="cm">// En un programa real:</span>
+    <span class="cm">//   let cert: String = read_file(&quot;certs/cliente.crt&quot;)</span>
+    <span class="cm">//   let key: String = read_file(&quot;certs/cliente.key&quot;)</span>
+    <span class="kw">match</span> <span class="fn">consultar_saldo</span><span class="op">(</span><span class="str">&quot;https://127.0.0.1:1/saldo&quot;</span><span class="op">,</span> <span class="str">&quot;esto no es un certificado&quot;</span><span class="op">,</span> <span class="str">&quot;ni una clave&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">http_status</span><span class="op">(</span>r<span class="op">)))</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;rechazado antes de conectar: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">))</span>
+            <span class="kw">assert</span><span class="op">(</span>e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;invalid&quot;</span> <span class="kw">and</span> e<span class="op">.</span>code <span class="op">==</span> <span class="num">22</span><span class="op">,</span> <span class="str">&quot;un par ilegible se dice, no se ignora&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="cm">// Un certificado sin su clave tampoco se manda a medias.</span>
+    <span class="kw">match</span> <span class="fn">consultar_saldo</span><span class="op">(</span><span class="str">&quot;https://127.0.0.1:1/saldo&quot;</span><span class="op">,</span> <span class="str">&quot;-----BEGIN CERTIFICATE-----&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">http_status</span><span class="op">(</span>r<span class="op">)))</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">assert</span><span class="op">(</span>e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;invalid&quot;</span><span class="op">,</span> <span class="str">&quot;certificado sin clave&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">rechazado antes de conectar: invalid 22</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Certificate and private key are PEM CONTENT, not paths — bring them with <code>read_file</code> or <code>include_bytes</code>. The certificate goes first, with any intermediates after it in the same text, and the key cannot have a passphrase. Everything is validated BEFORE connecting: one without the other, an unreadable PEM, or a key that does not match the certificate give <code>Err invalid 22</code> without opening the socket. That is what the recipe shows, even against a closed port.</p>
+<p>It only applies to that request; the rest of the process presents nothing. When the bank uses a private CA it combines with <code>cas_extra</code> (recipe 122): <code>o.cas_extra = read_file("certs/ca-banco.pem")</code>. The recipe needs no network, so the output is the early rejection and nothing more.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/128-rsa-verificar-webhook.html"><span class="label">← Previous</span><span class="doc-nav-name">Verify a signed payment webhook</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/130-http-multipart-subir.html"><span class="label">Next →</span><span class="doc-nav-name">Upload a binary file as multipart</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

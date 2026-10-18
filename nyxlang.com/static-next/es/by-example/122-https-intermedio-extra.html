@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTPS a un sitio con la cadena mal armada — Nyx por ejemplo</title>
+<meta name="description" content="HttpOpts.cas_extra suma el certificado intermedio que falta para UNA petición, sin apagar la verificación.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/122-https-intermedio-extra.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/122-https-intermedio-extra.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/122-https-intermedio-extra.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/122-https-intermedio-extra.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/122-https-intermedio-extra.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">122</span> / Redes</span></p>
+<h1 class="doc-title">HTTPS a un sitio con la cadena mal armada</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Pasa más de lo que parece (sitios de gobierno, bancos): el servidor envía un intermedio que no corresponde a su certificado, y la verificación contra las CAs del sistema falla con <q>unable to get local issuer certificate</q> (código 20). El intermedio correcto es público. <code>HttpOpts.cas_extra</code> lo SUMA a las CAs del sistema solo para esa petición, así que se llega al sitio sin apagar nunca la verificación.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">122-https-intermedio-extra.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/122-https-intermedio-extra.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: consultar por HTTPS un sitio que manda mal su cadena de</span>
+<span class="cm">// certificados, sin apagar la verificación.</span>
+<span class="cm">//</span>
+<span class="cm">// Pasa más de lo que parece (sitios de gobierno, bancos): el servidor envía un</span>
+<span class="cm">// intermedio que no corresponde a su certificado, y la verificación contra las</span>
+<span class="cm">// CAs del sistema falla con «unable to get local issuer certificate» (código</span>
+<span class="cm">// 20). El intermedio correcto es público. HttpOpts.cas_extra lo SUMA a las CAs</span>
+<span class="cm">// del sistema solo para ESA petición:</span>
+<span class="cm">//   - la cadena y el nombre se siguen verificando igual;</span>
+<span class="cm">//   - no toca la confianza del resto del proceso (otras peticiones, std/postgres);</span>
+<span class="cm">//   - es el CONTENIDO PEM (uno o varios certificados), no una ruta: se puede</span>
+<span class="cm">//     traer con include_bytes o read_file.</span>
+<span class="cm">//</span>
+<span class="cm">// La receta corre sin red: un servidor TCP local acepta la conexión, y se</span>
+<span class="cm">// muestra que un cas_extra que no trae ningún certificado se rechaza (invalid,</span>
+<span class="cm">// 22) antes del handshake, en vez de pasar como «no hacía falta».</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_listo<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+
+<span class="kw">fn</span> <span class="fn">servidor_mudo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> srv<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="fn">channel_send</span><span class="op">(</span>g_listo<span class="op">,</span> puerto<span class="op">.</span><span class="fn">unwrap</span><span class="op">())</span>
+    <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="fn">sleep</span><span class="op">(</span><span class="num">500</span><span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// Lo que haría un programa real: el intermedio correcto, publicado por la CA</span>
+<span class="cm">// (la extensión AIA del certificado dice dónde), guardado junto al programa.</span>
+<span class="kw">fn</span> <span class="fn">consultar</span><span class="op">(</span>url<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> intermedio_pem<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> o<span class="op">:</span> <span class="ty">HttpOpts</span> <span class="op">=</span> <span class="fn">http_opts</span><span class="op">()</span>
+    o<span class="op">.</span>cas_extra <span class="op">=</span> intermedio_pem
+    <span class="kw">return</span> <span class="fn">try_http_request_opts</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> url<span class="op">,</span> <span class="op">[],</span> <span class="str">&quot;&quot;</span><span class="op">,</span> o<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    g_listo <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span>servidor_mudo<span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>g_listo<span class="op">)</span>
+    <span class="kw">let</span> url<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;https://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>puerto<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/&quot;</span>
+
+    <span class="cm">// En un programa real: let pem: String = read_file(&quot;certs/intermedio.pem&quot;)</span>
+    <span class="kw">match</span> <span class="fn">consultar</span><span class="op">(</span>url<span class="op">,</span> <span class="str">&quot;esto no es un certificado&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inesperado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">http_status</span><span class="op">(</span>r<span class="op">)))</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;rechazado antes del handshake: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">))</span>
+            <span class="kw">assert</span><span class="op">(</span>e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;invalid&quot;</span> <span class="kw">and</span> e<span class="op">.</span>code <span class="op">==</span> <span class="num">22</span><span class="op">,</span> <span class="str">&quot;un PEM ilegible se dice, no se ignora&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">rechazado antes del handshake: invalid 22</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La cadena y el nombre se siguen verificando igual que antes, y el resto del proceso — otras peticiones, <code>std/postgres</code> — conserva la confianza que tenía. El valor es el CONTENIDO PEM (uno o varios certificados), no una ruta, de modo que puede venir de <code>include_bytes</code> o de <code>read_file</code>.</p>
+<p>La receta no necesita red: un servidor TCP local acepta la conexión, y el programa muestra que un <code>cas_extra</code> que no trae ningún certificado se rechaza como <code>invalid</code> (22) ANTES del handshake, en lugar de pasar en silencio como <q>no hacía falta</q>. Un paso silencioso sería lo peor aquí: se creería que una CA extra está vigente cuando no lo está.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/121-arena-persist-wasm.html"><span class="label">← Anterior</span><span class="doc-nav-name">Guardar un valor entre eventos wasm</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/123-zip-crear-y-leer.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Armar y leer un archivo .zip</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

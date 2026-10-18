@@ -1,0 +1,11 @@
+<!-- title: HTTPS con certificado de cliente | blurb: TLS mutuo por petición: HttpOpts presenta tu certificado y clave, validados ANTES de conectar. -->
+<section data-part="intro">
+<p>Algunos bancos y pasarelas de pago exigen que el comercio se identifique con un certificado propio además de su clave de API: el servidor pide el certificado durante el handshake y corta la conexión si no llega uno que acepte. <code>HttpOpts</code> lo presenta POR PETICIÓN con <code>http_opts_client_cert(opts, cert_pem, key_pem)</code>.</p>
+</section>
+<section data-part="output">
+rechazado antes de conectar: invalid 22
+</section>
+<section data-part="explanation">
+<p>Certificado y clave privada son CONTENIDO PEM, no rutas — se traen con <code>read_file</code> o <code>include_bytes</code>. El certificado va primero, con los intermedios a continuación en el mismo texto, y la clave no puede tener contraseña. Todo se valida ANTES de conectar: uno sin el otro, un PEM ilegible o una clave que no corresponde al certificado dan <code>Err invalid 22</code> sin abrir el socket. Eso es lo que muestra la receta, incluso contra un puerto cerrado.</p>
+<p>Solo vale para esa petición; el resto del proceso no presenta nada. Cuando el banco usa una CA privada se combina con <code>cas_extra</code> (receta 122): <code>o.cas_extra = read_file("certs/ca-banco.pem")</code>. La receta no necesita red, así que la salida es el rechazo temprano y nada más.</p>
+</section>

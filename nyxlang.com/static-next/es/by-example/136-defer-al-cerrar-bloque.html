@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>defer corre al cerrar su bloque — Nyx por ejemplo</title>
+<meta name="description" content="defer se dispara al salir del bloque donde está escrito — caída al final, return, ?, break o continue — en orden LIFO.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/136-defer-al-cerrar-bloque.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/136-defer-al-cerrar-bloque.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/136-defer-al-cerrar-bloque.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/136-defer-al-cerrar-bloque.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/136-defer-al-cerrar-bloque.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">136</span> / Tipos y patrones</span></p>
+<h1 class="doc-title">defer corre al cerrar su bloque</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un <code>defer</code> se ejecuta cuando el control SALE DEL BLOQUE donde está escrito: al caer al final, por <code>return</code>, por <code>?</code> con <code>Err</code>, por <code>break</code> o por <code>continue</code>. Hasta la 0.35.0 solo corría el del nivel superior de la función, y el <code>defer</code> de un bloque se descartaba en silencio; desde la 0.36 corre.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">136-defer-al-cerrar-bloque.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/136-defer-al-cerrar-bloque.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: `defer` corre al cerrar el bloque que lo contiene.</span>
+<span class="cm">//</span>
+<span class="cm">// Un `defer` se ejecuta cuando el control SALE DEL BLOQUE donde está escrito: al caer al final,</span>
+<span class="cm">// por `return`, por `?` con Err, por `break` o `continue`. (Hasta 0.35.0 solo corría el del nivel</span>
+<span class="cm">// superior de la función; el de un bloque se descartaba en silencio. Ver</span>
+<span class="cm">// docs/gotchas/defer-runs-at-block-exit.md.)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. `defer` dentro de un loop: libera algo en CADA iteración;</span>
+<span class="cm">//   2. `defer` dentro de un `if` con `return` temprano;</span>
+<span class="cm">//   3. el orden: LIFO dentro del bloque, de adentro hacia afuera entre bloques;</span>
+<span class="cm">//   4. el cuerpo del defer ve los valores AL SALIR, no al declararlo.</span>
+<span class="cm">//</span>
+<span class="cm">// Límite: un `throw` que sale de la función no corre sus `defer`</span>
+<span class="cm">// (ver docs/gotchas/defer-not-on-throw.md). Usa Result y `?` si necesitas la limpieza.</span>
+
+<span class="kw">var</span> g_log<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">reset</span><span class="op">()</span> <span class="op">{</span>
+    g_log <span class="op">=</span> <span class="str">&quot;&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// Un «recurso» por iteración: se abre al entrar y se cierra al terminar el cuerpo.</span>
+<span class="kw">fn</span> <span class="fn">por_iteracion</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> i <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">3</span> <span class="op">{</span>
+        g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;abre&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;;&quot;</span>
+        <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;cierra&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;;&quot;</span> <span class="op">}</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> i
+<span class="op">}</span>
+
+<span class="cm">// El defer del bloque corre también cuando el return sale desde adentro.</span>
+<span class="kw">fn</span> <span class="fn">temprano</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">if</span> b <span class="op">{</span>
+        <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;liberado;&quot;</span> <span class="op">}</span>
+        g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;usando;&quot;</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;sin-recurso;&quot;</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// LIFO dentro del bloque; interno, externo y función entre bloques.</span>
+<span class="kw">fn</span> <span class="fn">orden</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;fn;&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;externo-1;&quot;</span> <span class="op">}</span>
+        <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;externo-2;&quot;</span> <span class="op">}</span>
+        <span class="kw">if</span> <span class="kw">true</span> <span class="op">{</span>
+            <span class="kw">defer</span> <span class="op">{</span> g_log <span class="op">=</span> g_log <span class="op">+</span> <span class="str">&quot;interno;&quot;</span> <span class="op">}</span>
+            <span class="kw">return</span> <span class="num">7</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">reset</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">por_iteracion</span><span class="op">()</span> <span class="op">==</span> <span class="num">3</span><span class="op">)</span>
+    <span class="cm">// el defer ve `i` al salir: ya incrementado</span>
+    <span class="kw">assert</span><span class="op">(</span>g_log <span class="op">==</span> <span class="str">&quot;abre0;cierra1;abre1;cierra2;abre2;cierra3;&quot;</span><span class="op">)</span>
+
+    <span class="fn">reset</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">temprano</span><span class="op">(</span><span class="kw">true</span><span class="op">)</span> <span class="op">==</span> <span class="num">1</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>g_log <span class="op">==</span> <span class="str">&quot;usando;liberado;&quot;</span><span class="op">)</span>
+    <span class="fn">reset</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">temprano</span><span class="op">(</span><span class="kw">false</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>g_log <span class="op">==</span> <span class="str">&quot;sin-recurso;&quot;</span><span class="op">)</span>
+
+    <span class="fn">reset</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">orden</span><span class="op">()</span> <span class="op">==</span> <span class="num">7</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>g_log <span class="op">==</span> <span class="str">&quot;interno;externo-2;externo-1;fn;&quot;</span><span class="op">)</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Se muestran cuatro cosas. Un <code>defer</code> dentro de un loop libera algo en CADA iteración. Un <code>defer</code> dentro de un <code>if</code> con <code>return</code> temprano corre igual. El orden es LIFO dentro de un bloque y de adentro hacia afuera entre bloques anidados. Y el cuerpo de un <code>defer</code> ve los valores AL SALIR, no en el momento en que se declaró. El programa imprime <code>ok</code> cuando se cumplen todas.</p>
+<p>El límite: un <code>throw</code> que sale de la función no corre sus <code>defer</code>. Si necesitas la limpieza, usa <code>Result</code> y <code>?</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/135-sombreado-en-bloque.html"><span class="label">← Anterior</span><span class="doc-nav-name">Sombrear un nombre dentro de un bloque</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/137-oauth2.html"><span class="label">Siguiente →</span><span class="doc-nav-name">OAuth2 para un buzón de Gmail o Microsoft 365</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

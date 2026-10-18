@@ -1,0 +1,24 @@
+<!-- title: Convertir el correo entrante en casos | blurb: std/imap, std/mime y un punto de avance por UID atan la respuesta del cliente al hilo de la cotización que contesta. -->
+<section data-part="intro">
+<p>Una mesa de ayuda manda cotizaciones por correo (<code>std/smtp</code>) y necesita que la RESPUESTA del cliente vuelva al hilo de esa conversación. Para eso se lee la casilla (<code>std/imap</code>), se analiza cada mensaje (<code>std/mime</code>) y se ata la respuesta al envío por <code>In-Reply-To</code> / <code>References</code>, que contienen el Message-ID que el sistema guardó al enviar.</p>
+</section>
+<section data-part="output">
+respuesta: FETCH del mensaje 2
+UID 5, 349 bytes de correo
+respuesta al envío &lt;caso-123@nyxerp.cl&gt;: «Re: Cotización 123»
+cuerpo: Hola, acepto la cotización.
+rebote de &lt;caso-124@nyxerp.cl&gt; (no es del cliente)
+caso nuevo: «Hola»
+
+— qué hacer con cada error —
+auth       → revisar usuario y clave (o renovar el token OAuth2)
+tls        → el certificado no verifica: NO bajar la guardia, avisar
+timeout    → el servidor no contestó: cerrar y reintentar en el próximo sondeo
+stale      → UIDVALIDITY cambió: reescanear por Message-ID
+protocol   → servidor raro o hostil: la conexión se cerró; no marcar nada y reintentar
+connection → red caída o servidor cortó: reconectar
+</section>
+<section data-part="explanation">
+<p>El sondeo real contra un buzón es la función <code>sondear</code>: conexión verificada, LOGIN, punto de avance por UID y marcar leído. Compila y enlaza pero NO se llama, porque un buzón de verdad necesita credenciales y la receta tiene que correr sola. El punto de avance es por UID y no <q>los no leídos</q>: <code>\Seen</code> es estado compartido con quien más abra el buzón, así que una persona leyendo correo haría desaparecer casos.</p>
+<p>Lo que sí corre, sin red, es el analizador de respuestas de IMAP y <code>std/mime</code> sobre la respuesta de un servidor, más la decisión de a qué caso pertenece cada mensaje: una respuesta a una cotización enviada, un rebote que no es del cliente, o un caso nuevo. El último bloque lista los errores tipados y qué hacer con cada uno — <code>auth</code>, <code>tls</code> (NO bajar la guardia), <code>timeout</code>, <code>stale</code> (cambió el UIDVALIDITY), <code>protocol</code> y <code>connection</code>.</p>
+</section>

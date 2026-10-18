@@ -1,0 +1,12 @@
+<!-- title: defer runs when its block closes | blurb: defer fires on leaving the block it is written in — fall-through, return, ?, break or continue — in LIFO order. -->
+<!-- not-a-version: 0.35.0 — es la última versión del lenguaje con el comportamiento anterior, no la del toolchain -->
+<section data-part="intro">
+<p>A <code>defer</code> runs when control LEAVES THE BLOCK where it is written: by falling off the end, by <code>return</code>, by <code>?</code> on an <code>Err</code>, by <code>break</code> or by <code>continue</code>. Up to 0.35.0 only the one at the top level of a function ran, and a block's <code>defer</code> was dropped silently; from 0.36 on it runs.</p>
+</section>
+<section data-part="output">
+ok
+</section>
+<section data-part="explanation">
+<p>Four things are shown. A <code>defer</code> inside a loop releases something on EVERY iteration. A <code>defer</code> inside an <code>if</code> with an early <code>return</code> still runs. The order is LIFO within a block and from the inside out between nested blocks. And the body of a <code>defer</code> sees the values AT EXIT, not at the moment it was declared. The program prints <code>ok</code> when every one of those holds.</p>
+<p>The limit: a <code>throw</code> that leaves the function does not run its <code>defer</code>s. If you need the cleanup, use <code>Result</code> and <code>?</code>.</p>
+</section>

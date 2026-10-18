@@ -1,0 +1,19 @@
+<!-- title: Topes de cuerpo y límite de peticiones en std/serve | blurb: Un tope de cuerpo por ruta (413) y un limitador de peticiones por origen (429 con Retry-After), compartido por todos los workers. -->
+<section data-part="intro">
+<p>Dos guardas contra el abuso. Un tope de cuerpo por ruta, en bytes: el tope global es <code>NYX_HTTP_MAX_BODY</code> (1 MiB) y una ruta puede ser más estricta o más holgada — <code>app_max_body(app, "POST", "/contacto", 16384)</code> para un formulario de contacto, 8 MiB para fotos. Por encima del tope la respuesta es <code>413</code>. La receta hace de cliente con sockets TCP crudos para poder correr sola.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18214 with 2 workers
+100-byte form:  200
+101-byte form:  413
+client ana, request 1: 200
+client ana, request 2: 200
+client ana, request 3: 200
+client ana, request 4: 200
+client ana, request 5: 429
+client beto, request 1: 200
+</section>
+<section data-part="explanation">
+<p>El parser lee hasta el mayor tope declarado por CUALQUIER ruta antes de que una ruta pueda rechazar, así que conviene subir un tope solo donde hace falta. El limitador cuenta por origen en una ventana fija y es COMPARTIDO por todos los workers del proceso (son hilos de un mismo proceso, protegidos por un mutex): <code>app_rate_limit(app, 120, 60)</code> para toda la app, <code>app_route_rate_limit(app, "POST", "/contacto", 5, 60)</code> para una ruta. Por encima del límite la respuesta es <code>429</code> con <code>Retry-After</code> en los segundos que faltan para cerrar la ventana — mira la petición 5 del cliente <q>ana</q>, mientras <q>beto</q> sigue recibiendo <code>200</code>.</p>
+<p>El origen es la IP del cliente, y detrás de un proxy inverso todas las peticiones llegan desde el proxy; se cuenta por otra clave con <code>app_rate_limit_key(app, fn)</code>, por ejemplo <code>rate_key_forwarded_for</code> (el primer <code>X-Forwarded-For</code>) o un id de usuario. Una clave vacía exime a la petición. Los conteos son por proceso: dos instancias detrás de un balanceador cuentan por separado.</p>
+</section>

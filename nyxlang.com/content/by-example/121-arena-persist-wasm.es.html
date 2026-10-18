@@ -1,0 +1,12 @@
+<!-- title: Guardar un valor entre eventos wasm | blurb: arena_persist copia un String o Array fuera de la arena por evento para que otro evento lo lea intacto — el arreglo para la memoria reciclada en silencio. -->
+<section data-part="intro">
+<p>Con la arena por evento encendida (<code>runNyxWasm(bytes, { arena: true })</code>) todo lo que un handler aloca se descarta al terminar el evento. Un <code>String</code> o un <code>Array</code> armado en un evento y guardado en un global se leería en el evento siguiente como memoria reciclada, en silencio y sin ningún error. <code>arena_persist(x)</code> lo copia antes a la región persistente: lo que se guarda a propósito sobrevive y todo lo demás se sigue recuperando.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+listo: la página llama a al_escanear y a al_cobrar
+cobrando SKU-7 a 10.5 (sin hielo)
+</section>
+<section data-part="explanation">
+<p>Acepta un <code>String</code> o un <code>Array</code> de <code>String</code>, <code>int</code>, <code>float</code> y <code>bool</code> — incluso arrays de esos, así que una línea de ticket con sus modificadores se copia entera, como muestra <code>g_ticket</code>. Un struct, un <code>Map</code>, un <code>Fn</code> o un <code>Array&lt;Struct&gt;</code> es un error de compilación (<code>NYX1039</code>): en tiempo de ejecución no llevan la descripción de lo que contienen, así que se persisten sus campos uno por uno y el valor se reconstruye donde se usa.</p>
+<p><code>arena_persist</code> es un builtin, de modo que no se importa nada, y en nativo es la identidad (no hay arena). Eso permite que la lógica que lo rodea corra con <code>nyx test</code>. <code>arena_stats()</code>, de <code>std/wasm_mem</code> y solo para wasm, devuelve los bytes persistentes y los del turno, que es como una página de larga vida vigila que no crezca sin control. Esta es una receta de navegador — se construye con <code>nyx build --target wasm32-wasi</code> y la página llama a sus exports — así que la salida de arriba es ilustrativa.</p>
+</section>

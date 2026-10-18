@@ -36,7 +36,7 @@
 <div class="recipe-lede prose"><p>A <code>Map</code> stores key-value pairs with fast lookup by key. Maps are created with <code>Map.new()</code> and support insertion, retrieval, membership testing, and key enumeration.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">06-maps.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/06-maps.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// Maps: Map.new(), insert, get, has, size, iterar con keys()</span>
+<div class="panel-body"><pre><span class="cm">// Maps: Map.new(), insert, get, has, size, m[k], iterar con keys()</span>
 
 <span class="cm">// bool -&gt; texto: int_to_string() espera un int y un bool no se convierte solo,</span>
 <span class="cm">// así que la conversión se escribe explícita.</span>
@@ -74,6 +74,18 @@
         <span class="fn">print</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> clave<span class="op">)</span>
     <span class="op">}</span>
 
+    <span class="cm">// Indexar: m[k] es m.get(k) (aborta si falta) y m[k] = v es m.insert(k, v).</span>
+    <span class="cm">// El patrón contador, con un Map tipado:</span>
+    <span class="kw">var</span> cuenta<span class="op">:</span> <span class="ty">Map</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">for</span> palabra<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> <span class="op">[</span><span class="str">&quot;sol&quot;</span><span class="op">,</span> <span class="str">&quot;mar&quot;</span><span class="op">,</span> <span class="str">&quot;sol&quot;</span><span class="op">]</span> <span class="op">{</span>
+        <span class="kw">if</span> cuenta<span class="op">.</span><span class="fn">has</span><span class="op">(</span>palabra<span class="op">)</span> <span class="op">{</span>
+            cuenta<span class="op">[</span>palabra<span class="op">]</span> <span class="op">=</span> cuenta<span class="op">[</span>palabra<span class="op">]</span> <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+            cuenta<span class="op">[</span>palabra<span class="op">]</span> <span class="op">=</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sol aparece &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>cuenta<span class="op">[</span><span class="str">&quot;sol&quot;</span><span class="op">])</span> <span class="op">+</span> <span class="str">&quot; veces&quot;</span><span class="op">)</span>
+
     <span class="kw">return</span> <span class="num">0</span>
 <span class="op">}</span>
 </pre></div>
@@ -105,7 +117,7 @@ claves (3):
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.33.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

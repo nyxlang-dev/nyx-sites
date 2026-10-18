@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Una plantilla .xlsx de carga masiva con listas desplegables — Nyx por ejemplo</title>
+<meta name="description" content="validate_list y validate_list_range restringen una columna a valores permitidos; xlsx_fill marca las filas rechazadas.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/138-xlsx-plantilla.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/138-xlsx-plantilla.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/138-xlsx-plantilla.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/138-xlsx-plantilla.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/138-xlsx-plantilla.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">138</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Una plantilla .xlsx de carga masiva con listas desplegables</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un ERP entrega a sus usuarios una plantilla de catálogo para llenar y volver a subir. Si la columna <q>Unidad</q> solo acepta UND, KG o LT, una lista desplegable en la celda impide escribir otro valor y la carga rechaza muchas menos filas. Y en el archivo que vuelve, las filas rechazadas se marcan con un color de relleno.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">138-xlsx-plantilla.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/138-xlsx-plantilla.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: una plantilla .xlsx de carga masiva, con listas desplegables.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP entrega a sus usuarios una plantilla de catálogo para</span>
+<span class="cm">// llenar y volver a subir. Si la columna «Unidad» solo acepta UND, KG o LT, una</span>
+<span class="cm">// lista desplegable en la celda impide escribir otro valor y la carga rechaza</span>
+<span class="cm">// muchas menos filas. Y en el .xlsx que vuelve, las filas rechazadas se marcan</span>
+<span class="cm">// con color de relleno.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - validate_list(rango, valores): lista fija (Excel la guarda dentro de la</span>
+<span class="cm">//     fórmula: tope de 255 caracteres en total, sin comas ni comillas en los</span>
+<span class="cm">//     valores; si no cabe, xlsx_write devuelve Err);</span>
+<span class="cm">//   - validate_list_range(rango, origen): la lista sale de un rango, aquí la</span>
+<span class="cm">//     pestaña «Listas», sin tope de largo;</span>
+<span class="cm">//   - xlsx_fill(celda, &quot;RRGGBB&quot;): relleno sólido, encadenable con xlsx_bold;</span>
+<span class="cm">//   - los errores (color que no sea de 6 dígitos hex) salen de xlsx_write.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run -- plantilla.xlsx   (sin argumento solo informa el tamaño)</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/xlsx&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">plantilla</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> h<span class="op">:</span> <span class="ty">XlsxSheetOut</span> <span class="op">=</span> <span class="fn">xlsx_sheet_new</span><span class="op">(</span><span class="str">&quot;Catalogo&quot;</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Codigo&quot;</span><span class="op">)),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Descripcion&quot;</span><span class="op">)),</span>
+           <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Unidad&quot;</span><span class="op">)),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Categoria&quot;</span><span class="op">))])</span>
+    <span class="cm">// Una fila de ejemplo y otra rechazada por la carga anterior (unidad inválida),</span>
+    <span class="cm">// marcada en rojo claro con el motivo al lado.</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;T-001&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Tornillo 1/4&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;UND&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Ferreteria&quot;</span><span class="op">)])</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_fill</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;T-002&quot;</span><span class="op">),</span> <span class="str">&quot;FFC7CE&quot;</span><span class="op">),</span> <span class="fn">xlsx_fill</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Cemento&quot;</span><span class="op">),</span> <span class="str">&quot;FFC7CE&quot;</span><span class="op">),</span>
+           <span class="fn">xlsx_fill</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;SACO&quot;</span><span class="op">),</span> <span class="str">&quot;FFC7CE&quot;</span><span class="op">),</span> <span class="fn">xlsx_fill</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Construccion&quot;</span><span class="op">),</span> <span class="str">&quot;FFC7CE&quot;</span><span class="op">),</span>
+           <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;unidad no válida&quot;</span><span class="op">)])</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">2</span><span class="op">,</span> <span class="num">28.0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">5</span><span class="op">,</span> <span class="num">20.0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">freeze</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+
+    <span class="cm">// Unidad: lista fija, corta. Categoria: sale de la pestaña «Listas».</span>
+    h<span class="op">.</span><span class="fn">validate_list</span><span class="op">(</span><span class="str">&quot;C2:C500&quot;</span><span class="op">,</span> <span class="op">[</span><span class="str">&quot;UND&quot;</span><span class="op">,</span> <span class="str">&quot;KG&quot;</span><span class="op">,</span> <span class="str">&quot;LT&quot;</span><span class="op">])</span>
+    h<span class="op">.</span><span class="fn">validate_list_range</span><span class="op">(</span><span class="str">&quot;D2:D500&quot;</span><span class="op">,</span> <span class="str">&quot;Listas!$A$1:$A$3&quot;</span><span class="op">)</span>
+
+    <span class="kw">var</span> listas<span class="op">:</span> <span class="ty">XlsxSheetOut</span> <span class="op">=</span> <span class="fn">xlsx_sheet_new</span><span class="op">(</span><span class="str">&quot;Listas&quot;</span><span class="op">)</span>
+    listas<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Ferreteria&quot;</span><span class="op">)])</span>
+    listas<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Construccion&quot;</span><span class="op">)])</span>
+    listas<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Pintura&quot;</span><span class="op">)])</span>
+    <span class="kw">return</span> <span class="fn">xlsx_write</span><span class="op">([</span>h<span class="op">,</span> listas<span class="op">])</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">plantilla</span><span class="op">()</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>bytes<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+            <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">let</span> ruta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+                <span class="fn">write_file</span><span class="op">(</span>ruta<span class="op">,</span> bytes<span class="op">)</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;plantilla escrita en &quot;</span> <span class="op">+</span> ruta <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>bytes<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes)&quot;</span><span class="op">)</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;plantilla: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>bytes<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes, empieza con &quot;</span> <span class="op">+</span> bytes<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">2</span><span class="op">))</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;para escribirla: nyx run -- plantilla.xlsx&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo armar la plantilla: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">plantilla: 3213 bytes, empieza con PK
+para escribirla: nyx run -- plantilla.xlsx</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>validate_list(rango, valores)</code> es una lista fija. Excel la guarda dentro de la fórmula, así que hay un tope de 255 caracteres en total, y los valores no pueden llevar comas ni comillas; si no cabe, <code>xlsx_write</code> devuelve <code>Err</code>. <code>validate_list_range(rango, origen)</code> toma la lista de un rango — aquí la pestaña <q>Listas</q> — sin tope de largo. <code>xlsx_fill(celda, "RRGGBB")</code> da un relleno sólido y se encadena con <code>xlsx_bold</code>.</p>
+<p>Los errores, como un color que no sea de 6 dígitos hex, salen de <code>xlsx_write</code>. Con <code>nyx run -- plantilla.xlsx</code> se escribe el archivo; sin argumento solo informa el tamaño.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/137-oauth2.html"><span class="label">← Anterior</span><span class="doc-nav-name">OAuth2 para un buzón de Gmail o Microsoft 365</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/139-pdf-preimpreso.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Un PDF que calca una hoja preimpresa</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

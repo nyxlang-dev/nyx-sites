@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upload a binary file as multipart — Nyx by example</title>
+<meta name="description" content="multipart_build and try_http_post_multipart send text fields plus a binary file, and a local server proves the bytes arrive intact.">
+<link rel="canonical" href="https://nyxlang.com/by-example/130-http-multipart-subir.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/130-http-multipart-subir.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/130-http-multipart-subir.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/130-http-multipart-subir.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/130-http-multipart-subir.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">130</span> / Networking</span></p>
+<h1 class="doc-title">Upload a binary file as multipart</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Sending a quotation as a PDF to an API such as WhatsApp Business means <code>multipart/form-data</code>: text fields plus the file. <code>multipart_field</code> and <code>multipart_file</code> build the parts, and the file is BINARY — here it carries NUL bytes and line breaks inside, and travels untouched.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">130-http-multipart-subir.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/130-http-multipart-subir.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: subir un archivo binario con multipart/form-data.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: mandar una cotización en PDF a una API como la de WhatsApp</span>
+<span class="cm">// Business, que pide `multipart/form-data` (campos de texto + el archivo).</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - multipart_field / multipart_file arman las partes; el archivo es BINARIO</span>
+<span class="cm">//     (aquí lleva NUL y saltos de línea adentro y viaja intacto);</span>
+<span class="cm">//   - multipart_build elige un boundary aleatorio que no aparece en el contenido</span>
+<span class="cm">//     y devuelve el cuerpo y el Content-Type completo;</span>
+<span class="cm">//   - try_http_post_multipart lo envía con el cliente HTTP (agrega el Content-Type</span>
+<span class="cm">//     con el boundary y calcula el Content-Length en bytes);</span>
+<span class="cm">//   - para que corra sin red, la receta levanta su propio servidor local, que</span>
+<span class="cm">//     re-lee el POST con multipart_parse y comprueba los bytes recibidos.</span>
+<span class="cm">//</span>
+<span class="cm">// Con una API real solo cambia la URL y las cabeceras:</span>
+<span class="cm">//   try_http_post_multipart(&quot;https://graph.facebook.com/v20.0/ID/media&quot;, mp,</span>
+<span class="cm">//                           [&quot;Authorization&quot;, &quot;Bearer TOKEN&quot;])</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/multipart&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_listo<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+
+<span class="kw">fn</span> <span class="fn">servidor</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> srv<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="fn">channel_send</span><span class="op">(</span>g_listo<span class="op">,</span> puerto<span class="op">.</span><span class="fn">unwrap</span><span class="op">())</span>
+    <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="kw">var</span> largo<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> ctype<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">while</span> linea<span class="op">.</span><span class="fn">trim</span><span class="op">().</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">let</span> l<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> linea<span class="op">.</span><span class="fn">trim</span><span class="op">()</span>
+        <span class="kw">if</span> l<span class="op">.</span><span class="fn">toLower</span><span class="op">().</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;content-length:&quot;</span><span class="op">)</span> <span class="op">{</span> largo <span class="op">=</span> <span class="fn">string_to_int</span><span class="op">(</span>l<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">15</span><span class="op">,</span> l<span class="op">.</span><span class="fn">length</span><span class="op">()).</span><span class="fn">trim</span><span class="op">())</span> <span class="op">}</span>
+        <span class="kw">if</span> l<span class="op">.</span><span class="fn">toLower</span><span class="op">().</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;content-type:&quot;</span><span class="op">)</span> <span class="op">{</span> ctype <span class="op">=</span> l<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">13</span><span class="op">,</span> l<span class="op">.</span><span class="fn">length</span><span class="op">()).</span><span class="fn">trim</span><span class="op">()</span> <span class="op">}</span>
+        linea <span class="op">=</span> <span class="fn">tcp_read_line</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_tcp_read_exact</span><span class="op">(</span>fd<span class="op">,</span> largo<span class="op">)</span>
+    <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">multipart_parse</span><span class="op">(</span>cuerpo<span class="op">.</span><span class="fn">unwrap</span><span class="op">(),</span> ctype<span class="op">)</span>
+    <span class="kw">var</span> resumen<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> partes<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> p<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> partes<span class="op">[</span>i<span class="op">]</span>
+        resumen <span class="op">=</span> resumen <span class="op">+</span> <span class="fn">part_name</span><span class="op">(</span>p<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">str_byte_length</span><span class="op">(</span><span class="fn">part_value</span><span class="op">(</span>p<span class="op">)))</span> <span class="op">+</span> <span class="str">&quot; bytes; &quot;</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;HTTP/1.1 200 OK\r\nContent-Length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>resumen<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;\r\nConnection: close\r\n\r\n&quot;</span> <span class="op">+</span> resumen<span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    g_listo <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span>servidor<span class="op">)</span>
+    <span class="kw">let</span> puerto<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>g_listo<span class="op">)</span>
+
+    <span class="cm">// Un &quot;PDF&quot; con bytes binarios: NUL, CR, LF y &quot;--&quot; dentro.</span>
+    <span class="kw">let</span> pdf<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;%PDF-1.4\n&quot;</span> <span class="op">+</span> <span class="fn">chr</span><span class="op">(</span><span class="num">0</span><span class="op">)</span> <span class="op">+</span> <span class="fn">chr</span><span class="op">(</span><span class="num">1</span><span class="op">)</span> <span class="op">+</span> <span class="fn">chr</span><span class="op">(</span><span class="num">255</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\r\n--x--\r\n%%EOF&quot;</span>
+
+    <span class="kw">var</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    partes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">multipart_field</span><span class="op">(</span><span class="str">&quot;messaging_product&quot;</span><span class="op">,</span> <span class="str">&quot;whatsapp&quot;</span><span class="op">))</span>
+    partes<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">multipart_file</span><span class="op">(</span><span class="str">&quot;file&quot;</span><span class="op">,</span> <span class="str">&quot;cotizacion.pdf&quot;</span><span class="op">,</span> <span class="str">&quot;application/pdf&quot;</span><span class="op">,</span> pdf<span class="op">))</span>
+
+    <span class="kw">match</span> <span class="fn">multipart_build</span><span class="op">(</span>partes<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>mp<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;content-type: &quot;</span> <span class="op">+</span> mp<span class="op">.</span>content_type<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">30</span><span class="op">))</span>
+            <span class="kw">let</span> cab<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Authorization&quot;</span><span class="op">,</span> <span class="str">&quot;Bearer TOKEN&quot;</span><span class="op">]</span>
+            <span class="kw">match</span> <span class="fn">try_http_post_multipart</span><span class="op">(</span><span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>puerto<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/media&quot;</span><span class="op">,</span> mp<span class="op">,</span> cab<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>resp<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;status: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">http_status</span><span class="op">(</span>resp<span class="op">)))</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;el servidor recibió: &quot;</span> <span class="op">+</span> <span class="fn">http_body</span><span class="op">(</span>resp<span class="op">))</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;enviados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">str_byte_length</span><span class="op">(</span>pdf<span class="op">))</span> <span class="op">+</span> <span class="str">&quot; bytes de PDF&quot;</span><span class="op">)</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;falló el envío: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo armar el multipart: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">content-type: multipart/form-data; boundary=
+status: 200
+el servidor recibió: messaging_product=8 bytes; file=26 bytes; 
+enviados: 26 bytes de PDF</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>multipart_build</code> picks a random boundary that does not occur in the content and returns the body together with the full <code>Content-Type</code>; the output shows only the first 30 characters of it, because the boundary changes on every run. <code>try_http_post_multipart</code> sends it with the HTTP client, adding the <code>Content-Type</code> with the boundary and computing <code>Content-Length</code> in bytes.</p>
+<p>So that it runs without a network, the recipe starts its own local server, which re-reads the POST with <code>multipart_parse</code> and checks the bytes it received: <code>messaging_product</code> is 8 bytes and the file is 26, the same as was sent. With a real API only the URL and the headers change: <code>try_http_post_multipart("https://graph.facebook.com/v20.0/ID/media", mp, ["Authorization", "Bearer TOKEN"])</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/129-https-certificado-cliente.html"><span class="label">← Previous</span><span class="doc-nav-name">HTTPS with a client certificate</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/131-expr-formulas-nomina.html"><span class="label">Next →</span><span class="doc-nav-name">Safe user formulas for payroll</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

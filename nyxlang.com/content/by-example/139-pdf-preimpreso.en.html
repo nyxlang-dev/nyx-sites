@@ -1,0 +1,12 @@
+<!-- title: A PDF that traces a pre-printed form | blurb: std/pdf phase 2: line width, gray and color fills, Times and Courier, rotated text, per-page graphic state. -->
+<section data-part="intro">
+<p>An ERP fills forms that the business already prints on paper with a frame, shaded headings and side labels, and labels set in Courier. The program has to draw on top of what the paper already carries. This is the second phase of <code>std/pdf</code>, which writes a real PDF in pure Nyx.</p>
+</section>
+<section data-part="output">
+preimpreso: 13458 bytes, empieza con %PDF-1.4
+para escribirlo: nyx run -- preimpreso.pdf
+</section>
+<section data-part="explanation">
+<p>The recipe uses line width (<code>d.line_width</code>, in mm) for a thick frame and thin dividers; gray (<code>d.gray</code>) and color (<code>d.color</code>) fills for a table header, followed by a return to black to write on top; all 12 standard text fonts, with Times and Courier in bold and italic; and rotated text (<code>d.text_rotated</code>) for the margin label — 90 degrees climbs the left edge, 270 descends.</p>
+<p>The graphic state applies to WHAT IS DRAWN AFTER it on that page, and every new page starts again in black with the 1 pt stroke. Run it with <code>nyx run -- preimpreso.pdf</code> to write the file; with no argument it only reports the size and the <code>%PDF-1.4</code> header.</p>
+</section>

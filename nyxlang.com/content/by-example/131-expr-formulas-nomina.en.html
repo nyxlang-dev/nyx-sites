@@ -1,0 +1,22 @@
+<!-- title: Safe user formulas for payroll | blurb: std/expr parses once, evaluates per employee with fixed-point decimals, and reports the position of every error. -->
+<section data-part="intro">
+<p>A payroll lets the user define concepts with a formula — <code>salario_diario * dias * 1.5</code>, <code>min(base, 5 * salario_minimo) * 4 / 100</code>. <code>std/expr</code> is an expression evaluator in pure Nyx with no access to anything beyond the variables you hand it, which is what makes it safe to run text a user typed.</p>
+</section>
+<section data-part="output">
+salario_diario * dias * 1.5  =&gt;  974.93
+min(base, 5 * salario_minimo) * 4 / 100  =&gt;  49.79
+if(dias &gt;= 15, salario_diario * dias * 0.05, 0)  =&gt;  32.50
+0.1 + 0.2  =&gt;  0.30
+0.1 + 0.2 == 0.3  =&gt;  1
+round(2.675, 2)  =&gt;  2.68
+variable base: ok
+variable salario_minimo: ok
+variable porcentaje: NO existe en el catálogo
+base / (dias - 15)  =&gt;  expr: división por cero (posición 6)
+salario * 2  =&gt;  expr: variable sin definir 'salario' (posición 1)
+2 + * 3  =&gt;  expr: se esperaba un valor y hay '*' (posición 5)
+</section>
+<section data-part="explanation">
+<p><code>expr_parse</code> compiles a formula ONCE — and validates it when it is saved: the <code>Err</code> carries the position of the mistake — and <code>expr_eval_dec</code> evaluates it for each employee. <code>expr_vars</code> says which variables a formula uses, so you can check they exist before running it (the <q>variable porcentaje: NO existe</q> line).</p>
+<p>Precision matters because this is money: values are fixed-point decimals with 6 places, not <code>float</code>. <code>0.1 + 0.2</code> is exactly <code>0.3</code> and <code>round(2.675, 2)</code> is <code>2.68</code>, where a float gives <code>0.30000000000000004</code> and <code>2.67</code>. The allowed functions are <code>min</code>, <code>max</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>abs</code> and <code>if(cond, a, b)</code>. Evaluation errors — an undefined variable, a division by zero — also say where, as in the last three lines.</p>
+</section>

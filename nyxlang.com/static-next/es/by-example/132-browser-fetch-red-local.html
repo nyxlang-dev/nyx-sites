@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Una PWA que habla con un servidor de la red local — Nyx por ejemplo</title>
+<meta name="description" content="Permiso de red local más un plazo en fetch y SSE, para que una tablet no espere minutos a un servidor apagado.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/132-browser-fetch-red-local.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/132-browser-fetch-red-local.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/132-browser-fetch-red-local.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/132-browser-fetch-red-local.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/132-browser-fetch-red-local.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">132</span> / Avanzado</span></p>
+<h1 class="doc-title">Una PWA que habla con un servidor de la red local</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Las tablets de un local tienen la aplicación instalada (una PWA) y hablan con un servidor que está en la misma red, para seguir funcionando aunque se caiga internet. Es una receta de navegador para <code>wasm32-wasi</code>: se construye con <code>nyx build --target wasm32-wasi</code> y usa el DOM, así que no puede correr en nativo y la salida de arriba es ilustrativa.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">132-browser-fetch-red-local.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/132-browser-fetch-red-local.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 132 — Una PWA que habla con un servidor de la red local, con plazo</span>
+<span class="cm">//</span>
+<span class="cm">// Target wasm32-wasi (corre en el navegador, o bajo node con</span>
+<span class="cm">// examples/browser/run-node.mjs). El caso real: las tablets de un local</span>
+<span class="cm">// tienen la aplicación instalada (PWA) y hablan con un servidor que está en la</span>
+<span class="cm">// misma red, para seguir funcionando aunque se caiga internet.</span>
+<span class="cm">//</span>
+<span class="cm">// Construir:  nyx build --target wasm32-wasi</span>
+<span class="cm">//   (necesita binaryen: `sudo apt install binaryen`, o NYX_WASM_OPT=/ruta/a/wasm-opt;</span>
+<span class="cm">//    nyx build lo usa SOLO porque el programa espera al anfitrión)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que conviene saber:</span>
+<span class="cm">//   - Chrome pide el permiso de red local (Local Network Access, antes Private</span>
+<span class="cm">//     Network Access) para que una página hable con un equipo de la LAN. Se</span>
+<span class="cm">//     activa con `targetAddressSpace` en fetch: el tercer argumento</span>
+<span class="cm">//     &quot;local&quot; de estas funciones. &quot;&quot; = no pedirlo; un navegador que no conoce</span>
+<span class="cm">//     el campo lo ignora, así que nunca rompe el pedido.</span>
+<span class="cm">//   - El servidor también tiene que cooperar (CORS y, si el navegador manda</span>
+<span class="cm">//     un preflight de red local, contestarlo). Esto NO se pudo verificar</span>
+<span class="cm">//     contra un Chrome real desde el repo: los tests fijan que el shim pasa</span>
+<span class="cm">//     el campo y que el plazo aborta el pedido.</span>
+<span class="cm">//   - Contra un equipo apagado el fetch espera minutos: el plazo (en ms) lo</span>
+<span class="cm">//     aborta y devuelve Err con kind &quot;timeout&quot; (o &quot;connection&quot; si no hubo</span>
+<span class="cm">//     respuesta alguna).</span>
+<span class="cm">//   - En SSE el plazo es para CONECTAR, no para la vida del canal. Si vence</span>
+<span class="cm">//     (o la conexión falla) el manejador recibe UNA vez el evento</span>
+<span class="cm">//     &quot;nyx-error&quot; con dato &quot;timeout&quot; o &quot;connection&quot;, y el canal se cierra solo.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/browser&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/browser_await&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/dom&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">const</span> <span class="ty">SERVIDOR</span><span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;http://192.168.1.20:8080&quot;</span>
+
+<span class="cm">// Manda un pedido al servidor local: si no responde en 3 s, avisa en vez de</span>
+<span class="cm">// dejar la tablet esperando.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="fn">enviar_pedido</span><span class="op">(</span>cuerpo<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> res <span class="op">=</span> <span class="kw">await</span> <span class="fn">browser_fetch_await_net</span><span class="op">(</span><span class="ty">SERVIDOR</span> <span class="op">+</span> <span class="str">&quot;/pedidos&quot;</span><span class="op">,</span> <span class="str">&quot;POST&quot;</span><span class="op">,</span> cuerpo<span class="op">,</span> <span class="num">3000</span><span class="op">,</span> <span class="str">&quot;local&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> res <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;guardado (HTTP &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>status<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;timeout&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;el servidor local no responde: se guarda para más tarde&quot;</span> <span class="op">}</span>
+            <span class="kw">return</span> <span class="str">&quot;sin conexión con el servidor local: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+#<span class="op">[</span>export_name <span class="op">=</span> <span class="str">&quot;enviar&quot;</span><span class="op">]</span>
+<span class="kw">fn</span> <span class="fn">enviar</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> <span class="str">&quot;enviando...&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="kw">await</span> <span class="fn">enviar_pedido</span><span class="op">(</span><span class="str">&quot;{\&quot;mesa\&quot;:4,\&quot;items\&quot;:2}&quot;</span><span class="op">)</span>
+    <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> texto<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="cm">// Aviso de cambios del servidor local; el mismo plazo y permiso.</span>
+    <span class="kw">let</span> canal<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">browser_sse_opts_fn</span><span class="op">(</span><span class="ty">SERVIDOR</span> <span class="op">+</span> <span class="str">&quot;/eventos&quot;</span><span class="op">,</span> <span class="num">3000</span><span class="op">,</span> <span class="str">&quot;local&quot;</span><span class="op">,</span>
+        <span class="kw">fn</span><span class="op">(</span>evento<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> datos<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+            <span class="kw">if</span> evento <span class="op">==</span> <span class="str">&quot;nyx-error&quot;</span> <span class="op">{</span>
+                <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#red&quot;</span><span class="op">,</span> <span class="str">&quot;sin servidor local (&quot;</span> <span class="op">+</span> datos <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#red&quot;</span><span class="op">,</span> evento <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> datos<span class="op">)</span>
+            <span class="op">}</span>
+        <span class="op">})</span>
+    <span class="kw">if</span> canal <span class="op">==</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#red&quot;</span><span class="op">,</span> <span class="str">&quot;el navegador no permite SSE&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="cm">// Con cierre, en vez de await: la misma opción para un fetch de un disparo.</span>
+    <span class="fn">browser_fetch_opts_fn</span><span class="op">(</span><span class="ty">SERVIDOR</span> <span class="op">+</span> <span class="str">&quot;/estado&quot;</span><span class="op">,</span> <span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="num">3000</span><span class="op">,</span> <span class="str">&quot;local&quot;</span><span class="op">,</span>
+        <span class="kw">fn</span><span class="op">(</span>status<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> body<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+            <span class="kw">if</span> status <span class="op">==</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> body<span class="op">)</span> <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span> <span class="fn">dom_set_text</span><span class="op">(</span><span class="str">&quot;#estado&quot;</span><span class="op">,</span> <span class="str">&quot;servidor: &quot;</span> <span class="op">+</span> body<span class="op">)</span> <span class="op">}</span>
+        <span class="op">})</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">#estado: enviando...
+#estado: el servidor local no responde: se guarda para más tarde
+#red: sin servidor local (timeout)</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Chrome pide el permiso de red local (Local Network Access, antes Private Network Access) para que una página hable con un equipo de la LAN. Se activa con <code>targetAddressSpace</code> en fetch — el tercer argumento <code>"local"</code> de estas funciones; <code>""</code> es no pedirlo, y un navegador que no conoce el campo lo ignora, así que nunca rompe el pedido. El servidor también tiene que cooperar: CORS y, si el navegador manda un preflight de red local, contestarlo. Esa parte no se pudo verificar contra un Chrome real desde el repositorio; los tests fijan que el shim pasa el campo y que el plazo aborta el pedido.</p>
+<p>Contra un equipo apagado, un fetch espera minutos. El plazo (en ms, 3000 aquí) lo aborta y devuelve un <code>Err</code> con kind <code>"timeout"</code>, o <code>"connection"</code> si no hubo respuesta alguna, que <code>enviar_pedido</code> convierte en un mensaje en vez de dejar la tablet colgada. En SSE el plazo es para CONECTAR, no para la vida del canal: si vence, o la conexión falla, el manejador recibe UNA vez el evento <code>"nyx-error"</code> con dato <code>"timeout"</code> o <code>"connection"</code>, y el canal se cierra solo. Como el programa espera al anfitrión, <code>nyx build</code> necesita <code>binaryen</code> (o <code>NYX_WASM_OPT</code>).</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/131-expr-formulas-nomina.html"><span class="label">← Anterior</span><span class="doc-nav-name">Fórmulas de usuario seguras para una nómina</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/133-imagen-miniaturas.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Miniaturas de la foto de un producto</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

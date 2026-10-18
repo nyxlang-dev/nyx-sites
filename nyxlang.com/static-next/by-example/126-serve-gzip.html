@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automatic gzip in std/serve — Nyx by example</title>
+<meta name="description" content="Text responses of 1 KiB or more leave compressed when the client sends Accept-Encoding: gzip — no code needed.">
+<link rel="canonical" href="https://nyxlang.com/by-example/126-serve-gzip.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/126-serve-gzip.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/126-serve-gzip.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/126-serve-gzip.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/126-serve-gzip.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">126</span> / Networking</span></p>
+<h1 class="doc-title">Automatic gzip in std/serve</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>There is nothing to write: when the request says <code>Accept-Encoding: gzip</code>, the body is text (<code>text/*</code>, JSON, JavaScript, XML, SVG), it is at least 1024 bytes and the handler did not set its own <code>Content-Encoding</code>, <code>std/serve</code> compresses it. The recipe plays the client with a raw TCP socket so it can run on its own, and checks that the compressed body decompresses to the plain one.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">126-serve-gzip.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/126-serve-gzip.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// std/serve gzip: text responses go out compressed when the client accepts it</span>
+<span class="cm">// std/serve gzip: las respuestas de texto salen comprimidas cuando el cliente lo acepta</span>
+<span class="cm">//</span>
+<span class="cm">// No code needed: if the request says `Accept-Encoding: gzip`, the body is text</span>
+<span class="cm">// (text/*, JSON, JavaScript, XML, SVG), it is at least 1024 bytes and the handler</span>
+<span class="cm">// did not set its own Content-Encoding, std/serve compresses it and adds</span>
+<span class="cm">// `Content-Encoding: gzip`, `Vary: Accept-Encoding` and the right Content-Length</span>
+<span class="cm">// (in bytes of the compressed body). It is ON by default; turn it off or move the</span>
+<span class="cm">// size window with:</span>
+<span class="cm">//</span>
+<span class="cm">//   app_compress(app, false)                 // off</span>
+<span class="cm">//   app_compress_limits(app, 2048, 4194304)  // compress bodies of 2 KiB .. 4 MiB</span>
+<span class="cm">//</span>
+<span class="cm">// Compressed bodies are cached (by sha256 of the body), so a static page or a CSS</span>
+<span class="cm">// is compressed once. The codec is std/zip&#x27;s DEFLATE (fixed Huffman, pure Nyx);</span>
+<span class="cm">// zip_gzip / zip_gunzip are also there to use by hand.</span>
+<span class="cm">//</span>
+<span class="cm">// This recipe plays the client with a raw TCP socket so it can run on its own.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/zip&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">pagina</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> n <span class="op">{</span>
+        sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span><span class="str">&quot;&lt;tr&gt;&lt;td&gt;row &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;&lt;/td&gt;&lt;td&gt;value&lt;/td&gt;&lt;/tr&gt;\n&quot;</span><span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">tabla</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_html</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;&lt;table&gt;\n&quot;</span> <span class="op">+</span> <span class="fn">pagina</span><span class="op">(</span><span class="num">300</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;&lt;/table&gt;&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// One GET with Connection: close; the whole answer as bytes.</span>
+<span class="kw">fn</span> <span class="fn">pedir</span><span class="op">(</span>port<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> extra<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> tries<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> tries <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span> <span class="op">}</span>
+        tries <span class="op">=</span> tries <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;&quot;</span> <span class="op">}</span>
+    <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;GET /tabla HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n&quot;</span> <span class="op">+</span> extra <span class="op">+</span> <span class="str">&quot;\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">var</span> more<span class="op">:</span> <span class="ty">bool</span> <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">while</span> more <span class="op">{</span>
+        <span class="kw">let</span> chunk<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">65536</span><span class="op">)</span>
+        <span class="kw">if</span> chunk<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+            more <span class="op">=</span> <span class="kw">false</span>
+        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+            sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span>chunk<span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">body_of</span><span class="op">(</span>resp<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> resp<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> resp<span class="op">.</span><span class="fn">substring</span><span class="op">(</span>i <span class="op">+</span> <span class="num">4</span><span class="op">,</span> resp<span class="op">.</span><span class="fn">length</span><span class="op">())</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="kw">let</span> port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18213</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/tabla&quot;</span><span class="op">,</span> tabla<span class="op">)</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> port<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="kw">let</span> plain<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> gz<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">pedir</span><span class="op">(</span>port<span class="op">,</span> <span class="str">&quot;Accept-Encoding: gzip\r\n&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;plain body:      &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">body_of</span><span class="op">(</span>plain<span class="op">).</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;compressed body: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="fn">body_of</span><span class="op">(</span>gz<span class="op">).</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+    <span class="kw">if</span> gz<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;Content-Encoding: gzip&quot;</span><span class="op">)</span> <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;the answer is not gzip&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;Content-Encoding: gzip&quot;</span><span class="op">)</span>
+
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">zip_gunzip</span><span class="op">(</span><span class="fn">body_of</span><span class="op">(</span>gz<span class="op">),</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>text<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> text <span class="op">!=</span> <span class="fn">body_of</span><span class="op">(</span>plain<span class="op">)</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;the decompressed body differs&quot;</span><span class="op">)</span>
+                <span class="kw">return</span> <span class="num">1</span>
+            <span class="op">}</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;decompressed body equals the plain one&quot;</span><span class="op">)</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;gunzip failed: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18213 with 2 workers
+plain body:      11906 bytes
+compressed body: 1228 bytes
+Content-Encoding: gzip
+decompressed body equals the plain one</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The server adds <code>Content-Encoding: gzip</code>, <code>Vary: Accept-Encoding</code> and the right <code>Content-Length</code>, in bytes of the compressed body. It is ON by default; <code>app_compress(app, false)</code> turns it off and <code>app_compress_limits(app, 2048, 4194304)</code> moves the size window to bodies from 2 KiB to 4 MiB.</p>
+<p>Compressed bodies are cached by the sha256 of the body, so a static page or a stylesheet is compressed once, not on every request. The codec is the DEFLATE of <code>std/zip</code> (fixed Huffman, pure Nyx), and <code>zip_gzip</code> / <code>zip_gunzip</code> are there to use by hand. The server starts in the same process on a local port and ends with the program.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/125-xlsx-leer-hoja.html"><span class="label">← Previous</span><span class="doc-nav-name">Read an .xlsx sheet</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/127-serve-limites.html"><span class="label">Next →</span><span class="doc-nav-name">Body caps and rate limits in std/serve</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

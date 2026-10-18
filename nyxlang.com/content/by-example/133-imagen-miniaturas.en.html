@@ -1,0 +1,22 @@
+<!-- title: Product photo thumbnails | blurb: std/image decodes at the largest possible reduction, makes several sizes from one decode and flattens transparency onto white. -->
+<section data-part="intro">
+<p>A shop uploads a product photo from the phone — 3 to 5 MB, 12 megapixels, sometimes rotated by its EXIF orientation — and the system has to serve it small: about 600 px for the product page, about 200 px for the list, as JPEG, without the photo's location. <code>std/image</code> is pure Nyx, native and <code>wasm32-wasi</code>, so neither libjpeg nor ImageMagick is needed. The sample photo is built inside the recipe with <code>image_encode_jpeg</code>; in real life it is the bytes of the multipart that arrived.</p>
+</section>
+<section data-part="output">
+original: jpeg 1600x1200, 140360 bytes
+ficha: jpeg 600x450, 13167 bytes
+tamaño 0: jpeg 600x450, 13167 bytes
+tamaño 1: jpeg 200x150, 3175 bytes
+tamaño 2: jpeg 80x60, 1366 bytes
+calidad 95: 8025 bytes
+calidad 80: 3168 bytes
+calidad 60: 2504 bytes
+calidad 40: 2174 bytes
+logo: jpeg 64x64 (sobre blanco)
+rechazada (invalid): image_thumbnail: no parece una imagen JPEG ni PNG (firma desconocida)
+rechazada (invalid): image_thumbnail: la calidad va de 1 a 100 (llegó 101)
+</section>
+<section data-part="explanation">
+<p><code>image_thumbnail</code> decodes, shrinks and encodes in ONE step, decoding at the largest possible reduction (1/2, 1/4 or 1/8) so a 12 MP photo is not decoded in full. <code>image_thumbnails</code> makes several sizes from a SINGLE decode — the product page, the list and an 80 px one. Quality runs 1 to 100 (<code>image_default_quality()</code> is 80) and its effect on the bytes is visible in the four <q>calidad</q> lines.</p>
+<p>A PNG with transparency, the logo, comes out composited over white, which is what a JPEG can store; for another background call <code>image_flatten</code> before encoding. Errors are a <code>Result</code> with a kind: <code>"invalid"</code> (a parameter or a limit), <code>"parse"</code> (a damaged file) and <code>"unsupported"</code> (HEIC, WebP, progressive JPEG...). Both rejections at the end of the output are <code>invalid</code>.</p>
+</section>

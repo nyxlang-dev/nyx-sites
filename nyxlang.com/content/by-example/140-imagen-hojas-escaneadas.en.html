@@ -1,0 +1,16 @@
+<!-- title: Thumbnails of scanned sheets | blurb: std/image on letter-size scans: almost no reduction, so what matters is the build mode. -->
+<section data-part="intro">
+<p>An ERP receives scanned sheets (1275 x 1650 at 150 dpi, 2550 x 3300 at 300 dpi) and makes a lightweight version of each one on upload. A sheet is NOT a 12-megapixel photo: the <q>thumbnail</q> wanted is 1600 px on a side, almost the source size. That changes what to expect from <code>std/image</code>. The sample sheet is built inside the recipe — white paper with lines of <q>text</q> — so it needs no file.</p>
+</section>
+<section data-part="output">
+hoja: jpeg 1275x1650, 199862 bytes
+guardar: jpeg 1236x1600, 208944 bytes
+destino 1600: decodifica a 1275x1650 (reducción 1/1)
+destino 300: decodifica a 638x825 (reducción 1/2)
+salida: jpeg 1236x1600, 208944 bytes
+salida: jpeg 232x300, 23637 bytes
+</section>
+<section data-part="explanation">
+<p>The reduced decoding (1/2, 1/4, 1/8) that photos use does not apply here: the rule is to reduce while at least twice the target's pixels remain, and 1650 to 1600 leaves no room to reduce anything. The whole sheet is decoded, shrunk a little (Lanczos3, byte for byte equal to Pillow) and encoded again, so the work is proportional to the sheet, not to the target. For a small preview — say 300 px — there is reduction: the sheet decodes at 1/2, as the output shows.</p>
+<p>That is why the build mode matters. <code>nyx build</code> without <code>--release</code> does not optimize (<code>-O0</code>), and <code>nyx build --release</code> passes <code>-O2</code>. Measured on the 1275 x 1650 sheet (aarch64, CPU), <code>image_thumbnail(sheet, 1600, 1600, 80)</code> takes about 1.0 s at <code>-O0</code> and about 0.25 s at <code>-O2</code>; the 2550 x 3300 sheet costs about four times that. Before the image-speed work the same call took 3.6 s at <code>-O0</code>.</p>
+</section>

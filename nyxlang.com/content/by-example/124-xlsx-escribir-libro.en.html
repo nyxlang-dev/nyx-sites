@@ -1,0 +1,12 @@
+<!-- title: A purchase ledger as .xlsx | blurb: std/xlsx writes a real workbook in pure Nyx: typed cells, merged cells, frozen header, autofilter and thousands separators. -->
+<section data-part="intro">
+<p>An ERP hands over the month's purchase ledger in Excel. <code>std/xlsx</code> writes a genuine <code>.xlsx</code> — a zip with XML inside, in pure Nyx, so it runs the same on the server and on <code>wasm32-wasi</code> — that Excel, LibreOffice and openpyxl all open.</p>
+</section>
+<section data-part="output">
+libro: 3375 bytes, empieza con PK
+para escribirlo: nyx run -- libro.xlsx
+</section>
+<section data-part="explanation">
+<p>A sheet is a list of rows of cells, built with <code>xlsx_sheet_new</code> and <code>row()</code>. Cells have one constructor per type: <code>xlsx_text</code>, <code>xlsx_number(value, decimals)</code>, <code>xlsx_int</code>, <code>xlsx_date("YYYY-MM-DD")</code>, <code>xlsx_bool</code>, <code>xlsx_blank</code> and <code>xlsx_bold</code>. On top of that come column widths (<code>col_width</code>), merged cells (<code>merge</code>), a header that stays put on scroll (<code>freeze</code>), an autofilter over the table, and amounts with a thousands separator through <code>xlsx_number_fmt</code> and <code>"#,##0.00"</code>.</p>
+<p>The total is calculated in the program: formulas are NOT written, the value is. And mistakes — a repeated sheet name, an invalid date — surface from <code>xlsx_write</code> as an <code>Err</code>, not earlier. Run it with <code>nyx run -- libro.xlsx</code> to write the file; with no argument it only reports the size, which is what you see above.</p>
+</section>

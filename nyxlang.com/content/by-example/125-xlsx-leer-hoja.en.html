@@ -1,0 +1,18 @@
+<!-- title: Read an .xlsx sheet | blurb: xlsx_read returns each cell with its type, ISO dates, gaps as empty cells, and default limits against zip bombs. -->
+<section data-part="intro">
+<p>A bank sends the account statement in Excel and the ERP reconciles it. To avoid depending on an input file, the recipe first builds a workbook with <code>xlsx_write</code> and then reads it back as if it came from outside.</p>
+</section>
+<section data-part="output">
+hoja Movimientos: 4 filas
+Fecha | Descripción | Monto | 
+2026-09-01 | Depósito | 1234.50 | 
+2026-09-03 | Comisión | -12.75 | 
+2026-09-10 | - | 80.00 | 
+C2 es number, vale 1234.5, formato 0.00
+A3 es date: 2026-09-03
+B4 es empty
+</section>
+<section data-part="explanation">
+<p><code>xlsx_read(bytes, xlsx_read_opts())</code> comes with default limits against zip bombs and giant workbooks (file, parts, total decompressed size, cells). Every cell carries its TYPE — <code>text</code>, <code>number</code>, <code>date</code>, <code>bool</code>, <code>error</code> or <code>empty</code> — plus its <code>text</code>, so an amount is read exactly as written, and its <code>number</code>. Dates come out in ISO form, with the workbook's 1900 or 1904 epoch applied.</p>
+<p><code>rows[r][c]</code> is the cell of row <code>r+1</code>, column <code>c+1</code>. Gaps are cells of kind <code>empty</code>, so <q>C7</q> lands where it should, and <code>xlsx_cell(sheet, "B3")</code> asks for one by name — look at the last three lines of the output. FORMULAS are not evaluated: you read the value the file has cached. <code>xlsx_sheet(book, name)</code> finds a sheet by name and returns an <code>Option</code>.</p>
+</section>

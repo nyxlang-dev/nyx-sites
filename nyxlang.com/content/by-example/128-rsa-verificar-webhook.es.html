@@ -1,0 +1,13 @@
+<!-- title: Verificar un aviso de pago firmado | blurb: std/rsa comprueba una firma RSA-SHA256 con la clave pública del proveedor: PKCS#1 v1.5 o PSS, verdadero, falso o error. -->
+<section data-part="intro">
+<p>Una pasarela de pago avisa un pago con un POST cuyo cuerpo viene firmado con RSA; la firma llega en base64 en un header. Con HMAC no alcanza porque el proveedor no comparte un secreto: publica su CLAVE PÚBLICA (PEM) y uno verifica con ella. <code>std/rsa</code> lo hace con OpenSSL.</p>
+</section>
+<section data-part="output">
+aviso genuino: aceptado
+cuerpo alterado: rechazado
+no se pudo verificar: rsa: la clave pública PEM no se pudo leer o no es RSA
+</section>
+<section data-part="explanation">
+<p>Tres puntos de entrada: <code>rsa_sha256_verify_b64(pem, cuerpo, firma_base64)</code> para PKCS#1 v1.5, lo común; <code>rsa_sha256_verify(pem, cuerpo, firma_cruda)</code> para la misma firma en bytes; y <code>rsa_pss_sha256_verify(pem, cuerpo, firma_cruda)</code> para RSASSA-PSS. La respuesta tiene tres desenlaces: <code>Ok(true)</code>, firma válida; <code>Ok(false)</code>, el aviso NO es del proveedor (datos alterados o clave ajena); y <code>Err</code>, ni siquiera se pudo intentar, como con un PEM ilegible — las tres líneas de la salida.</p>
+<p>Se verifica el cuerpo EXACTO recibido, byte a byte, ANTES de parsearlo. Los datos de la receta son los fixtures de prueba del repositorio, hechos con la CLI de <code>openssl</code>; en un programa real la clave sale de <code>read_file("proveedor.pem")</code> y el cuerpo y la firma, de la petición entrante.</p>
+</section>

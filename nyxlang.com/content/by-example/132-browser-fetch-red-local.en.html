@@ -1,0 +1,13 @@
+<!-- title: A PWA talking to a local-network server | blurb: Local Network Access permission plus a timeout on fetch and SSE, so a tablet does not wait minutes on a server that is off. -->
+<section data-part="intro">
+<p>The tablets of a shop have the application installed (a PWA) and talk to a server on the same network, so they keep working when the internet goes down. This is a browser recipe for <code>wasm32-wasi</code>: it is built with <code>nyx build --target wasm32-wasi</code> and uses the DOM, so it cannot run natively and the output above is illustrative.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+#estado: enviando...
+#estado: el servidor local no responde: se guarda para más tarde
+#red: sin servidor local (timeout)
+</section>
+<section data-part="explanation">
+<p>Chrome asks for the Local Network Access permission (formerly Private Network Access) before a page may talk to a machine on the LAN. It is requested with <code>targetAddressSpace</code> on fetch — the third argument <code>"local"</code> of these functions; <code>""</code> means do not ask, and a browser that does not know the field ignores it, so it never breaks the request. The server has to cooperate too: CORS and, if the browser sends a local-network preflight, an answer to it. That part could not be verified against a real Chrome from the repository; the tests pin that the shim passes the field and that the timeout aborts the request.</p>
+<p>Against a machine that is off, a fetch waits for minutes. The timeout (in ms, 3000 here) aborts it and returns an <code>Err</code> with kind <code>"timeout"</code>, or <code>"connection"</code> if there was no response at all, which <code>enviar_pedido</code> turns into a message instead of leaving the tablet hanging. On SSE the timeout is for CONNECTING, not for the life of the channel: if it expires, or the connection fails, the handler receives the <code>"nyx-error"</code> event ONCE with data <code>"timeout"</code> or <code>"connection"</code>, and the channel closes by itself. Because the program waits on the host, <code>nyx build</code> needs <code>binaryen</code> (or <code>NYX_WASM_OPT</code>).</p>
+</section>

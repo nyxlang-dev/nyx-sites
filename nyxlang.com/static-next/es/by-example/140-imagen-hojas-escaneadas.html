@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Miniaturas de hojas escaneadas — Nyx por ejemplo</title>
+<meta name="description" content="std/image sobre escaneos tamaño carta: casi no hay reducción, así que importa el modo de compilación.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/140-imagen-hojas-escaneadas.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/140-imagen-hojas-escaneadas.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/140-imagen-hojas-escaneadas.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/140-imagen-hojas-escaneadas.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/140-imagen-hojas-escaneadas.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">140</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Miniaturas de hojas escaneadas</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un ERP recibe hojas escaneadas (1275 x 1650 a 150 ppp, 2550 x 3300 a 300 ppp) y genera una versión liviana de cada una al subirla. Una hoja NO es una foto de 12 megapíxeles: la <q>miniatura</q> que se quiere es de 1600 px de lado, casi el tamaño de origen. Eso cambia qué esperar de <code>std/image</code>. La hoja de ejemplo se fabrica dentro de la receta — papel blanco con renglones de <q>texto</q> — para no necesitar ningún archivo.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">140-imagen-hojas-escaneadas.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/140-imagen-hojas-escaneadas.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: miniaturas de documentos escaneados (hojas carta) con std/image.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: nyxerp recibe hojas escaneadas (1275 x 1650 a 150 ppp, 2550 x 3300 a 300 ppp)</span>
+<span class="cm">// y genera una versión liviana de cada una al subirla. Una hoja NO es una foto de 12</span>
+<span class="cm">// megapíxeles: la «miniatura» que se quiere es de 1600 px de lado, o sea casi el tamaño de</span>
+<span class="cm">// origen. Eso cambia qué esperar de std/image:</span>
+<span class="cm">//</span>
+<span class="cm">//   - La decodificación reducida (1/2, 1/4, 1/8) que usan las fotos NO entra acá: la regla es</span>
+<span class="cm">//     «reducir mientras queden al menos el doble de píxeles que el destino», y 1650 -&gt; 1600</span>
+<span class="cm">//     no deja margen para reducir nada. Se decodifica la hoja entera, se achica poco (Lanczos3,</span>
+<span class="cm">//     byte a byte igual a Pillow) y se vuelve a codificar. El trabajo es proporcional a la hoja,</span>
+<span class="cm">//     no al destino.</span>
+<span class="cm">//   - Por eso importa cómo se compila. `nyx build` sin --release no optimiza (clang -O0) y</span>
+<span class="cm">//     `nyx build --release` pasa -O2. Tiempos medidos en la hoja de 1275 x 1650 (aarch64, CPU):</span>
+<span class="cm">//</span>
+<span class="cm">//         image_thumbnail(hoja, 1600, 1600, 80)   -O0 ~1,0 s     -O2 ~0,25 s</span>
+<span class="cm">//         decodificar                             -O0 ~0,37 s    -O2 ~0,09 s</span>
+<span class="cm">//         image_resize_fit a 1600                 -O0 ~0,28 s    -O2 ~0,08 s</span>
+<span class="cm">//         codificar JPEG q80                      -O0 ~0,34 s    -O2 ~0,075 s</span>
+<span class="cm">//</span>
+<span class="cm">//     La hoja de 2550 x 3300 cuesta ~4 veces eso. Antes del arco image-rapido el mismo</span>
+<span class="cm">//     image_thumbnail tardaba 3,6 s en -O0 (y 8,6 s de CPU la hoja grande).</span>
+<span class="cm">//   - Para una vista previa chica (ej. 300 px) sí hay reducción: una hoja de 1275 x 1650 se</span>
+<span class="cm">//     decodifica a 1/2 y sale en una fracción del tiempo.</span>
+<span class="cm">//</span>
+<span class="cm">// La hoja de ejemplo se fabrica acá mismo (papel blanco con renglones de «texto»), para que la</span>
+<span class="cm">// receta no dependa de un archivo: en la vida real son los bytes que llegaron por multipart.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/image&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Una hoja carta: fondo blanco y bandas oscuras que imitan renglones de texto.</span>
+<span class="kw">fn</span> <span class="fn">hoja_de_prueba</span><span class="op">(</span>ancho<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> alto<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Image</span> <span class="op">{</span>
+    <span class="kw">let</span> blanca<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot; &quot;</span><span class="op">.</span><span class="fn">repeat</span><span class="op">(</span>ancho <span class="op">*</span> <span class="num">3</span><span class="op">)</span>
+    <span class="kw">var</span> filas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">var</span> y<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> y <span class="op">&lt;</span> alto <span class="op">{</span>
+        <span class="kw">if</span> <span class="op">(</span>y <span class="op">/</span> <span class="num">6</span><span class="op">)</span> <span class="op">%</span> <span class="num">5</span> <span class="op">==</span> <span class="num">0</span> <span class="kw">and</span> y <span class="op">&gt;</span> alto <span class="op">/</span> <span class="num">10</span> <span class="kw">and</span> y <span class="op">&lt;</span> alto <span class="op">-</span> alto <span class="op">/</span> <span class="num">10</span> <span class="op">{</span>
+            <span class="kw">var</span> px<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+            <span class="kw">var</span> x<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> x <span class="op">&lt;</span> ancho <span class="op">{</span>
+                <span class="kw">var</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">255</span>
+                <span class="kw">if</span> x <span class="op">&gt;</span> ancho <span class="op">/</span> <span class="num">8</span> <span class="kw">and</span> x <span class="op">&lt;</span> ancho <span class="op">-</span> ancho <span class="op">/</span> <span class="num">8</span> <span class="kw">and</span> <span class="op">(</span>x <span class="op">/</span> <span class="num">9</span><span class="op">)</span> <span class="op">%</span> <span class="num">4</span> <span class="op">!=</span> <span class="num">3</span> <span class="op">{</span> v <span class="op">=</span> <span class="num">30</span> <span class="op">}</span>
+                px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>v<span class="op">)</span>
+                px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>v<span class="op">)</span>
+                px<span class="op">.</span><span class="fn">push</span><span class="op">(</span>v<span class="op">)</span>
+                x <span class="op">=</span> x <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+            filas<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">string_from_bytes</span><span class="op">(</span>px<span class="op">,</span> <span class="num">0</span><span class="op">,</span> ancho <span class="op">*</span> <span class="num">3</span><span class="op">))</span>
+        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+            filas<span class="op">.</span><span class="fn">push</span><span class="op">(</span>blanca<span class="op">)</span>
+        <span class="op">}</span>
+        y <span class="op">=</span> y <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Image</span> <span class="op">{</span> width<span class="op">:</span> ancho<span class="op">,</span> height<span class="op">:</span> alto<span class="op">,</span> channels<span class="op">:</span> <span class="num">3</span><span class="op">,</span> rows<span class="op">:</span> filas<span class="op">,</span> icc<span class="op">:</span> <span class="str">&quot;&quot;</span><span class="op">,</span> reduction<span class="op">:</span> <span class="num">1</span> <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">medidas</span><span class="op">(</span>bytes<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">image_info</span><span class="op">(</span>bytes<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>i<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> i<span class="op">.</span>format <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">.</span>width<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">.</span>height<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// La hoja «escaneada»: 1275 x 1650 a calidad 85.</span>
+    <span class="kw">var</span> hoja<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">match</span> <span class="fn">image_encode_jpeg</span><span class="op">(</span><span class="fn">hoja_de_prueba</span><span class="op">(</span><span class="num">1275</span><span class="op">,</span> <span class="num">1650</span><span class="op">),</span> <span class="num">85</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>b<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> hoja <span class="op">=</span> b <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo armar la hoja: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;hoja: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>hoja<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>hoja<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+
+    <span class="cm">// 1. La versión liviana para guardar: cabe en 1600 x 1600. No hay reducción posible.</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnail</span><span class="op">(</span>hoja<span class="op">,</span> <span class="num">1600</span><span class="op">,</span> <span class="num">1600</span><span class="op">,</span> <span class="num">80</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;guardar: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>t<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>t<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 2. Cuánto reduce al decodificar cada destino. Para 1600 px: nada (reduction 1). Para una</span>
+    <span class="cm">//    vista previa de 300 px el destino ×2 es 600 x 600 y la hoja se decodifica a 1/2.</span>
+    <span class="kw">for</span> lado<span class="op">:</span> <span class="ty">int</span> <span class="kw">in</span> <span class="op">[</span><span class="num">1600</span><span class="op">,</span> <span class="num">300</span><span class="op">]</span> <span class="op">{</span>
+        <span class="kw">match</span> <span class="fn">image_decode_min</span><span class="op">(</span>hoja<span class="op">,</span> <span class="fn">image_limits</span><span class="op">(),</span> lado <span class="op">*</span> <span class="num">2</span><span class="op">,</span> lado <span class="op">*</span> <span class="num">2</span><span class="op">)</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>img<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;destino &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>lado<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: decodifica a &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>img<span class="op">.</span>width<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;x&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>img<span class="op">.</span>height<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; (reducción 1/&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>img<span class="op">.</span>reduction<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 3. Varios tamaños de UNA decodificación: el de guardar y la vista previa.</span>
+    <span class="kw">match</span> <span class="fn">image_thumbnails</span><span class="op">(</span>hoja<span class="op">,</span> <span class="op">[[</span><span class="num">1600</span><span class="op">,</span> <span class="num">1600</span><span class="op">],</span> <span class="op">[</span><span class="num">300</span><span class="op">,</span> <span class="num">300</span><span class="op">]],</span> <span class="num">80</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>salidas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">for</span> s<span class="op">:</span> <span class="ty">String</span> <span class="kw">in</span> salidas <span class="op">{</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;salida: &quot;</span> <span class="op">+</span> <span class="fn">medidas</span><span class="op">(</span>s<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>s<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// 4. La hoja de 2550 x 3300 (300 ppp) hace lo mismo con 4 veces los píxeles: ~4 veces el</span>
+    <span class="cm">//    tiempo de la tabla de arriba. Para medir en tu máquina: monotonic_ms() antes y después.</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">hoja: jpeg 1275x1650, 199862 bytes
+guardar: jpeg 1236x1600, 208944 bytes
+destino 1600: decodifica a 1275x1650 (reducción 1/1)
+destino 300: decodifica a 638x825 (reducción 1/2)
+salida: jpeg 1236x1600, 208944 bytes
+salida: jpeg 232x300, 23637 bytes</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La decodificación reducida (1/2, 1/4, 1/8) que usan las fotos no entra aquí: la regla es reducir mientras queden al menos el doble de píxeles que el destino, y 1650 a 1600 no deja margen para reducir nada. Se decodifica la hoja entera, se achica poco (Lanczos3, byte a byte igual a Pillow) y se vuelve a codificar, así que el trabajo es proporcional a la hoja, no al destino. Para una vista previa chica — digamos 300 px — sí hay reducción: la hoja se decodifica a 1/2, como muestra la salida.</p>
+<p>Por eso importa cómo se compila. <code>nyx build</code> sin <code>--release</code> no optimiza (<code>-O0</code>), y <code>nyx build --release</code> pasa <code>-O2</code>. Medido en la hoja de 1275 x 1650 (aarch64, CPU), <code>image_thumbnail(hoja, 1600, 1600, 80)</code> tarda cerca de 1,0 s en <code>-O0</code> y cerca de 0,25 s en <code>-O2</code>; la hoja de 2550 x 3300 cuesta unas cuatro veces eso. Antes del trabajo de velocidad de imagen, la misma llamada tardaba 3,6 s en <code>-O0</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/139-pdf-preimpreso.html"><span class="label">← Anterior</span><span class="doc-nav-name">Un PDF que calca una hoja preimpresa</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/141-smtp-texto-y-html.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Un correo con versión de texto Y versión HTML</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
