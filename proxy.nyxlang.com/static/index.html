@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>nyx-proxy — an HTTPS reverse proxy in one small binary</title>
-    <meta name="description" content="HTTPS reverse proxy: TLS termination, SNI multi-domain routing, health checks, LRU response cache, per-IP rate limiting and a Prometheus /metrics endpoint. One small binary, zero dependencies.">
+    <meta name="description" content="HTTPS reverse proxy: TLS termination, SNI multi-domain routing, health checks, LRU response cache, per-IP rate limiting and a Prometheus /metrics endpoint. Wildcard hostnames, up to 128 upstreams. One small binary.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
 
 <!-- HERO -->
 <section class="hero">
-    <span class="hero-label">TLS 1.2+ &middot; SNI ROUTING &middot; ~330KB BINARY</span>
+    <span class="hero-label">TLS 1.2+ &middot; SNI ROUTING &middot; ~560KB BINARY</span>
     <h1>An HTTPS reverse proxy.<br>One small binary.</h1>
     <p class="subtitle">
         TLS termination with SNI multi-domain routing, active health checks,
@@ -41,10 +41,10 @@
 <!-- STATS -->
 <section style="padding-top:0.5rem">
     <div class="stats-inner">
-        <div class="stat"><div class="n"><em>~330</em>KB</div><div class="l">static binary</div></div>
-        <div class="stat"><div class="n"><em>6</em></div><div class="l">domains on one IP</div></div>
+        <div class="stat"><div class="n"><em>~560</em>KB</div><div class="l">single binary</div></div>
+        <div class="stat"><div class="n"><em>13</em></div><div class="l">domains on one IP, plus a wildcard</div></div>
         <div class="stat"><div class="n"><em>1</em></div><div class="l">TOML config file</div></div>
-        <div class="stat"><div class="n"><em>0</em></div><div class="l">dependencies</div></div>
+        <div class="stat"><div class="n"><em>128</em></div><div class="l">upstreams per file</div></div>
     </div>
 </section>
 
@@ -73,7 +73,14 @@ hostname    = <span class="str">"example.com"</span>
 name        = <span class="str">"api"</span>
 host        = <span class="str">"127.0.0.1"</span>
 port        = <span class="num">3001</span>
-hostname    = <span class="str">"api.example.com"</span></pre>
+hostname    = <span class="str">"api.example.com"</span>
+
+<span class="cm"># every &lt;customer&gt;.example.com not listed above</span>
+<span class="op">[</span><span class="kw">upstream.2</span><span class="op">]</span>
+name        = <span class="str">"tenants"</span>
+host        = <span class="str">"127.0.0.1"</span>
+port        = <span class="num">3002</span>
+hostname    = <span class="str">"*.example.com"</span></pre>
 </section>
 
 <!-- INSTALL TO PRODUCTION -->
@@ -158,7 +165,11 @@ WantedBy=multi-user.target</pre>
     <div class="card-grid cols-2" style="margin-top:1.5rem">
         <div class="card">
             <div class="card-title">Multi-domain TLS with SNI</div>
-            <div class="card-desc">Serve multiple domains on a single IP. Each domain presents its own TLS certificate via SNI. This server routes 6 domains through one nyx-proxy.</div>
+            <div class="card-desc">Serve multiple domains on a single IP. Each domain presents its own TLS certificate via SNI. This server routes 13 domains and a wildcard through one nyx-proxy.</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Wildcard hostnames</div>
+            <div class="card-desc"><code>hostname = "*.example.com"</code> sends every one-label subdomain to one upstream &mdash; new tenants go live without touching the config. Exact hostnames always win over the wildcard, whatever their order; like a wildcard certificate, it covers neither the bare domain nor <code>a.b.example.com</code>.</div>
         </div>
         <div class="card">
             <div class="card-title">Health checks</div>
@@ -185,8 +196,8 @@ WantedBy=multi-user.target</pre>
             <div class="card-desc">Request counts, status classes, latency and upstream health exposed on a separate admin port &mdash; scrape it straight into Grafana.</div>
         </div>
         <div class="card">
-            <div class="card-title">X-Forwarded-For</div>
-            <div class="card-desc">Injects the real client IP so your backends can rate-limit and log by origin, not by the proxy.</div>
+            <div class="card-title">X-Forwarded-For, -Host, -Proto</div>
+            <div class="card-desc">Injects the real client IP, the hostname it asked for and the original scheme, so your backends can log by origin and serve several tenants from one process.</div>
         </div>
         <div class="card">
             <div class="card-title">HTTP redirect</div>
@@ -227,7 +238,7 @@ WantedBy=multi-user.target</pre>
         </div>
         <div class="card" style="border-color:var(--accent)">
             <div class="card-title">nyx-proxy</div>
-            <div class="card-desc">~330KB binary. Simple TOML config. TLS, health checks, rate limiting, LRU cache, /metrics and access logs built-in. Zero dependencies.</div>
+            <div class="card-desc">~560KB binary. Simple TOML config. TLS, wildcard routing, health checks, rate limiting, LRU cache, /metrics and access logs built-in. Links only OpenSSL, Boehm GC and zlib; no module system.</div>
         </div>
     </div>
 </section>
