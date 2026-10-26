@@ -19,6 +19,7 @@
 <li><a href="/es/#install">Instalar</a></li>
 <li><a href="/es/docs/">Documentación</a></li>
 <li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
 <li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
 </ul>
 <a class="nav-lang" href="/" hreflang="en" lang="en" title="View this page in English">English</a>
@@ -29,7 +30,7 @@
 
 <section class="hero">
 <div class="wrap hero-inner">
-<p class="hero-meta"><span class="stamp stamp-accent">Ficha técnica <span class="stamp-num stamp-num-end">v0.34.0</span></span><span class="hero-rule"></span></p>
+<p class="hero-meta"><span class="stamp stamp-accent">Ficha técnica <span class="stamp-num stamp-num-end">v0.38.0</span></span><span class="hero-rule"></span></p>
 <h1 class="hero-title">Software nativo, documentado para agentes.</h1>
 <p class="hero-lede prose">Nyx compila a código nativo con LLVM, hospeda su propio compilador y entrega cada proyecto con lo que un agente de IA necesita para escribirlo bien.</p>
 
@@ -38,6 +39,21 @@
 <div class="cmd-body"><span class="cmd-prompt">$</span><span class="cmd-text">curl -sSf https://nyxlang.com/install.sh | sh</span></div>
 </div>
 <p class="cmd-foot"><span class="tick">Linux</span> · x86_64 / aarch64 / armv7l · Termux</p>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">Por qué Nyx</span></p>
+<div><h2 class="band-title">Lo que le da a quien lo escribe.</h2></div>
+</header>
+<table class="kv kv-wide">
+<tr><th>Código nativo</th><td>nyx build compila vía LLVM a un ejecutable nativo. No hay máquina virtual ni intérprete en tiempo de ejecución.</td></tr>
+<tr><th>Tipado gradual</th><td>Una variable anotada la verifica el compilador; sin el tipo, se infiere o queda abierto. Un script puede empezar suelto y volverse más estricto a medida que crece.</td></tr>
+<tr><th>Se compila a sí mismo</th><td>El compilador está escrito en Nyx y se compila a sí mismo hasta dar el mismo IR de LLVM: el punto fijo se verifica, no se promete.</td></tr>
+<tr><th>Biblioteca estándar</th><td>HTTP, PostgreSQL, SQLite, JSON, CSV, PDF y XLSX vienen con el lenguaje. Su lector columnar de CSV agrupó y filtró 5 millones de filas en 0.93 s, contra 1.21 s de pandas, según la medición de las notas de la versión 0.38.0. <a href="/es/by-example/146-csv-columnar.html">Ver la receta</a></td></tr>
+</table>
 </div>
 </section>
 
@@ -55,6 +71,7 @@
 <tr><th>Verificar</th><td><code>nyx --version</code> — imprime la versión instalada.</td></tr>
 <tr><th>Actualizar</th><td><code>nyx update</code> — trae la versión más reciente, la recompila e imprime qué cambió.</td></tr>
 <tr><th>Desinstalar</th><td><code>nyx uninstall</code> — borra la toolchain y el enlace que creó.</td></tr>
+<tr><th>Siguiente</th><td><a href="/es/docs/02-first-program.html">Primer programa</a> — un solo archivo .nx, compilado a un binario nativo y verificado antes de correrlo.</td></tr>
 </table>
 </div>
 <div>
@@ -106,6 +123,32 @@
 </table>
 </div>
 </div>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">Biblioteca estándar</span></p>
+<div>
+<h2 class="band-title">Qué trae la biblioteca estándar.</h2>
+<p class="band-sub prose">Todo lo de abajo viene con el toolchain: no hay paquete que agregar. Cada entrada abre una receta que compila y corre con la versión del pie de página.</p>
+</div>
+</header>
+<ul class="steps">
+<li class="step"><a class="step-link" href="/es/by-example/146-csv-columnar.html"><span class="step-num">146</span><span><span class="step-name">std/csv</span><span class="step-note note">Un lector columnar: millones de filas a columnas tipadas en una pasada.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/15-json-parse.html"><span class="step-num">15</span><span><span class="step-name">std/json</span><span class="step-note note">Parsear JSON a mapas y arreglos, y volver a serializarlo.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/51-http-server.html"><span class="step-num">51</span><span><span class="step-name">std/http</span><span class="step-note note">Un servidor HTTP mínimo con ruteo.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/110-serve-sse.html"><span class="step-num">110</span><span><span class="step-name">std/serve</span><span class="step-note note">Un framework web: rutas, middlewares, archivos estáticos y Server-Sent Events.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/49-http-get.html"><span class="step-num">49</span><span><span class="step-name">std/http</span><span class="step-note note">Cliente HTTP: pedidos, cabeceras, plazos y TLS.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/104-postgres.html"><span class="step-num">104</span><span><span class="step-name">std/postgres</span><span class="step-note note">Un cliente de PostgreSQL en Nyx puro, sin libpq.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/55-sqlite.html"><span class="step-num">55</span><span><span class="step-name">std/sqlite</span><span class="step-note note">Una base de datos SQL embebida.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/118-pdf-invoice.html"><span class="step-num">118</span><span><span class="step-name">std/pdf</span><span class="step-note note">Generar una factura en PDF: texto, líneas, una imagen y un código QR.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/143-pdf-a-imagen.html"><span class="step-num">143</span><span><span class="step-name">std/pdf_render</span><span class="step-note note">Dibujar una página de un PDF como imagen, en el servidor.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/124-xlsx-escribir-libro.html"><span class="step-num">124</span><span><span class="step-name">std/xlsx</span><span class="step-note note">Escribir un libro de Excel con celdas tipadas y combinadas.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/113-smtp.html"><span class="step-num">113</span><span><span class="step-name">std/smtp</span><span class="step-note note">Enviar correo con adjuntos, por STARTTLS o TLS.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/133-imagen-miniaturas.html"><span class="step-num">133</span><span><span class="step-name">std/image</span><span class="step-note note">Decodificar, achicar y codificar imágenes: miniaturas de productos.</span></span></a></li>
+</ul>
 </div>
 </section>
 
@@ -184,7 +227,7 @@
 <table class="kv kv-wide">
 <tr><th>Licencia</th><td>Apache-2.0</td></tr>
 <tr><th>Repositorio</th><td><a href="https://github.com/nyxlang-dev/nyx">https://github.com/nyxlang-dev/nyx</a></td></tr>
-<tr><th>Changelog</th><td><a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">CHANGELOG.md</a> — cada versión, con qué cambió y por qué.</td></tr>
+<tr><th>Novedades</th><td><a href="/es/changelog/">Novedades</a> — las últimas versiones, con qué cambió y por qué; la historia completa está en GitHub.</td></tr>
 <tr><th>Estado</th><td>0.x: en desarrollo activo. La API puede cambiar y no se garantiza la compatibilidad entre versiones minor.</td></tr>
 </table>
 </div>
@@ -192,7 +235,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

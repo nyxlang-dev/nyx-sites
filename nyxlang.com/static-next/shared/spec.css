@@ -707,31 +707,3 @@ code:not([class]) {
 }
 .recipe-links a { color: var(--steel); }
 .recipe-links a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-
-/* ── 16. Notas de versión /changelog ───────────────────────────────────────
-   Reusa la retícula de la guía (.doc-layout, .doc-toc, .doc-body). Lo propio:
-   el índice lleva versión + fecha en vez de número + nombre (la versión no
-   entra en la columna de 24px del número de paso), y el cuerpo admite lo que
-   trae el CHANGELOG y la guía no usa: citas y listas anidadas. */
-.cl-toc .doc-toc-link { grid-template-columns: minmax(0, 1fr) auto; }
-.cl-toc .doc-toc-num { font-weight: 400; color: var(--steel); }
-.cl-date { font-family: var(--mono); font-size: 0.8125rem; font-weight: 400; color: var(--steel); margin-left: 8px; }
-.cl-release > * + * { margin-top: 14px; }
-.doc-body > .cl-release:first-child > h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
-.cl-body li ul { margin-top: 6px; }
-.cl-body li > p { margin-top: 8px; }
-.cl-body blockquote {
-  border-left: 3px solid var(--accent);
-  background: var(--surface);
-  padding: 12px 16px;
-  font-family: var(--sans);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  max-width: 68ch;
-}
-.cl-body li > blockquote { margin-top: 8px; }
-.cl-body blockquote p + p { margin-top: 8px; }
-.cl-body blockquote code { background: var(--paper); }
-/* Una línea del CHANGELOG puede traer un identificador largo sin espacios
-   (rutas, nombres de test): que corte antes de empujar el ancho del teléfono. */
-.cl-body { overflow-wrap: anywhere; }

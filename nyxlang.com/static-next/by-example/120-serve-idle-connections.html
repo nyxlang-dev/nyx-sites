@@ -19,7 +19,6 @@
 <li><a href="/#install">Install</a></li>
 <li><a href="/docs/">Docs</a></li>
 <li><a href="/by-example/">By example</a></li>
-<li><a href="/changelog/">Changelog</a></li>
 <li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
 </ul>
 <a class="nav-lang" href="/es/by-example/120-serve-idle-connections.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
@@ -48,8 +47,6 @@
 <span class="cm">// Limits (environment variables, read when serve_app starts):</span>
 <span class="cm">//   NYX_HTTP_KEEPALIVE_SECS (15)  an idle keep-alive connection is closed after this</span>
 <span class="cm">//   NYX_HTTP_HEADER_SECS    (10)  time to receive a request&#x27;s whole header -&gt; 408</span>
-<span class="cm">//   NYX_HTTP_SEND_SECS      (30)  a response write stalled with no progress is cut</span>
-<span class="cm">//                                 (a client that stopped reading frees its worker)</span>
 <span class="cm">//</span>
 <span class="cm">// This recipe opens more idle connections than there are workers and shows the</span>
 <span class="cm">// server still answers. It plays the clients with raw TCP sockets so it can run</span>
@@ -154,7 +151,7 @@ idle connection came back and was answered</pre></div>
 </article>
 <nav class="doc-nav" aria-label="Previous and next recipe">
 <a class="doc-nav-link doc-nav-prev" href="/by-example/119-postgres-listen-notify.html"><span class="label">← Previous</span><span class="doc-nav-name">LISTEN/NOTIFY as a live bus</span></a>
-<a class="doc-nav-link doc-nav-next" href="/by-example/121-arena-persist-wasm.html"><span class="label">Next →</span><span class="doc-nav-name">Keep a value across wasm events</span></a>
+
 </nav>
 <p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
 </div>
@@ -162,7 +159,7 @@ idle connection came back and was answered</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.34.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
