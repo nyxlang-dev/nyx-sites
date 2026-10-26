@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check SPF, DKIM and DMARC before sending mail — Nyx by example</title>
+<meta name="description" content="std/dns reads TXT and CNAME records and tells NXDOMAIN from NODATA; the checking logic is pure and testable without a network.">
+<link rel="canonical" href="https://nyxlang.com/by-example/142-dns-spf-dkim-dmarc.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/142-dns-spf-dkim-dmarc.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/142-dns-spf-dkim-dmarc.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/142-dns-spf-dkim-dmarc.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/142-dns-spf-dkim-dmarc.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">142</span> / Networking</span></p>
+<h1 class="doc-title">Check SPF, DKIM and DMARC before sending mail</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>An application that will email invoices wants to check, by itself, that the sender's domain has its DNS records in order — and to show the administrator what is missing instead of letting messages land in spam. SPF is a TXT record of the domain starting with <code>v=spf1</code>; DKIM is the CNAME (or TXT) of <code>&lt;selector&gt;._domainkey.&lt;domain&gt;</code>; DMARC is a TXT record of <code>_dmarc.&lt;domain&gt;</code> starting with <code>v=DMARC1</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">142-dns-spf-dkim-dmarc.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/142-dns-spf-dkim-dmarc.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: verificar SPF, DKIM y DMARC antes de enviar correo (std/dns).</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: una aplicación que va a mandar facturas por correo quiere</span>
+<span class="cm">// comprobar, desde sí misma, que el dominio del remitente tiene sus registros</span>
+<span class="cm">// DNS en regla, y mostrarle al administrador qué falta en lugar de dejar que</span>
+<span class="cm">// los mensajes caigan en spam:</span>
+<span class="cm">//   - SPF   : un registro TXT del dominio que empieza por &quot;v=spf1&quot;;</span>
+<span class="cm">//   - DKIM  : el CNAME (o TXT) de «&lt;selector&gt;._domainkey.&lt;dominio&gt;»;</span>
+<span class="cm">//   - DMARC : un registro TXT de «_dmarc.&lt;dominio&gt;» que empieza por &quot;v=DMARC1&quot;.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - dns_txt devuelve UN elemento por registro (las cadenas de 255 bytes de un</span>
+<span class="cm">//     registro largo ya vienen unidas), así que basta buscar el prefijo;</span>
+<span class="cm">//   - distinguir «el nombre no existe» (NXDOMAIN) de «existe pero no publicó ese</span>
+<span class="cm">//     registro» (NODATA) con dns_is_nxdomain / dns_is_nodata, sin leer mensajes;</span>
+<span class="cm">//   - separar la LÓGICA de comprobar (funciones puras sobre los registros) de la</span>
+<span class="cm">//     consulta de red, para probarla sin red;</span>
+<span class="cm">//   - este módulo da los registros, no el veredicto: evaluar `include:` de SPF o</span>
+<span class="cm">//     la alineación de DKIM es trabajo de quien lo usa.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr:  nyx run                       (sin argumentos: demostración sin red)</span>
+<span class="cm">//          nyx run -- midominio.com sel1 (consulta el DNS real del sistema)</span>
+<span class="cm">// Sin `nameserver` en /etc/resolv.conf (o en un sistema sin ese archivo) llamar antes a</span>
+<span class="cm">// dns_set_server(&quot;ip&quot;).</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/dns&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// ---- lógica pura: no toca la red</span>
+
+<span class="kw">fn</span> <span class="fn">tiene_prefijo</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> pref<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="kw">if</span> s<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&lt;</span> pref<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span> <span class="kw">return</span> <span class="kw">false</span> <span class="op">}</span>
+    <span class="kw">return</span> s<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> pref<span class="op">.</span><span class="fn">length</span><span class="op">()).</span><span class="fn">to_lower</span><span class="op">()</span> <span class="op">==</span> pref<span class="op">.</span><span class="fn">to_lower</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="cm">// El primer registro cuyo texto empieza por `pref`, o &quot;&quot; si ninguno.</span>
+<span class="kw">fn</span> <span class="fn">buscar</span><span class="op">(</span>recs<span class="op">:</span> <span class="ty">Array</span><span class="op">,</span> pref<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> recs<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> r<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> recs<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">if</span> <span class="fn">tiene_prefijo</span><span class="op">(</span>r<span class="op">.</span><span class="fn">trim</span><span class="op">(),</span> pref<span class="op">)</span> <span class="op">{</span> <span class="kw">return</span> r<span class="op">.</span><span class="fn">trim</span><span class="op">()</span> <span class="op">}</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// La política de un registro DMARC: «p=reject; rua=...» -&gt; &quot;reject&quot;.</span>
+<span class="kw">fn</span> <span class="fn">dmarc_politica</span><span class="op">(</span>registro<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> registro<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;;&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> partes<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> p<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> partes<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> t<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> p<span class="op">.</span><span class="fn">trim</span><span class="op">()</span>
+        <span class="kw">if</span> <span class="fn">tiene_prefijo</span><span class="op">(</span>t<span class="op">,</span> <span class="str">&quot;p=&quot;</span><span class="op">)</span> <span class="op">{</span> <span class="kw">return</span> t<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">2</span><span class="op">,</span> t<span class="op">.</span><span class="fn">length</span><span class="op">()).</span><span class="fn">trim</span><span class="op">()</span> <span class="op">}</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;&quot;</span>
+<span class="op">}</span>
+
+<span class="cm">// Informe de un dominio a partir de lo que devolvió el DNS (o &quot;&quot; si no hay).</span>
+<span class="kw">fn</span> <span class="fn">informe</span><span class="op">(</span>spf<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> dkim<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> dmarc<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Array</span> <span class="op">{</span>
+    <span class="kw">var</span> out<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">if</span> spf <span class="op">==</span> <span class="str">&quot;&quot;</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;SPF: falta el registro TXT &#x27;v=spf1 ...&#x27; del dominio&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">else</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;SPF: ok (&quot;</span> <span class="op">+</span> spf <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">if</span> dkim <span class="op">==</span> <span class="str">&quot;&quot;</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;DKIM: falta el registro del selector&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">else</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;DKIM: ok (apunta a &quot;</span> <span class="op">+</span> dkim <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">if</span> dmarc <span class="op">==</span> <span class="str">&quot;&quot;</span> <span class="op">{</span>
+        out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;DMARC: falta el registro TXT de _dmarc&quot;</span><span class="op">)</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="kw">let</span> pol<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">dmarc_politica</span><span class="op">(</span>dmarc<span class="op">)</span>
+        <span class="kw">if</span> pol <span class="op">==</span> <span class="str">&quot;none&quot;</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;DMARC: presente pero p=none (solo monitorea, no protege)&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="kw">else</span> <span class="op">{</span> out<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;DMARC: ok (p=&quot;</span> <span class="op">+</span> pol <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> out
+<span class="op">}</span>
+
+<span class="cm">// ---- consulta de red: cada pieza distingue «no existe» de «no publicó»</span>
+
+<span class="cm">// Los TXT de un nombre, o [] si no hay (NXDOMAIN o NODATA); Err solo por fallos reales.</span>
+<span class="kw">fn</span> <span class="fn">txt_o_vacio</span><span class="op">(</span>nombre<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">dns_txt</span><span class="op">(</span>nombre<span class="op">)</span>
+    <span class="kw">match</span> r <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> <span class="fn">dns_is_nxdomain</span><span class="op">(</span>e<span class="op">)</span> <span class="kw">or</span> <span class="fn">dns_is_nodata</span><span class="op">(</span>e<span class="op">)</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">([])</span> <span class="op">}</span>
+            <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">consultar</span><span class="op">(</span>dominio<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> selector<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> spf_recs<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">txt_o_vacio</span><span class="op">(</span>dominio<span class="op">)</span>
+    <span class="kw">var</span> spf<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">match</span> spf_recs <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> spf <span class="op">=</span> <span class="fn">buscar</span><span class="op">(</span>v<span class="op">,</span> <span class="str">&quot;v=spf1&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// DKIM: normalmente un CNAME hacia el proveedor; algunos publican el TXT directo.</span>
+    <span class="kw">var</span> dkim<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">let</span> nombre_dkim<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> selector <span class="op">+</span> <span class="str">&quot;._domainkey.&quot;</span> <span class="op">+</span> dominio
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">dns_cname</span><span class="op">(</span>nombre_dkim<span class="op">)</span>
+    <span class="kw">match</span> c <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>destino<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> dkim <span class="op">=</span> destino <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> <span class="kw">not</span> <span class="op">(</span><span class="fn">dns_is_nxdomain</span><span class="op">(</span>e<span class="op">)</span> <span class="kw">or</span> <span class="fn">dns_is_nodata</span><span class="op">(</span>e<span class="op">))</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">}</span>
+            <span class="kw">let</span> t<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">txt_o_vacio</span><span class="op">(</span>nombre_dkim<span class="op">)</span>
+            <span class="kw">match</span> t <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="kw">if</span> <span class="fn">buscar</span><span class="op">(</span>v<span class="op">,</span> <span class="str">&quot;v=dkim1&quot;</span><span class="op">)</span> <span class="op">!=</span> <span class="str">&quot;&quot;</span> <span class="op">{</span> dkim <span class="op">=</span> <span class="str">&quot;un registro TXT&quot;</span> <span class="op">}</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e2<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e2<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">let</span> dm<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">txt_o_vacio</span><span class="op">(</span><span class="str">&quot;_dmarc.&quot;</span> <span class="op">+</span> dominio<span class="op">)</span>
+    <span class="kw">var</span> dmarc<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">match</span> dm <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>v<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> dmarc <span class="op">=</span> <span class="fn">buscar</span><span class="op">(</span>v<span class="op">,</span> <span class="str">&quot;v=dmarc1&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span><span class="fn">informe</span><span class="op">(</span>spf<span class="op">,</span> dkim<span class="op">,</span> dmarc<span class="op">))</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">imprimir</span><span class="op">(</span>lineas<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lineas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span>lineas<span class="op">[</span>i<span class="op">])</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+    <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span>
+        <span class="kw">let</span> dominio<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+        <span class="kw">var</span> selector<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;default&quot;</span>
+        <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">2</span> <span class="op">{</span> selector <span class="op">=</span> args<span class="op">[</span><span class="num">2</span><span class="op">]</span> <span class="op">}</span>
+        <span class="kw">match</span> <span class="fn">consultar</span><span class="op">(</span>dominio<span class="op">,</span> selector<span class="op">)</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>lineas<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">imprimir</span><span class="op">(</span>lineas<span class="op">)</span> <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo consultar el DNS: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="kw">return</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Demostración sin red: lo que devolvería el DNS de un dominio bien configurado</span>
+    <span class="cm">// y de uno a medias.</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;== dominio completo&quot;</span><span class="op">)</span>
+    <span class="fn">imprimir</span><span class="op">(</span><span class="fn">informe</span><span class="op">(</span><span class="str">&quot;v=spf1 include:_spf.proveedor.com -all&quot;</span><span class="op">,</span> <span class="str">&quot;sel1.dkim.proveedor.com&quot;</span><span class="op">,</span> <span class="str">&quot;v=DMARC1; p=reject; rua=mailto:dmarc@mine.com&quot;</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;== dominio a medias&quot;</span><span class="op">)</span>
+    <span class="fn">imprimir</span><span class="op">(</span><span class="fn">informe</span><span class="op">(</span><span class="str">&quot;v=spf1 -all&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;v=DMARC1; p=none&quot;</span><span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;== sin nada&quot;</span><span class="op">)</span>
+    <span class="fn">imprimir</span><span class="op">(</span><span class="fn">informe</span><span class="op">(</span><span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">))</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">== dominio completo
+SPF: ok (v=spf1 include:_spf.proveedor.com -all)
+DKIM: ok (apunta a sel1.dkim.proveedor.com)
+DMARC: ok (p=reject)
+== dominio a medias
+SPF: ok (v=spf1 -all)
+DKIM: falta el registro del selector
+DMARC: presente pero p=none (solo monitorea, no protege)
+== sin nada
+SPF: falta el registro TXT 'v=spf1 ...' del dominio
+DKIM: falta el registro del selector
+DMARC: falta el registro TXT de _dmarc</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>dns_txt</code> returns ONE element per record (the 255-byte strings of a long record already come joined), so looking for the prefix is enough. <code>dns_is_nxdomain</code> and <code>dns_is_nodata</code> tell <q>the name does not exist</q> from <q>it exists but published no such record</q>, without reading messages. The checks themselves are pure functions over the records, kept apart from the network query, which is why the demo can run three domains — complete, half-configured and empty — without any DNS.</p>
+<p>The module gives the records, not the verdict: evaluating an SPF <code>include:</code> or DKIM alignment is the caller's job. With no arguments, <code>nyx run</code> runs the demonstration; <code>nyx run -- midominio.com sel1</code> queries the system's real DNS. Without a <code>nameserver</code> in <code>/etc/resolv.conf</code> (or on a system without that file), call <code>dns_set_server("ip")</code> first.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/141-smtp-texto-y-html.html"><span class="label">← Previous</span><span class="doc-nav-name">An email with a text AND an HTML version</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/143-pdf-a-imagen.html"><span class="label">Next →</span><span class="doc-nav-name">Render a PDF page as an image</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

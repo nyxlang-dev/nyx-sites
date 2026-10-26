@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A purchase ledger as .xlsx — Nyx by example</title>
+<meta name="description" content="std/xlsx writes a real workbook in pure Nyx: typed cells, merged cells, frozen header, autofilter and thousands separators.">
+<link rel="canonical" href="https://nyxlang.com/by-example/124-xlsx-escribir-libro.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/124-xlsx-escribir-libro.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/124-xlsx-escribir-libro.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/124-xlsx-escribir-libro.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/124-xlsx-escribir-libro.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">124</span> / Input, output and data</span></p>
+<h1 class="doc-title">A purchase ledger as .xlsx</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>An ERP hands over the month's purchase ledger in Excel. <code>std/xlsx</code> writes a genuine <code>.xlsx</code> — a zip with XML inside, in pure Nyx, so it runs the same on the server and on <code>wasm32-wasi</code> — that Excel, LibreOffice and openpyxl all open.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">124-xlsx-escribir-libro.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/124-xlsx-escribir-libro.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un libro contable en .xlsx.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un ERP entrega el libro de compras del mes en Excel. std/xlsx</span>
+<span class="cm">// escribe un .xlsx de verdad (un zip con XML adentro, en Nyx puro: corre igual</span>
+<span class="cm">// en el servidor y en wasm32-wasi) que abren Excel, LibreOffice y openpyxl.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - xlsx_sheet_new + row(): una hoja es una lista de filas de celdas;</span>
+<span class="cm">//   - constructores por tipo: xlsx_text, xlsx_number(valor, decimales),</span>
+<span class="cm">//     xlsx_int, xlsx_date(&quot;AAAA-MM-DD&quot;), xlsx_bool, xlsx_blank, xlsx_bold;</span>
+<span class="cm">//   - ancho de columna (col_width) y celdas combinadas (merge);</span>
+<span class="cm">//   - encabezado fijo al bajar (freeze), autofiltro sobre la tabla y</span>
+<span class="cm">//     montos con separador de miles (xlsx_number_fmt con &quot;#,##0.00&quot;);</span>
+<span class="cm">//   - un total calculado en el programa: las fórmulas NO se escriben, se</span>
+<span class="cm">//     escribe el valor;</span>
+<span class="cm">//   - los errores (nombre de hoja repetido, fecha inválida...) salen de</span>
+<span class="cm">//     xlsx_write como Err, no antes.</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run -- libro.xlsx   (sin argumento solo informa el tamaño)</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/xlsx&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">libro</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> h<span class="op">:</span> <span class="ty">XlsxSheetOut</span> <span class="op">=</span> <span class="fn">xlsx_sheet_new</span><span class="op">(</span><span class="str">&quot;Libro de compras&quot;</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Libro de compras — septiembre 2026&quot;</span><span class="op">))])</span>
+    h<span class="op">.</span><span class="fn">merge</span><span class="op">(</span><span class="str">&quot;A1:D1&quot;</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([])</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Fecha&quot;</span><span class="op">)),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Proveedor&quot;</span><span class="op">)),</span>
+           <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Base&quot;</span><span class="op">)),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;IVA&quot;</span><span class="op">))])</span>
+
+    <span class="kw">let</span> fechas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;2026-09-01&quot;</span><span class="op">,</span> <span class="str">&quot;2026-09-04&quot;</span><span class="op">,</span> <span class="str">&quot;2026-09-15&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> proveedores<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Ferretería El Tornillo, C.A.&quot;</span><span class="op">,</span> <span class="str">&quot;Cementos del Centro&quot;</span><span class="op">,</span> <span class="str">&quot;Pinturas Aragua&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> bases<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">1000.0</span><span class="op">,</span> <span class="num">2500.5</span><span class="op">,</span> <span class="num">320.25</span><span class="op">]</span>
+    <span class="kw">var</span> total_base<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">0.0</span>
+    <span class="kw">var</span> total_iva<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">0.0</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> fechas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> base<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> bases<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> iva<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> base <span class="op">*</span> <span class="num">0.16</span>
+        <span class="kw">let</span> fecha<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> fechas<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">let</span> prov<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> proveedores<span class="op">[</span>i<span class="op">]</span>
+        h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_date</span><span class="op">(</span>fecha<span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span>prov<span class="op">),</span> <span class="fn">xlsx_number_fmt</span><span class="op">(</span>base<span class="op">,</span> <span class="str">&quot;#,##0.00&quot;</span><span class="op">),</span> <span class="fn">xlsx_number_fmt</span><span class="op">(</span>iva<span class="op">,</span> <span class="str">&quot;#,##0.00&quot;</span><span class="op">)])</span>
+        total_base <span class="op">=</span> total_base <span class="op">+</span> base
+        total_iva <span class="op">=</span> total_iva <span class="op">+</span> iva
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_blank</span><span class="op">(),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Totales&quot;</span><span class="op">)),</span>
+           <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_number_fmt</span><span class="op">(</span>total_base<span class="op">,</span> <span class="str">&quot;#,##0.00&quot;</span><span class="op">)),</span> <span class="fn">xlsx_bold</span><span class="op">(</span><span class="fn">xlsx_number_fmt</span><span class="op">(</span>total_iva<span class="op">,</span> <span class="str">&quot;#,##0.00&quot;</span><span class="op">))])</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">12.0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">2</span><span class="op">,</span> <span class="num">30.0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">14.0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">col_width</span><span class="op">(</span><span class="num">4</span><span class="op">,</span> <span class="num">14.0</span><span class="op">)</span>
+    <span class="cm">// La tabla empieza en la fila 3: se fijan sus tres primeras filas (título,</span>
+    <span class="cm">// separador y encabezado) y el filtro cubre encabezado + datos, sin totales.</span>
+    h<span class="op">.</span><span class="fn">freeze</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">autofilter</span><span class="op">(</span><span class="str">&quot;A3:D&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span><span class="num">3</span> <span class="op">+</span> fechas<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+
+    <span class="kw">var</span> notas<span class="op">:</span> <span class="ty">XlsxSheetOut</span> <span class="op">=</span> <span class="fn">xlsx_sheet_new</span><span class="op">(</span><span class="str">&quot;Notas&quot;</span><span class="op">)</span>
+    notas<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Generado por Nyx&quot;</span><span class="op">),</span> <span class="fn">xlsx_int</span><span class="op">(</span><span class="num">3</span><span class="op">),</span> <span class="fn">xlsx_bool</span><span class="op">(</span><span class="kw">true</span><span class="op">)])</span>
+    <span class="kw">return</span> <span class="fn">xlsx_write</span><span class="op">([</span>h<span class="op">,</span> notas<span class="op">])</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">libro</span><span class="op">()</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>bytes<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">get_args</span><span class="op">()</span>
+            <span class="kw">if</span> args<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">let</span> ruta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> args<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+                <span class="fn">write_file</span><span class="op">(</span>ruta<span class="op">,</span> bytes<span class="op">)</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;libro escrito en &quot;</span> <span class="op">+</span> ruta <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>bytes<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes)&quot;</span><span class="op">)</span>
+            <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;libro: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>bytes<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes, empieza con &quot;</span> <span class="op">+</span> bytes<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">2</span><span class="op">))</span>
+                <span class="fn">print</span><span class="op">(</span><span class="str">&quot;para escribirlo: nyx run -- libro.xlsx&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> <span class="num">0</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo armar el libro: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">libro: 3375 bytes, empieza con PK
+para escribirlo: nyx run -- libro.xlsx</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>A sheet is a list of rows of cells, built with <code>xlsx_sheet_new</code> and <code>row()</code>. Cells have one constructor per type: <code>xlsx_text</code>, <code>xlsx_number(value, decimals)</code>, <code>xlsx_int</code>, <code>xlsx_date("YYYY-MM-DD")</code>, <code>xlsx_bool</code>, <code>xlsx_blank</code> and <code>xlsx_bold</code>. On top of that come column widths (<code>col_width</code>), merged cells (<code>merge</code>), a header that stays put on scroll (<code>freeze</code>), an autofilter over the table, and amounts with a thousands separator through <code>xlsx_number_fmt</code> and <code>"#,##0.00"</code>.</p>
+<p>The total is calculated in the program: formulas are NOT written, the value is. And mistakes — a repeated sheet name, an invalid date — surface from <code>xlsx_write</code> as an <code>Err</code>, not earlier. Run it with <code>nyx run -- libro.xlsx</code> to write the file; with no argument it only reports the size, which is what you see above.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/123-zip-crear-y-leer.html"><span class="label">← Previous</span><span class="doc-nav-name">Build and read a .zip file</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/125-xlsx-leer-hoja.html"><span class="label">Next →</span><span class="doc-nav-name">Read an .xlsx sheet</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

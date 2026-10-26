@@ -1,6 +1,6 @@
 <!-- templates/changelog.html — notas de versión (/changelog/ y /es/changelog/).
      gen.nx arma `releases` (version, date, anchor, notes) desde la copia del
-     CHANGELOG.md del monorepo; `notes` es HTML generado por
+     CHANGELOG.md del monorepo (en inglés, de su gemelo CHANGELOG.en.md); `notes` es HTML generado por
      src/gen/changelog.nx con el texto ya escapado. Mismos ladrillos que la
      guía: .doc-head, .doc-layout con el índice al margen y .doc-body. -->
 <section class="band">
@@ -20,7 +20,7 @@
 {{/each}}</ol>
 </div>
 </nav>
-<article class="doc-body cl-body" lang="es">
+<article class="doc-body cl-body" lang="{{cl_body_lang}}">
 {{#each releases}}<section class="cl-release" id="{{anchor}}">
 <h2>{{version}} <span class="cl-date">{{date}}</span></h2>
 {{{notes}}}

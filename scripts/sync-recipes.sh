@@ -394,24 +394,28 @@ fi
 # el monorepo al lado sigue generando (con la última copia sincronizada). Si el
 # monorepo no trae CHANGELOG.md se avisa (⚠) y se conserva la copia: no es un
 # hallazgo, es el mismo fallback que tiene la versión.
-changelog_src="$MONO/CHANGELOG.md"
-changelog_dst="$SITE/content/changelog/CHANGELOG.md"
-if [ ! -f "$changelog_src" ]; then
-    echo "  ⚠ no está $changelog_src — /changelog/ se genera con la copia que ya hay"
-elif ! cmp -s "$changelog_src" "$changelog_dst" 2>/dev/null; then
-    if [ "$MODE" = "check" ]; then
-        if [ -f "$changelog_dst" ]; then
-            echo "  ✗ content/changelog/CHANGELOG.md difiere del CHANGELOG.md del monorepo"
+# Son DOS copias: CHANGELOG.md (castellano, normativo) para /es/changelog/ y su
+# gemelo CHANGELOG.en.md (inglés, desde 0.33.0) para /changelog/.
+for changelog_name in CHANGELOG.md CHANGELOG.en.md; do
+    changelog_src="$MONO/$changelog_name"
+    changelog_dst="$SITE/content/changelog/$changelog_name"
+    if [ ! -f "$changelog_src" ]; then
+        echo "  ⚠ no está $changelog_src — /changelog/ se genera con la copia que ya hay"
+    elif ! cmp -s "$changelog_src" "$changelog_dst" 2>/dev/null; then
+        if [ "$MODE" = "check" ]; then
+            if [ -f "$changelog_dst" ]; then
+                echo "  ✗ content/changelog/$changelog_name difiere del $changelog_name del monorepo"
+            else
+                echo "  ✗ falta content/changelog/$changelog_name"
+            fi
+            findings=$((findings + 1))
         else
-            echo "  ✗ falta content/changelog/CHANGELOG.md"
+            mkdir -p "$(dirname "$changelog_dst")"
+            cp "$changelog_src" "$changelog_dst"
+            echo "  · content/changelog/$changelog_name: copiado del monorepo"
         fi
-        findings=$((findings + 1))
-    else
-        mkdir -p "$(dirname "$changelog_dst")"
-        cp "$changelog_src" "$changelog_dst"
-        echo "  · content/changelog/CHANGELOG.md: copiado del monorepo"
     fi
-fi
+done
 
 # ── STUB de sidecar para recetas sin prosa heredada ────────────────────────
 # Una receta nueva del monorepo entra al catálogo con `sidecar = "0"` y no tiene

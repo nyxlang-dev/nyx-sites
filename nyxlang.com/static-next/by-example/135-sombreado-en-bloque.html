@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shadowing a name inside a block — Nyx by example</title>
+<meta name="description" content="A name redeclared in an if, loop, match arm or try is another variable that disappears at the closing brace.">
+<link rel="canonical" href="https://nyxlang.com/by-example/135-sombreado-en-bloque.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/135-sombreado-en-bloque.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/135-sombreado-en-bloque.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/135-sombreado-en-bloque.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/135-sombreado-en-bloque.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">135</span> / Types and patterns</span></p>
+<h1 class="doc-title">Shadowing a name inside a block</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A name redeclared inside a block — <code>if</code>, <code>else</code>, <code>while</code>, <code>for</code>, a <code>match</code> arm, <code>try</code>/<code>catch</code> — is ANOTHER variable. It lives until the block closes and, on the way out, the name goes back to being the outer variable, with its value and its type. Up to 0.35.0 the inner one hid the outer one until the end of the function; from 0.36 on it behaves as described.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">135-sombreado-en-bloque.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/135-sombreado-en-bloque.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: sombrear un nombre dentro de un bloque.</span>
+<span class="cm">//</span>
+<span class="cm">// Un nombre redeclarado dentro de un bloque (`if`, `else`, `while`, `for`, brazo de `match`,</span>
+<span class="cm">// `try`/`catch`) es OTRA variable: vive hasta el cierre del bloque y, al salir, el nombre vuelve</span>
+<span class="cm">// a ser la variable de afuera, con su valor y su tipo. (Hasta 0.35.0 la interna tapaba a la de</span>
+<span class="cm">// afuera hasta el final de la función; ver docs/gotchas/block-shadowing-restores-outer.md.)</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. sombreado en un `if` con OTRO tipo y con el MISMO tipo;</span>
+<span class="cm">//   2. la variable de un `for q in ...` y el binding de un patrón `Option.Some(q) =&gt;`;</span>
+<span class="cm">//   3. la forma correcta de «sacar» un valor de un bloque: declarar afuera y asignar adentro.</span>
+<span class="cm">//</span>
+<span class="cm">// En el mismo alcance no hay bloque: `let x = x + 1` sigue reemplazando.</span>
+
+<span class="kw">struct</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="ty">int</span> <span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">usar</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">S</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> s<span class="op">.</span>a
+<span class="op">}</span>
+
+<span class="cm">// Otro tipo dentro del bloque; después se lee la de afuera.</span>
+<span class="kw">fn</span> <span class="fn">otro_tipo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> q<span class="op">:</span> <span class="ty">S</span> <span class="op">=</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="num">3</span> <span class="op">}</span>
+    <span class="kw">if</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">let</span> q<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;interna&quot;</span>
+        <span class="kw">assert</span><span class="op">(</span>q<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">7</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">usar</span><span class="op">(</span>q<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// El mismo tipo: la interna vale 99 solo dentro del bloque.</span>
+<span class="kw">fn</span> <span class="fn">mismo_tipo</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> q<span class="op">:</span> <span class="ty">S</span> <span class="op">=</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="num">3</span> <span class="op">}</span>
+    <span class="kw">if</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">let</span> q<span class="op">:</span> <span class="ty">S</span> <span class="op">=</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="num">99</span> <span class="op">}</span>
+        <span class="kw">assert</span><span class="op">(</span>q<span class="op">.</span>a <span class="op">==</span> <span class="num">99</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> q<span class="op">.</span>a
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">variable_del_for</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> q<span class="op">:</span> <span class="ty">S</span> <span class="op">=</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="num">1</span> <span class="op">}</span>
+    <span class="kw">var</span> vistos <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">for</span> q <span class="kw">in</span> <span class="op">[</span><span class="str">&quot;x&quot;</span><span class="op">,</span> <span class="str">&quot;y&quot;</span><span class="op">]</span> <span class="op">{</span>
+        <span class="kw">assert</span><span class="op">(</span>q<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">1</span><span class="op">)</span>
+        vistos <span class="op">=</span> vistos <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">assert</span><span class="op">(</span>vistos <span class="op">==</span> <span class="num">2</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="fn">usar</span><span class="op">(</span>q<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">binding_del_match</span><span class="op">(</span>o<span class="op">:</span> <span class="ty">Option</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> q<span class="op">:</span> <span class="ty">S</span> <span class="op">=</span> <span class="ty">S</span> <span class="op">{</span> a<span class="op">:</span> <span class="num">4</span> <span class="op">}</span>
+    <span class="kw">match</span> o <span class="op">{</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>q<span class="op">)</span> <span class="op">=&gt;</span> <span class="kw">assert</span><span class="op">(</span>q <span class="op">==</span> <span class="num">7</span><span class="op">),</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span> <span class="op">=&gt;</span> <span class="kw">assert</span><span class="op">(</span><span class="kw">false</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">usar</span><span class="op">(</span>q<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// Para sacar un valor de un bloque: declarar afuera y asignar adentro (sin `let` en el bloque).</span>
+<span class="kw">fn</span> <span class="fn">sacar_valor</span><span class="op">(</span>b<span class="op">:</span> <span class="ty">bool</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> resultado<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">if</span> b <span class="op">{</span>
+        resultado <span class="op">=</span> <span class="num">42</span>
+    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+        <span class="kw">let</span> resultado<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;no sale&quot;</span>
+        <span class="kw">assert</span><span class="op">(</span>resultado<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">7</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> resultado
+<span class="op">}</span>
+
+<span class="cm">// Mismo alcance: reemplaza, como siempre.</span>
+<span class="kw">fn</span> <span class="fn">mismo_alcance</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> x <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">let</span> x <span class="op">=</span> x <span class="op">+</span> <span class="num">1</span>
+    <span class="kw">return</span> x
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">otro_tipo</span><span class="op">()</span> <span class="op">==</span> <span class="num">3</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">mismo_tipo</span><span class="op">()</span> <span class="op">==</span> <span class="num">3</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">variable_del_for</span><span class="op">()</span> <span class="op">==</span> <span class="num">1</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">binding_del_match</span><span class="op">(</span><span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span><span class="num">7</span><span class="op">))</span> <span class="op">==</span> <span class="num">4</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">sacar_valor</span><span class="op">(</span><span class="kw">true</span><span class="op">)</span> <span class="op">==</span> <span class="num">42</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">sacar_valor</span><span class="op">(</span><span class="kw">false</span><span class="op">)</span> <span class="op">==</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">mismo_alcance</span><span class="op">()</span> <span class="op">==</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The recipe covers three things: shadowing in an <code>if</code> with a DIFFERENT type and with the SAME type; the variable of a <code>for q in ...</code> and the binding of an <code>Option.Some(q) =></code> pattern; and the right way to get a value OUT of a block — declare it outside and assign inside. It prints <code>ok</code> when every outer value came back intact.</p>
+<p>One limit to remember: in the same scope there is no block, so <code>let x = x + 1</code> keeps replacing the previous <code>x</code>, as before.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/134-imap-correo-entrante.html"><span class="label">← Previous</span><span class="doc-nav-name">Turn incoming mail into cases</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/136-defer-al-cerrar-bloque.html"><span class="label">Next →</span><span class="doc-nav-name">defer runs when its block closes</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

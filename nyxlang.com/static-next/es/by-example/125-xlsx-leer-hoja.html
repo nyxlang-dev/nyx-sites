@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leer una hoja .xlsx — Nyx por ejemplo</title>
+<meta name="description" content="xlsx_read devuelve cada celda con su tipo, fechas ISO, los huecos como celdas vacías y topes por omisión contra bombas zip.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/125-xlsx-leer-hoja.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/125-xlsx-leer-hoja.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/125-xlsx-leer-hoja.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/125-xlsx-leer-hoja.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/125-xlsx-leer-hoja.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">125</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Leer una hoja .xlsx</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un banco manda el estado de cuenta en Excel y el ERP lo concilia. Para no depender de un archivo de entrada, la receta arma primero un libro con <code>xlsx_write</code> y después lo lee como si viniera de afuera.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">125-xlsx-leer-hoja.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/125-xlsx-leer-hoja.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: leer una planilla .xlsx e imprimir una hoja.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un banco manda el estado de cuenta en Excel y el ERP lo</span>
+<span class="cm">// concilia. Para no depender de un archivo de entrada, la receta arma primero</span>
+<span class="cm">// una planilla con xlsx_write y después la lee como si viniera de afuera.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - xlsx_read(bytes, xlsx_read_opts()): topes por omisión contra bombas zip</span>
+<span class="cm">//     y libros gigantes (archivo, partes, total descomprimido, celdas);</span>
+<span class="cm">//   - cada celda trae su TIPO (kind: text, number, date, bool, error, empty),</span>
+<span class="cm">//     `text` (un importe se lee tal cual está escrito) y `number`;</span>
+<span class="cm">//   - las fechas salen en ISO (con la época 1900 o 1904 del libro);</span>
+<span class="cm">//   - rows[f][c] es la celda de la fila f+1, columna c+1: los huecos son celdas</span>
+<span class="cm">//     &quot;empty&quot;, así &quot;C7&quot; cae donde debe; xlsx_cell(hoja, &quot;B3&quot;) la pide por nombre;</span>
+<span class="cm">//   - las FÓRMULAS no se evalúan: se lee el valor que el archivo trae en caché;</span>
+<span class="cm">//   - xlsx_sheet(libro, nombre) busca la hoja por nombre (Option).</span>
+<span class="cm">//</span>
+<span class="cm">// Correr: nyx run</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/xlsx&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">planilla</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> h<span class="op">:</span> <span class="ty">XlsxSheetOut</span> <span class="op">=</span> <span class="fn">xlsx_sheet_new</span><span class="op">(</span><span class="str">&quot;Movimientos&quot;</span><span class="op">)</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Fecha&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Descripción&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Monto&quot;</span><span class="op">)])</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_date</span><span class="op">(</span><span class="str">&quot;2026-09-01&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Depósito&quot;</span><span class="op">),</span> <span class="fn">xlsx_number</span><span class="op">(</span><span class="num">1234.5</span><span class="op">,</span> <span class="num">2</span><span class="op">)])</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_date</span><span class="op">(</span><span class="str">&quot;2026-09-03&quot;</span><span class="op">),</span> <span class="fn">xlsx_text</span><span class="op">(</span><span class="str">&quot;Comisión&quot;</span><span class="op">),</span> <span class="fn">xlsx_number</span><span class="op">(</span><span class="num">0.0</span> <span class="op">-</span> <span class="num">12.75</span><span class="op">,</span> <span class="num">2</span><span class="op">)])</span>
+    h<span class="op">.</span><span class="fn">row</span><span class="op">([</span><span class="fn">xlsx_date</span><span class="op">(</span><span class="str">&quot;2026-09-10&quot;</span><span class="op">),</span> <span class="fn">xlsx_blank</span><span class="op">(),</span> <span class="fn">xlsx_number</span><span class="op">(</span><span class="num">80.0</span><span class="op">,</span> <span class="num">2</span><span class="op">)])</span>
+    <span class="kw">return</span> <span class="fn">xlsx_write</span><span class="op">([</span>h<span class="op">])</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> bytes<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="kw">match</span> <span class="fn">planilla</span><span class="op">()</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>b<span class="op">)</span> <span class="op">=&gt;</span> b
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo armar la planilla: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="kw">match</span> <span class="fn">xlsx_read</span><span class="op">(</span>bytes<span class="op">,</span> <span class="fn">xlsx_read_opts</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>libro<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">match</span> <span class="fn">xlsx_sheet</span><span class="op">(</span>libro<span class="op">,</span> <span class="str">&quot;Movimientos&quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>hoja<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;hoja &quot;</span> <span class="op">+</span> hoja<span class="op">.</span>name <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>hoja<span class="op">.</span>rows<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; filas&quot;</span><span class="op">)</span>
+                    <span class="kw">for</span> fila<span class="op">:</span> <span class="ty">Array</span> <span class="kw">in</span> hoja<span class="op">.</span>rows <span class="op">{</span>
+                        <span class="kw">var</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+                        <span class="kw">for</span> c<span class="op">:</span> <span class="ty">XlsxCell</span> <span class="kw">in</span> fila <span class="op">{</span>
+                            <span class="kw">var</span> t<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> c<span class="op">.</span>text
+                            <span class="kw">if</span> c<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;empty&quot;</span> <span class="op">{</span> t <span class="op">=</span> <span class="str">&quot;-&quot;</span> <span class="op">}</span>
+                            linea <span class="op">=</span> linea <span class="op">+</span> t <span class="op">+</span> <span class="str">&quot; | &quot;</span>
+                        <span class="op">}</span>
+                        <span class="fn">print</span><span class="op">(</span>linea<span class="op">)</span>
+                    <span class="op">}</span>
+                    <span class="kw">let</span> monto<span class="op">:</span> <span class="ty">XlsxCell</span> <span class="op">=</span> <span class="fn">xlsx_cell</span><span class="op">(</span>hoja<span class="op">,</span> <span class="str">&quot;C2&quot;</span><span class="op">)</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;C2 es &quot;</span> <span class="op">+</span> monto<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;, vale &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>monto<span class="op">.</span>number<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, formato &quot;</span> <span class="op">+</span> monto<span class="op">.</span>format<span class="op">)</span>
+                    <span class="kw">let</span> fecha<span class="op">:</span> <span class="ty">XlsxCell</span> <span class="op">=</span> <span class="fn">xlsx_cell</span><span class="op">(</span>hoja<span class="op">,</span> <span class="str">&quot;A3&quot;</span><span class="op">)</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;A3 es &quot;</span> <span class="op">+</span> fecha<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> fecha<span class="op">.</span>text<span class="op">)</span>
+                    <span class="kw">let</span> hueco<span class="op">:</span> <span class="ty">XlsxCell</span> <span class="op">=</span> <span class="fn">xlsx_cell</span><span class="op">(</span>hoja<span class="op">,</span> <span class="str">&quot;B4&quot;</span><span class="op">)</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;B4 es &quot;</span> <span class="op">+</span> hueco<span class="op">.</span>kind<span class="op">)</span>
+                <span class="op">}</span>
+                <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no hay hoja Movimientos&quot;</span><span class="op">)</span>
+                    <span class="kw">return</span> <span class="num">1</span>
+                <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;planilla inválida: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">hoja Movimientos: 4 filas
+Fecha | Descripción | Monto | 
+2026-09-01 | Depósito | 1234.50 | 
+2026-09-03 | Comisión | -12.75 | 
+2026-09-10 | - | 80.00 | 
+C2 es number, vale 1234.5, formato 0.00
+A3 es date: 2026-09-03
+B4 es empty</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p><code>xlsx_read(bytes, xlsx_read_opts())</code> trae topes por omisión contra bombas zip y libros gigantes (archivo, partes, total descomprimido, celdas). Cada celda trae su TIPO — <code>text</code>, <code>number</code>, <code>date</code>, <code>bool</code>, <code>error</code> o <code>empty</code> — además de su <code>text</code>, de modo que un importe se lee tal cual está escrito, y su <code>number</code>. Las fechas salen en ISO, con la época 1900 o 1904 del libro ya aplicada.</p>
+<p><code>rows[f][c]</code> es la celda de la fila <code>f+1</code>, columna <code>c+1</code>. Los huecos son celdas de tipo <code>empty</code>, así <q>C7</q> cae donde debe, y <code>xlsx_cell(hoja, "B3")</code> pide una por su nombre — mira las tres últimas líneas de la salida. Las FÓRMULAS no se evalúan: se lee el valor que el archivo trae en caché. <code>xlsx_sheet(libro, nombre)</code> busca una hoja por nombre y devuelve un <code>Option</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/124-xlsx-escribir-libro.html"><span class="label">← Anterior</span><span class="doc-nav-name">Un libro contable en .xlsx</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/126-serve-gzip.html"><span class="label">Siguiente →</span><span class="doc-nav-name">gzip automático en std/serve</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -551,63 +551,52 @@ fn gen_by_example(out_dir: String) -> Array {
 // en el CHANGELOG.md completo de GitHub.
 const CHANGELOG_RELEASES: int = 8
 
-// Genera /changelog/ y /es/changelog/ desde content/changelog/CHANGELOG.md (la
-// copia que trae scripts/sync-recipes.sh). Las notas están en castellano en el
-// repositorio y se publican así en los DOS idiomas: la página en inglés lo
-// dice en una línea (cl_lang_note) en vez de traducirlas, y el <article> lleva
-// lang="es" para que un lector de pantalla las pronuncie bien.
+// Genera /changelog/ y /es/changelog/. Cada idioma lee su archivo: la página
+// en castellano el CHANGELOG.md normativo y la inglesa su gemelo
+// CHANGELOG.en.md (desde 0.33.0), las dos copias que trae
+// scripts/sync-recipes.sh. Que el gemelo no se atrase lo garantiza el
+// monorepo: release-check exige la traducción de cada versión que se corta y
+// el check 13 de docs-health compara encabezados, subtítulos e ítems.
 fn gen_changelog(out_dir: String) -> Array {
     var written: Array = []
     let site: Map = load_site()
     let repo_url: String = site.get_or("repo_url", "")
-    let text: String = read_fragment("content/changelog/CHANGELOG.md")
-    let parts: Array = cl_split(text, CHANGELOG_RELEASES)
-    if parts.length() == 0 {
-        print("error: content/changelog/CHANGELOG.md no tiene ningún encabezado « ## [X.Y.Z] »")
-        exit(1)
-    }
-
-    // El HTML de cada versión no depende del idioma: se arma una sola vez.
-    var versions: Array = []
-    var dates: Array = []
-    var notes: Array = []
-    var k: int = 0
-    while k + 2 < parts.length() {
-        let v: String = parts[k]
-        let d: String = parts[k + 1]
-        let b: String = parts[k + 2]
-        versions.push(v)
-        dates.push(d)
-        notes.push(cl_blocks(b, repo_url))
-        k = k + 3
-    }
-
     let langs: Array = ["en", "es"]
+    let files: Array = ["content/changelog/CHANGELOG.en.md", "content/changelog/CHANGELOG.md"]
     var li: int = 0
     while li < langs.length() {
         let lang: String = langs[li]
+        let file: String = files[li]
         let dict: Map = load_i18n(lang)
+        let text: String = read_fragment(file)
+        let parts: Array = cl_split(text, CHANGELOG_RELEASES)
+        if parts.length() == 0 {
+            print("error: " + file + " no tiene ningún encabezado « ## [X.Y.Z] »")
+            exit(1)
+        }
         var releases: Array = []
-        var r: int = 0
-        while r < versions.length() {
-            let ver: String = versions[r]
-            let date: String = dates[r]
-            let html: String = notes[r]
-            var item: Map = map_new()
-            if ver == "Unreleased" {
-                item.insert("version", dict.get_or("cl_unreleased", ""))
-            } else {
+        var k: int = 0
+        while k + 2 < parts.length() {
+            let ver: String = parts[k]
+            let date: String = parts[k + 1]
+            let body: String = parts[k + 2]
+            // Solo versiones publicadas: `[Unreleased]` no tiene traducción
+            // hasta el corte, y mostrarlo en un idioma solo rompería la
+            // paridad EN/ES de la página (check G).
+            if ver != "Unreleased" {
+                var item: Map = map_new()
                 item.insert("version", ver)
+                item.insert("date", date)
+                item.insert("anchor", cl_anchor(ver))
+                item.insert("notes", cl_blocks(cl_strip_tags(body), repo_url))
+                releases.push(item)
             }
-            item.insert("date", date)
-            item.insert("anchor", cl_anchor(ver))
-            item.insert("notes", html)
-            releases.push(item)
-            r = r + 1
+            k = k + 3
         }
         var extra: Map = map_new()
         extra.insert("title_key", "cl_title")
         extra.insert("desc_key", "cl_desc")
+        extra.insert("cl_body_lang", lang)
         extra.insert("releases", releases)
         let page: String = render_page("changelog", lang, extra)
         let rel: String = page_rel("changelog", lang)

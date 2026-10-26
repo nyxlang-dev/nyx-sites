@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OAuth2 for a Gmail or Microsoft 365 mailbox — Nyx by example</title>
+<meta name="description" content="std/oauth2 builds the PKCE login URL, renews tokens and supports device code — the token imap_auth_xoauth2 and smtp_auth_xoauth2 expect.">
+<link rel="canonical" href="https://nyxlang.com/by-example/137-oauth2.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/137-oauth2.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/137-oauth2.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/137-oauth2.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/137-oauth2.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">137</span> / Networking</span></p>
+<h1 class="doc-title">OAuth2 for a Gmail or Microsoft 365 mailbox</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>The help desk of an ERP reads <code>soporte@miempresa.com</code> over IMAP and replies over SMTP in the same thread (recipe 134). Gmail and Microsoft 365 no longer accept user and password: they ask for an OAuth2 token, and <code>imap_auth_xoauth2</code> / <code>smtp_auth_xoauth2</code> take it ready-made. This recipe shows how to OBTAIN and RENEW it with <code>std/oauth2</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">137-oauth2.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/137-oauth2.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: OAuth2 para leer y contestar un buzón de Gmail o Microsoft 365.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: la mesa de ayuda de un ERP lee soporte@miempresa.com por IMAP y contesta por</span>
+<span class="cm">// SMTP en el mismo hilo (receta 134). Gmail y Microsoft 365 ya no aceptan usuario y contraseña:</span>
+<span class="cm">// piden un token OAuth2, y `imap_auth_xoauth2` / `smtp_auth_xoauth2` lo reciben hecho. Esta</span>
+<span class="cm">// receta muestra cómo se OBTIENE y se RENUEVA con std/oauth2.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que esta receta muestra:</span>
+<span class="cm">//   1. la primera vez: una persona autoriza en el navegador (PKCE + state, la URL, el canje);</span>
+<span class="cm">//   2. todas las demás: renovar antes de que venza y guardar el refresh_token;</span>
+<span class="cm">//   3. un servidor sin navegador: device code («abre esta URL y escribe este código»);</span>
+<span class="cm">//   4. lo que corre acá sin red: PKCE, state y la URL de autorización. Las funciones que</span>
+<span class="cm">//      hablan con Google compilan y enlazan pero NO se llaman: necesitan un client_id real y</span>
+<span class="cm">//      esta receta corre sola bajo `make test-examples`.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/oauth2&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Google. Para Microsoft 365 las URLs llevan el inquilino:</span>
+<span class="cm">//   https://login.microsoftonline.com/&lt;tenant&gt;/oauth2/v2.0/authorize | token | devicecode</span>
+<span class="cm">// y los scopes son https://outlook.office.com/IMAP.AccessAsUser.All,</span>
+<span class="cm">// https://outlook.office.com/SMTP.Send y offline_access (el que da el refresh_token).</span>
+<span class="kw">fn</span> <span class="fn">opciones</span><span class="op">(</span>client_id<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> client_secret<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">OAuth2Opts</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">oauth2_opts</span><span class="op">(</span>client_id<span class="op">,</span> client_secret<span class="op">,</span>
+        <span class="str">&quot;https://accounts.google.com/o/oauth2/v2/auth&quot;</span><span class="op">,</span>
+        <span class="str">&quot;https://oauth2.googleapis.com/token&quot;</span><span class="op">,</span>
+        <span class="str">&quot;http://127.0.0.1:8080/oauth2/callback&quot;</span><span class="op">,</span>
+        <span class="op">[</span><span class="str">&quot;https://mail.google.com/&quot;</span><span class="op">])</span>
+<span class="op">}</span>
+
+<span class="cm">// ── 1. La primera vez: la persona autoriza en el navegador ────────────────</span>
+<span class="cm">// La aplicación guarda `pkce` y `state` hasta que el navegador vuelve al redirect_uri con</span>
+<span class="cm">// ?code=…&amp;state=… (una ruta de std/serve). Si el state no coincide, NO se canjea el código.</span>
+<span class="kw">fn</span> <span class="fn">primera_vez</span><span class="op">(</span>o<span class="op">:</span> <span class="ty">OAuth2Opts</span><span class="op">,</span> code_que_volvio<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> state_que_volvio<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> pkce<span class="op">:</span> <span class="ty">OAuth2Pkce</span><span class="op">,</span> state<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">if</span> state_que_volvio <span class="op">!=</span> state <span class="op">{</span>
+        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="str">&quot;auth&quot;</span><span class="op">,</span> <span class="str">&quot;el state no coincide: no es nuestra autorización&quot;</span><span class="op">))</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">oauth2_exchange_code</span><span class="op">(</span>o<span class="op">,</span> code_que_volvio<span class="op">,</span> pkce<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// ── 2. Todas las demás: renovar antes de que venza ────────────────────────</span>
+<span class="cm">// Google no repite el refresh_token al renovar; Microsoft lo rota. Por eso SIEMPRE se guarda</span>
+<span class="cm">// el que viene en el token nuevo (oauth2_refresh conserva el viejo si no vino uno).</span>
+<span class="kw">fn</span> <span class="fn">token_vigente</span><span class="op">(</span>o<span class="op">:</span> <span class="ty">OAuth2Opts</span><span class="op">,</span> t<span class="op">:</span> <span class="ty">OAuth2Token</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">if</span> <span class="fn">oauth2_expired</span><span class="op">(</span>t<span class="op">,</span> <span class="num">60</span><span class="op">)</span> <span class="op">==</span> <span class="kw">false</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">oauth2_refresh</span><span class="op">(</span>o<span class="op">,</span> t<span class="op">.</span>refresh_token<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// ── 3. Sin navegador: device code ─────────────────────────────────────────</span>
+<span class="kw">fn</span> <span class="fn">desde_el_servidor</span><span class="op">(</span>o<span class="op">:</span> <span class="ty">OAuth2Opts</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">let</span> od<span class="op">:</span> <span class="ty">OAuth2Opts</span> <span class="op">=</span> <span class="fn">oauth2_with_device_url</span><span class="op">(</span>o<span class="op">,</span> <span class="str">&quot;https://oauth2.googleapis.com/device/code&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> d<span class="op">:</span> <span class="ty">OAuth2DeviceCode</span> <span class="op">=</span> <span class="fn">oauth2_device_code</span><span class="op">(</span>od<span class="op">)?</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;Abre &quot;</span> <span class="op">+</span> d<span class="op">.</span>verification_url <span class="op">+</span> <span class="str">&quot; y escribe el código &quot;</span> <span class="op">+</span> d<span class="op">.</span>user_code<span class="op">)</span>
+    <span class="cm">// Bloquea sondeando cada `interval` segundos hasta que la persona autoriza, niega o el</span>
+    <span class="cm">// código vence. Si el programa tiene que seguir atendiendo, correrlo en un thread.</span>
+    <span class="kw">return</span> <span class="fn">oauth2_device_wait</span><span class="op">(</span>od<span class="op">,</span> d<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">explicar</span><span class="op">(</span>e<span class="op">:</span> <span class="ty">Error</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;auth&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;auth       → el proveedor dijo: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;pending&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;pending    → la persona no autorizó todavía; esperar &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>e<span class="op">.</span>code<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; s&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;protocol&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;protocol   → la respuesta no es la de un endpoint OAuth2 (¿proxy? ¿URL equivocada?)&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;invalid&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;invalid    → argumentos: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg <span class="op">}</span>
+    <span class="kw">return</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot; → &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="cm">// ── 4. Lo que corre sin red ───────────────────────────────────────────</span>
+    <span class="kw">let</span> o<span class="op">:</span> <span class="ty">OAuth2Opts</span> <span class="op">=</span> <span class="fn">opciones</span><span class="op">(</span><span class="str">&quot;mi-client-id.apps.googleusercontent.com&quot;</span><span class="op">,</span> <span class="str">&quot;mi-secreto&quot;</span><span class="op">)</span>
+
+    <span class="cm">// PKCE: el verifier se guarda, el challenge viaja en la URL. Siempre S256.</span>
+    <span class="kw">let</span> pkce<span class="op">:</span> <span class="ty">OAuth2Pkce</span> <span class="op">=</span> <span class="fn">oauth2_pkce_new</span><span class="op">()</span>
+    <span class="kw">let</span> state<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">oauth2_state_new</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;verifier:  &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>pkce<span class="op">.</span>verifier<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; chars (nunca va en la URL)&quot;</span><span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;challenge: &quot;</span> <span class="op">+</span> pkce<span class="op">.</span>challenge<span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;state:     &quot;</span> <span class="op">+</span> state<span class="op">)</span>
+
+    <span class="cm">// Google: sin access_type=offline NO devuelve refresh_token; prompt=consent fuerza la</span>
+    <span class="cm">// pantalla de consentimiento la primera vez (o cuando se perdió el refresh_token).</span>
+    <span class="kw">let</span> url<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">oauth2_authorize_url_extra</span><span class="op">(</span>o<span class="op">,</span> pkce<span class="op">,</span> state<span class="op">,</span> <span class="op">[</span><span class="str">&quot;access_type&quot;</span><span class="op">,</span> <span class="str">&quot;prompt&quot;</span><span class="op">],</span> <span class="op">[</span><span class="str">&quot;offline&quot;</span><span class="op">,</span> <span class="str">&quot;consent&quot;</span><span class="op">])</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;URL para el navegador:&quot;</span><span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;  &quot;</span> <span class="op">+</span> url<span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>url<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;code_challenge_method=S256&quot;</span><span class="op">)</span> <span class="op">&gt;=</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>url<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span>pkce<span class="op">.</span>verifier<span class="op">)</span> <span class="op">&lt;</span> <span class="num">0</span><span class="op">)</span>
+
+    <span class="cm">// Un token con vencimiento: ¿hay que renovar?</span>
+    <span class="kw">let</span> t<span class="op">:</span> <span class="ty">OAuth2Token</span> <span class="op">=</span> <span class="ty">OAuth2Token</span> <span class="op">{</span> access_token<span class="op">:</span> <span class="str">&quot;ya-...&quot;</span><span class="op">,</span> refresh_token<span class="op">:</span> <span class="str">&quot;1//0g...&quot;</span><span class="op">,</span> token_type<span class="op">:</span> <span class="str">&quot;Bearer&quot;</span><span class="op">,</span> expires_at<span class="op">:</span> <span class="fn">time_epoch</span><span class="op">()</span> <span class="op">+</span> <span class="num">3600</span><span class="op">,</span> scope<span class="op">:</span> <span class="str">&quot;https://mail.google.com/&quot;</span> <span class="op">}</span>
+    <span class="kw">if</span> <span class="fn">oauth2_expired</span><span class="op">(</span>t<span class="op">,</span> <span class="num">60</span><span class="op">)</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;renovar&quot;</span><span class="op">)</span> <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;token vigente por ahora&quot;</span><span class="op">)</span> <span class="op">}</span>
+
+    <span class="cm">// Los errores, por clase (los que vuelven de las funciones de red de arriba):</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">400</span><span class="op">,</span> <span class="str">&quot;auth&quot;</span><span class="op">,</span> <span class="str">&quot;invalid_grant: Token has been expired or revoked.&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">5</span><span class="op">,</span> <span class="str">&quot;pending&quot;</span><span class="op">,</span> <span class="str">&quot;la persona todavía no autorizó&quot;</span><span class="op">)))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="fn">explicar</span><span class="op">(</span><span class="fn">err_new</span><span class="op">(</span><span class="num">502</span><span class="op">,</span> <span class="str">&quot;protocol&quot;</span><span class="op">,</span> <span class="str">&quot;la respuesta del endpoint de token no es JSON (HTTP 502)&quot;</span><span class="op">)))</span>
+
+    <span class="cm">// Las tres funciones de red compilan y enlazan; no se llaman acá (hace falta un client_id real).</span>
+    <span class="kw">if</span> url<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="kw">let</span> _a<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">primera_vez</span><span class="op">(</span>o<span class="op">,</span> <span class="str">&quot;code&quot;</span><span class="op">,</span> state<span class="op">,</span> pkce<span class="op">,</span> state<span class="op">)</span>
+        <span class="kw">let</span> _b<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">token_vigente</span><span class="op">(</span>o<span class="op">,</span> t<span class="op">)</span>
+        <span class="kw">let</span> _c<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">OAuth2Token</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">desde_el_servidor</span><span class="op">(</span>o<span class="op">)</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">verifier:  43 chars (nunca va en la URL)
+challenge: Ca1b8dxuQcQpOTx8Oa5bYK4WtRle2nX_vmskhHRHLus
+state:     dZjnHOiUwioDhbPBo0PjMXWODt_p2mmT
+URL para el navegador:
+  https://accounts.google.com/o/oauth2/v2/auth?response_type=code&amp;client_id=mi-client-id.apps.googleusercontent.com&amp;redirect_uri=http%3A%2F%2F127.0.0.1%3A8080%2Foauth2%2Fcallback&amp;scope=https%3A%2F%2Fmail.google.com%2F&amp;state=dZjnHOiUwioDhbPBo0PjMXWODt_p2mmT&amp;code_challenge=Ca1b8dxuQcQpOTx8Oa5bYK4WtRle2nX_vmskhHRHLus&amp;code_challenge_method=S256&amp;access_type=offline&amp;prompt=consent
+token vigente por ahora
+auth       → el proveedor dijo: invalid_grant: Token has been expired or revoked.
+pending    → la persona no autorizó todavía; esperar 5 s
+protocol   → la respuesta no es la de un endpoint OAuth2 (¿proxy? ¿URL equivocada?)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Three flows. The first time, a person authorizes in the browser: PKCE plus <code>state</code>, the authorization URL, and the exchange of the code. Every other time, renew before it expires and store the <code>refresh_token</code>. And on a server with no browser, device code: <q>open this URL and type this code</q>.</p>
+<p>What runs here without a network is PKCE, the <code>state</code> and the authorization URL; the verifier, the challenge and the state are random, so those three values differ on every run. The functions that talk to Google compile and link but are NOT called, because they need a real <code>client_id</code>. The last lines show how each error kind reads: <code>auth</code> carries the provider's own reason, <code>pending</code> means the person has not authorized yet and tells you how long to wait, and <code>protocol</code> means the answer is not an OAuth2 endpoint's.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/136-defer-al-cerrar-bloque.html"><span class="label">← Previous</span><span class="doc-nav-name">defer runs when its block closes</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/138-xlsx-plantilla.html"><span class="label">Next →</span><span class="doc-nav-name">An .xlsx bulk-upload template with dropdowns</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

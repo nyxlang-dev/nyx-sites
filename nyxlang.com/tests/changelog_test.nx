@@ -1,0 +1,30 @@
+// tests/changelog_test.nx — suite de cl_strip_tags (src/gen/changelog.nx).
+// Bloques `test "…" { … }`: las funciones `test_*` se saltean en silencio.
+
+import "src/gen/changelog"
+
+test "etiqueta suelta con el espacio de después" {
+    assert(cl_strip_tags("de `std/csv`\n  [arco: csv-columnar] y otra") == "de `std/csv`\n  y otra")
+}
+
+test "etiqueta antes de dos puntos se lleva el espacio de antes" {
+    assert(cl_strip_tags("**`std/csv`: lector** [arco: csv-columnar]: parsea") == "**`std/csv`: lector**: parsea")
+}
+
+test "etiqueta entre backticks" {
+    assert(cl_strip_tags("**leer** `[arco: http-streaming]` (fricción") == "**leer** (fricción")
+}
+
+test "dogfooding y varias en la misma línea" {
+    assert(cl_strip_tags("Cosecha [dogfooding:bench] A [arco: x] B") == "Cosecha A B")
+}
+
+test "sin cierre en la línea no se toca" {
+    let s: String = "texto [arco: sin cierre\n] otra"
+    assert(cl_strip_tags(s) == s)
+}
+
+test "texto sin etiquetas queda igual" {
+    let s: String = "- **NYX1046**: un patrón [de enum](docs/x.md)"
+    assert(cl_strip_tags(s) == s)
+}

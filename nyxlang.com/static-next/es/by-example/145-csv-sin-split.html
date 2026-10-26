@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un CSV grande sin split() por fila — Nyx por ejemplo</title>
+<meta name="description" content="indexOf ubica las comas y string_to_float_range parsea el número directo de los bytes, sin crear un substring por campo.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/145-csv-sin-split.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/145-csv-sin-split.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/145-csv-sin-split.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/145-csv-sin-split.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/145-csv-sin-split.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">145</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Un CSV grande sin split() por fila</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>fila.split(",")</code> es claro, pero crea un <code>Array</code> y un <code>String</code> por campo. En un CSV de millones de filas esas asignaciones son cerca de la mitad del tiempo. <code>string_to_int_range(s, ini, fin, def)</code> y <code>string_to_float_range(s, ini, fin, def)</code> parsean el número de los bytes <code>[ini, fin)</code> del texto sin crear el substring, y dan siempre lo mismo que <code>string_to_X_or(s.substring(ini, fin), def)</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">145-csv-sin-split.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/145-csv-sin-split.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 145: CSV grande sin split() por fila — indexOf + string_to_X_range</span>
+<span class="cm">//</span>
+<span class="cm">// `fila.split(&quot;,&quot;)` crea un Array y un String por campo: en un CSV de millones</span>
+<span class="cm">// de filas esas asignaciones son la mitad del tiempo (medido 2026-10-25, 5M</span>
+<span class="cm">// filas). string_to_int_range / string_to_float_range parsean el número</span>
+<span class="cm">// directo de los bytes [ini, fin) del texto, sin crear el substring. Dan</span>
+<span class="cm">// siempre lo mismo que string_to_X_or(s.substring(ini, fin), def).</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Un CSV chico armado en memoria (en la vida real: read_file(ruta)).</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;id,ciudad,valor,cantidad\n1,lima,10.5,3\n2,quito,99.25,1\n3,lima,0.75,10\n&quot;</span>
+
+    <span class="cm">// Estilo split: claro, pero aloca un Array + un String por campo y por fila.</span>
+    <span class="kw">var</span> total_split<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">0.0</span>
+    <span class="kw">let</span> lineas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">1</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> lineas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> linea<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> lineas<span class="op">[</span>i<span class="op">]</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+        <span class="kw">if</span> linea<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">continue</span> <span class="op">}</span>
+        <span class="kw">let</span> campos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> linea<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;,&quot;</span><span class="op">)</span>
+        total_split <span class="op">=</span> total_split <span class="op">+</span> <span class="fn">string_to_float</span><span class="op">(</span>campos<span class="op">[</span><span class="num">2</span><span class="op">])</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Estilo rango: las comas se ubican con indexOf y los números se parsean</span>
+    <span class="cm">// en su lugar. Solo la ciudad, que sí se guarda, se copia con substring.</span>
+    <span class="kw">var</span> total<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">0.0</span>
+    <span class="kw">var</span> unidades<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">var</span> por_ciudad<span class="op">:</span> <span class="ty">Map</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">float</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ty">Map</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">length</span><span class="op">()</span>
+    <span class="kw">var</span> p<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">)</span> <span class="op">+</span> <span class="num">1</span>          <span class="cm">// saltar la cabecera</span>
+    <span class="kw">while</span> p <span class="op">&lt;</span> n <span class="op">{</span>
+        <span class="kw">var</span> fin<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">,</span> p<span class="op">)</span>
+        <span class="kw">if</span> fin <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> fin <span class="op">=</span> n <span class="op">}</span>
+        <span class="kw">let</span> c1<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;,&quot;</span><span class="op">,</span> p<span class="op">)</span>
+        <span class="kw">let</span> c2<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;,&quot;</span><span class="op">,</span> c1 <span class="op">+</span> <span class="num">1</span><span class="op">)</span>
+        <span class="kw">let</span> c3<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;,&quot;</span><span class="op">,</span> c2 <span class="op">+</span> <span class="num">1</span><span class="op">)</span>
+        <span class="kw">let</span> ciudad<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> texto<span class="op">.</span><span class="fn">substring</span><span class="op">(</span>c1 <span class="op">+</span> <span class="num">1</span><span class="op">,</span> c2<span class="op">)</span>
+        <span class="cm">// El default (0.0 / 0) entra si el campo viene vacío o no es número.</span>
+        <span class="kw">let</span> valor<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="fn">string_to_float_range</span><span class="op">(</span>texto<span class="op">,</span> c2 <span class="op">+</span> <span class="num">1</span><span class="op">,</span> c3<span class="op">,</span> <span class="num">0.0</span><span class="op">)</span>
+        unidades <span class="op">=</span> unidades <span class="op">+</span> <span class="fn">string_to_int_range</span><span class="op">(</span>texto<span class="op">,</span> c3 <span class="op">+</span> <span class="num">1</span><span class="op">,</span> fin<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+        total <span class="op">=</span> total <span class="op">+</span> valor
+        por_ciudad<span class="op">[</span>ciudad<span class="op">]</span> <span class="op">=</span> por_ciudad<span class="op">.</span><span class="fn">get_or</span><span class="op">(</span>ciudad<span class="op">,</span> <span class="num">0.0</span><span class="op">)</span> <span class="op">+</span> valor
+        p <span class="op">=</span> fin <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;total con split: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>total_split<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;total con rango: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>total<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;unidades: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>unidades<span class="op">))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;lima: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>por_ciudad<span class="op">[</span><span class="str">&quot;lima&quot;</span><span class="op">]))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">total con split: 110.5
+total con rango: 110.5
+unidades: 14
+lima: 11.25</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La receta suma la misma columna dos veces. El estilo <code>split</code> parte el texto en líneas y cada línea en campos. El estilo rango recorre el texto una sola vez: <code>texto.indexOf("\n", p)</code> ubica el fin de la fila y tres llamadas a <code>indexOf(",", …)</code> ubican las comas, todas con la posición absoluta que devuelve <code>indexOf(s, desde)</code>. Los números se parsean en su lugar; solo la ciudad, que se guarda como clave del mapa, se copia con <code>substring</code>.</p>
+<p>El default (<code>0.0</code> o <code>0</code>) entra cuando el campo viene vacío o no es un número, y un entero que no entra en 64 bits también cuenta como inválido en vez de saturarse. Cuando las columnas y sus tipos se conocen de antemano, el lector columnar de la receta 146 hace la pasada entera en C y es el paso siguiente.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/144-reenviar-eventos.html"><span class="label">← Anterior</span><span class="doc-nav-name">Reenviar una respuesta por partes apenas llega</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/146-csv-columnar.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Un CSV grande por columnas</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

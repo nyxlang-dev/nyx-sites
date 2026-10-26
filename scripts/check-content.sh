@@ -110,7 +110,7 @@
 #      no es un fallo del contenido — pero sí es la clase de cosa que se
 #      publica sin que nadie la mire.
 #
-#   CITA LITERAL: changelog/ y es/changelog/ (el CHANGELOG.md del monorepo
+#   CITA LITERAL: changelog/ y es/changelog/ (CHANGELOG.en.md y CHANGELOG.md del monorepo
 #   publicado tal cual) quedan fuera de A, B, C y H — ver quoted_prune_args.
 #
 #   QUÉ MIRA CADA CHECK. Sobre el ÁRBOL PUBLICADO (ROOT): A, B, C, D, E, F,

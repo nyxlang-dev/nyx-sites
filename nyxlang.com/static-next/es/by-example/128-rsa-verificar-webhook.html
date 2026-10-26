@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificar un aviso de pago firmado — Nyx por ejemplo</title>
+<meta name="description" content="std/rsa comprueba una firma RSA-SHA256 con la clave pública del proveedor: PKCS#1 v1.5 o PSS, verdadero, falso o error.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/128-rsa-verificar-webhook.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/128-rsa-verificar-webhook.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/128-rsa-verificar-webhook.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/128-rsa-verificar-webhook.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/128-rsa-verificar-webhook.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">128</span> / Avanzado</span></p>
+<h1 class="doc-title">Verificar un aviso de pago firmado</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Una pasarela de pago avisa un pago con un POST cuyo cuerpo viene firmado con RSA; la firma llega en base64 en un header. Con HMAC no alcanza porque el proveedor no comparte un secreto: publica su CLAVE PÚBLICA (PEM) y uno verifica con ella. <code>std/rsa</code> lo hace con OpenSSL.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">128-rsa-verificar-webhook.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/128-rsa-verificar-webhook.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: verificar el aviso firmado de una pasarela de pago (RSA-SHA256).</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: la pasarela avisa un pago con un POST cuyo cuerpo viene firmado</span>
+<span class="cm">// con RSA; la firma llega en base64 en un header. Con HMAC no alcanza porque el</span>
+<span class="cm">// proveedor no comparte un secreto: publica su CLAVE PÚBLICA (PEM) y uno</span>
+<span class="cm">// verifica con ella. std/rsa lo hace con OpenSSL:</span>
+<span class="cm">//   - rsa_sha256_verify_b64(pem, cuerpo, firma_base64): PKCS#1 v1.5, lo común;</span>
+<span class="cm">//   - rsa_sha256_verify(pem, cuerpo, firma_cruda): la misma firma en bytes;</span>
+<span class="cm">//   - rsa_pss_sha256_verify(pem, cuerpo, firma_cruda): RSASSA-PSS.</span>
+<span class="cm">// Ok(true) = firma válida; Ok(false) = el aviso NO es del proveedor (datos</span>
+<span class="cm">// alterados o clave ajena); Err = no se pudo ni intentar (PEM ilegible).</span>
+<span class="cm">// Se verifica el cuerpo EXACTO recibido, byte a byte, antes de parsearlo.</span>
+<span class="cm">//</span>
+<span class="cm">// Los datos de la receta son los fixtures de prueba del repo (openssl CLI). En un</span>
+<span class="cm">// programa real: la clave con read_file(&quot;proveedor.pem&quot;) y el cuerpo y la firma</span>
+<span class="cm">// de la petición entrante.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/rsa&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">aviso_valido</span><span class="op">(</span>pem<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> cuerpo<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> firma_b64<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">bool</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">rsa_sha256_verify_b64</span><span class="op">(</span>pem<span class="op">,</span> cuerpo<span class="op">,</span> firma_b64<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>ok<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> ok <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo verificar: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="kw">false</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="kw">let</span> pem<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;tests/fixtures/rsa/publica.pem&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;tests/fixtures/rsa/datos.txt&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> firma<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;tests/fixtures/rsa/firma.b64&quot;</span><span class="op">)</span>
+
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">aviso_valido</span><span class="op">(</span>pem<span class="op">,</span> cuerpo<span class="op">,</span> firma<span class="op">),</span> <span class="str">&quot;el aviso genuino verifica&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;aviso genuino: aceptado&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Un atacante cambia el monto: la firma ya no corresponde.</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">aviso_valido</span><span class="op">(</span>pem<span class="op">,</span> cuerpo <span class="op">+</span> <span class="str">&quot; &quot;</span><span class="op">,</span> firma<span class="op">)</span> <span class="op">==</span> <span class="kw">false</span><span class="op">,</span> <span class="str">&quot;un cuerpo alterado se rechaza&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;cuerpo alterado: rechazado&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Una clave que no se puede leer se dice, no se toma por «firma falsa».</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">aviso_valido</span><span class="op">(</span><span class="str">&quot;no soy un pem&quot;</span><span class="op">,</span> cuerpo<span class="op">,</span> firma<span class="op">)</span> <span class="op">==</span> <span class="kw">false</span><span class="op">,</span> <span class="str">&quot;PEM ilegible&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">aviso genuino: aceptado
+cuerpo alterado: rechazado
+no se pudo verificar: rsa: la clave pública PEM no se pudo leer o no es RSA</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Tres puntos de entrada: <code>rsa_sha256_verify_b64(pem, cuerpo, firma_base64)</code> para PKCS#1 v1.5, lo común; <code>rsa_sha256_verify(pem, cuerpo, firma_cruda)</code> para la misma firma en bytes; y <code>rsa_pss_sha256_verify(pem, cuerpo, firma_cruda)</code> para RSASSA-PSS. La respuesta tiene tres desenlaces: <code>Ok(true)</code>, firma válida; <code>Ok(false)</code>, el aviso NO es del proveedor (datos alterados o clave ajena); y <code>Err</code>, ni siquiera se pudo intentar, como con un PEM ilegible — las tres líneas de la salida.</p>
+<p>Se verifica el cuerpo EXACTO recibido, byte a byte, ANTES de parsearlo. Los datos de la receta son los fixtures de prueba del repositorio, hechos con la CLI de <code>openssl</code>; en un programa real la clave sale de <code>read_file("proveedor.pem")</code> y el cuerpo y la firma, de la petición entrante.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/127-serve-limites.html"><span class="label">← Anterior</span><span class="doc-nav-name">Topes de cuerpo y límite de peticiones en std/serve</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/129-https-certificado-cliente.html"><span class="label">Siguiente →</span><span class="doc-nav-name">HTTPS con certificado de cliente</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un CSV grande por columnas — Nyx por ejemplo</title>
+<meta name="description" content="try_csv_read parsea un CSV en una pasada directo a columnas tipadas; una columna cat llega como códigos enteros más un diccionario, así que agrupar es indexar un arreglo.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/146-csv-columnar.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/146-csv-columnar.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/146-csv-columnar.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/146-csv-columnar.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/146-csv-columnar.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">146</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Un CSV grande por columnas</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Para millones de filas, <code>try_csv_read(texto, esquema, csv_opts())</code> de <code>std/csv</code> parsea el texto entero en una pasada a columnas tipadas — <code>int</code>, <code>float</code>, <code>str</code> y <code>cat</code> — con el núcleo escrito en C: sin <code>split()</code> y sin un <code>String</code> por campo. El esquema nombra solo las columnas que se usan; las demás se saltan sin parsearse.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">146-csv-columnar.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/146-csv-columnar.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// 146: CSV grande por columnas — try_csv_read, esquema y agrupación por códigos</span>
+<span class="cm">//</span>
+<span class="cm">// Para millones de filas, try_csv_read parsea en una pasada directo a columnas</span>
+<span class="cm">// tipadas (el núcleo está en C): sin split() ni un String por campo. Una columna</span>
+<span class="cm">// `cat` llega como códigos int + un diccionario, así que agrupar es indexar un</span>
+<span class="cm">// Array, sin Map. En el bench de 5M filas (2026-10-25) este programa le gana a</span>
+<span class="cm">// pandas; ver docs/design/specs/2026-10-25-csv-columnar-design.md.</span>
+<span class="kw">import</span> <span class="str">&quot;std/csv&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// En la vida real: read_file(&quot;ventas.csv&quot;).</span>
+    <span class="kw">let</span> texto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;id,ciudad,monto,cantidad\n1,lima,10.5,3\n2,quito,99.25,1\n3,lima,0.75,10\n4,cusco,5.0,2\n&quot;</span>
+
+    <span class="cm">// ¿No conoces los tipos? try_csv_guess_schema propone un esquema para revisar.</span>
+    <span class="kw">match</span> <span class="fn">try_csv_guess_schema</span><span class="op">(</span>texto<span class="op">,</span> <span class="fn">csv_opts</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>esq<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;esquema propuesto: &quot;</span> <span class="op">+</span> esq<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo proponer: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// El esquema nombra solo lo que se usa: `id` se saltea sin parsear.</span>
+    <span class="kw">match</span> <span class="fn">try_csv_read</span><span class="op">(</span>texto<span class="op">,</span> <span class="str">&quot;ciudad:cat,monto:float,cantidad:int&quot;</span><span class="op">,</span> <span class="fn">csv_opts</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> montos<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">float</span><span class="op">&gt;</span> <span class="op">=</span> t<span class="op">.</span><span class="fn">floats</span><span class="op">(</span><span class="str">&quot;monto&quot;</span><span class="op">)</span>
+            <span class="kw">let</span> cantidades<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> t<span class="op">.</span><span class="fn">ints</span><span class="op">(</span><span class="str">&quot;cantidad&quot;</span><span class="op">)</span>
+            <span class="kw">let</span> codigos<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> t<span class="op">.</span><span class="fn">codes</span><span class="op">(</span><span class="str">&quot;ciudad&quot;</span><span class="op">)</span>
+            <span class="kw">let</span> ciudades<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> t<span class="op">.</span><span class="fn">dict</span><span class="op">(</span><span class="str">&quot;ciudad&quot;</span><span class="op">)</span>
+
+            <span class="cm">// Un acumulador por valor distinto, indexado por el código.</span>
+            <span class="kw">var</span> totales<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">float</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">[]</span>
+            <span class="kw">var</span> unidades<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">[]</span>
+            <span class="kw">for</span> c <span class="kw">in</span> ciudades <span class="op">{</span>
+                totales<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">0.0</span><span class="op">)</span>
+                unidades<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> i <span class="op">&lt;</span> t<span class="op">.</span><span class="fn">rows</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> k<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> codigos<span class="op">[</span>i<span class="op">]</span>
+                totales<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> totales<span class="op">[</span>k<span class="op">]</span> <span class="op">+</span> montos<span class="op">[</span>i<span class="op">]</span>
+                unidades<span class="op">[</span>k<span class="op">]</span> <span class="op">=</span> unidades<span class="op">[</span>k<span class="op">]</span> <span class="op">+</span> cantidades<span class="op">[</span>i<span class="op">]</span>
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+            <span class="kw">var</span> k<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> k <span class="op">&lt;</span> ciudades<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> ciudades<span class="op">[</span>k<span class="op">]</span>
+                <span class="fn">print</span><span class="op">(</span>nombre <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>totales<span class="op">[</span>k<span class="op">])</span> <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>unidades<span class="op">[</span>k<span class="op">])</span> <span class="op">+</span> <span class="str">&quot; u.)&quot;</span><span class="op">)</span>
+                k <span class="op">=</span> k <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Un dato malo no se convierte en 0: es un Err con la fila y la columna.</span>
+    <span class="kw">match</span> <span class="fn">try_csv_read</span><span class="op">(</span><span class="str">&quot;a,monto\n1,10\n2,diez\n&quot;</span><span class="op">,</span> <span class="str">&quot;monto:float&quot;</span><span class="op">,</span> <span class="fn">csv_opts</span><span class="op">())</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>t<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no debería llegar acá&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span>e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">esquema propuesto: id:int,ciudad:str,monto:float,cantidad:int
+lima: 11.25 (13 u.)
+quito: 99.25 (1 u.)
+cusco: 5.0 (2 u.)
+csv: fila 3, columna 'monto': "diez" no es float</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Cuando no se conocen los tipos, <code>try_csv_guess_schema</code> propone un esquema para revisar. La tabla que vuelve da cada columna por nombre: <code>t.floats("monto")</code>, <code>t.ints("cantidad")</code>, y para la columna <code>cat</code>, <code>t.codes("ciudad")</code> (un entero por fila) y <code>t.dict("ciudad")</code> (los valores distintos). Agrupar es entonces un acumulador por valor distinto, indexado por el código — sin <code>Map</code> en el bucle.</p>
+<p>El lector es estricto: un dato malo no se convierte en cero sino en un <code>Err</code> que nombra la fila y la columna. Las comillas, los saltos de línea entre comillas, CRLF y el BOM siguen la RFC 4180. En las notas de la versión 0.38.0, agrupar y filtrar un CSV de 5 millones de filas con este lector tardó 0.93 s, contra 1.21 s de pandas.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/145-csv-sin-split.html"><span class="label">← Anterior</span><span class="doc-nav-name">Un CSV grande sin split() por fila</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

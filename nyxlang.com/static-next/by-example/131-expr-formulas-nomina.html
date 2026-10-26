@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe user formulas for payroll — Nyx by example</title>
+<meta name="description" content="std/expr parses once, evaluates per employee with fixed-point decimals, and reports the position of every error.">
+<link rel="canonical" href="https://nyxlang.com/by-example/131-expr-formulas-nomina.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/131-expr-formulas-nomina.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/131-expr-formulas-nomina.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/131-expr-formulas-nomina.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/131-expr-formulas-nomina.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">131</span> / Advanced</span></p>
+<h1 class="doc-title">Safe user formulas for payroll</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A payroll lets the user define concepts with a formula — <code>salario_diario * dias * 1.5</code>, <code>min(base, 5 * salario_minimo) * 4 / 100</code>. <code>std/expr</code> is an expression evaluator in pure Nyx with no access to anything beyond the variables you hand it, which is what makes it safe to run text a user typed.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">131-expr-formulas-nomina.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/131-expr-formulas-nomina.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: fórmulas de usuario seguras (nómina) con std/expr.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: una nómina deja que el usuario defina conceptos con una fórmula</span>
+<span class="cm">// (`salario_diario * dias * 1.5`, `min(base, 5 * salario_minimo) * 4 / 100`).</span>
+<span class="cm">// std/expr es un evaluador de expresiones en Nyx puro, sin acceso a nada fuera de</span>
+<span class="cm">// las variables que se le dan.</span>
+<span class="cm">//</span>
+<span class="cm">// Lo que muestra:</span>
+<span class="cm">//   - expr_parse compila UNA vez (y valida al guardar la fórmula: el Err trae la</span>
+<span class="cm">//     posición del error); expr_eval_dec la evalúa por cada empleado;</span>
+<span class="cm">//   - expr_vars dice qué variables usa la fórmula, para verificar que existan;</span>
+<span class="cm">//   - PRECISIÓN: es plata, así que los valores son decimales de punto fijo con 6</span>
+<span class="cm">//     decimales, no float: 0.1 + 0.2 da exactamente 0.3 y round(2.675, 2) da 2.68</span>
+<span class="cm">//     (en float da 0.30000000000000004 y 2.67);</span>
+<span class="cm">//   - funciones permitidas: min, max, round, floor, ceil, abs, if(cond, a, b);</span>
+<span class="cm">//   - los errores de evaluación (variable sin definir, división por cero) también</span>
+<span class="cm">//     dicen la posición.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/expr&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">evaluar</span><span class="op">(</span>texto<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> v<span class="op">:</span> <span class="ty">ExprVars</span><span class="op">,</span> decimales<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">expr_parse</span><span class="op">(</span>texto<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>f<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">match</span> <span class="fn">expr_eval_dec</span><span class="op">(</span>f<span class="op">,</span> v<span class="op">,</span> decimales<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span>texto <span class="op">+</span> <span class="str">&quot;  =&gt;  &quot;</span> <span class="op">+</span> s<span class="op">)</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span>texto <span class="op">+</span> <span class="str">&quot;  =&gt;  &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span>texto <span class="op">+</span> <span class="str">&quot;  =&gt;  &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="cm">// Datos de un empleado. set_dec recibe el decimal EXACTO en texto.</span>
+    <span class="kw">var</span> v<span class="op">:</span> <span class="ty">ExprVars</span> <span class="op">=</span> <span class="fn">expr_vars_new</span><span class="op">()</span>
+    v<span class="op">.</span><span class="fn">set_dec</span><span class="op">(</span><span class="str">&quot;salario_diario&quot;</span><span class="op">,</span> <span class="str">&quot;43.33&quot;</span><span class="op">)</span>
+    v<span class="op">.</span><span class="fn">set_int</span><span class="op">(</span><span class="str">&quot;dias&quot;</span><span class="op">,</span> <span class="num">15</span><span class="op">)</span>
+    v<span class="op">.</span><span class="fn">set_dec</span><span class="op">(</span><span class="str">&quot;base&quot;</span><span class="op">,</span> <span class="str">&quot;12345.67&quot;</span><span class="op">)</span>
+    v<span class="op">.</span><span class="fn">set_dec</span><span class="op">(</span><span class="str">&quot;salario_minimo&quot;</span><span class="op">,</span> <span class="str">&quot;248.93&quot;</span><span class="op">)</span>
+
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;salario_diario * dias * 1.5&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;min(base, 5 * salario_minimo) * 4 / 100&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;if(dias &gt;= 15, salario_diario * dias * 0.05, 0)&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+
+    <span class="cm">// Por qué no float.</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;0.1 + 0.2&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;0.1 + 0.2 == 0.3&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;round(2.675, 2)&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+
+    <span class="cm">// Validar al guardar la fórmula: qué variables usa y si el catálogo las tiene.</span>
+    <span class="kw">match</span> <span class="fn">expr_parse</span><span class="op">(</span><span class="str">&quot;min(base, 5 * salario_minimo) * porcentaje / 100&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>f<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> usadas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">expr_vars</span><span class="op">(</span>f<span class="op">)</span>
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> i <span class="op">&lt;</span> usadas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+                <span class="kw">let</span> nombre<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> usadas<span class="op">[</span>i<span class="op">]</span>
+                <span class="kw">if</span> v<span class="op">.</span><span class="fn">has</span><span class="op">(</span>nombre<span class="op">)</span> <span class="op">{</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;variable &quot;</span> <span class="op">+</span> nombre <span class="op">+</span> <span class="str">&quot;: ok&quot;</span><span class="op">)</span>
+                <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;variable &quot;</span> <span class="op">+</span> nombre <span class="op">+</span> <span class="str">&quot;: NO existe en el catálogo&quot;</span><span class="op">)</span>
+                <span class="op">}</span>
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span>e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Errores con posición.</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;base / (dias - 15)&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;salario * 2&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="fn">evaluar</span><span class="op">(</span><span class="str">&quot;2 + * 3&quot;</span><span class="op">,</span> v<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">salario_diario * dias * 1.5  =&gt;  974.93
+min(base, 5 * salario_minimo) * 4 / 100  =&gt;  49.79
+if(dias &gt;= 15, salario_diario * dias * 0.05, 0)  =&gt;  32.50
+0.1 + 0.2  =&gt;  0.30
+0.1 + 0.2 == 0.3  =&gt;  1
+round(2.675, 2)  =&gt;  2.68
+variable base: ok
+variable salario_minimo: ok
+variable porcentaje: NO existe en el catálogo
+base / (dias - 15)  =&gt;  expr: división por cero (posición 6)
+salario * 2  =&gt;  expr: variable sin definir 'salario' (posición 1)
+2 + * 3  =&gt;  expr: se esperaba un valor y hay '*' (posición 5)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p><code>expr_parse</code> compiles a formula ONCE — and validates it when it is saved: the <code>Err</code> carries the position of the mistake — and <code>expr_eval_dec</code> evaluates it for each employee. <code>expr_vars</code> says which variables a formula uses, so you can check they exist before running it (the <q>variable porcentaje: NO existe</q> line).</p>
+<p>Precision matters because this is money: values are fixed-point decimals with 6 places, not <code>float</code>. <code>0.1 + 0.2</code> is exactly <code>0.3</code> and <code>round(2.675, 2)</code> is <code>2.68</code>, where a float gives <code>0.30000000000000004</code> and <code>2.67</code>. The allowed functions are <code>min</code>, <code>max</code>, <code>round</code>, <code>floor</code>, <code>ceil</code>, <code>abs</code> and <code>if(cond, a, b)</code>. Evaluation errors — an undefined variable, a division by zero — also say where, as in the last three lines.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/130-http-multipart-subir.html"><span class="label">← Previous</span><span class="doc-nav-name">Upload a binary file as multipart</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/132-browser-fetch-red-local.html"><span class="label">Next →</span><span class="doc-nav-name">A PWA talking to a local-network server</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

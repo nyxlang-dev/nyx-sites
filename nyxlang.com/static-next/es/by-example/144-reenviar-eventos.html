@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reenviar una respuesta por partes apenas llega — Nyx por ejemplo</title>
+<meta name="description" content="try_http_stream lee de a poco la respuesta de otra API y sse_broadcast reenvía cada evento al navegador en cuanto llega.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/144-reenviar-eventos.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/144-reenviar-eventos.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/144-reenviar-eventos.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/144-reenviar-eventos.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/144-reenviar-eventos.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">144</span> / Redes</span></p>
+<h1 class="doc-title">Reenviar una respuesta por partes apenas llega</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un servidor llama a una API de modelos de lenguaje que contesta con eventos (<code>text/event-stream</code>) durante varios segundos. En vez de esperar la respuesta entera y mostrar un «pensando», cada trozo se reenvía al navegador en cuanto llega. La mitad cliente es <code>std/http</code>, que vuelve con el estado y las cabeceras y deja leer el cuerpo de a poco; la mitad servidor es <code>std/serve</code>, que mantiene abierto un canal de Server-Sent Events por pedido.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">144-reenviar-eventos.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/144-reenviar-eventos.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: reenviar al navegador, apenas llega, la respuesta por partes de otra API.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un servidor llama a una API de modelos de lenguaje que contesta con eventos</span>
+<span class="cm">// (`text/event-stream`) durante varios segundos. En vez de esperar la respuesta entera y mostrar</span>
+<span class="cm">// un «pensando», cada trozo se reenvía al navegador en cuanto llega.</span>
+<span class="cm">//</span>
+<span class="cm">// Las dos mitades:</span>
+<span class="cm">//   - Cliente: try_http_stream_opts vuelve con el estado y las cabeceras, y el cuerpo se lee de a</span>
+<span class="cm">//     poco: s.read() da trozos crudos y s.read_event() da eventos ya armados (event, data, id).</span>
+<span class="cm">//     El plazo `lectura_ms` es la espera máxima ENTRE dos trozos: una API colgada da</span>
+<span class="cm">//     Err(timeout), no un cuelgue. No hay plazo total por defecto.</span>
+<span class="cm">//   - Servidor: la ruta del navegador devuelve sse_open(req, room) con un room propio del pedido,</span>
+<span class="cm">//     y un HILO lee la API y llama a sse_broadcast(room, ...). El hilo espera con</span>
+<span class="cm">//     sse_wait_room: el canal se registra recién después de que el handler devuelve, y sin esa</span>
+<span class="cm">//     espera los primeros eventos se pierden.</span>
+<span class="cm">//</span>
+<span class="cm">// La receta corre sola: hace de API falsa (un hilo que emite tres eventos con pausas), de servidor</span>
+<span class="cm">// (std/serve) y de navegador (un socket que lee lo que llega).</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_api_port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18451</span>
+<span class="kw">var</span> g_app_port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18452</span>
+<span class="kw">var</span> g_listo<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+
+<span class="cm">// La API de afuera: tres eventos `delta` y uno `fin`, con pausas como un modelo que va escribiendo.</span>
+<span class="kw">fn</span> <span class="fn">api_falsa</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> l<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> g_api_port<span class="op">)</span>
+    <span class="fn">channel_send</span><span class="op">(</span>g_listo<span class="op">,</span> <span class="num">1</span><span class="op">)</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>l<span class="op">)</span>
+    <span class="kw">let</span> pedido<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>c<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="kw">let</span> w0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>c<span class="op">,</span> <span class="str">&quot;HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> partes<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Hola&quot;</span><span class="op">,</span> <span class="str">&quot;, ¿en qué&quot;</span><span class="op">,</span> <span class="str">&quot; te ayudo?&quot;</span><span class="op">]</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> partes<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> p<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> partes<span class="op">[</span>i<span class="op">]</span>
+        <span class="fn">sleep</span><span class="op">(</span><span class="num">200</span><span class="op">)</span>
+        <span class="kw">let</span> w<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>c<span class="op">,</span> <span class="str">&quot;event: delta\ndata: &quot;</span> <span class="op">+</span> p <span class="op">+</span> <span class="str">&quot;\n\n&quot;</span><span class="op">)</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> wf<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>c<span class="op">,</span> <span class="str">&quot;event: fin\ndata: listo\n\n&quot;</span><span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>c<span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>l<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// El hilo que reenvía: espera al navegador, lee la API y difunde cada evento al room del pedido.</span>
+<span class="kw">fn</span> <span class="fn">reenviar</span><span class="op">(</span>room<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">if</span> <span class="kw">not</span> <span class="fn">sse_wait_room</span><span class="op">(</span>room<span class="op">,</span> <span class="num">5000</span><span class="op">)</span> <span class="op">{</span> <span class="kw">return</span> <span class="num">1</span> <span class="op">}</span>
+    <span class="kw">var</span> cab<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    cab<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;Accept&quot;</span><span class="op">)</span>
+    cab<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;text/event-stream&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> rs<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">HttpStream</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_http_stream</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>g_api_port<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/v1/eventos&quot;</span><span class="op">,</span> cab<span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> rs <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span>room<span class="op">,</span> <span class="str">&quot;error&quot;</span><span class="op">,</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">while</span> <span class="kw">true</span> <span class="op">{</span>
+                <span class="kw">let</span> re<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">SseEvent</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> s<span class="op">.</span><span class="fn">read_event</span><span class="op">()</span>
+                <span class="kw">if</span> re<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span>
+                    <span class="kw">let</span> e<span class="op">:</span> <span class="ty">Error</span> <span class="op">=</span> re<span class="op">.</span><span class="fn">unwrap_err</span><span class="op">()</span>
+                    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span>room<span class="op">,</span> <span class="str">&quot;error&quot;</span><span class="op">,</span> e<span class="op">.</span>msg<span class="op">)</span>
+                    <span class="kw">break</span>
+                <span class="op">}</span>
+                <span class="kw">let</span> ev<span class="op">:</span> <span class="ty">SseEvent</span> <span class="op">=</span> re<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+                <span class="kw">if</span> ev<span class="op">.</span>evento <span class="op">==</span> <span class="str">&quot;&quot;</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+                <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">sse_broadcast</span><span class="op">(</span>room<span class="op">,</span> ev<span class="op">.</span>evento<span class="op">,</span> ev<span class="op">.</span>datos<span class="op">)</span>
+            <span class="op">}</span>
+            s<span class="op">.</span><span class="fn">close</span><span class="op">()</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="cm">// La ruta del navegador: abre el canal y lanza el hilo que reenvía.</span>
+<span class="kw">fn</span> <span class="fn">chat</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">let</span> room<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;resp:1&quot;</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span><span class="kw">fn</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span> <span class="kw">return</span> <span class="fn">reenviar</span><span class="op">(</span>room<span class="op">)</span> <span class="op">})</span>
+    <span class="kw">return</span> <span class="fn">sse_open</span><span class="op">(</span>req<span class="op">,</span> room<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span>api_falsa<span class="op">)</span>
+    <span class="kw">let</span> _a<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>g_listo<span class="op">)</span>
+
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/chat&quot;</span><span class="op">,</span> chat<span class="op">)</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app</span><span class="op">(</span>app<span class="op">,</span> g_app_port<span class="op">,</span> <span class="num">2</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="cm">// El «navegador»: abre el canal y va mostrando lo que llega, con la hora relativa.</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> intentos<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> intentos <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> g_app_port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span> <span class="op">}</span>
+        intentos <span class="op">=</span> intentos <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;el servidor no arrancó&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span>
+    <span class="kw">let</span> t0<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">monotonic_ms</span><span class="op">()</span>
+    <span class="kw">let</span> w<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;GET /chat HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept: text/event-stream\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> visto<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> guard<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> visto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;event: fin&quot;</span><span class="op">)</span> <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> guard <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+        <span class="kw">if</span> r<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+        <span class="kw">let</span> d<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> r<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+        <span class="kw">if</span> d<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+        visto <span class="op">=</span> visto <span class="op">+</span> d
+        <span class="kw">let</span> lineas<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> d<span class="op">.</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">)</span>
+        <span class="kw">var</span> k<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> k <span class="op">&lt;</span> lineas<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+            <span class="kw">let</span> ln<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> lineas<span class="op">[</span>k<span class="op">]</span>
+            <span class="kw">if</span> ln<span class="op">.</span><span class="fn">startsWith</span><span class="op">(</span><span class="str">&quot;data: &quot;</span><span class="op">)</span> <span class="op">{</span>
+                <span class="fn">println</span><span class="op">(</span><span class="str">&quot;+&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">((</span><span class="fn">monotonic_ms</span><span class="op">()</span> <span class="op">-</span> t0<span class="op">)</span> <span class="op">/</span> <span class="num">100</span> <span class="op">*</span> <span class="num">100</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot; ms  &quot;</span> <span class="op">+</span> ln<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">6</span><span class="op">,</span> ln<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+            <span class="op">}</span>
+            k <span class="op">=</span> k <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+        guard <span class="op">=</span> guard <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">if</span> visto<span class="op">.</span><span class="fn">indexOf</span><span class="op">(</span><span class="str">&quot;te ayudo&quot;</span><span class="op">)</span> <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no llegó la respuesta completa&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;cada trozo llegó apenas la API lo mandó, no todo junto al final&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida ilustrativa</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18452 with 2 workers
++200 ms  Hola
++400 ms  , ¿en qué
++600 ms   te ayudo?
++600 ms  listo
+cada trozo llegó apenas la API lo mandó, no todo junto al final</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>La receta corre sola: un hilo hace de API de afuera (tres eventos <code>delta</code> y uno <code>fin</code>, con pausas), <code>std/serve</code> hace de aplicación y un socket común hace de navegador. La ruta del navegador devuelve <code>sse_open(req, room)</code> con un room propio y lanza un hilo que llama a <code>try_http_stream</code>. Sobre el flujo, <code>s.read()</code> da trozos crudos del cuerpo y <code>s.read_event()</code> da eventos ya armados (<code>evento</code>, <code>datos</code>, <code>id</code>); cada uno sale con <code>sse_broadcast(room, …)</code>.</p>
+<p>El hilo espera primero con <code>sse_wait_room(room, 5000)</code>: el canal entra al room recién después de que el handler devuelve, y sin esa espera los primeros eventos se perderían. Con <code>try_http_stream_opts</code> el plazo de lectura es la espera máxima <em>entre</em> dos trozos, así que una API colgada da <code>Err(timeout)</code> en vez de un cuelgue; no hay plazo total por defecto. Los tiempos de la salida dependen de la máquina, por eso el panel está marcado como ilustrativo.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/143-pdf-a-imagen.html"><span class="label">← Anterior</span><span class="doc-nav-name">Dibujar una página de un PDF como imagen</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/145-csv-sin-split.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Un CSV grande sin split() por fila</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
