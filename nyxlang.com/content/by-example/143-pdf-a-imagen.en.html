@@ -1,0 +1,15 @@
+<!-- title: Render a PDF page as an image | blurb: std/pdf_render draws a page of a PDF into an <code>Image</code> on the server, with no external programs; what it cannot draw is either an error or a list you inspect. -->
+<section data-part="intro">
+<p>A print-layout editor lets the user trace a pre-printed sheet — an invoice with its letterhead and boxes — by putting the sheet in the background and placing the fields on top. The print shop delivers the template as a PDF, so one page has to become an image on the server, shrunk and stored like any other picture. <code>pdf_open</code> reads the cross-reference table and the pages; <code>doc.render_report(page, dpi, opts)</code> draws one of them.</p>
+</section>
+<section data-part="output">
+páginas: 1
+página 1: 612.0 x 792.0 puntos
+imagen: 1275 x 1650 px
+fondo para el editor: 773 x 1000, 52416 bytes de JPEG
+rechazado: invalid: pdf_render: no es un PDF (falta %PDF- al principio) (code 22)
+</section>
+<section data-part="explanation">
+<p>The sheet is built here with <code>std/pdf</code> so the recipe does not depend on a file; in real life it is the bytes the user uploaded. <code>pdf_open</code> validates the structure and counts the pages without drawing anything, and <code>doc.page_size(1)</code> gives the size in points (612 × 792 is US Letter). At 150 dpi that page becomes a 1275 × 1650 <code>Image</code>, which <code>std/image</code> then treats like any photo: <code>image_resize_fit</code> shrinks it to fit in 1000 × 1000 and <code>image_encode_jpeg</code> encodes it.</p>
+<p>There are two modes. Strict (<code>pdf_render_strict()</code>) returns <code>Err(unsupported)</code> naming what the page uses and the renderer does not draw, so an image never comes out with a piece missing and no warning. Best effort (<code>pdf_render_best_effort()</code> with <code>render_report</code>) draws the rest and returns what it left out in <code>res.omitted</code>, so the caller decides whether it is good enough — a missing decorative gradient does not get in the way of tracing boxes. Bytes that are not a PDF give an <code>Err</code> with the reason, not a hang. The header of the <code>.nx</code> lists what is drawn (paths, clipping, the usual color spaces, JPEG and raw images, embedded TrueType/CFF fonts and the 14 standard ones) and what is not (shadings and patterns, Type 1 and Type 3 fonts, JBIG2/JPX/CCITT, encrypted files).</p>
+</section>

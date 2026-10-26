@@ -114,6 +114,8 @@ fn build_ctx(tmpl_name: String, lang: String, extra: Map) -> Map {
     ctx.insert("site_url", site_url)
     ctx.insert("repo_url", repo_url)
     ctx.insert("install_cmd", install_cmd)
+    // changelog_url es el CHANGELOG.md COMPLETO en GitHub; changelog_href, la
+    // página propia con las últimas versiones (gen.nx, gen_changelog).
     ctx.insert("changelog_url", repo_url + "/blob/main/CHANGELOG.md")
 
     let alt: String = other_lang(lang)
@@ -139,6 +141,7 @@ fn build_ctx(tmpl_name: String, lang: String, extra: Map) -> Map {
     ctx.insert("install_href", prefix + "/#install")
     ctx.insert("docs_href", page_href("docs", lang))
     ctx.insert("examples_href", page_href("by-example", lang))
+    ctx.insert("changelog_href", page_href("changelog", lang))
 
     // `extra` va último: una página puede pisar cualquier valor derivado
     // (las páginas de la guía pisan canonical_url/url_en/url_es/alt_href,

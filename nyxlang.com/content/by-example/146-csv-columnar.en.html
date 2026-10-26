@@ -1,0 +1,16 @@
+<!-- not-a-version: 0.38.0 -->
+<!-- title: A large CSV by columns | blurb: <code>try_csv_read</code> parses a CSV in one pass straight into typed columns; a <code>cat</code> column arrives as integer codes plus a dictionary, so grouping is indexing an array. -->
+<section data-part="intro">
+<p>For millions of rows, <code>try_csv_read(text, schema, csv_opts())</code> from <code>std/csv</code> parses the whole text in one pass into typed columns — <code>int</code>, <code>float</code>, <code>str</code> and <code>cat</code> — with the core written in C: no <code>split()</code> and no <code>String</code> per field. The schema names only the columns that are used; the rest are skipped without being parsed.</p>
+</section>
+<section data-part="output">
+esquema propuesto: id:int,ciudad:str,monto:float,cantidad:int
+lima: 11.25 (13 u.)
+quito: 99.25 (1 u.)
+cusco: 5.0 (2 u.)
+csv: fila 3, columna 'monto': "diez" no es float
+</section>
+<section data-part="explanation">
+<p>When the types are not known, <code>try_csv_guess_schema</code> proposes a schema to review. The table that comes back gives each column by name: <code>t.floats("monto")</code>, <code>t.ints("cantidad")</code>, and for the <code>cat</code> column <code>t.codes("ciudad")</code> (one integer per row) and <code>t.dict("ciudad")</code> (the distinct values). Grouping is then one accumulator per distinct value, indexed by the code — no <code>Map</code> in the loop.</p>
+<p>The reader is strict: a bad value is not turned into a zero but into an <code>Err</code> that names the row and the column. Quotes, line breaks inside quotes, CRLF and a BOM follow RFC 4180. In the release notes for 0.38.0, grouping and filtering a CSV of 5 million rows with this reader took 0.93 s, against 1.21 s for pandas.</p>
+</section>

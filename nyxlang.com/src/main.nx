@@ -61,6 +61,9 @@ fn main() -> int {
     app_static_cached(app, "/es/by-example/", sp("es/by-example/"), 300)
     app_static_cached(app, "/docs/", sp("docs/"), 300)
     app_static_cached(app, "/es/docs/", sp("es/docs/"), 300)
+    // Notas de versión (gen.nx, gen_changelog): cambian con cada release.
+    app_static_cached(app, "/changelog/", sp("changelog/"), 300)
+    app_static_cached(app, "/es/changelog/", sp("es/changelog/"), 300)
     // Assets compartidos (CSS/JS/imgs/fonts): max-age 1h — cambios menos
     // frecuentes y bundle lo suficientemente pequeño que revalidar ocasional
     // no duele.

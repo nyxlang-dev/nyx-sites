@@ -1,0 +1,16 @@
+<!-- title: Forward a streamed response as it arrives | blurb: <code>try_http_stream</code> reads another API's response piece by piece and <code>sse_broadcast</code> forwards each event to the browser the moment it lands. -->
+<section data-part="intro">
+<p>A server calls a language-model API that answers with events (<code>text/event-stream</code>) for several seconds. Instead of waiting for the whole answer and showing a spinner, each piece is forwarded to the browser as soon as it arrives. The client half is <code>std/http</code>, which returns with the status and headers and lets the body be read a little at a time; the server half is <code>std/serve</code>, which keeps a Server-Sent Events channel open per request.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+nyx-serve starting on 127.0.0.1:18452 with 2 workers
++200 ms  Hola
++400 ms  , ¿en qué
++600 ms   te ayudo?
++600 ms  listo
+cada trozo llegó apenas la API lo mandó, no todo junto al final
+</section>
+<section data-part="explanation">
+<p>The recipe runs on its own: one thread plays the outside API (three <code>delta</code> events and a <code>fin</code>, with pauses), <code>std/serve</code> plays the application, and a plain socket plays the browser. The browser route returns <code>sse_open(req, room)</code> with a room of its own and spawns a thread that calls <code>try_http_stream</code>. On the stream, <code>s.read()</code> gives raw pieces of the body and <code>s.read_event()</code> gives events already assembled (<code>evento</code>, <code>datos</code>, <code>id</code>); each one goes out with <code>sse_broadcast(room, …)</code>.</p>
+<p>The thread first waits with <code>sse_wait_room(room, 5000)</code>: the channel joins the room only after the handler returns, and without that wait the first events would be lost. With <code>try_http_stream_opts</code> the read timeout is the longest wait <em>between</em> two pieces, so a stalled API gives <code>Err(timeout)</code> instead of a hang; there is no total timeout by default. The times in the output depend on the machine, which is why the panel is marked as illustrative.</p>
+</section>

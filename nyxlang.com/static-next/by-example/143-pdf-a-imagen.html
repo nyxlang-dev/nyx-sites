@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Render a PDF page as an image — Nyx by example</title>
+<meta name="description" content="std/pdf_render draws a page of a PDF into an Image on the server, with no external programs; what it cannot draw is either an error or a list you inspect.">
+<link rel="canonical" href="https://nyxlang.com/by-example/143-pdf-a-imagen.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/143-pdf-a-imagen.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/143-pdf-a-imagen.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/143-pdf-a-imagen.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/143-pdf-a-imagen.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">143</span> / Input, output and data</span></p>
+<h1 class="doc-title">Render a PDF page as an image</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A print-layout editor lets the user trace a pre-printed sheet — an invoice with its letterhead and boxes — by putting the sheet in the background and placing the fields on top. The print shop delivers the template as a PDF, so one page has to become an image on the server, shrunk and stored like any other picture. <code>pdf_open</code> reads the cross-reference table and the pages; <code>doc.render_report(page, dpi, opts)</code> draws one of them.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">143-pdf-a-imagen.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/143-pdf-a-imagen.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: dibujar una página de un PDF como imagen con std/pdf_render.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un editor de formatos de impresión deja «calcar» una hoja preimpresa (una</span>
+<span class="cm">// factura con su membrete y sus casillas) poniendo la hoja de FONDO y ubicando los campos</span>
+<span class="cm">// encima. La imprenta entrega el modelo en PDF, así que hay que convertir una página del PDF a</span>
+<span class="cm">// imagen en el servidor, sin programas externos, para achicarla y guardarla como cualquier foto.</span>
+<span class="cm">//</span>
+<span class="cm">//   let doc: PdfDoc = pdf_open(bytes, pdf_open_limits())?     // lee la xref y las páginas</span>
+<span class="cm">//   let img: Image = doc.render(1, 150, pdf_render_strict())?  // página 1 a 150 ppp</span>
+<span class="cm">//</span>
+<span class="cm">// Qué dibuja: trazos y rellenos con antialias, recortes, colores (gris, RGB, CMYK, Indexed,</span>
+<span class="cm">// Separation, DeviceN, Lab), imágenes (JPEG, crudas, con máscara), formularios (Form XObjects)</span>
+<span class="cm">// y texto con fuentes TrueType o CFF incrustadas, o con las 14 estándar sin incrustar (las</span>
+<span class="cm">// dibuja con caras de métrica compatible). Qué NO: sombreados y patrones, Type 1 y Type 3,</span>
+<span class="cm">// JBIG2/JPX/CCITT, transparencia salvo el alfa constante, PDFs cifrados.</span>
+<span class="cm">//</span>
+<span class="cm">// Dos modos. Estricto (pdf_render_strict, el de siempre): si la página usa algo que no se</span>
+<span class="cm">// dibuja, Err(unsupported) diciendo qué; nunca sale una imagen con un pedazo de menos sin</span>
+<span class="cm">// avisar. Best effort (pdf_render_best_effort + render_report): se dibuja lo demás y lo omitido</span>
+<span class="cm">// vuelve en una lista, para decidir si alcanza (un degradé decorativo que falta no estorba</span>
+<span class="cm">// para calcar casillas).</span>
+<span class="cm">//</span>
+<span class="cm">// Tiempos de esta receta entera (armar la hoja, dibujarla a 150 ppp, achicarla y pasarla a</span>
+<span class="cm">// JPEG), aarch64, una CPU: nyx build ~0,5 s, nyx build --release ~0,17 s. Páginas reales con</span>
+<span class="cm">// fuentes incrustadas e imágenes, a 100 ppp sin --release: de 0,1 a 2,6 s (las que más tardan</span>
+<span class="cm">// son las de muchos glifos).</span>
+<span class="cm">//</span>
+<span class="cm">// La hoja se fabrica acá con std/pdf para que la receta no dependa de un archivo: en la vida</span>
+<span class="cm">// real son los bytes que subió la persona.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/pdf&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/pdf_render&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/image&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Una «hoja preimpresa»: membrete, casillas y una tabla vacía.</span>
+<span class="kw">fn</span> <span class="fn">hoja_preimpresa</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> d<span class="op">:</span> <span class="ty">Pdf</span> <span class="op">=</span> <span class="fn">pdf_new</span><span class="op">(</span><span class="ty">PdfPageSize</span><span class="op">.</span><span class="ty">Letter</span><span class="op">,</span> <span class="num">0.0</span><span class="op">,</span> <span class="num">0.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">20.0</span><span class="op">,</span> <span class="num">25.0</span><span class="op">,</span> <span class="str">&quot;IMPRENTA LA ESTRELLA, C.A.&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">14.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">20.0</span><span class="op">,</span> <span class="num">31.0</span><span class="op">,</span> <span class="str">&quot;RIF J-12345678-9 · Av. Bolívar, Valencia&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">150.0</span><span class="op">,</span> <span class="num">25.0</span><span class="op">,</span> <span class="str">&quot;FACTURA&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesBold</span><span class="op">,</span> <span class="num">16.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">150.0</span><span class="op">,</span> <span class="num">31.0</span><span class="op">,</span> <span class="str">&quot;N.º de control 00-&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">TimesRoman</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">line_width</span><span class="op">(</span><span class="num">0.4</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span><span class="num">20.0</span><span class="op">,</span> <span class="num">40.0</span><span class="op">,</span> <span class="num">175.9</span><span class="op">,</span> <span class="num">22.0</span><span class="op">,</span> <span class="kw">false</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">23.0</span><span class="op">,</span> <span class="num">46.0</span><span class="op">,</span> <span class="str">&quot;Cliente:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">23.0</span><span class="op">,</span> <span class="num">53.0</span><span class="op">,</span> <span class="str">&quot;RIF/C.I.:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">23.0</span><span class="op">,</span> <span class="num">60.0</span><span class="op">,</span> <span class="str">&quot;Domicilio:&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">Helvetica</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">gray</span><span class="op">(</span><span class="num">0.85</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">rect</span><span class="op">(</span><span class="num">20.0</span><span class="op">,</span> <span class="num">70.0</span><span class="op">,</span> <span class="num">175.9</span><span class="op">,</span> <span class="num">7.0</span><span class="op">,</span> <span class="kw">true</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">gray</span><span class="op">(</span><span class="num">0.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">23.0</span><span class="op">,</span> <span class="num">75.0</span><span class="op">,</span> <span class="str">&quot;Cantidad      Descripción&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    d<span class="op">.</span><span class="fn">text</span><span class="op">(</span><span class="num">160.0</span><span class="op">,</span> <span class="num">75.0</span><span class="op">,</span> <span class="str">&quot;Importe&quot;</span><span class="op">,</span> <span class="ty">PdfFont</span><span class="op">.</span><span class="ty">HelveticaBold</span><span class="op">,</span> <span class="num">9.0</span><span class="op">)</span>
+    <span class="kw">var</span> y<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> <span class="num">84.0</span>
+    <span class="kw">while</span> y <span class="op">&lt;</span> <span class="num">200.0</span> <span class="op">{</span>
+        d<span class="op">.</span><span class="fn">line</span><span class="op">(</span><span class="num">20.0</span><span class="op">,</span> y<span class="op">,</span> <span class="num">195.9</span><span class="op">,</span> y<span class="op">)</span>
+        y <span class="op">=</span> y <span class="op">+</span> <span class="num">8.0</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> d<span class="op">.</span><span class="fn">bytes</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> rb<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">hoja_preimpresa</span><span class="op">()</span>
+    <span class="kw">if</span> rb<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo armar la hoja&quot;</span><span class="op">)</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> bytes<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> rb<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+
+    <span class="cm">// Abrir: valida la estructura y cuenta las páginas sin dibujar nada.</span>
+    <span class="kw">let</span> rd<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">PdfDoc</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">pdf_open</span><span class="op">(</span>bytes<span class="op">,</span> <span class="fn">pdf_open_limits</span><span class="op">())</span>
+    <span class="kw">match</span> rd <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;PDF inválido: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>doc<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;páginas: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>doc<span class="op">.</span><span class="fn">page_count</span><span class="op">()))</span>
+            <span class="kw">let</span> rs<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Array</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> doc<span class="op">.</span><span class="fn">page_size</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+            <span class="kw">let</span> tam<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> rs<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+            <span class="kw">let</span> w<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> tam<span class="op">[</span><span class="num">0</span><span class="op">]</span>
+            <span class="kw">let</span> h<span class="op">:</span> <span class="ty">float</span> <span class="op">=</span> tam<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;página 1: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>w<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; x &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>h<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; puntos&quot;</span><span class="op">)</span>
+
+            <span class="cm">// Dibujar a 150 ppp con lo no soportado como lista, no como error.</span>
+            <span class="kw">let</span> rr<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">PdfRendered</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> doc<span class="op">.</span><span class="fn">render_report</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">150</span><span class="op">,</span> <span class="fn">pdf_render_best_effort</span><span class="op">())</span>
+            <span class="kw">match</span> rr <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no se pudo dibujar: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+                    <span class="kw">return</span> <span class="num">1</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>res<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="kw">let</span> img<span class="op">:</span> <span class="ty">Image</span> <span class="op">=</span> res<span class="op">.</span>image
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;imagen: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>img<span class="op">.</span>width<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; x &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>img<span class="op">.</span>height<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; px&quot;</span><span class="op">)</span>
+                    <span class="kw">let</span> om<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> res<span class="op">.</span>omitted
+                    <span class="kw">if</span> om<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;omitido: &quot;</span> <span class="op">+</span> om<span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="str">&quot;; &quot;</span><span class="op">))</span> <span class="op">}</span>
+                    <span class="cm">// Como cualquier foto: achicar para el editor y guardar en JPEG.</span>
+                    <span class="kw">let</span> rc<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Image</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">image_resize_fit</span><span class="op">(</span>img<span class="op">,</span> <span class="num">1000</span><span class="op">,</span> <span class="num">1000</span><span class="op">)</span>
+                    <span class="kw">let</span> chica<span class="op">:</span> <span class="ty">Image</span> <span class="op">=</span> rc<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+                    <span class="kw">let</span> rj<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">image_encode_jpeg</span><span class="op">(</span>chica<span class="op">,</span> <span class="num">85</span><span class="op">)</span>
+                    <span class="kw">let</span> jpg<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> rj<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;fondo para el editor: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>chica<span class="op">.</span>width<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; x &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>chica<span class="op">.</span>height<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;, &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>jpg<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; bytes de JPEG&quot;</span><span class="op">)</span>
+                <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Un archivo que no es un PDF da Err con el motivo, no un cuelgue.</span>
+    <span class="kw">let</span> malo<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">Image</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">pdf_page_to_image</span><span class="op">(</span><span class="str">&quot;esto no es un PDF&quot;</span><span class="op">,</span> <span class="num">1</span><span class="op">,</span> <span class="num">150</span><span class="op">)</span>
+    <span class="kw">match</span> malo <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>img<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;¿?&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">println</span><span class="op">(</span><span class="str">&quot;rechazado: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">páginas: 1
+página 1: 612.0 x 792.0 puntos
+imagen: 1275 x 1650 px
+fondo para el editor: 773 x 1000, 52416 bytes de JPEG
+rechazado: invalid: pdf_render: no es un PDF (falta %PDF- al principio) (code 22)</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The sheet is built here with <code>std/pdf</code> so the recipe does not depend on a file; in real life it is the bytes the user uploaded. <code>pdf_open</code> validates the structure and counts the pages without drawing anything, and <code>doc.page_size(1)</code> gives the size in points (612 × 792 is US Letter). At 150 dpi that page becomes a 1275 × 1650 <code>Image</code>, which <code>std/image</code> then treats like any photo: <code>image_resize_fit</code> shrinks it to fit in 1000 × 1000 and <code>image_encode_jpeg</code> encodes it.</p>
+<p>There are two modes. Strict (<code>pdf_render_strict()</code>) returns <code>Err(unsupported)</code> naming what the page uses and the renderer does not draw, so an image never comes out with a piece missing and no warning. Best effort (<code>pdf_render_best_effort()</code> with <code>render_report</code>) draws the rest and returns what it left out in <code>res.omitted</code>, so the caller decides whether it is good enough — a missing decorative gradient does not get in the way of tracing boxes. Bytes that are not a PDF give an <code>Err</code> with the reason, not a hang. The header of the <code>.nx</code> lists what is drawn (paths, clipping, the usual color spaces, JPEG and raw images, embedded TrueType/CFF fonts and the 14 standard ones) and what is not (shadings and patterns, Type 1 and Type 3 fonts, JBIG2/JPX/CCITT, encrypted files).</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/142-dns-spf-dkim-dmarc.html"><span class="label">← Previous</span><span class="doc-nav-name">Check SPF, DKIM and DMARC before sending mail</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/144-reenviar-eventos.html"><span class="label">Next →</span><span class="doc-nav-name">Forward a streamed response as it arrives</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

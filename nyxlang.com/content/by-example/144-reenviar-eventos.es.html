@@ -1,0 +1,16 @@
+<!-- title: Reenviar una respuesta por partes apenas llega | blurb: <code>try_http_stream</code> lee de a poco la respuesta de otra API y <code>sse_broadcast</code> reenvía cada evento al navegador en cuanto llega. -->
+<section data-part="intro">
+<p>Un servidor llama a una API de modelos de lenguaje que contesta con eventos (<code>text/event-stream</code>) durante varios segundos. En vez de esperar la respuesta entera y mostrar un «pensando», cada trozo se reenvía al navegador en cuanto llega. La mitad cliente es <code>std/http</code>, que vuelve con el estado y las cabeceras y deja leer el cuerpo de a poco; la mitad servidor es <code>std/serve</code>, que mantiene abierto un canal de Server-Sent Events por pedido.</p>
+</section>
+<section data-part="output" data-illustrative="1">
+nyx-serve starting on 127.0.0.1:18452 with 2 workers
++200 ms  Hola
++400 ms  , ¿en qué
++600 ms   te ayudo?
++600 ms  listo
+cada trozo llegó apenas la API lo mandó, no todo junto al final
+</section>
+<section data-part="explanation">
+<p>La receta corre sola: un hilo hace de API de afuera (tres eventos <code>delta</code> y uno <code>fin</code>, con pausas), <code>std/serve</code> hace de aplicación y un socket común hace de navegador. La ruta del navegador devuelve <code>sse_open(req, room)</code> con un room propio y lanza un hilo que llama a <code>try_http_stream</code>. Sobre el flujo, <code>s.read()</code> da trozos crudos del cuerpo y <code>s.read_event()</code> da eventos ya armados (<code>evento</code>, <code>datos</code>, <code>id</code>); cada uno sale con <code>sse_broadcast(room, …)</code>.</p>
+<p>El hilo espera primero con <code>sse_wait_room(room, 5000)</code>: el canal entra al room recién después de que el handler devuelve, y sin esa espera los primeros eventos se perderían. Con <code>try_http_stream_opts</code> el plazo de lectura es la espera máxima <em>entre</em> dos trozos, así que una API colgada da <code>Err(timeout)</code> en vez de un cuelgue; no hay plazo total por defecto. Los tiempos de la salida dependen de la máquina, por eso el panel está marcado como ilustrativo.</p>
+</section>

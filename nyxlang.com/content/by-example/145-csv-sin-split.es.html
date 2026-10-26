@@ -1,0 +1,14 @@
+<!-- title: Un CSV grande sin split() por fila | blurb: <code>indexOf</code> ubica las comas y <code>string_to_float_range</code> parsea el número directo de los bytes, sin crear un substring por campo. -->
+<section data-part="intro">
+<p><code>fila.split(",")</code> es claro, pero crea un <code>Array</code> y un <code>String</code> por campo. En un CSV de millones de filas esas asignaciones son cerca de la mitad del tiempo. <code>string_to_int_range(s, ini, fin, def)</code> y <code>string_to_float_range(s, ini, fin, def)</code> parsean el número de los bytes <code>[ini, fin)</code> del texto sin crear el substring, y dan siempre lo mismo que <code>string_to_X_or(s.substring(ini, fin), def)</code>.</p>
+</section>
+<section data-part="output">
+total con split: 110.5
+total con rango: 110.5
+unidades: 14
+lima: 11.25
+</section>
+<section data-part="explanation">
+<p>La receta suma la misma columna dos veces. El estilo <code>split</code> parte el texto en líneas y cada línea en campos. El estilo rango recorre el texto una sola vez: <code>texto.indexOf("\n", p)</code> ubica el fin de la fila y tres llamadas a <code>indexOf(",", …)</code> ubican las comas, todas con la posición absoluta que devuelve <code>indexOf(s, desde)</code>. Los números se parsean en su lugar; solo la ciudad, que se guarda como clave del mapa, se copia con <code>substring</code>.</p>
+<p>El default (<code>0.0</code> o <code>0</code>) entra cuando el campo viene vacío o no es un número, y un entero que no entra en 64 bits también cuenta como inválido en vez de saturarse. Cuando las columnas y sus tipos se conocen de antemano, el lector columnar de la receta 146 hace la pasada entera en C y es el paso siguiente.</p>
+</section>

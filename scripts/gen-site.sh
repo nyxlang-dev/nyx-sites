@@ -52,6 +52,28 @@ if [ -f static-next/.cutover-rollback ] && [ "${FORCE_GEN:-0}" != "1" ]; then
     exit 1
 fi
 
+# ── 0s. Sincronizar con el monorepo ANTES de generar ────────────────────────
+# La versión del sitio (VERSION del monorepo → content/site.toml), la copia del
+# CHANGELOG.md (→ content/changelog/, de donde sale /changelog/) y los .nx del
+# recetario tienen UNA fuente de verdad: el monorepo. Hasta 2026-10-26 este
+# paso era manual y la versión publicada quedó dos releases atrás sin que nada
+# lo dijera al generar; ahora `make gen` lo hace siempre. gen.nx sigue leyendo
+# SOLO content/ — nunca un path absoluto ajeno —, así que site.toml es el
+# fallback: sin el monorepo al lado se genera con lo último sincronizado, y se
+# avisa. El check L de check-content.sh (`sync-recipes.sh --check`) es la
+# guardia de que las dos copias no divergen en silencio.
+MONO="${NYX_MONOREPO:-/home/admin/nyx/lang}"
+if [ -d "$MONO/examples/by-example" ]; then
+    echo "[0s/4] sync con el monorepo ($MONO): recetas, versión, CHANGELOG"
+    if ! bash "$REPO_ROOT/scripts/sync-recipes.sh"; then
+        echo "error: scripts/sync-recipes.sh falló — no se genera con contenido a medio sincronizar" >&2
+        exit 1
+    fi
+else
+    v="$(awk -F'"' '/^version *=/ { print $2; exit }' content/site.toml)"
+    echo "[0s/4] ⚠ no está el monorepo en $MONO: se genera con content/site.toml (v$v) y la copia del CHANGELOG que ya hay"
+fi
+
 # ── 0. Lo que gen.nx pasó a producir y antes se copiaba ─────────────────────
 # El recetario se GENERA desde la fase 2. Sin este borrado, las páginas de la
 # versión anterior que gen.nx ya no produce (una receta excluida, un rename)

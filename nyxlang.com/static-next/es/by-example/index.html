@@ -19,6 +19,7 @@
 <li><a href="/es/#install">Instalar</a></li>
 <li><a href="/es/docs/">Documentación</a></li>
 <li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
 <li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
 </ul>
 <a class="nav-lang" href="/by-example/" hreflang="en" lang="en" title="View this page in English">English</a>
@@ -75,6 +76,9 @@
 <li class="step"><a class="step-link" href="/es/by-example/138-xlsx-plantilla.html"><span class="step-num">138</span><span><span class="step-name">Una plantilla .xlsx de carga masiva con listas desplegables</span><span class="step-note note">validate_list y validate_list_range restringen una columna a valores permitidos; xlsx_fill marca las filas rechazadas.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/139-pdf-preimpreso.html"><span class="step-num">139</span><span><span class="step-name">Un PDF que calca una hoja preimpresa</span><span class="step-note note">std/pdf fase 2: grosor de línea, sombreado gris y en color, Times y Courier, texto girado, estado gráfico por página.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/140-imagen-hojas-escaneadas.html"><span class="step-num">140</span><span><span class="step-name">Miniaturas de hojas escaneadas</span><span class="step-note note">std/image sobre escaneos tamaño carta: casi no hay reducción, así que importa el modo de compilación.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/143-pdf-a-imagen.html"><span class="step-num">143</span><span><span class="step-name">Dibujar una página de un PDF como imagen</span><span class="step-note note">std/pdf_render dibuja una página de un PDF en una <code>Image</code> en el servidor, sin programas externos; lo que no sabe dibujar es un error o una lista que se revisa.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/145-csv-sin-split.html"><span class="step-num">145</span><span><span class="step-name">Un CSV grande sin split() por fila</span><span class="step-note note"><code>indexOf</code> ubica las comas y <code>string_to_float_range</code> parsea el número directo de los bytes, sin crear un substring por campo.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/146-csv-columnar.html"><span class="step-num">146</span><span><span class="step-name">Un CSV grande por columnas</span><span class="step-note note"><code>try_csv_read</code> parsea un CSV en una pasada directo a columnas tipadas; una columna <code>cat</code> llega como códigos enteros más un diccionario, así que agrupar es indexar un arreglo.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -153,6 +157,7 @@
 <li class="step"><a class="step-link" href="/es/by-example/137-oauth2.html"><span class="step-num">137</span><span><span class="step-name">OAuth2 para un buzón de Gmail o Microsoft 365</span><span class="step-note note">std/oauth2 arma la URL de login con PKCE, renueva tokens y soporta device code — el token que esperan imap_auth_xoauth2 y smtp_auth_xoauth2.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/141-smtp-texto-y-html.html"><span class="step-num">141</span><span><span class="step-name">Un correo con versión de texto Y versión HTML</span><span class="step-note note">smtp_message_alternative arma multipart/alternative, se combina con adjuntos y no inventa el texto por ti.</span></span></a></li>
 <li class="step"><a class="step-link" href="/es/by-example/142-dns-spf-dkim-dmarc.html"><span class="step-num">142</span><span><span class="step-name">Verificar SPF, DKIM y DMARC antes de enviar correo</span><span class="step-note note">std/dns lee registros TXT y CNAME y distingue NXDOMAIN de NODATA; la lógica de comprobación es pura y se prueba sin red.</span></span></a></li>
+<li class="step"><a class="step-link" href="/es/by-example/144-reenviar-eventos.html"><span class="step-num">144</span><span><span class="step-name">Reenviar una respuesta por partes apenas llega</span><span class="step-note note"><code>try_http_stream</code> lee de a poco la respuesta de otra API y <code>sse_broadcast</code> reenvía cada evento al navegador en cuanto llega.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -186,7 +191,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

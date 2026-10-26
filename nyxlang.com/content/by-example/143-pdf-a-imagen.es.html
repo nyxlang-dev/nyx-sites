@@ -1,0 +1,15 @@
+<!-- title: Dibujar una página de un PDF como imagen | blurb: std/pdf_render dibuja una página de un PDF en una <code>Image</code> en el servidor, sin programas externos; lo que no sabe dibujar es un error o una lista que se revisa. -->
+<section data-part="intro">
+<p>Un editor de formatos de impresión deja «calcar» una hoja preimpresa — una factura con su membrete y sus casillas — poniendo la hoja de fondo y ubicando los campos encima. La imprenta entrega el modelo en PDF, así que una página tiene que convertirse en imagen en el servidor, achicarse y guardarse como cualquier foto. <code>pdf_open</code> lee la tabla de referencias cruzadas y las páginas; <code>doc.render_report(página, ppp, opts)</code> dibuja una de ellas.</p>
+</section>
+<section data-part="output">
+páginas: 1
+página 1: 612.0 x 792.0 puntos
+imagen: 1275 x 1650 px
+fondo para el editor: 773 x 1000, 52416 bytes de JPEG
+rechazado: invalid: pdf_render: no es un PDF (falta %PDF- al principio) (code 22)
+</section>
+<section data-part="explanation">
+<p>La hoja se fabrica acá con <code>std/pdf</code> para que la receta no dependa de un archivo; en la vida real son los bytes que subió la persona. <code>pdf_open</code> valida la estructura y cuenta las páginas sin dibujar nada, y <code>doc.page_size(1)</code> da el tamaño en puntos (612 × 792 es carta). A 150 ppp esa página se vuelve una <code>Image</code> de 1275 × 1650, que <code>std/image</code> trata después como cualquier foto: <code>image_resize_fit</code> la achica para que entre en 1000 × 1000 e <code>image_encode_jpeg</code> la codifica.</p>
+<p>Hay dos modos. El estricto (<code>pdf_render_strict()</code>) devuelve <code>Err(unsupported)</code> nombrando lo que la página usa y el dibujante no dibuja, así que nunca sale una imagen con un pedazo de menos sin avisar. El de mejor esfuerzo (<code>pdf_render_best_effort()</code> con <code>render_report</code>) dibuja lo demás y devuelve lo omitido en <code>res.omitted</code>, para que quien llama decida si alcanza — un degradé decorativo que falta no estorba para calcar casillas. Unos bytes que no son un PDF dan un <code>Err</code> con el motivo, no un cuelgue. La cabecera del <code>.nx</code> enumera lo que se dibuja (trazos, recortes, los espacios de color habituales, imágenes JPEG y crudas, fuentes TrueType/CFF incrustadas y las 14 estándar) y lo que no (sombreados y patrones, fuentes Type 1 y Type 3, JBIG2/JPX/CCITT, archivos cifrados).</p>
+</section>

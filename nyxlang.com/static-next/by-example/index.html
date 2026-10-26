@@ -19,6 +19,7 @@
 <li><a href="/#install">Install</a></li>
 <li><a href="/docs/">Docs</a></li>
 <li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
 <li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
 </ul>
 <a class="nav-lang" href="/es/by-example/" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
@@ -75,6 +76,9 @@
 <li class="step"><a class="step-link" href="/by-example/138-xlsx-plantilla.html"><span class="step-num">138</span><span><span class="step-name">An .xlsx bulk-upload template with dropdowns</span><span class="step-note note">validate_list and validate_list_range restrict a column to allowed values; xlsx_fill marks rejected rows.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/139-pdf-preimpreso.html"><span class="step-num">139</span><span><span class="step-name">A PDF that traces a pre-printed form</span><span class="step-note note">std/pdf phase 2: line width, gray and color fills, Times and Courier, rotated text, per-page graphic state.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/140-imagen-hojas-escaneadas.html"><span class="step-num">140</span><span><span class="step-name">Thumbnails of scanned sheets</span><span class="step-note note">std/image on letter-size scans: almost no reduction, so what matters is the build mode.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/143-pdf-a-imagen.html"><span class="step-num">143</span><span><span class="step-name">Render a PDF page as an image</span><span class="step-note note">std/pdf_render draws a page of a PDF into an <code>Image</code> on the server, with no external programs; what it cannot draw is either an error or a list you inspect.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/145-csv-sin-split.html"><span class="step-num">145</span><span><span class="step-name">A large CSV without split() per row</span><span class="step-note note"><code>indexOf</code> finds the commas and <code>string_to_float_range</code> parses the number straight from the bytes, without creating a substring per field.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/146-csv-columnar.html"><span class="step-num">146</span><span><span class="step-name">A large CSV by columns</span><span class="step-note note"><code>try_csv_read</code> parses a CSV in one pass straight into typed columns; a <code>cat</code> column arrives as integer codes plus a dictionary, so grouping is indexing an array.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -153,6 +157,7 @@
 <li class="step"><a class="step-link" href="/by-example/137-oauth2.html"><span class="step-num">137</span><span><span class="step-name">OAuth2 for a Gmail or Microsoft 365 mailbox</span><span class="step-note note">std/oauth2 builds the PKCE login URL, renews tokens and supports device code — the token imap_auth_xoauth2 and smtp_auth_xoauth2 expect.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/141-smtp-texto-y-html.html"><span class="step-num">141</span><span><span class="step-name">An email with a text AND an HTML version</span><span class="step-note note">smtp_message_alternative builds multipart/alternative, combines with attachments and does not invent the text for you.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/142-dns-spf-dkim-dmarc.html"><span class="step-num">142</span><span><span class="step-name">Check SPF, DKIM and DMARC before sending mail</span><span class="step-note note">std/dns reads TXT and CNAME records and tells NXDOMAIN from NODATA; the checking logic is pure and testable without a network.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/144-reenviar-eventos.html"><span class="step-num">144</span><span><span class="step-name">Forward a streamed response as it arrives</span><span class="step-note note"><code>try_http_stream</code> reads another API's response piece by piece and <code>sse_broadcast</code> forwards each event to the browser the moment it lands.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -186,7 +191,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.36.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

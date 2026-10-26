@@ -54,8 +54,10 @@ pub fn load_i18n(lang: String) -> Map {
     return parsed
 }
 
-// Versión publicada del lenguaje (la del archivo VERSION del monorepo, copiada
-// a site.toml cuando se corta release).
+// Versión publicada del lenguaje: la del archivo VERSION del monorepo, que
+// scripts/sync-recipes.sh copia a site.toml y que `make gen` sincroniza antes
+// de generar (scripts/gen-site.sh, paso 0s). Sin el monorepo al lado, manda lo
+// último que quedó en site.toml.
 pub fn site_version() -> String {
     let site: Map = load_site()
     let v: String = site.get_or("version", "")

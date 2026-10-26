@@ -10,7 +10,7 @@
 # eso es lo que devuelve el parser y lo que consume el motor de templates.
 #
 # El nombre de cada tabla es `r` + el número con cero a la izquierda:
-# `[r01]`…`[r70]`, `[r71]`…`[r100]`, `[r101]`…`[r142]`.
+# `[r01]`…`[r70]`, `[r71]`…`[r100]`, `[r101]`…`[r146]`.
 #
 # Claves de cada tabla `[rNN]`:
 #   slug      nombre del archivo sin extensión, IDÉNTICO al .nx del monorepo
@@ -43,7 +43,7 @@
 categories = "fundamentals,io-data,types-patterns,advanced,networking,concurrency,systems"
 
 # Recetas publicadas, en orden de índice y de la navegación prev/next.
-order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,31-iterator-enumerate,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style,103-orm-sin-mapeo,104-postgres,105-struct-fn-field,106-json-exact-numbers,107-for-continue,108-http-plazo-y-causa,109-await-fetch-wasm,110-serve-sse,111-nyx-test-coverage,112-include-bytes,113-smtp,114-idb-offline-wasm,115-form-repeated-keys,116-barcode-qr,117-serial-printer-wasm,118-pdf-invoice,119-postgres-listen-notify,120-serve-idle-connections,121-arena-persist-wasm,122-https-intermedio-extra,123-zip-crear-y-leer,124-xlsx-escribir-libro,125-xlsx-leer-hoja,126-serve-gzip,127-serve-limites,128-rsa-verificar-webhook,129-https-certificado-cliente,130-http-multipart-subir,131-expr-formulas-nomina,132-browser-fetch-red-local,133-imagen-miniaturas,134-imap-correo-entrante,135-sombreado-en-bloque,136-defer-al-cerrar-bloque,137-oauth2,138-xlsx-plantilla,139-pdf-preimpreso,140-imagen-hojas-escaneadas,141-smtp-texto-y-html,142-dns-spf-dkim-dmarc"
+order = "01-hello-world,02-variables,03-functions,04-control-flow,05-arrays,06-maps,07-strings,08-structs,09-enums,10-closures,11-file-read-write,12-stdin-input,13-cli-args,14-env-vars,15-json-parse,16-json-serialize,17-regex,18-csv,19-datetime,20-spawn-channel,21-traits,22-trait-bounds,23-derive-clone,24-option-some-none,25-result-ok-err,26-try-operator,27-if-let,28-match-guard,29-iterator-map-filter,30-iterator-fold,31-iterator-enumerate,32-iterator-take-skip,33-recursion,34-sorting,35-error-handling,36-defer-cleanup,37-sleep-timer,38-crypto-hash,39-random-uuid,40-thread-spawn,41-base64,42-url-encode,43-toml-config,44-msgpack,45-dns-resolve,46-tcp-client,47-tcp-server,48-udp-socket,49-http-get,50-http-post,51-http-server,52-http-middleware,53-websocket,55-sqlite,56-csv-write,57-mutex,58-channel-patterns,59-worker-pool,60-producer-consumer,61-waitgroup,62-semaphore,64-fork-exec,65-pipes,66-signal-handling,67-file-watcher,68-process-control,69-raw-terminal,70-shebang-script,101-file-errors-two-tier,102-template-flask-style,103-orm-sin-mapeo,104-postgres,105-struct-fn-field,106-json-exact-numbers,107-for-continue,108-http-plazo-y-causa,109-await-fetch-wasm,110-serve-sse,111-nyx-test-coverage,112-include-bytes,113-smtp,114-idb-offline-wasm,115-form-repeated-keys,116-barcode-qr,117-serial-printer-wasm,118-pdf-invoice,119-postgres-listen-notify,120-serve-idle-connections,121-arena-persist-wasm,122-https-intermedio-extra,123-zip-crear-y-leer,124-xlsx-escribir-libro,125-xlsx-leer-hoja,126-serve-gzip,127-serve-limites,128-rsa-verificar-webhook,129-https-certificado-cliente,130-http-multipart-subir,131-expr-formulas-nomina,132-browser-fetch-red-local,133-imagen-miniaturas,134-imap-correo-entrante,135-sombreado-en-bloque,136-defer-al-cerrar-bloque,137-oauth2,138-xlsx-plantilla,139-pdf-preimpreso,140-imagen-hojas-escaneadas,141-smtp-texto-y-html,142-dns-spf-dkim-dmarc,143-pdf-a-imagen,144-reenviar-eventos,145-csv-sin-split,146-csv-columnar"
 
 [r01]
 slug = "01-hello-world"
@@ -1037,5 +1037,33 @@ sidecar = "0"
 slug = "142-dns-spf-dkim-dmarc"
 num = "142"
 category = "networking"
+excluded = "0"
+sidecar = "0"
+
+[r143]
+slug = "143-pdf-a-imagen"
+num = "143"
+category = "io-data"
+excluded = "0"
+sidecar = "0"
+
+[r144]
+slug = "144-reenviar-eventos"
+num = "144"
+category = "networking"
+excluded = "0"
+sidecar = "0"
+
+[r145]
+slug = "145-csv-sin-split"
+num = "145"
+category = "io-data"
+excluded = "0"
+sidecar = "0"
+
+[r146]
+slug = "146-csv-columnar"
+num = "146"
+category = "io-data"
 excluded = "0"
 sidecar = "0"

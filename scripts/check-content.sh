@@ -110,6 +110,9 @@
 #      no es un fallo del contenido — pero sí es la clase de cosa que se
 #      publica sin que nadie la mire.
 #
+#   CITA LITERAL: changelog/ y es/changelog/ (el CHANGELOG.md del monorepo
+#   publicado tal cual) quedan fuera de A, B, C y H — ver quoted_prune_args.
+#
 #   QUÉ MIRA CADA CHECK. Sobre el ÁRBOL PUBLICADO (ROOT): A, B, C, D, E, F,
 #   K y la primera mitad de G (paridad de rutas y de <pre>/<h2> entre ROOT/ y
 #   ROOT/es/). Sobre content/ del sitio: J (literales de versión), L (drift
@@ -261,6 +264,32 @@ find_nolegacy() {
     find "$root" -type f "$@" "${LEGACY_PRUNE[@]}" 2>/dev/null | sort
 }
 
+# CITA LITERAL (desde 2026-10-26): las notas de versión (changelog/ y
+# es/changelog/) son el CHANGELOG.md del monorepo —ya público en el mirror
+# github.com/nyxlang-dev/nyx— renderizado tal cual por src/gen/changelog.nx,
+# sin reescribir una palabra. Nombran productos que viven en otros repos, citan
+# mediciones con su contexto (máquina, mediana, fecha) y plataformas de trabajo
+# interno. Es el mismo criterio que exime el contenido de un <pre> en A y B: un
+# registro verbatim no es copy de marketing, y «corregir» la cita para pasar la
+# guardia la volvería falsa. Por eso A, B, C y H no lo escanean; D, E, F, G, I y
+# K SÍ (identidad vieja, anclas, enlaces, paridad EN/ES, salida al día y HTML
+# sin agujeros siguen valiendo para esta página como para cualquier otra).
+quoted_prune_args() {
+    local root="$1"
+    QUOTED_PRUNE=(
+        -not -path "$root/changelog/*"
+        -not -path "$root/es/changelog/*"
+    )
+}
+
+# find_nolegacy sin la CITA LITERAL: lo que usan A, B y C.
+find_nolegacy_noquote() {
+    local root="$1"; shift
+    legacy_prune_args "$root"
+    quoted_prune_args "$root"
+    find "$root" -type f "$@" "${LEGACY_PRUNE[@]}" "${QUOTED_PRUNE[@]}" 2>/dev/null | sort
+}
+
 # Escanea $files (lista separada por líneas) con el regex $2 y reporta cada
 # coincidencia como ✗ etiquetada $1. $files vacío = 0 archivos, 0 hallazgos.
 #
@@ -398,7 +427,7 @@ strip_code() {
 check_a() {
     local root="$1"
     local files html_files n1 n2
-    files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
+    files=$(find_nolegacy_noquote "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
 
     scan_denylist_nopre "A" "$DENY_PRODUCTS_RE" "$files"
     n1=$CHECK_LAST_FAILS
@@ -407,7 +436,7 @@ check_a() {
     # escanear .css/.js ahí da falsos positivos que nada tienen que ver con
     # la herramienta de IA. El nombre de una herramienta es texto de página,
     # no sintaxis de estilos.
-    html_files=$(find_nolegacy "$root" -name '*.html')
+    html_files=$(find_nolegacy_noquote "$root" -name '*.html')
     n2=0
     if [ -n "$html_files" ]; then
         local hf
@@ -440,7 +469,7 @@ EOF
 check_b() {
     local root="$1"
     local files n=0
-    files=$(find_nolegacy "$root" -name '*.html')
+    files=$(find_nolegacy_noquote "$root" -name '*.html')
     if [ -n "$files" ]; then
         while IFS= read -r f; do
             [ -z "$f" ] && continue
@@ -464,7 +493,7 @@ EOF
 # ── C. Plataformas no soportadas (excepto el LEGADO) ─────────────────────
 check_c() {
     local root="$1" files
-    files=$(find_nolegacy "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
+    files=$(find_nolegacy_noquote "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
     scan_denylist "C" "$PLATFORMS_RE" "$files"
 }
 
@@ -671,9 +700,12 @@ check_h() {
     # voseo que ya tenía no es una regresión de este rediseño. Reutiliza
     # legacy_prune_args (la cláusula de learn/ sin es/ es inerte acá: el
     # find ya está anclado bajo "$root/es").
+    # La CITA LITERAL (es/changelog/) tampoco: el CHANGELOG del monorepo se
+    # publica verbatim, con su castellano tal como está escrito.
     legacy_prune_args "$root"
+    quoted_prune_args "$root"
     files=$(find "$root/es" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' \) \
-        "${LEGACY_PRUNE[@]}" 2>/dev/null | sort)
+        "${LEGACY_PRUNE[@]}" "${QUOTED_PRUNE[@]}" 2>/dev/null | sort)
     if [ -d "$site_dir/content" ]; then
         local content_es
         content_es=$(find "$site_dir/content" -type f -name '*.es.*' 2>/dev/null | sort)

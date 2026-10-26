@@ -28,7 +28,8 @@ for rel in "${!BINS[@]}"; do
     done
     if [ "$ok" = "1" ]; then echo "  PASS $rel (:$port → 200)"; else echo "  FAIL $rel (:$port → ${code:-sin respuesta})"; fail=1; fi
 
-    # nyxlang.com: rutas extra del rediseño. /docs/ y /es/docs/ existen o no
+    # nyxlang.com: rutas extra del rediseño. /docs/, /es/docs/ y, desde
+    # 2026-10-26, /changelog/ y /es/changelog/ existen o no
     # según la raíz servida (NYX_STATIC_ROOT) — solo exigimos 200 cuando el
     # directorio está presente bajo esa raíz; si no, alcanza con que no sea
     # un 500 (404 limpio es el contrato de app_static_cached).
@@ -47,7 +48,7 @@ for rel in "${!BINS[@]}"; do
         }
         check_path "/by-example/" "200"
         check_path "/learn/01.html" "200"
-        for docs_path in "/docs/" "/es/docs/"; do
+        for docs_path in "/docs/" "/es/docs/" "/changelog/" "/es/changelog/"; do
             docs_dir="$site_dir/$static_root${docs_path%/}"
             if [ -d "$docs_dir" ]; then
                 check_path "$docs_path" "200"

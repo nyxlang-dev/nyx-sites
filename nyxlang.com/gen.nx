@@ -1,7 +1,7 @@
 // gen.nx — generador estático de nyxlang.com.
 //
 // Uso:
-//   nyx gen.nx --out <dir> [--only landing|docs|by-example] [--check]
+//   nyx gen.nx --out <dir> [--only landing|docs|by-example|changelog] [--check]
 //
 // El sitio dejó de ser HTML escrito a mano: cada página sale de un template
 // (templates/) + contenido (content/) y se escribe en <dir>. Durante el
@@ -15,13 +15,15 @@
 // generador PRODUCE; un archivo de más en <dir> no lo detecta (limitación
 // conocida, igual que gendocs).
 //
-// Secciones: `landing` (la ficha), `docs` (la guía de seis pasos) y
-// `by-example` (el recetario), las tres en EN y ES.
+// Secciones: `landing` (la ficha), `docs` (la guía de seis pasos),
+// `by-example` (el recetario) y `changelog` (las notas de las últimas
+// versiones), todas en EN y ES.
 
 import "src/gen/content"
 import "src/gen/render"
 import "src/gen/highlight"
 import "src/gen/recipes"
+import "src/gen/changelog"
 
 const CHECK_TMP_DIR: String = "static-next.tmp"
 
@@ -54,6 +56,56 @@ fn highlight_sample(path: String) -> String {
     return html
 }
 
+// Las tarjetas «Qué trae la biblioteca estándar» de la landing: módulo →
+// receta que lo usa. Tres Arrays paralelos (receta, módulo, clave i18n de la
+// nota) en vez de un Array de Map, por el mismo gotcha que doc_slugs.
+fn stdlib_slugs() -> Array {
+    return ["146-csv-columnar", "15-json-parse", "51-http-server", "110-serve-sse", "49-http-get", "104-postgres", "55-sqlite", "118-pdf-invoice", "143-pdf-a-imagen", "124-xlsx-escribir-libro", "113-smtp", "133-imagen-miniaturas"]
+}
+fn stdlib_modules() -> Array {
+    return ["std/csv", "std/json", "std/http", "std/serve", "std/http", "std/postgres", "std/sqlite", "std/pdf", "std/pdf_render", "std/xlsx", "std/smtp", "std/image"]
+}
+fn stdlib_note_keys() -> Array {
+    return ["std_csv_note", "std_json_note", "std_server_note", "std_serve_note", "std_http_note", "std_postgres_note", "std_sqlite_note", "std_pdf_note", "std_pdfrender_note", "std_xlsx_note", "std_smtp_note", "std_image_note"]
+}
+
+// Arma las tarjetas de un idioma. Cada receta tiene que estar en `order` de
+// recipes.toml Y su .nx tiene que importar el módulo que la tarjeta nombra:
+// una receta excluida o renombrada, o una tarjeta que promete un módulo que la
+// receta no usa, abortan la generación en vez de publicar un enlace muerto o
+// una afirmación falsa.
+fn stdlib_items(lang: String) -> Array {
+    let dict: Map = load_i18n(lang)
+    let order: Array = catalog_list(load_recipes(), "order")
+    let slugs: Array = stdlib_slugs()
+    let mods: Array = stdlib_modules()
+    let keys: Array = stdlib_note_keys()
+    var items: Array = []
+    var i: int = 0
+    while i < slugs.length() {
+        let slug: String = slugs[i]
+        let modname: String = mods[i]
+        let key: String = keys[i]
+        if index_of_str(order, slug) < 0 {
+            print("error: la tarjeta de « " + modname + " » apunta a la receta " + slug + ", que no está en `order` de recipes.toml")
+            exit(1)
+        }
+        let src: String = read_fragment(recipe_src_path(slug))
+        if src.indexOf("import \"" + modname + "\"") < 0 {
+            print("error: la tarjeta de « " + modname + " » apunta a " + slug + ", que no importa ese módulo")
+            exit(1)
+        }
+        var item: Map = map_new()
+        item.insert("num", recipe_num(slug))
+        item.insert("href", ex_href(slug, lang))
+        item.insert("title", modname)
+        item.insert("blurb", dict.get_or(key, ""))
+        items.push(item)
+        i = i + 1
+    }
+    return items
+}
+
 fn gen_landing(out_dir: String) -> Array {
     var written: Array = []
     let langs: Array = ["en", "es"]
@@ -74,6 +126,8 @@ fn gen_landing(out_dir: String) -> Array {
         extra.insert("docs_agents_href", docs + "04-agents.html")
         extra.insert("docs_cli_href", docs + "05-cli.html")
         extra.insert("docs_syntax_href", docs + "06-syntax.html")
+        extra.insert("why_csv_href", ex_href("146-csv-columnar", lang))
+        extra.insert("stdlib", stdlib_items(lang))
         let html: String = render_page("index", lang, extra)
         let rel: String = page_rel("index", lang)
         write_page(out_dir, rel, html)
@@ -491,6 +545,79 @@ fn gen_by_example(out_dir: String) -> Array {
     return written
 }
 
+// ── Notas de versión /changelog ─────────────────────────────────────────────
+
+// Cuántas versiones publicadas muestra la página; el resto queda a un enlace,
+// en el CHANGELOG.md completo de GitHub.
+const CHANGELOG_RELEASES: int = 8
+
+// Genera /changelog/ y /es/changelog/ desde content/changelog/CHANGELOG.md (la
+// copia que trae scripts/sync-recipes.sh). Las notas están en castellano en el
+// repositorio y se publican así en los DOS idiomas: la página en inglés lo
+// dice en una línea (cl_lang_note) en vez de traducirlas, y el <article> lleva
+// lang="es" para que un lector de pantalla las pronuncie bien.
+fn gen_changelog(out_dir: String) -> Array {
+    var written: Array = []
+    let site: Map = load_site()
+    let repo_url: String = site.get_or("repo_url", "")
+    let text: String = read_fragment("content/changelog/CHANGELOG.md")
+    let parts: Array = cl_split(text, CHANGELOG_RELEASES)
+    if parts.length() == 0 {
+        print("error: content/changelog/CHANGELOG.md no tiene ningún encabezado « ## [X.Y.Z] »")
+        exit(1)
+    }
+
+    // El HTML de cada versión no depende del idioma: se arma una sola vez.
+    var versions: Array = []
+    var dates: Array = []
+    var notes: Array = []
+    var k: int = 0
+    while k + 2 < parts.length() {
+        let v: String = parts[k]
+        let d: String = parts[k + 1]
+        let b: String = parts[k + 2]
+        versions.push(v)
+        dates.push(d)
+        notes.push(cl_blocks(b, repo_url))
+        k = k + 3
+    }
+
+    let langs: Array = ["en", "es"]
+    var li: int = 0
+    while li < langs.length() {
+        let lang: String = langs[li]
+        let dict: Map = load_i18n(lang)
+        var releases: Array = []
+        var r: int = 0
+        while r < versions.length() {
+            let ver: String = versions[r]
+            let date: String = dates[r]
+            let html: String = notes[r]
+            var item: Map = map_new()
+            if ver == "Unreleased" {
+                item.insert("version", dict.get_or("cl_unreleased", ""))
+            } else {
+                item.insert("version", ver)
+            }
+            item.insert("date", date)
+            item.insert("anchor", cl_anchor(ver))
+            item.insert("notes", html)
+            releases.push(item)
+            r = r + 1
+        }
+        var extra: Map = map_new()
+        extra.insert("title_key", "cl_title")
+        extra.insert("desc_key", "cl_desc")
+        extra.insert("releases", releases)
+        let page: String = render_page("changelog", lang, extra)
+        let rel: String = page_rel("changelog", lang)
+        write_page(out_dir, rel, page)
+        written.push(rel)
+        li = li + 1
+    }
+    return written
+}
+
 // Copia los assets compartidos a <out>/shared/. Son texto (CSS/JS), así que
 // read_file/write_file alcanzan; si algún día entra un binario hay que pasar a
 // std/fs o a un copy del sistema.
@@ -537,6 +664,15 @@ fn generate(out_dir: String, only: String) -> Array {
             let rel4: String = recipes[e]
             written.push(rel4)
             e = e + 1
+        }
+    }
+    if only == "" or only == "changelog" {
+        let cl: Array = gen_changelog(out_dir)
+        var f: int = 0
+        while f < cl.length() {
+            let rel5: String = cl[f]
+            written.push(rel5)
+            f = f + 1
         }
     }
     // Los assets compartidos los usa CUALQUIER página, así que van con
@@ -600,13 +736,14 @@ fn run_check(out_dir: String, only: String) -> int {
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
 fn usage() {
-    print("uso: nyx gen.nx --out <dir> [--only landing|docs|by-example] [--check]")
+    print("uso: nyx gen.nx --out <dir> [--only landing|docs|by-example|changelog] [--check]")
 }
 
 fn known_section(name: String) -> bool {
     if name == "landing" { return true }
     if name == "docs" { return true }
     if name == "by-example" { return true }
+    if name == "changelog" { return true }
     return false
 }
 
@@ -653,7 +790,7 @@ fn main() -> int {
         return 1
     }
     if only != "" and known_section(only) == false {
-        print("error: sección desconocida « " + only + " » (landing | docs | by-example)")
+        print("error: sección desconocida « " + only + " » (landing | docs | by-example | changelog)")
         return 1
     }
 

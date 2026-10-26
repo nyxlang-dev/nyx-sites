@@ -1,0 +1,14 @@
+<!-- title: A large CSV without split() per row | blurb: <code>indexOf</code> finds the commas and <code>string_to_float_range</code> parses the number straight from the bytes, without creating a substring per field. -->
+<section data-part="intro">
+<p><code>row.split(",")</code> is clear, but it creates an <code>Array</code> and a <code>String</code> per field. On a CSV of millions of rows those allocations are about half of the time. <code>string_to_int_range(s, start, end, def)</code> and <code>string_to_float_range(s, start, end, def)</code> parse the number in bytes <code>[start, end)</code> of the text without creating the substring, and always give the same result as <code>string_to_X_or(s.substring(start, end), def)</code>.</p>
+</section>
+<section data-part="output">
+total con split: 110.5
+total con rango: 110.5
+unidades: 14
+lima: 11.25
+</section>
+<section data-part="explanation">
+<p>The recipe adds up the same column twice. The <code>split</code> style splits the text into lines and each line into fields. The range style walks the text once: <code>texto.indexOf("\n", p)</code> finds the end of the row and three <code>indexOf(",", …)</code> calls find the commas, all with the absolute offset that <code>indexOf(s, from)</code> returns. The numbers are parsed in place; only the city, which is kept as a map key, is copied with <code>substring</code>.</p>
+<p>The default (<code>0.0</code> or <code>0</code>) is used when the field is empty or is not a number, and an integer that does not fit in 64 bits also counts as invalid instead of being clamped. When the columns and their types are known in advance, the columnar reader of recipe 146 does the whole pass in C and is the next step up.</p>
+</section>

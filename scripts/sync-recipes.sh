@@ -13,12 +13,17 @@
 #
 # Uso:
 #   bash scripts/sync-recipes.sh            copia las recetas, actualiza la
-#                                           versión del sitio y siembra los
-#                                           STUB de sidecar que falten
+#                                           versión del sitio (VERSION →
+#                                           content/site.toml), copia el
+#                                           CHANGELOG.md a content/changelog/ y
+#                                           siembra los STUB de sidecar que
+#                                           falten. `make gen` lo corre antes de
+#                                           generar (scripts/gen-site.sh)
 #   bash scripts/sync-recipes.sh --check    no escribe nada; sale 1 si alguna
 #                                           copia difiere del monorepo, si falta
-#                                           o sobra alguna, o si la versión de
-#                                           content/site.toml está desactualizada.
+#                                           o sobra alguna, si la versión de
+#                                           content/site.toml está desactualizada
+#                                           o si la copia del CHANGELOG.md difiere.
 #                                           Además avisa (⚠, no ✗) de los
 #                                           sidecars cuyo slug no figura en el
 #                                           catálogo: prosa muerta que se
@@ -364,8 +369,10 @@ site_toml="$SITE/content/site.toml"
 mono_version="$(tr -d ' \t\n\r' < "$MONO/VERSION" 2>/dev/null)"
 site_version="$(awk -F'"' '/^version *=/ { print $2; exit }' "$site_toml")"
 if [ -z "$mono_version" ]; then
-    echo "  ✗ no se pudo leer $MONO/VERSION"
-    findings=$((findings + 1))
+    # Fallback declarado: sin VERSION en el monorepo manda la versión que ya
+    # está en content/site.toml. Se avisa, porque es la única vía por la que el
+    # sitio puede publicar una versión que no salió de VERSION.
+    echo "  ⚠ no se pudo leer $MONO/VERSION — queda la de content/site.toml ($site_version)"
 elif [ "$mono_version" != "$site_version" ]; then
     if [ "$MODE" = "check" ]; then
         echo "  ✗ content/site.toml: version = $site_version, el monorepo dice $mono_version"
@@ -377,6 +384,32 @@ elif [ "$mono_version" != "$site_version" ]; then
         awk -v v="$mono_version" '/^version *=/ && !done { print "version = \"" v "\""; done=1; next } { print }' "$site_toml" > "$tmp"
         mv "$tmp" "$site_toml"
         echo "  · content/site.toml: version $site_version → $mono_version"
+    fi
+fi
+
+# ── notas de versión (CHANGELOG.md del monorepo) ──────────────────────────
+# La página /changelog/ se genera desde una COPIA byte a byte del CHANGELOG.md
+# del monorepo, guardada en content/changelog/ — el mismo trato que los .nx de
+# las recetas: gen.nx lee solo lo que está dentro de este repo, y un clon sin
+# el monorepo al lado sigue generando (con la última copia sincronizada). Si el
+# monorepo no trae CHANGELOG.md se avisa (⚠) y se conserva la copia: no es un
+# hallazgo, es el mismo fallback que tiene la versión.
+changelog_src="$MONO/CHANGELOG.md"
+changelog_dst="$SITE/content/changelog/CHANGELOG.md"
+if [ ! -f "$changelog_src" ]; then
+    echo "  ⚠ no está $changelog_src — /changelog/ se genera con la copia que ya hay"
+elif ! cmp -s "$changelog_src" "$changelog_dst" 2>/dev/null; then
+    if [ "$MODE" = "check" ]; then
+        if [ -f "$changelog_dst" ]; then
+            echo "  ✗ content/changelog/CHANGELOG.md difiere del CHANGELOG.md del monorepo"
+        else
+            echo "  ✗ falta content/changelog/CHANGELOG.md"
+        fi
+        findings=$((findings + 1))
+    else
+        mkdir -p "$(dirname "$changelog_dst")"
+        cp "$changelog_src" "$changelog_dst"
+        echo "  · content/changelog/CHANGELOG.md: copiado del monorepo"
     fi
 fi
 

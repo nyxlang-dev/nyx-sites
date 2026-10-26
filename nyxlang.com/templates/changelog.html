@@ -1,0 +1,32 @@
+<!-- templates/changelog.html — notas de versión (/changelog/ y /es/changelog/).
+     gen.nx arma `releases` (version, date, anchor, notes) desde la copia del
+     CHANGELOG.md del monorepo; `notes` es HTML generado por
+     src/gen/changelog.nx con el texto ya escapado. Mismos ladrillos que la
+     guía: .doc-head, .doc-layout con el índice al margen y .doc-body. -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent">{{cl_label}}</span></p>
+<h1 class="doc-title">{{cl_head}}</h1>
+<p class="band-sub prose">{{cl_lede}}</p>
+{{#if cl_lang_note}}<p class="band-sub note">{{cl_lang_note}}</p>{{/if}}
+</header>
+<div class="doc-layout">
+<nav class="doc-toc cl-toc" aria-label="{{cl_toc_label}}">
+<div class="doc-toc-inner">
+<p class="label doc-toc-label">{{cl_toc_label}}</p>
+<ol class="doc-toc-list">
+{{#each releases}}<li class="doc-toc-item"><a class="doc-toc-link" href="#{{anchor}}"><span class="doc-toc-name">{{version}}</span><span class="doc-toc-num">{{date}}</span></a></li>
+{{/each}}</ol>
+</div>
+</nav>
+<article class="doc-body cl-body" lang="es">
+{{#each releases}}<section class="cl-release" id="{{anchor}}">
+<h2>{{version}} <span class="cl-date">{{date}}</span></h2>
+{{{notes}}}
+</section>
+{{/each}}</article>
+</div>
+<a class="callout" href="{{changelog_url}}"><span><span class="callout-name">{{cl_full_title}}</span><span class="step-note note">{{cl_full_note}}</span></span><span class="callout-go">GitHub →</span></a>
+</div>
+</section>

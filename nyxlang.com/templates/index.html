@@ -20,6 +20,24 @@
 </div>
 </section>
 
+<!-- ── POR QUÉ NYX: cuatro afirmaciones verificables, para una persona. Sin
+     número de sección, como la muestra: es lectura, no un paso. La cifra del
+     CSV es la del CHANGELOG de 0.38.0 y su receta (146) la repite y la cita. ── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">{{why_label}}</span></p>
+<div><h2 class="band-title">{{why_title}}</h2></div>
+</header>
+<table class="kv kv-wide">
+<tr><th>{{why_k_native}}</th><td>{{why_v_native}}</td></tr>
+<tr><th>{{why_k_typing}}</th><td>{{why_v_typing}}</td></tr>
+<tr><th>{{why_k_self}}</th><td>{{why_v_self}}</td></tr>
+<tr><th>{{why_k_stdlib}}</th><td>{{why_v_stdlib}} <a href="{{why_csv_href}}">{{why_v_stdlib_link}}</a></td></tr>
+</table>
+</div>
+</section>
+
 <!-- ── 01 INSTALL: tabla de requisitos + primer proyecto ────────────────── -->
 <section class="band">
 <div class="wrap band-inner">
@@ -35,6 +53,7 @@
 <tr><th>{{install_k_verify}}</th><td><code>nyx --version</code> — {{install_v_verify}}</td></tr>
 <tr><th>{{install_k_update}}</th><td><code>nyx update</code> — {{install_v_update}}</td></tr>
 <tr><th>{{install_k_remove}}</th><td><code>nyx uninstall</code> — {{install_v_remove}}</td></tr>
+<tr><th>{{install_k_next}}</th><td><a href="{{docs_program_href}}">{{docs_program_title}}</a> — {{install_v_next}}</td></tr>
 </table>
 </div>
 <div>
@@ -71,6 +90,24 @@
 </table>
 </div>
 </div>
+</div>
+</section>
+
+<!-- ── BIBLIOTECA ESTÁNDAR: módulos con su receta. La lista `stdlib` la arma
+     gen.nx (num, href, title, blurb) y verifica que cada receta esté publicada;
+     mismos ladrillos que los pasos de la guía (.steps). ─────────────────────── -->
+<section class="band">
+<div class="wrap band-inner">
+<header class="band-head">
+<p><span class="stamp">{{std_label}}</span></p>
+<div>
+<h2 class="band-title">{{std_title}}</h2>
+<p class="band-sub prose">{{std_lede}}</p>
+</div>
+</header>
+<ul class="steps">
+{{#each stdlib}}<li class="step"><a class="step-link" href="{{href}}"><span class="step-num">{{num}}</span><span><span class="step-name">{{title}}</span><span class="step-note note">{{blurb}}</span></span></a></li>
+{{/each}}</ul>
 </div>
 </section>
 
@@ -140,7 +177,7 @@
 <table class="kv kv-wide">
 <tr><th>{{source_k_license}}</th><td>Apache-2.0</td></tr>
 <tr><th>{{source_k_repo}}</th><td><a href="{{repo_url}}">{{repo_url}}</a></td></tr>
-<tr><th>{{source_k_changelog}}</th><td><a href="{{changelog_url}}">CHANGELOG.md</a> — {{source_v_changelog}}</td></tr>
+<tr><th>{{source_k_changelog}}</th><td><a href="{{changelog_href}}">{{cl_head}}</a> — {{source_v_changelog}}</td></tr>
 <tr><th>{{source_k_status}}</th><td>{{source_v_status}}</td></tr>
 </table>
 </div>

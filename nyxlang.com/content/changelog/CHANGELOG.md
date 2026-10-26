@@ -1,0 +1,5912 @@
+# Changelog — Nyx Language
+
+Todos los cambios notables de este proyecto se documentan aquí.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
+
+> **Note**: current version = the top entry below (source of truth: `VERSION` file). Versions v0.2.0-v5.4.0 were assigned during rapid development before a formal versioning policy was adopted. The version was reset to v0.9.0 and then progressed through v0.10.0-v0.17.x. See [docs/VERSIONING.md](docs/VERSIONING.md) for details.
+
+---
+
+## [Unreleased]
+
+## [0.38.0] — 2026-10-26
+
+> **MINOR**: API nueva para procesar datos tabulares: el lector columnar `try_csv_read` de `std/csv`
+  [arco: csv-columnar] y `string_to_X_range`. Además, un entero que no entra en 64 bits pasa a ser inválido
+  en vez de saturarse: `string_to_int` sobre un número así ahora aborta (antes daba INT64_MAX en silencio).
+>
+> **Migración**: si tu código valida que el texto sean solo dígitos y después llama a `string_to_int`, un
+> número de 19+ dígitos que llega de afuera ahora **aborta el proceso** (antes se saturaba). La salida es
+> `string_to_int_or(s, def)` o rechazar el desborde antes. Afecta hoy a nyx-kv (`INCRBY`, `LRANGE`, `SCAN`,
+> `SET … EX`, `INCR`), nyx-db (`LIMIT`/`OFFSET`), nyx-proxy (`max-age`) y el webhook de kv: no
+> recompilarlos con 0.38.0 hasta que tengan su arreglo (fichado en `TASKS.md`).
+
+### Agregado
+- **`string_to_int_range(s, ini, fin, def)` / `string_to_float_range(s, ini, fin, def)`**: parsean el
+  número de los bytes `[ini, fin)` de `s` sin crear el substring; valen siempre lo mismo que
+  `string_to_X_or(s.substring(ini, fin), def)`. Motivo: en un CSV de 5M filas, `split()` +
+  `string_to_float` por fila hace ~11 asignaciones GC por fila y se lleva la mitad del tiempo
+  (bench 2026-10-25 contra Python/pandas/polars). Antes se probó pre-dimensionar el Array de `split()` y
+  se descartó: −4% en el split gigante, +4..9% en los cortos. +1 test (`507`), receta
+  `examples/by-example/145-csv-sin-split.nx`.
+
+- **`std/csv`: lector columnar `try_csv_read(texto, esquema, opts)`** [arco: csv-columnar]: parsea en una pasada
+  directo a columnas tipadas (`int`, `float`, `str`, y `cat` = códigos + diccionario), con el núcleo en el
+  nuevo `runtime/csv.c` (RFC 4180: comillas, saltos de línea entre comillas, CRLF, BOM). Estricto: un dato
+  inválido es `Err` con fila y columna. `try_csv_guess_schema` propone el esquema. En el bench de 5M filas
+  agrupar y filtrar tarda 0.93 s y 265 MB, contra 1.21 s de pandas y 1.19 s de polars con un hilo (con
+  `split()` + `Map`: 5.5 s). +1 test (`509`), +1 suite C (`test_csv.c`), receta `146-csv-columnar`.
+
+### Cambiado
+- **Un entero que no entra en 64 bits es inválido, no se satura**: `string_to_int` aborta con un mensaje
+  propio, `string_to_int_or`/`_range` devuelven el default y una columna `int` de `try_csv_read` da `Err`
+  («no entra en un int»). Antes `strtoll` lo dejaba en INT64_MAX/MIN y nadie miraba `ERANGE`:
+  `string_to_int_or("99999999999999999999", 0)` daba 9223372036854775807 en silencio (decisión de Ottavio).
+  Consecuencias que se arreglaron con el cambio: **`std/json`** guarda un entero así como `"float"` con su
+  texto (antes lo saturaba; con el cambio habría abortado el proceso por un número llegado de afuera), y
+  **el intérprete/REPL** aplica la misma regla NYX2015 que el compilador: `-9223372036854775808` da
+  INT_MIN exacto (daba -9223372036854775807) y un literal que no entra es error (daba INT_MAX). +2 tests
+  (`510`, `511`), +1 suite C (`test_int_parse.c`), +2 checks en el smoke del REPL.
+- **`string_to_float` / `_or` / `_range` parsean con el fast path de Clinger** [arco: csv-columnar]: un número
+  `[+-]dígitos[.dígitos]` de hasta 15 dígitos se convierte con una división exacta, que da el mismo double
+  que `strtod` bit a bit; el resto (exponentes, 16+ dígitos, `inf`, hex, espacios) sigue yendo a `strtod`.
+  Verificado contra `strtod` en 5M valores aleatorios y en los bordes (`test_float_parse.c`). En el bench de
+  5M filas, `indexOf` + `_range` baja de 2.67 s a 2.13 s. +1 test (`508`), +1 suite C.
+
+## [0.37.1] — 2026-10-24
+
+> **PATCH**: los tres reportes de fricción de nyxerp del 2026-10-22.
+
+### Corregido
+- **NYX1046**: un patrón de enum (`Result.Ok(v)`, `Option.None`) en un `match` cuyo valor es primitivo
+  (`int`, `float`, `bool`, `String`) es error. Antes pasaba `nyx check` y clang fallaba con IR inválido
+  o, con un String, compilaba y no entraba a ningún brazo (fricción de nyxerp con
+  `match string_to_int(s)`, que devuelve `int`). +2 tests de error.
+
+### Agregado
+- **`sse_close_room(room) -> int`** en `std/serve`: cierra solo los canales de un room; el resto sigue y
+  el room se puede volver a abrir. `sse_drain_close` no servía: deja el registro en drenaje y ninguna
+  apertura posterior se registra (fricción de nyxerp). +5 checks en el smoke de serve.
+- **`std/postgres` toma la clave como libpq** cuando la cadena no trae `password=`: `PGPASSWORD`, después
+  `passfile=`, `PGPASSFILE` o `~/.pgpass` (comodines `*`, escapes `\:` y `\\`; un archivo legible por
+  otros se ignora). Expuesta `pg_pgpass_buscar` (fricción de nyxerp). +1 test (`506`).
+
+## [0.37.0] — 2026-10-22
+
+> **MINOR**: dos avisos de 0.36.x pasan a error, como anunciaban (regla 7 de `docs/VERSIONING.md`):
+> NYX1010 entre entero y String, y NYX1045 en un escape desconocido. Lo demás es aditivo: `std/pdf_render`,
+> respuestas HTTP por partes, SNI con comodín, `http_serve_en`, registros DNS, `nyx build -j N` y
+> varias mejoras de `std/pdf`, `std/xlsx`, `std/image` y `std/smtp`. Antes del corte se revisaron
+> 1201 archivos (nyxerp, los productos, los sitios, y std, ejemplos y compilador de este repo) con el
+> compilador de 0.36.x: ningún caso de los dos avisos.
+
+### Cambiado
+
+- **NYX1010 entre entero y String es error** (aviso en 0.36.x). `5 + "a"`, `5 == "5"` y `"a" < 5`
+  compilaban y morían con SIGSEGV al ejecutar la línea; ahora no compilan, con la misma pista
+  (`int_to_string`, `string_to_int_or`). Los tres casos `test-nyx1010-*-mixto` pasan a la lista de
+  errores de `run_error_tests.sh`. Sigue siendo aviso cuando un lado lee una casilla (`dst[1] == "dos"`):
+  el tipo de elemento inferido de un Array puede mentir (`var dst = [9]` y después `dst.push(src[1])`
+  con un String) y la casilla lleva su tag, así que ese programa anda (`test-323`, caso 6; aviso en
+  `test-nyx1010-casilla-aviso`).
+- **NYX1045 en un escape desconocido es error** (aviso en 0.36.x). `"\q"` o `"\e"` valían la letra sin la
+  barra; ahora el análisis los rechaza con línea y la lista de escapes válidos (`\x1b` en lugar de
+  `\e`). Sale con el formato y el NDJSON de los demás errores del análisis (`"severity":"error"`).
+
+### Agregado
+
+- **`std/http`: `http_serve_en(host, port, handler)` y `http_serve_mt_en(host, port, workers, handler)`**
+  eligen la dirección de bind; `http_serve`/`http_serve_mt` siguen en `0.0.0.0` por compatibilidad
+  (gotcha `http-serve-all-interfaces`). El playground pasa a `127.0.0.1:8081`: en producción quedaba
+  abierto directo aunque lo sirve el gateway (orden del servidor, 2026-10-21). Test
+  `test-505-http-serve-en` (liga `127.0.0.2` y mide que `127.0.0.1` no conecte).
+- **SNI con comodín en el servidor TLS**: `tls_server_add_cert("*.dominio", cert, key)` cubre una
+  etiqueta (`a.dominio`, no `dominio` ni `a.b.dominio`, RFC 6125), los nombres exactos ganan sobre el
+  comodín sin importar el orden, la comparación ya no distingue mayúsculas y el tope sube de 16 a 64
+  dominios. Pedido de nyxerp (fase C0 de su alta automática de clientes `<cliente>.nyxerp.com`).
+  Test `test_sni_name_matches` (runtime) y handshake real verificado con `openssl s_client`.
+- **`std/http`: leer una respuesta por partes** `[arco: http-streaming]` (fricción nyxerp
+  20261019-200016-team-1: reenviar al navegador cada trozo de una API de modelos de lenguaje apenas
+  llega). `try_http_stream_opts(method, url, headers, body, http_stream_opts())` → `HttpStream`, que
+  vuelve con el estado y las cabeceras:
+  - `read()` da trozos del cuerpo sin el marco chunked; `read_event()` da eventos `text/event-stream`
+    ya armados (`SseEvent { evento, datos, id }`, WHATWG).
+  - Plazos `connect_ms`, `primer_byte_ms`, `lectura_ms` (entre dos trozos) y `total_ms` (sin tope por
+    defecto). HTTP y HTTPS.
+  - `sse_wait_room(room, ms)` en `std/serve` cierra la carrera del reenvío: el canal entra al room
+    después de que el handler devuelve, y sin esperar los primeros eventos se perdían.
+  - Test `test-504-http-stream` (chunked partido, Content-Length, hasta el cierre, SSE partido, plazos,
+    gzip, cortes, TLS), `tests/ai-first/42`, receta `144-reenviar-eventos`.
+- **`std/pdf_render`: dibujar una página de un PDF como imagen** `[arco: pdf-a-imagen]` (fricción
+  nyxerp 20261019-080021-team-1: calcar en el editor de formatos la hoja preimpresa que la imprenta
+  manda en PDF). Módulo nuevo en Nyx puro: el mismo código en nativo y en `wasm32-wasi`, con la
+  imagen byte a byte igual en los dos.
+  - `pdf_open(bytes, pdf_open_limits()) -> Result<PdfDoc, Error>`, `doc.page_count()`,
+    `doc.page_size(p)`, `doc.render(p, ppp, pdf_render_strict())` y `doc.render_report(...)` con
+    `pdf_render_best_effort()`, que devuelve la imagen y la lista de lo omitido. Atajo
+    `pdf_page_to_image(bytes, página, ppp)`. La salida es la `Image` de `std/image`.
+  - Parser con xref clásica, xref streams, object streams, actualizaciones incrementales y
+    reconstrucción por barrido; filtros Flate (con predictores), LZW, ASCIIHex, ASCII85 y RunLength.
+  - Rasterizador con antialias (cobertura exacta horizontal × 4 submuestras), nonzero y even-odd,
+    trazos con uniones, puntas, punteado y stroke adjustment, y recortes.
+  - Color gris, RGB, CMYK (la interpolación de poppler), ICCBased, Indexed, Lab, Separation y DeviceN
+    con funciones de tipo 0, 2, 3 y 4; alfa constante.
+  - Imágenes JPEG y crudas, con SMask, Mask y stencil. Las grandes se reducen en una pasada al tamaño
+    que ocupan en la página, sin materializarlas enteras.
+  - Texto con TrueType y CFF incrustadas (simples y Type0/CID). Las 14 estándar sin incrustar usan un
+    subconjunto de Liberation (OFL 1.1, 227 KB, licencia incluida en el bloque generado). Caché de
+    glifos rasterizados.
+  - Estricto por defecto: lo no soportado (sombreados, Type 1/3, JBIG2/JPX/CCITT, cifrado...) es
+    `Err(unsupported)` con el nombre. `PdfOpenLimits` acota tamaño, descompresión, anidamiento,
+    formularios, operadores, ppp y píxeles: un PDF hostil da `Err(invalid)` nombrando el límite.
+  - Verificado contra poppler 25.03: corpus sintético de 12 PDFs (`tests/pdf-corpus/`,
+    `scripts/testing/pdf_render_oracle.sh`) y 44 PDFs reales locales (93 páginas, ninguna falla).
+  - Tests `test-503-pdf-render`, `test-wasm-59-pdf-render` y `tests/ai-first/41-pdf-pagina-a-imagen`;
+    receta `143-pdf-a-imagen`.
+
+- **`std/dns`: consultas TXT, CNAME y MX** `[arco: dns-registros]` (pedido de nyxerp, 2026-10-18, para
+  revisar SPF, DKIM y DMARC antes de encender el correo). Módulo nuevo con cliente DNS propio en Nyx
+  (RFC 1035) sobre UDP, con reintento por TCP si la respuesta viene truncada y sin dependencias de enlace.
+  - `dns_txt` (un String por registro), `dns_cname`, `dns_mx` (ordenado por preferencia), `dns_query`
+    crudo, `dns_set_server`, `dns_set_timeout`, `dns_is_nxdomain` y `dns_is_nodata`.
+  - Errores `Result<_, Error>`: NXDOMAIN `not_found` 3, NODATA `not_found` 61, `timeout` 110,
+    SERVFAIL/REFUSED `io`, `parse`.
+  - Parser de entrada hostil: tope de 16 saltos de compresión, nombres de 255 bytes, ID aleatorio y
+    pregunta verificados. Servidores desde `/etc/resolv.conf` (hasta 3 IPv4); en Windows exige
+    `dns_set_server`. Sin caché, IPv6, EDNS(0) ni DNSSEC.
+  - Verificado contra la red real (SPF y DMARC de gmail.com, 17 TXT de google.com por TCP).
+  - Tests `test-499-dns` (paquetes fijos), `test-500-dns-servidor` (servidor falso UDP/TCP) y
+    `test-501-dns-red-real` (SKIP sin red); receta `142-dns-spf-dkim-dmarc`.
+- **`std/smtp`: correo con texto y HTML (`multipart/alternative`)** `[arco: smtp-alternative]` (pedido de
+  nyxerp, 2026-10-18). `smtp_message_alternative(de, para, asunto, texto, html)`: texto primero y HTML
+  después (RFC 2046), cada parte en quoted-printable (RFC 2045 §6.7). Con `smtp_attach` sale
+  `multipart/mixed` › `alternative` + adjuntos, con boundaries distintos y dot-stuffing por parte.
+  `smtp_message` y `smtp_message_html` no cambian un byte. Test `test-stdlib-12-smtp-alternative`
+  (incluye vuelta completa por `mime_parse`) y receta `141-smtp-texto-y-html`.
+- **`std/image`: miniaturas de hojas escaneadas en décimas de segundo** `[arco: image-rapido]` (fricción
+  nyxerp, 2026-10-18), con la salida idéntica byte a byte (sigue igual a Pillow).
+  - Resize, decodificador y codificador JPEG leen y escriben por punteros en nativo de 64 bits; wasm32
+    conserva las versiones anteriores, y las dos rutas dan los mismos bytes.
+  - Hoja de 1275×1650, tiempo de CPU de `image_thumbnail`: 3,6 s → 1,0 s con `nyx build` (clang `-O0`)
+    y 0,92 s → 0,25 s con `--release` (`-O2`). En 2550×3300: 8,6 s → 2,4 s y 2,3 s → 0,65 s.
+  - Buena parte de los 3,5 s reportados era compilar sin `--release`.
+  - Test `test-497-image-rapido` (huellas CRC32 fijadas antes de optimizar), receta
+    `140-imagen-hojas-escaneadas` y `scripts/bench_image_thumb.nx`.
+- **`std/xlsx`: listas desplegables y color de relleno** `[arco: xlsx-validacion]` (pedido de nyxerp,
+  2026-10-17, para plantillas de carga masiva).
+  - `XlsxSheetOut.validate_list(rango, valores)` y `validate_list_range(rango, origen)` emiten
+    `<dataValidations>` en el orden que exige el esquema ECMA-376. `xlsx_write` devuelve `Err` si la
+    lista fija pasa de 255 caracteres, si un valor lleva coma o comillas, o si el rango es inválido.
+  - `xlsx_fill(celda, "RRGGBB")` da relleno sólido y se encadena con `xlsx_bold`.
+  - `xlsx_read` no cambia.
+  - Test `test-495-xlsx-validacion` y receta `138-xlsx-plantilla`.
+- **`std/pdf` fase 2: grosor, gris y color, 12 fuentes Core14 y texto girado** `[arco: pdf-fase-2]`
+  (pedido de nyxerp, 2026-10-17, para hojas preimpresas y etiquetas).
+  - `line_width`, `gray` y `color` cambian a la vez el trazo y el relleno de lo que se dibuja después.
+    Cada página arranca en el estado por omisión del PDF: negro y 1 pt.
+  - Fuentes nuevas: `HelveticaOblique`, `HelveticaBoldOblique`, `TimesBold`, `TimesItalic`,
+    `TimesBoldItalic` y las cuatro `Courier`. Las tres tablas AFM nuevas de Times se cruzaron entre
+    pypdf y pdfminer.six; la única diferencia es el €, que pdfminer no trae.
+  - `text_rotated` gira el texto con la matriz `Tm`, a cualquier ángulo, con seno y coseno calculados
+    sin libm; los múltiplos de 90° salen exactos.
+  - Ningún PDF de la fase 1 cambia de bytes.
+  - Test `test-496-pdf-fase-2` y receta `139-pdf-preimpreso`.
+
+- **`nyx build -j N`: las unidades de `[lib]` se compilan en paralelo** `[arco: build-lib-paralelo]`
+  (fricción nyxerp, 2026-10-17). Antes iban en serie: 302 módulos y unos 50 minutos en frío en 4
+  núcleos. Las unidades no dependen unas de otras para compilar, así que ahora se lanzan hasta N a la
+  vez (`-j N`, `--jobs N` o `NYX_JOBS`; por omisión, los núcleos). `nyx test` pasa por el mismo
+  camino. Salida y enlace en el orden del manifiesto; con un error se reportan todas las unidades que
+  fallaron y no queda ningún objeto a medio escribir. Dos builds del mismo proyecto a la vez (varios
+  `nyx test` en paralelo, como corre nyxerp) toman un candado sobre `target/nyx-lib`: el segundo
+  espera y reutiliza; antes se borraban los temporales uno al otro. Un build sin nada que compilar
+  no lanza procesos auxiliares (el que pasa `nyx test` en cada archivo). Medido en una copia de
+  nyxerp: 300 bibliotecas en frío, 2.894 s en serie y 1.057 s con `-j 4`. Medición en
+  `docs/design/spikes/2026-10-17-build-lib-paralelo-medicion.md`: menos de 600 MB por unidad. Caso 10
+  de `run_lib_modules.sh`.
+
+### Arreglado
+
+- **Una cabecera escrita como `"Nombre: valor"` en un solo elemento llega al pedido** (silently-wrong,
+  fricción nyxerp). El cliente de `std/http` solo leía pares `[nombre, valor]` y la descartaba sin aviso;
+  ahora acepta las dos formas, también mezcladas (un nombre de cabecera no puede tener `:`, así que no
+  hay ambigüedad con valores como `Bearer a:b`). Test `tests/ai-first/43`.
+- **`CAPABILITIES.md` lista los tipos públicos y sus métodos**: hasta acá solo funciones libres, así que
+  APIs hechas de métodos (`doc.render()`, `s.read()`, `d.text()`) y sus structs no aparecían (fricción
+  nyxerp, 2026-10-20).
+- **NYX1017 sugiere la llamada cuando el nombre es un método**: `s.status` sobre un `HttpStream` ahora
+  dice «'status' is a method: call it with parentheses, .status()» (fricción nyxerp, 2026-10-20). Test
+  `test-nyx1017-metodo-sin-parentesis`.
+- **Los literales de string compilan en tiempo lineal** `[arco: pdf-a-imagen]`. El lexer y
+  `escape_string` concatenaban un byte por vez: un literal de 64 KB tardaba ~4 s en el frontend y uno
+  de 400 KB, 32 s. Ahora 64 KB tardan 35 ms. `test-lexer` y `test-emit-bytes-global` lo fijan.
+- **Un float de una casilla sin `<T>` conserva su valor al asignarlo y al empujarlo**
+  `[arco: pdf-a-imagen]`. `x = d[i]` con `x: float` ya declarada, y `b.push(a[2 * i])`, daban los
+  bits del double como número (1.5 → 4,6e18) en silencio. Test `test-502`.
+- **wasm32: una casilla pasada directo a un método de `impl`** `[arco: pdf-a-imagen]`. Con un
+  parámetro `Array` o `String`, la llamada emitía el i64 crudo: en nativo pasaba de casualidad, en
+  wasm32 era un trap `unreachable`. Ahora se convierte, igual que en las funciones libres. Test
+  `test-wasm-58`.
+- **Las variantes de un enum de una sola línea ya no dependen del camino del import** (fricción nyxerp,
+  2026-10-18). `std/pdf` declara `pub enum PdfFont { Helvetica, … }` en una línea; cuando llegaba primero por
+  un import transitivo, el escaneo por líneas de `semantic` buscaba las variantes en las líneas siguientes
+  y registraba basura. Como el primer registro gana, `PdfFont.Helvetica` daba NYX2012 «has no variant» (el
+  chequeo de NYX2012 en expresiones, nuevo en esta versión, lo hizo visible; antes fallaba en codegen
+  con «unknown enum variant»). Con los imports al revés compilaba. Regresión: `test-498`.
+- **`std/smtp` verifica contra las CAs del sistema** (fricción nyxerp, 2026-10-18). `smtp_starttls` (587) y
+  `smtp_connect_tls` (465) verificaban contra el almacén de `tls_set_ca_file`, que arranca vacío: todo relé
+  público con certificado válido daba «unknown ca». El rodeo, `tls_set_ca_file("")`, sumaba todas las CAs
+  públicas a un almacén global que también usa el `verify-ca` de `std/postgres`. Ahora usan
+  `tls_upgrade_fd_verified_system` / `tls_connect_verified_system`, como ya hacía `std/imap`. Verificado
+  contra `smtp.gmail.com` en 587 y 465: antes fallaban los dos, ahora verifican. El autofirmado sigue
+  rechazado (`test-stdlib-07`, caso d). El rodeo ya no hace falta; una CA privada por conexión queda
+  fichada.
+- **Una casilla de un `Array` sin `<T>` pasada directo a un parámetro struct, o usada como clave de
+  `Map`, ya funciona** (fricción nyxerp, 2026-10-17). `texto(hs[0])`, con `fn texto(h: Hoja)`, pasaba
+  el `i64` crudo de la casilla donde la función esperaba el struct por valor. El resultado era «GC heap
+  exhausted» o, en otro programa de nyxerp, la función recibía otro elemento. `m.insert(pares[0],
+  pares[1])` usaba el `i64` como puntero de la clave y clang rechazaba el IR. En los dos casos
+  `nyx check` daba verde. Ahora la casilla se convierte al struct del parámetro (`inttoptr` + `load`,
+  como en `let h: Hoja = hs[0]`), y la clave de un método de Map que sale de una casilla se lee como
+  String. El propio compilador tenía el mismo patrón en `cg_tipo_duplicado(decls[i], …)`, que andaba
+  de casualidad por la convención de llamadas de aarch64. `ASTNode` queda afuera: en una casilla es un
+  Array y no un puntero. Regresión: `tests/ai-first/40-casilla-sin-tipo-como-argumento.nx` y gotcha
+  `untyped-slot-as-argument`.
+- **`nyx check` rechaza una variante de enum que no existe (NYX2012)** (fricción nyxerp, 2026-10-17).
+  `PdfFont.Zzzz` pasaba el chequeo en verde y recién el codegen lo rechazaba, con un mensaje que pedía
+  una anotación de tipo. Ahora es NYX2012, con «did you mean» si hay una variante cercana, tanto para
+  enums locales como importados. No se valida cuando el nombre corresponde a una variable o a un
+  parámetro. Casos `test-nyx2012-variante-{inexistente,importada}`.
+
+- **Escapes de String: `\xNN` y `\u{…}` valen lo que dicen, y un escape desconocido avisa (NYX1045)**
+  `[arco: escapes-de-string]`. Antes el lexer conocía solo `\n \t \\ \" \r \0` y cualquier otro escape
+  perdía la barra en silencio: `"\x41"` valía `x41`, `"\u{0}"` valía `u{0}` y `'\x41'` imprimía `41`.
+  Había tres casos reales, todos equivocados sin que nadie lo notara: el centinela `"\u{0}"` de la
+  configuración de nyxerp, el separador `"\x1F"` de la clave de `DISTINCT` de nyx-db (y su copia en
+  venezuelainfo), y las secuencias ANSI `"\x1b[…"` del ejemplo de nyx-edit. Con este arreglo los tres
+  valen lo que quisieron decir sin tocar su código. `\'` y `\$` (`"\${x}"` es `${x}` literal) quedan
+  documentados. Un `\x` o `\u{…}` malformado es error de lexer con línea y columna. Cualquier otro
+  escape es `warning [NYX1045]` y pasa a error en 0.37.0. Los cuatro caminos del lexer que leían
+  escapes, que eran cuatro copias del mismo `if`, ahora pasan por una sola función.
+  `test-494-escapes-hex-unicode`, siete casos `test-nyx1045-*` y gotcha `string-escapes`.
+
+- **`CAPABILITIES.md` ya no esconde 34 módulos de la stdlib en «Otros»**. La tabla curada
+  `module_category` de `compiler/build.nx` no tenía 34 de los 78 módulos, entre ellos `serve`,
+  `postgres`, `error`, `math`, `map`, `router`, `template`, `xlsx`, `pdf` e `image`. Todos tienen ahora
+  categoría, y se suman dos categorías nuevas: «Núcleo» (`error`, `prelude`) e «IA & LLM». «Otros»
+  queda solo para builtins sin tema. Guarda nueva (d) en `run_capabilities_test.sh`: falla si un
+  módulo de `std/` cae en «Otros», así que un módulo nuevo entra a la tabla en el mismo commit que lo crea.
+
+- **El compilador ya no copia de forma cuadrática: un archivo de prueba grande de nyxerp compila 9 veces
+  más rápido** `[arco: test-sin-repetir]` (fricción nyxerp, 2026-10-17: ~42 s por archivo de `nyx test`).
+  La medición por fase mostró que el tiempo crecía más rápido que el IR, y un perfilador de muestreo
+  que el 81% era el GC, provocado por concatenaciones que recopiaban todo lo acumulado: las constantes
+  de texto en `generate_llvm`, las declaraciones de módulo en `resolve_source`, y el prefijo de símbolo
+  de cada módulo recalculado carácter por carácter en cada llamada sin calificar. Ahora van con
+  `StringBuilder`, los prefijos se calculan una vez (`ctx.alcances[3]`), la búsqueda de una función
+  entre los módulos se memoriza (`ctx.alcances[4]`, con la versión del conjunto en la clave),
+  `extract_exports` no recorta las líneas que no pueden exportar nada y `scan_module_types` no relee un
+  módulo ya escaneado. La huella de `[lib]` en `nyx_build` tenía el mismo patrón (`todo = todo + …`
+  sobre el cierre de imports): un `nyx_build libs` sin cambios, que `nyx test` corre en cada archivo,
+  bajó de 5,7 s a 2,0 s en nyxerp. El IR sale idéntico byte a byte. Medido: 105,6 s → 11,2 s y 822 → 642 MB en el
+  archivo más grande; 3,5 s → 1,6 s en uno mediano. Spike:
+  `docs/design/spikes/2026-10-17-test-sin-repetir-medicion.md`.
+- **Operadores entre primitivos de clases distintas: NYX1010 en vez de SIGSEGV o IR inválido.** El
+  chequeo dejaba pasar aritmética y comparación entre cualquier par de tipos. La matriz medida el
+  2026-10-17 (cuatro tipos por lado, nueve operadores) mostró que solo existen números con números,
+  `String + x`, `==`/`!=` entre dos String o dos bool y el orden entre dos String; el resto moría con
+  SIGSEGV al ejecutar la línea (`5 + "a"`, `5 == "5"`, `"a" < 5`) o daba IR inválido que recién
+  rechazaba clang (`x * "dos"`, `2.5 + "a"`, `true + 1`). Lo segundo nunca produjo un binario y es
+  error ya; lo primero compilaba, así que por la regla 7 de `docs/VERSIONING.md` es
+  `warning [NYX1010]` en 0.36.x y **error en 0.37.0**. Nyxerp (539 archivos) no tiene ningún caso.
+  Tests: `test-493-operadores-primitivos-mixtos` (los valores de lo que sí existe) y cinco de
+  `make test-errors`; gotcha `mixed-primitive-operators`.
+- **Reinstalar el mismo compilador ya no invalida `target/nyx-lib`** (fricción nyxerp, 2026-10-17).
+  La huella de cada objeto de `[lib]` llevaba la ruta y el mtime del binario del compilador, y la
+  ruta absoluta de cada `std/` del cierre. Como cada `make install-local` / `nyx update` arma una
+  carpeta nueva en `~/.nyx/versions/`, reinstalar el mismo compilador recompilaba todo: 302 módulos
+  y unos 50 minutos en nyxerp. Ahora el compilador cuenta por el sha256 de su contenido, guardado en
+  `target/nyx-lib/.compilador` junto a la ruta, el tamaño y el mtime que lo produjeron, y los `std/`
+  por su ruta relativa. Caso 9 de `run_lib_modules.sh`: reinstalación igual reutiliza, otro
+  compilador recompila.
+
+## [0.36.1] — 2026-10-17
+
+> **PATCH**: un arreglo de codegen (conversión numérica sobre una casilla de `Array` sin tipo) y dos
+> capacidades aditivas pedidas por nyxerp para correo con OAuth2: `smtp_auth_xoauth2` en `std/smtp` y
+> el módulo nuevo `std/oauth2`. Nada que compilaba deja de compilar.
+
+### Agregado
+
+- **`std/oauth2`: cliente OAuth2 sin estado** `[arco: oauth2-cliente]` (fricción nyxerp 2026-10-11,
+  GO 2026-10-16): PKCE S256 y `state` (CSPRNG), URL de autorización (+ extras del proveedor:
+  `access_type=offline` de Google), canje del código, renovación que conserva el `refresh_token`,
+  `client_credentials` y device code (RFC 8628: `oauth2_device_code` / `_poll` / `_wait`, con
+  `verification_uri` y la `_url` de Google). Errores `auth` / `protocol` / `pending` / `invalid`,
+  nunca con el token, el secreto ni el verifier. Sin runtime nuevo: `std/http` + `std/json` +
+  `std/url` + `std/base64` + `std/webpushcrypto`. `test-stdlib-11-oauth2` (vector RFC 7636 B y un
+  proveedor canned con la forma de Google y Microsoft), receta `137-oauth2`, SPEC y LLM.md con las
+  recetas Gmail y Microsoft 365. CAPABILITIES: `oauth2` en «Cripto & seguridad», y de paso `imap` y
+  `mime` salen de «Otros» a «Red».
+- **`smtp_auth_xoauth2(c, usuario, token)` en `std/smtp`** (fricción nyxerp, 2026-10-11): el
+  simétrico de `imap_auth_xoauth2` para ENVIAR por Gmail y Microsoft 365, que ya no aceptan usuario y
+  contraseña. Exige que el EHLO haya anunciado `XOAUTH2` y maneja el rechazo propio del mecanismo
+  (`334` con un JSON en base64 → línea vacía → `535`); el JSON decodificado va al `Error`, el token
+  nunca. Caso (e) de `test-stdlib-07-smtp-tls` (token bueno, token vencido, servidor sin el
+  mecanismo). Obtener y renovar el token sigue siendo de la aplicación: `std/oauth2` quedó sembrado
+  como arco `oauth2-cliente` (BORRADOR, GO pendiente) en
+  `docs/design/specs/2026-10-16-oauth2-cliente-design.md`.
+
+### Arreglado
+
+- **`int_to_float(arr[i])` / `float_to_int(arr[i])` sobre un `Array` sin `<T>` ligados a un `let`
+  con tipo generaban IR inválido que `nyx check` no veía** (fricción nyxerp, 2026-10-16). El
+  indexado heredaba el `expected_type` del `let`: con `let f: float = int_to_float(cuentas[q])` la
+  casilla se leía como `double` y el `sitofp i64` recibía un `double`; con
+  `let n: int = float_to_int(pesos[0])`, al revés (`fptosi double` sobre un `i64` crudo). Recién
+  fallaba clang con «invalid IR». Ahora los dos builtins fijan el hint del tipo que exigen (`int` /
+  `float`) mientras se codegena su argumento, igual que `string_to_int` con `String`. Regresión:
+  `tests/ai-first/39-conversion-de-casilla-sin-tipo.nx` (+1 en `make test-ai-first`).
+
+## [0.36.0] — 2026-10-10
+
+> **MINOR porque rechaza código que antes compilaba** (decisión #3): NYX2019 pasa a error en el `let`
+> a un entero (fue aviso en 0.35.x, regla 7 de `docs/VERSIONING.md`); NYX1031 para la familia del
+> handle de archivo con una ruta (antes, SIGSEGV al correr); NYX1042 (`return`/`break`/`continue`
+> que sale de un `defer`; antes colgaba o no hacía nada), NYX1043 (`defer` en `async fn`) y NYX1044
+> (captura por nombre ambigua en una closure de bloque). Ninguno rechaza un programa que diera el
+> resultado correcto. El grueso es la semántica de bloques: alcances reales en codegen, `defer` y
+> drops de `#[affine]` al cerrar su bloque (también en `throw`), closures dentro de bloques
+> (decisión #22). Además, los pedidos de nyxerp: `std/zip`/`xml`/`xlsx`, `std/image`, `std/mime`,
+> `std/imap`, `std/expr`, `std/rsa`, gzip y límites en `std/serve`, mTLS y multipart en el cliente
+> HTTP.
+
+### Agregado
+
+- **`std/xlsx`: paneles fijos, autofiltro y formato con separador de miles** (pedido de nyxerp,
+  2026-10-02): `h.freeze(filas, columnas)` (`<pane state="frozen">`), `h.autofilter("A1:F120")`
+  (con el nombre oculto `_xlnm._FilterDatabase` que guarda Excel) y `xlsx_number_fmt(v, código)`
+  con cualquier código de Excel (`"#,##0.00"` usa el integrado 4; la configuración regional de quien
+  abre decide si se ve 1.234.567,89). Test 462 ampliado y verificado con openpyxl; receta 124.
+
+- **Segunda tanda de nyxerp (2026-10-01): JPEG de salida, miniaturas y lectura de correo por IMAP**,
+  revisada antes de integrar e integrada con una batería completa:
+  - **`std/image` escribe JPEG y arma miniaturas** `[arco: std-image]`: `image_encode_jpeg(img,
+    quality)` (baseline, calidad 1-100 estilo libjpeg sobre el Anexo K, Huffman estándar, JFIF, 4:2:0
+    hasta q90 y 4:4:4 por encima, gris de un componente, alfa sobre blanco, sin EXIF, ICC conservado;
+    FDCT entera: los mismos bytes en nativo y wasm). Mismo PSNR que Pillow a igual calidad hasta q90.
+    `image_thumbnail(bytes, max_w, max_h, quality)` e `image_thumbnails(bytes, sizes, quality)`:
+    decodifica con reducción, achica con Lanczos3 y codifica en un paso, una sola decodificación para
+    varios tamaños (12 MP a 600 px en ~1,4 s). `image_default_quality()` (80) e `image_strip_icc`.
+    Tests 481-482, wasm 57, receta 133.
+  - **`std/imap`: leer un buzón** `[arco: std-imap]`: TLS implícito (993) y STARTTLS (143), ambos
+    verificando siempre contra las CAs del sistema; LOGIN, PLAIN y XOAUTH2 (token de la app), nunca en
+    claro; `imap_select`/`imap_examine`, `imap_fetch_since` (cursor por UID, búsqueda por tramos,
+    `stale` ante UIDVALIDITY cambiado, plazo global opcional), `imap_fetch_message`,
+    `imap_search_unseen`, `imap_mark_seen`; todo con BODY.PEEK. El servidor se trata como entrada
+    hostil: topes de línea, literal (antes de leerlo), total por comando y profundidad, y plazos.
+    Un mensaje grande, o que un tope de `std/mime` rechazaría, sale con sus cabeceras y `truncated`.
+    Tests 483-485, sub-suite `test_imap_client.py` (107 comprobaciones contra un servidor de mentira
+    con PKI y casos hostiles), receta 134. Sin verificar todavía contra Gmail ni Dovecot reales.
+  - **`std/mime`: `mime_parse_head`** analiza solo las cabeceras: un cuerpo que pasa un tope ya no
+    hace perder el `In-Reply-To` (resuelve la ficha «un tope superado tumba el mensaje entero» para
+    imap y para quien la llame; `mime_parse` sigue dando Err).
+  - La revisión encontró y se arreglaron, con su caso: FETCH repartido en varias respuestas daba un
+    mensaje vacío y adelantaba el cursor (el correo se perdía); sin tope acumulado por comando
+    (memoria); capacidades con costo cuadrático; la primera corrida de un buzón de >130 mil mensajes
+    no arrancaba. En `std/image`, el re-prefijo de los errores de `image_thumbnail`.
+
+- **Siete pedidos de nyxerp del 2026-09-29** `[arco: friccion-nyxerp-0929]`, hechos por subagentes en
+  worktrees propios e integrados con una batería completa:
+  - **gzip en `std/serve`, encendido por omisión**: respuestas de texto entre 1 KiB y 1 MiB, cuando el
+    cliente manda `Accept-Encoding: gzip` (con q-values); `Vary`, `Content-Length` en bytes, ETag
+    débil, HEAD igual que GET, caché por sha256. Cambia lo que ven los clientes que aceptan gzip:
+    `app_compress(app, false)` lo apaga. `std/zip` gana `zip_gzip`/`zip_gunzip`. Test 463, receta 126.
+  - **Límites en `std/serve`**: tope de cuerpo por ruta (`app_max_body`, 413) y limitador por origen
+    compartido por todos los workers (`app_rate_limit`, `app_route_rate_limit`, 429 con
+    `Retry-After`; `app_rate_limit_key` y `rate_key_forwarded_for` detrás de un proxy). Test 464,
+    receta 127.
+  - **`std/rsa`**: verificar firmas RSA-SHA256 (v1.5, base64 y PSS) con clave pública PEM, para
+    avisos firmados de pasarelas de pago. `EVP_DigestVerify` en `runtime/crypto.c`; en wasm
+    `Err(invalid 95)`. Test 465 con vectores del CLI de openssl, receta 128.
+  - **TLS mutuo en el cliente HTTPS**: `HttpOpts.client_cert_pem`/`client_key_pem`, solo en esa
+    petición y validado antes de abrir el socket (mismo camino que `cas_extra`). Sub-suite
+    `test_http_mtls.py` con un servidor que exige certificado, receta 129.
+  - **multipart en el cliente HTTP**: `multipart_field`, `multipart_file`, `multipart_build` y
+    `try_http_post_multipart`; binario seguro, verificado contra el parser `email` de Python. Test
+    467, receta 130.
+  - **`std/expr`**: evaluador seguro de fórmulas con variables, en decimales de punto fijo (6), no
+    float: `0.1 + 0.2 == 0.3`, `round(2.675, 2) = 2.68`. 1500 expresiones al azar iguales a `decimal`
+    de Python; mismo resultado en wasm. Test 468, receta 131.
+  - **fetch y SSE del navegador hacia la red local, con plazo**: `targetAddressSpace` de Chrome y
+    AbortController; la API vieja no cambia (el merge la había cambiado sin querer y se restauró:
+    `c3c6a87e`). Test wasm 53, receta 132. El permiso en un Chrome real no se pudo verificar.
+  Specs en BORRADOR para los grandes (imágenes, IMAP, red local, Android) y, en el repo de nyx-proxy,
+  la de dominios sin reinicio y ACME.
+
+- **`std/zip`, `std/xml` y `std/xlsx`: leer y escribir planillas `.xlsx` en Nyx puro** (fricción de
+  nyxerp, 2026-09-29) `[arco: std-xlsx]`. Un `.xlsx` es un zip con XML adentro, así que son tres
+  módulos y los dos de abajo sirven solos. `std/zip`: contenedor `.zip` (`zip_read` por el directorio
+  central, `zip_writer`) con topes contra bombas zip (`ZipReadOpts`). `std/xml`: lector por eventos y
+  árbol chico; `<!DOCTYPE` es error, así que no hay XXE ni bombas de expansión. `std/xlsx`:
+  `xlsx_read` da celdas tipadas (texto, número, fecha, bool, error, vacía), con fechas en ISO y las
+  épocas 1900 y 1904; las fórmulas no se evalúan (se lee el valor en caché) y los huecos son celdas
+  `empty`; `xlsx_write` arma el libro (texto, números con decimales fijos, fechas, negrita, anchos,
+  celdas combinadas). Sin `extern "C"`: igual en nativo y en `wasm32-wasi`. El códec DEFLATE
+  (inflate, deflate, CRC-32, Adler-32) se trasladó de `std/pdf` a `std/zip` con nombres `zip_*` (para
+  no chocar con `std/compress`): una sola implementación, y los PDF salen idénticos byte a byte.
+  Verificado contra otros lectores: 818 celdas de un libro real de Excel iguales a las de openpyxl; lo
+  que escribe `xlsx_write` lo abre openpyxl; los `.zip` de `zip_writer` los aceptan `zipfile` y
+  `unzip` (`run_zip_verify.sh`, en `make test-stdlib`; `run_xlsx_verify.sh` aparte, necesita openpyxl). `test-458..462` y las recetas
+  123 (zip), 124 (escribir un libro) y 125 (leer una hoja).
+
+- **Primera tanda de los pedidos grandes de nyxerp del 2026-09-29** (GO de Ottavio el 2026-09-30),
+  hecha por subagentes en worktrees propios, revisada e integrada con una batería completa:
+  - **`std/image`: decodificar, achicar y recortar fotos en Nyx puro, igual en nativo y wasm**
+    `[arco: std-image]`. `image_info` (formato por firma, lados, orientación sin decodificar);
+    `image_decode` de PNG completo y de JPEG baseline de 8 bits (gris o color, todos los
+    submuestreos, reinicios), con la orientación EXIF ya aplicada, el perfil ICC expuesto en
+    `Image.icc` sin aplicarlo, y reducción 1/2, 1/4 y 1/8 durante la decodificación
+    (`image_decode_scaled`, `image_decode_min`); `image_resize`, `image_resize_fit`,
+    `image_resize_cover`, `image_crop` e `image_flatten` (alfa premultiplicado). Topes
+    (`ImageLimits`: bytes, píxeles, lado) validados ANTES de reservar memoria. Progresivo, CMYK y 12
+    bits dan `Err(unsupported)` con la salida; WebP, GIF, HEIC, AVIF, BMP y TIFF se reconocen por firma.
+    Verificado contra Pillow (fotos de varios codificadores, las 8 orientaciones, redimensionado).
+    El lector PNG salió de `std/pdf`, que ahora lo importa. Falta el codificador JPEG y las
+    miniaturas en un paso (Tasks 5-6). Tests 475-480, wasm 55-56; spike del prototipo medido.
+  - **`std/mime`: leer correo entrante** `[arco: std-imap]`: cabeceras con plegado, RFC 2047 y
+    2231, base64 y quoted-printable, charsets, multipart anidado con tope de profundidad, adjuntos
+    binarios, rebotes, HTML a texto, y los ids de hilo (Message-ID, In-Reply-To, References). Base
+    de `std/imap` (Tasks 4-6, próxima tanda). Tests 472-474, wasm 54.
+  - **`std/smtp`: Message-ID y cabeceras de hilo** `[arco: std-imap]`: el id se fija al crear el
+    mensaje (antes cambiaba en cada `smtp_render` y no había forma de saber el que salió);
+    `smtp_message_id`, `smtp_set_message_id`, `smtp_header` y `smtp_reply_to` (arma
+    `In-Reply-To` + `References`; la cabecera `Reply-To` se pone con `smtp_header`). `smtp_send`
+    rechaza con `Err(header)` CR/LF/NUL, nombres inválidos y las cabeceras que escribe la biblioteca.
+    `test-stdlib-10`. Pedido de nyxerp del 2026-10-01 (mesa de ayuda).
+  - **`tls_upgrade_fd_verified_system`** en `std/tls`: STARTTLS verificado contra el almacén del
+    sistema, para IMAP (143) y SMTP (587). Sonda TLS de `std/imap` en `make test-integration`.
+  - **Android** `[arco: target-android]`: sonda del build arm64 contra el sysroot del NDK (spike) y
+    la capa `os_*` para bionic: cambio de contexto propio en ensamblador aarch64 y
+    `os_thread_timedjoin`/`cancel` cooperativos.
+
+### Arreglado
+
+- **El drop de un valor `#[affine]` con `Drop` es por declaración y corre al cerrar su bloque**
+  `[arco: drop-por-declaracion]`. Silently-wrong: el drop iba por nombre y por función, así que en un
+  loop cada iteración pisaba el mismo slot y solo se soltaba el último valor (el resto se perdía sin
+  aviso); un `throw` no soltaba nada; y dos afines homónimos eran NYX2020. Ahora el drop es un `defer`
+  implícito de su declaración (slot propio, entrada pendiente del alcance con su marco de `try`): una
+  vez por declaración, también por iteración y en `throw`. La bandera de un valor devuelto se apaga
+  antes de las salidas. Se fueron la sección de limpieza de la función, `%__defer_retval` y NYX2020.
+  Test `tests/ai-first/38`; gotcha `drop-per-declaration`.
+
+- **Un `defer` corre solo si se alcanzó, y un `throw` corre los `defer` alcanzados**
+  `[arco: defer-alcanzado-y-throw]`. Silently-wrong: `if b { return 1 } defer {...}` corría el
+  `defer` con `b` verdadero, porque la sección de limpieza generaba todos los de nivel superior en
+  cada salida. Y un `throw` saltaba toda la limpieza. Ahora el cuerpo de la función es un alcance más
+  (los `defer` se generan en línea en las salidas que los alcanzaron) y cada `defer` empuja al
+  ejecutarse un marco de `try` implícito cuyo catch lo corre y relanza: corren los alcanzados, del más
+  interno al más externo, antes del `catch`; un `throw` dentro de un `defer` no lo repite. Tests 492 y
+  `tests/ai-first/37`; el gotcha `defer-not-on-throw` pasa a `fixed`.
+
+- **Una closure dentro de un bloque puede capturar las variables del bloque; una `fn` con nombre en un
+  bloque linkea** `[arco: closures-capturan-bloque]`. Las closures solo existían en el nivel superior:
+  una lambda en un `if` no veía las variables del `if` (NYX1002) y una `fn` con nombre en un bloque no
+  linkeaba (`use of undefined value` de clang, sin línea). El parser deja la lambda en su bloque,
+  codegen junta las funciones anidadas de cualquier bloque y las variables de bloque con nombre único
+  entran al SharedEnv. Lo que no se puede capturar por nombre (un nombre repetido en la función, la
+  variable de un `for`, un binding de `match`) es NYX1044, nunca un valor equivocado. Tests: ai-first
+  36 y dos de error; gotcha `closures-capture-block-vars`.
+
+- **`for` sobre un literal de array, sobre `Array<T>` y sobre `Map`: tres resultados equivocados en la
+  misma función de codegen.** `for q in ["x", "y"]` tipaba `q` como `int` (`print(q)` mostraba la
+  dirección del String, sin error); un elemento `Array<T>` daba SIGSEGV al usarlo, y uno `Map` devolvía
+  `m.size() == 0` en silencio (los dos caían en la rama de struct, con un load de más). El literal toma
+  el tipo común de todos sus elementos (uno mixto queda sin tipo); `Array<T>` y `Map`/`Map<K, V>`
+  tienen su rama. Test `tests/ai-first/35`; gotcha `for-in-element-type`.
+
+- **`defer` ya no se descarta en silencio fuera del nivel superior de la función; `return` en un
+  `defer` ya no cuelga** `[arco: defer-al-cerrar-bloque]`. Un `defer` dentro de un bloque (`if`,
+  `else`, `while`, `for`, brazo de `match`, `try`, `catch`, `unsafe`), en una fn anidada o en una
+  lambda compilaba, pasaba `nyx check` y no corría nunca. Un `return` dentro de un `defer` colgaba
+  el programa, un `break` no hacía nada, un `defer` dentro de otro se ignoraba, y una fn con `defer`
+  y una fn anidada con `return` no compilaba (error de clang sin línea). Ahora los `defer` corren, y
+  `return`, o `break`/`continue` que salga del cuerpo de un `defer`, es NYX1042; un `defer` en una
+  `async fn` es NYX1043. Tests: `tests/ai-first/34-defer-al-cerrar-bloque.nx`, `test-488` a
+  `test-491`, `test-nyx1042-*`, `test-nyx1043-*`.
+- **`file_write_string("/ruta", "hola")` ya no compila para caerse después: es NYX1031** (fricción
+  nyxerp, 2026-10-09). Las funciones del handle de archivo (`file_write_string`, `file_write_bytes`,
+  `file_read_line`, `file_read_bytes`, `file_seek`, `file_tell`, `file_flush`, `file_close`) reciben
+  el handle de `file_open`; con una ruta `String` pasaban el checker y el binario moría con SIGSEGV sin
+  mensaje, perdiendo además la salida en el buffer. Ahora el checker lo rechaza con una pista
+  (`file_open` o `write_file`); un handle guardado en un `int` sigue andando. `LLM.md` §4 y
+  `CAPABILITIES.md` dicen el tipo de cada argumento. Test de error nuevo.
+
+- **Un nombre redeclarado dentro de un bloque ya no tapa a la variable de afuera** (fricción nyxerp,
+  2026-10-04) `[arco: alcance-de-bloque-codegen]`: el codegen guardaba las variables de una función
+  en un mapa plano, así que un `let q` dentro de un `if`/`else`/`while`/`for`/brazo de `match`/`try`/
+  `catch`/`unsafe`, la variable de un `for q in ...` o el binding de `Option.Some(q) =>` REEMPLAZABA a
+  la de afuera hasta el final de la función. Compilaba, `nyx check` daba verde (el checker sí la
+  restauraba) y el resultado era basura o segfault con otro tipo, y el valor de la interna sin ningún
+  síntoma con el mismo: `let q: S = S{a:3}; if true { let q: S = S{a:99} }; return q.a` daba 99. Ahora
+  cada bloque es un alcance real y al cerrarlo el nombre vuelve a ser la variable de afuera, con su
+  valor y su tipo. Además: un `defer` de nivel de función ve la `q` de la función aunque el `return`
+  salga de un bloque que declaró otra; una closure que captura una variable de nivel de función la
+  sigue viendo aunque un bloque declare otra igual (una lambda devolvía 801 en vez de 707); el checker
+  abre alcance en el cuerpo de `try` y en `unsafe` (un `let` del `try` era visible en el `catch` y
+  rechazaba programas válidos con NYX1014). Diagnósticos nuevos: NYX1041 (una lambda escrita dentro de
+  un bloque usa un nombre que en ese bloque es otra variable; el arco `closures-capturan-bloque` lo
+  dejó como respaldo de NYX1044) y NYX2020 (dos afines con `Drop` homónimos; retirado en este mismo
+  release por `drop-por-declaracion`). Tests: `tests/ai-first/33-sombreado-en-bloque.nx` (13
+  casos), 486, 487, `test-nyx1041-lambda-captura-de-bloque` y `test-nyx2020-drop-sombreado`; receta
+  135; gotcha `block-shadowing-restores-outer`.
+
+- **Una variable local `Fn` que se llama igual que una `fn` global se chequeaba contra la firma de la
+  global** (fricción nyxerp, 2026-10-04): `let leer: Fn(int) -> int = a.leer; leer(21)` daba NYX1005
+  «expected String, got int» si había una `fn leer(s: String)` en otro archivo, y con firmas iguales el
+  chequeo pasaba contra la función equivocada. Semantic resuelve ahora el nombre como el codegen: la
+  variable más reciente gana y aporta su propia firma `Fn` (también el tipo de retorno y `it.map(f)`).
+  Regresión: ai-first 32 y un test de error.
+
+- **`std/xlsx`: un número con 3+ decimales escrito antes que la primera fecha se leía como fecha**
+  (silently-wrong): la fecha tenía el `numFmtId` 164 fijo y chocaba con el del `"0.000"`. Ahora todo
+  formato propio toma 164 + su posición. Hallado al revisar el pedido de nyxerp; regresión en test 462.
+
+- **Editar un archivo de `include_bytes` no recompilaba su biblioteca de `[lib] modules`.** La huella
+  de `target/nyx-lib` hasheaba el fuente del módulo y su cierre de imports, pero no los archivos
+  incrustados: `nyx run`/`test`/`build` reutilizaban el `.o` y servían el contenido VIEJO sin error
+  (ni `touch` del `.nx` alcanzaba). Ahora cada archivo hasheado entero suma la ruta y el sha256 de
+  cada `include_bytes("…")` que nombra, incluidos los de módulos no-`[lib]` que la biblioteca
+  inlinea. Fricción nyxerp 20260930-170003; tres casos nuevos en `run_lib_modules.sh`.
+- **STARTTLS «verificado» no verificaba nada** (`runtime/tls.c`). `nyx_tls_client_upgrade` con modo
+  4 (estricto contra el almacén del sistema) caía en el contexto de `tls_set_ca_file` y ninguna rama
+  lo verificaba: el handshake aceptaba cualquier certificado. Ahora usa el contexto del sistema y
+  verifica cadena y nombre; un modo fuera de 0..4 falla cerrado. Hallado por la sonda TLS de
+  `std/imap` `[arco: std-imap]`.
+- **Revisión de la tanda antes de integrar** (entrada hostil: fotos subidas y correo entrante):
+  - `std/image`: un SOS de largo 2 al final del archivo abortaba el proceso (lectura fuera de
+    rango), y cada tabla Huffman de un DHT armaba al leerse una tabla de 65536 entradas sin tope de
+    cuántas trae el archivo (1 MB de tablas vacías eran ~4·10⁹ escrituras). Ahora se arman al
+    usarlas. Casos en el test 478 `[arco: std-image]`.
+  - `std/mime`: `mime_html_to_text` pasaba el HTML entero a minúsculas en cada `<style>` (DoS
+    cuadrático que controla el remitente), y el `_` final de una palabra Q de RFC 2047 se perdía
+    («Cotización123»). Casos en el test 473 `[arco: std-imap]`.
+  - `std/smtp`: `smtp_render`, que es pública, escribía las cabeceras extra sin validar (inyección de
+    un `Bcc` desde un `In-Reply-To` copiado de un correo entrante). Ahora cambia CR/LF/NUL por
+    espacios y omite los nombres inválidos o reservados.
+  - La guarda de español neutro tomaba la sigla «SOS» (el marcador JPEG) por el «sos» rioplatense.
+
+- **Un elemento de un `Array` sin tipo, asignado a un campo o comparado con un String.**
+  `c.nombre = xs[i]` guardaba el entero opaco del elemento directo en el campo, y `f != xs[0]` (el
+  elemento a la derecha) se lo pasaba crudo a la comparación: IR inválido que solo clang rechazaba,
+  con `nyx check` en verde, mientras `s = xs[i]` y `xs[0] == f` sí construían. La asignación a campo
+  convierte ahora con el mismo código que la asignación a variable (también un campo int, float o
+  struct), y `==`/`!=` convierten el lado opaco esté donde esté. Fricción nyxerp 20260930-040018.
+  Regresión: `test-471`.
+
+- **`m[k]` y `m[k] = v` sobre un `Map`.** La indexación de un `Map` no estaba implementada: caía al
+  camino de Array con una clave String como índice y el programa no enlazaba (`defined with type 'ptr'
+  but expected 'i64'`), también como argumento (`nums.push(m["a"])`) y en una concatenación
+  (`"x" + m["k"]`). Ahora el codegen la reescribe a `get`/`insert`, sobre `Map` locales, globales,
+  parámetros y campos de struct. Dos fallas más salieron al probarlo: el tipo de valor de un
+  `Map<String, int>` se deducía del primer argumento de tipo (la clave), y un `Map<String, float>`
+  devolvía los **bits** del double como entero (1.5 → 4.6e18, sin error) en `get` y `get_or`; ahora
+  se reinterpretan con `bitcast`. Cierra tres fichas de TASKS. Regresión: `test-470`; receta 06.
+
+- **Los valores String de un `Map` se guardan enteros.** El codegen guardaba un String en un `Map`
+  como `char*` y lo leía con `strlen`. Cuatro fallas con esa raíz: un valor con un byte 0 (gzip, hash
+  crudo, imagen) volvía **cortado sin error** —el caché de gzip de `std/serve` recibía 3 bytes—;
+  `values()` sobre un `Map<String, String>` entregaba esos `char*` como String y el programa pedía
+  700 GB y moría; el camino opaco (`get` como entero) daba basura; y en los `Map` globales `insert` ya
+  guardaba el `nyx_string*` mientras `get` lo leía como `char*`. Ahora se guarda el `nyx_string*`
+  entero, como cualquier otro puntero, en los ocho sitios del codegen (literal, métodos, globales,
+  campos de struct, `get_or`). El runtime no cambia; como la convención la usa el propio compilador,
+  se recompilaron los nueve módulos con punto fijo en dos pasadas. Los objetos `[lib]` cacheados se
+  invalidan solos (la huella incluye el compilador). Las claves siguen como `char*`: una clave con un
+  byte 0 se corta (límite conocido). Regresión: `test-469`, un caso por camino.
+
+- **`e.code` con la numeración de errno de Linux en todas las plataformas** `[arco: w4-windows]`.
+  La CRT de MSVC numera distinto desde el 35 (y el 26): `ECONNREFUSED` 107 en vez de 111, y hay
+  colisiones que clasificaban mal —un host inalcanzable en Windows salía como `timeout`—. Nueva
+  `os_errno_canon` (`runtime/os/errno_canon.h`, tabla por nombre simbólico, identidad en Linux) en un
+  solo punto de la frontera de `net.c`: las 18 funciones `*_result` pasan a envoltorios de su cuerpo
+  `*_native`, que sigue viendo el número nativo. `test-374` pasa en Windows; suite de runtime nueva
+  `test_os_errno_canon.c`. Implementado y medido en la laptop Windows (W4 Task 9).
+
+- **Lectura y escritura de sockets nativas sobre IOCP en Windows** `[arco: w4-windows]`.
+  `os_ev_read`/`os_ev_write`/`os_ev_cancel` de win32 dejan de ser `-ENOSYS`, sin cambiar el contrato
+  de `os_ev`: el read es un `WSARecv` de cero bytes más un `recv` no bloqueante al completarse (el
+  kernel nunca escribe en el buffer del llamador, y un cancel no pierde datos), y el write envía desde
+  una copia interna. `loop_free` cancela y drena lo pendiente. `test_os_ev.c` corre completo en
+  Windows (110/110) y en Linux (111/111), con dos casos nuevos portables (`cancel_lossless`,
+  `free_pending`); gate 240/240. Implementado y medido en la laptop Windows (W4 Task 7).
+
+- **Timers de Windows sobre IOCP, con tabla que crece** `[arco: w4-windows]`. `os_ev_timer`/`os_ev_wake`
+  de win32 dejan de ser `-ENOSYS`: esperan en `GetQueuedCompletionStatusEx` con el timeout del deadline
+  más próximo, despiertan con `PostQueuedCompletionStatus` (agrupando wakes: a lo sumo uno en vuelo) y
+  la tabla crece de 256 a 65536 como la de POSIX. `event_loop_win32.c` pasa a ser un adaptador fino.
+  Antes, con más de ~72 goroutinas durmiendo, el resto no despertaba a tiempo (tabla fija y workers
+  ocupados en el fallback): `test-411` pasa de 0/20 a 20/20, y lo mismo con 1500 goroutinas; gate
+  240/240. Implementado y medido en la laptop Windows (W4 Task 5); test nuevo
+  `tests/runtime-unit/win/test_os_ev_timers_win32.c`. La verificación final del arreglo de
+  `test-241` sobre `main` dio 300/300.
+
+- **`await` anidado en win32: el scheduler ya no reusa la dirección TLS a través de `os_ctx_swap`**
+  `[arco: w4-windows]`. `nyx_goroutine_join` (con `yield` inlineado) calculaba la dirección de
+  `g_current_worker` una vez y la reusaba después de cada swap; si la goroutina volvía en otro worker,
+  leía el slot del hilo anterior y hacía swap hacia el scheduler de un worker que estaba corriendo
+  otra cosa: dos hilos sobre la misma fiber, con SEGV, cuelgue o el abort de «entry retorno».
+  `test-241` fallaba ~7-29% en win32 según la máquina; en Linux no, porque el backend ELF re-evalúa la
+  dirección en cada uso. Todas las lecturas pasan por un accessor `noinline`. Diagnóstico y parche de
+  la laptop (W4 Task 3, spike `2026-09-29-w4-test241-fibers`): 723/723 corridas y gate 36/36 en win32.
+- **`nyx_goroutine_block_on_fd` ya no deja una goroutina bloqueada para siempre** `[arco: w4-windows]`.
+  Ignoraba el -1 de `nyx_event_loop_add`: sin nada registrado que la despertara, la goroutina quedaba
+  BLOCKED y su `join` no volvía (en win32 con cualquier fd; en POSIX con uno inválido). Ahora deshace
+  el estado y devuelve -1. Test nuevo en `test_scheduler.c`, con un `alarm` que convierte el cuelgue
+  en falla.
+
+- **`s[i]` sobre un `String` lee el carácter correcto.** `codegen_index` no distinguía el receptor
+  String y caía al get de Array —misma forma en memoria—, que lee 8 bytes en la posición `i*8`:
+  `"abcdefghijklmnopq"[1]` daba la `i` en vez de la `b`, `[2]` la `q`, y `let c: int = "abc"[0]` daba
+  6513249, todo con rc 0. `[0]` hacia un `char` salía bien por casualidad. Ahora es el byte `i`, igual
+  que `s.charAt(i)` (y fuera de rango aborta igual). Encontrado midiendo falsos positivos de NYX2019.
+  Regresión: `test-457`, que compara contra `charAt` en ocho contextos (let anotado int/char, sin
+  anotar, comparación con char y con int, bucle, índice calculado, argumento de builtin). Gotcha
+  `string-index-byte`.
+
+- **`nyx archivo.nx` muestra los avisos del compilador.** Con compilación exitosa el wrapper tiraba el
+  log entero, así que ningún `⚠` llegaba al usuario en ese camino —tampoco NYX2019, que en 0.35.x es
+  aviso justamente para que se vea antes de ser error en 0.36.0—; `nyx build` ya los reenviaba desde
+  el arco compilacion-separada. Encontrado probando la 0.35.0 instalada. Guarda en
+  `run_tooling_gates.sh` (`make test-ai-first`), con control positivo: un programa sin avisos no
+  muestra ninguno.
+
+### Cambiado
+
+- **NYX2019 es error también en el `let` a un entero**: `let n: int = fila[0]` con un elemento que el
+  compilador sabe `String` (`Array<String>` anotado o inferido de su literal, o `split()`) compilaba y
+  guardaba la DIRECCIÓN del String como si fuera el número. En 0.35.x fue `⚠ warning`, un release
+  antes del rechazo (regla 7 de `docs/VERSIONING.md`); desde 0.36.0 la compilación falla con la
+  función y la variable. Se convierte explícito (`string_to_int`) o se declara `String`. Los casos
+  `nyx2019-let-int` y `nyx2019-split-int` del runner de errores pasan a esperar el error; la guarda
+  de avisos de `nyx archivo.nx` usa ahora el aviso de «untyped Array».
+
+- **Conducta nueva de `defer`: corre al cerrar el bloque que lo contiene**
+  `[arco: defer-al-cerrar-bloque]`. Al caer al final, por `return`, por `?` con Err, por `break` o
+  `continue`; LIFO en el bloque y de adentro hacia afuera; en el cuerpo de un loop, una vez por
+  iteración; el valor de `return` se evalúa antes de los `defer` y el cuerpo del `defer` ve los
+  valores al salir (semántica de Zig/Swift, no de Go). Se midió con el corpus completo (repo,
+  nyxerp, stacks): 16 `defer`, ninguno fuera del nivel superior, así que ningún programa conocido
+  cambia de resultado. Un `throw` que sale de la función también corre los `defer` alcanzados (arco
+  `defer-alcanzado-y-throw`, en este mismo release).
+- **Conducta nueva del sombreado en bloque: tras el bloque se lee la variable de afuera**
+  `[arco: alcance-de-bloque-codegen]`. Un programa que dependía de leer o asignar, después del bloque,
+  la variable interna que había tapado a la de afuera ahora usa la de afuera. Se midió con
+  `NYX_SCOPE_AUDIT=1` (en el checker: informa cada uso de un nombre donde checker y codegen veían
+  variables distintas) sobre 1286 archivos del repo, el ERP nyxerp y los stacks: cero casos reales,
+  así que ningún programa conocido cambia de resultado. Para revisar código propio:
+  `NYX_SCOPE_AUDIT=1 nyx check archivo.nx` (líneas con prefijo `scope-audit:`). `let x = x + 1` en el
+  mismo alcance sigue reemplazando, como siempre.
+
+- **El cambio de contexto de las goroutines es ensamblador propio en Linux aarch64** (antes solo
+  opt-in): `swapcontext` de glibc hace un `rt_sigprocmask` por cambio, ~2230 ns por yield contra ~175
+  ns en asm (64 goroutines, 1 worker). Validado con la suite de runtime y 23 programas de goroutines
+  en las dos rutas; `-DNYX_OS_CTX_ASM=0` vuelve a ucontext. macOS y x86_64 siguen con ucontext.
+  Decisión de Ottavio `[arco: target-android]`.
+
+## [0.35.0] — 2026-09-29
+
+> **MINOR porque rechaza código que antes compilaba** (`[arco: release-0-35]`): NYX1036/NYX2010 sin la
+> transición de 0.34 y NYX2019 (error en el `let` a `bool` y en la asignación; aviso en el `let` a un
+> entero, que pasa a error en 0.36.0). Incluye además todo lo acumulado desde 0.34.0: `nyx exec`, el
+> espejo público con `runtime/wasi/`, cripto en wasm32-wasi, `HttpOpts.cas_extra`, `arena_persist`
+> fase 1 y los arreglos de abajo. Verificado con `make test-all` sobre el corte; la única falla es
+> `test-wasm-29-arena-autocancelacion` bajo el shim de node, intermitente y ya fichada (BAJA): falla
+> igual con 0.34 (5 de 10 corridas contra 4 de 10).
+
+### Cambiado — rechaza código que antes compilaba (por eso 0.35.0)
+
+- **NYX1036 y NYX2010 sin transición: son error** `[arco: release-0-35]`. En 0.34 los casos que
+  aparecían solo por el arreglo del resolvedor del 2026-09-24 (el cierre de un import transitivo
+  reabre al módulo padre, y hasta 0.33.x ese tramo se atribuía al archivo principal) salían como
+  `⚠ aviso` y compilaban. Ahora son error como cualquier otro: agregar `pub` a la función o calificar
+  la llamada. Se retiró todo lo que sostenía la atribución de 0.33.x en semantic y codegen, y
+  `resolve.nx` ya no emite `//#module-reabre`. Consumidores medidos antes: nyx-proxy sin casos, nyxerp
+  resueltos en su línea viva, nyx-queue arreglado en su repo (`mq_ensure_queue` pasa a `pub`).
+- **NYX2019: un elemento de Array que el compilador sabe `String` no entra en una variable `int` o
+  `bool`** `[arco: release-0-35]`. `let n: int = fila[0]` sobre `["42"]` guardaba la DIRECCIÓN del
+  String como si fuera el número y salía 0; con `bool`, y en la asignación `n = fila[0]`, era IR
+  inválido al enlazar, reportado como bug del compilador. El `let` con `bool` y toda asignación son
+  **error** desde ya (nunca enlazaron, así que no se rompe nada que anduviera). El `let` a un entero
+  que no es `bool`, que sí compilaba con el valor equivocado, es **aviso** en 0.35.x y pasa a error en
+  0.36.0 — la regla 7 de `docs/VERSIONING.md`: lo que va a rechazar código avisa un release antes.
+  Convertir con `string_to_int` o declarar `String`. Complementa a NYX2014, que actúa en runtime
+  cuando el tipo del elemento no se conoce. Regresión: tres errores (`let bool`, asignación a `int` y
+  a `i32`), dos avisos que compilan (`let int`, `split()`), el control positivo y `test-456`.
+
+### Agregado
+
+- **`nyx exec [--version <id>] -- <cmd>`: una sola versión del toolchain para toda una suite**
+  (nyxerp, 2026-09-29). El wrapper fija la versión por proceso, así que una suite que lanza muchos
+  `nyx test` sueltos la resolvía en cada uno, y un `nyx update` a mitad la partió entre dos
+  compiladores: hubo que relanzarla entera. `nyx exec` corre el comando con `NYX_HOME` fijo en la
+  ruta real de la versión (la activa, o una instalada con `--version`) y le hereda el candado de
+  versión, así la poda tampoco la borra mientras corre. Y `install-local`/`nyx update` avisan si la
+  versión que reemplazan está en uso. `CLAUDE.md` regla 3 decía que la suite ajena terminaba con su
+  versión; valía solo para un árbol de procesos. Guarda: `make test-toolchain` (casos 5-6, con
+  control positivo: la misma suite sin `exec` se parte).
+
+- **`CAPABILITIES.md` dice qué builtins no existen en wasm32-wasi** (pedido de nyxerp,
+  2026-09-27): cada uno lleva «· *no existe en wasm32-wasi*». `std/builtins.index` suma un sexto
+  campo (`no-wasm`) que el generador saca de `wasm_forbidden_builtin` y de los
+  `codegen_target_guard` con nombre de builtin (atomics, `run`). `run_wasm_builtin_symbols.sh`
+  contrasta esa marca con lo que wasm frena DE VERDAD —compila una sonda por builtin— y falla si
+  difieren: fue el cruce el que encontró los cuatro que no venían de la lista. Un índice viejo de
+  cinco campos sigue sirviendo.
+
+- **Hashes, HMAC y PBKDF2 en wasm32-wasi** (fricción de nyxerp, 2026-09-27). `sha256`,
+  `sha256_raw`, `md5`, `hmac_sha256`, `hmac_sha256_raw` y `pbkdf2_hmac_sha256` eran «not supported
+  on target 'wasm32-wasi'»: `crypto.c` no entraba al runtime wasm porque incluía OpenSSL, y un POS
+  offline tenía que pedirle PBKDF2 a WebCrypto desde JavaScript. Hashes y HMAC ya eran C propio;
+  PBKDF2 pasa a serlo también (antes `PKCS5_PBKDF2_HMAC`), con el HMAC sobre buffers de pila —en
+  wasm sin arena nada se libera, y 80.000 iteraciones reservando en cada una eran varios MB—.
+  Mismos bytes que OpenSSL: vectores del RFC 7914 y dos casos fijados con OpenSSL antes del cambio
+  (`test_crypto.c`). Lo de OpenSSL (Web Push) queda detrás de `__wasi__`. Regresión:
+  `test-wasm-51-cripto` (wasmtime y shim del navegador).
+
+- **`HttpOpts.cas_extra`: sumar certificados a UNA petición HTTPS** (fricción de nyxerp,
+  2026-09-27). Un sitio que manda un intermedio que no corresponde a su hoja no verifica contra las
+  CAs del sistema; desde la separación de almacenes del 2026-09-14, `tls_set_ca_file` ya no llega
+  al HTTPS de `std/http`, y `SSL_CERT_FILE` reemplaza en vez de sumar, para todo el proceso y solo
+  antes del primer https. `cas_extra` (contenido PEM, uno o varios) se suma a las CAs del sistema
+  solo para esa conexión (`SSL_set1_verify_cert_store` sobre un almacén propio del SSL), con la
+  cadena y el nombre verificados igual; el resto del proceso no se entera. PEM sin certificados
+  legibles = `Err(invalid, 22)`. A bajo nivel, `try_tls_connect_cas` (`std/tls`) y
+  `nyx_tls_connect_result_cas` (runtime). Regresión: sub-suite `test_http_cas_extra.py` (PKI de
+  prueba con intermedio equivocado: 5 casos, incluidos «no se filtra a la petición siguiente» y
+  «el nombre se sigue verificando»). Receta `122-https-intermedio-extra`.
+
+- **`arena_persist` cierra su fase 1** `[arco: wasm-arena-persistir]`:
+  - **NYX1039 en semantic**: persistir un struct, un `Map`, un `Fn` o un `Array<Struct>` se
+    rechaza en `nyx check`, no solo al generar código; semantic además ve el tipo del ELEMENTO de
+    un Array, que codegen no conoce.
+  - **Arrays anidados**: un Array guardado dentro de otro (literal, `push`, `a[i] = x`) lleva ahora
+    tag `Array` en vez de ninguno, y `arena_persist` lo copia en profundidad (antes abortaba). Las
+    lecturas tipadas que chocan con ese tag —leer un Array como `String` o `float`— pasan de
+    devolver basura en silencio a abortar con diagnóstico; como `int` siguen dando el valor crudo.
+    Verificado: el compilador con los tags nuevos se compila a sí mismo sin abortos en falso
+    (punto fijo en tres pasadas).
+  - **En nativo es la identidad** (decisión de Ottavio): no hay arena por evento y el GC ya
+    conserva el valor, así que el mismo código corre con `nyx test` y en wasm sin ramas por target.
+    Antes era un error de target.
+  - Documentación: SPEC (NYX1039), LLM.md §wasm, gotcha `wasm-arena-closure-env`, receta
+    `121-arena-persist-wasm`. Regresión: 3 casos negativos y 1 positivo en `tests/compiler/errors/`,
+    y el test wasm 36 suma un array anidado con enteros calculados (10.000 eventos, arena encendida).
+
+- **`nyx update --sync-docs` ya no pisa lo que un proyecto escribió en su `AGENTS.md`.** Hasta
+  acá resembraba el archivo entero y solo salvaba un bloque `proyecto:inicio`…`proyecto:fin`
+  que el proyecto tenía que conocer; nyxerp perdió así sus «Reglas de este proyecto» varias
+  veces. Ahora nyx reemplaza SOLO su bloque, entre las líneas `<!-- nyx:inicio -->` y
+  `<!-- nyx:fin -->` (lo siembra `nyx init`); lo de afuera es del proyecto, y lo propio va
+  arriba, donde el agente lo lee primero. Un `AGENTS.md` anterior se migra por secciones `## `:
+  la que la plantilla no reconoce como suya se conserva textual arriba, y el sync informa qué
+  conservó y qué reemplazó (con `.bak`). `nyx sdd init` pone su disparador arriba del bloque.
+  Lógica en `nyx_build agents-merge` (`agents_merge`, compiler/build.nx), la misma para `init`
+  y `--sync-docs`. Regresión: escenarios (g)–(k) de `run_sync_docs_migration.sh`; sobre una
+  copia del `AGENTS.md` real de nyxerp, el wrapper anterior dejaba 0 de sus reglas y el nuevo
+  las conserva byte a byte.
+
+- **Plazo de envío en los servidores HTTP y plazo de cabecera en `http_serve`/`http_serve_mt`.**
+  `NYX_HTTP_SEND_SECS` (30 s por omisión) acota cuánto puede quedar trabada la escritura de una
+  respuesta sin avanzar: un cliente que dejaba de LEER una respuesta grande retenía su worker de
+  `std/serve` para siempre. Es por escritura, no total (una descarga lenta que avanza no se
+  corta). Los dos servidores de `std/http` leían además sin plazo: una conexión que goteaba la
+  cabecera (slowloris) dejaba mudo a `http_serve`, que tiene un solo hilo; ahora usan el parser
+  con plazo de `std/serve` (`NYX_HTTP_HEADER_SECS`, 408 y cierre). Runtime:
+  `os_sock_set_send_timeout` (solo `SO_SNDTIMEO`) y `nyx_tcp_set_send_timeout`. Regresión:
+  sub-suite nueva `test_http_plazos.py` (8 checks, en rojo con el `std/http` anterior) y 1 check
+  en `test_serve_std_keepalive.py` (22 → 23).
+
+- **`std/serve` anuncia su plazo de keep-alive**: cada respuesta con `Connection: keep-alive` lleva
+  `Keep-Alive: timeout=N` (N = `NYX_HTTP_KEEPALIVE_SECS`). Un proxy con pool que no lo sabía
+  reutilizaba la conexión ya cerrada por el servidor y a un POST —que no se reintenta— le tocaba
+  un 502 (nyxerp → sumain2, 2026-09-25). El lado del proxy (descartar conexiones muertas o
+  vencidas antes de escribir) es un encargo a nyx-proxy. Regresión: 1 check en
+  `test_serve_std_keepalive.py` (21 → 22).
+
+### Arreglado
+
+- **El mensaje de un `assert` puede ser un valor opaco** (fricción de nyxerp, 2026-09-17).
+  `assert(arr[0] == "x", arr[0])` con un `Array` devuelto por una fn no enlazaba: el mensaje llegaba
+  como `i64` a `nyx_string_to_cstr`, que pide `%nyx_string*` (IR inválido), con `nyx check` en
+  verde. El arco builtins-arg-opaco había convertido los argumentos de los builtins, pero `assert`
+  es sentencia y quedó afuera. Los tres sitios de `codegen_assert` que evalúan el mensaje (camino
+  genérico y ramas `int == int` y `String == String`) pasan por `codegen_arg_str`. La ficha decía
+  que en `main()` andaba; medido hoy, fallaba igual. Regresión: `test-455` (una línea por sitio,
+  cada una rompía el enlace sola).
+
+- **`nyx update` dejaba la versión sin `runtime/wasi/` y nada compilaba a wasm32-wasi** (fricción
+  de nyxerp, 2026-09-29). El espejo público —del que construye `nyx update`— nunca tuvo esa
+  carpeta: `sync_to_public.sh` copiaba `runtime/*.c`, que no entra en subcarpetas, y solo
+  `runtime/os/` iba explícito. Pasó inadvertido porque las instalaciones de desarrollo salen de
+  `make install-local`, que sí la copia. El sync copia ahora la carpeta entera y no commitea si
+  faltan `main_shim.c`, `nyx_arena.c`, los `gc.h` u `os_wasm.c`. Verificado con `install.sh` desde
+  el espejo en un HOME aislado y con `nyx update` real.
+
+- **`.to_string()` sobre `char` y sobre enteros de ancho fijo** (`i8`, `u8`, `i16`, `u16`, `i32`,
+  `u32`) abortaba con NYX2002. `char`, `i8` y `u8` comparten `i8` en LLVM: el helper recibe ahora
+  el tipo Nyx del receptor, así que un `char` da el carácter («A») y un `u8` el número («200»), y
+  el signo decide `sext`/`zext`. El catálogo de NYX1022 suma `char` (solo con anotación, como los
+  demás escalares). Pila de `codegen_method_call` sin cambios (formas auxiliares sin literales).
+  Regresión: `test-454`.
+
+- **NYX1022 también sobre `int`, `float` y `bool`.** El catálogo de métodos por tipo de semantic
+  cubría String, Array, Map, Option y Result; sin catálogo, un escalar aprobaba cualquier método, y
+  `x.contains("a")` con `x: int` bajaba en codegen por la rama de arrays (un `i64` puede ser un
+  Array sin tipo): IR inválido con `nyx check` en verde. Sobre un escalar solo existe `to_string`.
+  El chequeo vale solo para variables DECLARADAS con anotación escalar (`var x: int`): un escalar
+  inferido puede mentir (`[1, "dos"]` se infiere `Array<int>` y `a[1].contains("d")` es legítimo,
+  test-323), así que ahí sigue decidiendo el tag en runtime. Verificado sin falsos positivos contra
+  todos los módulos del compilador con semantic activo, el nyxerp real y los stacks. `char` queda sin catálogo (su `to_string` falta; ficha en TASKS).
+  Regresión: `test-nyx1022-metodo-sobre-int` (test-errors 347 → 348).
+
+- **`let x: T = <escalar de otro ancho>` convierte al tipo anotado.** `let s: int = w + h` con
+  `w`/`h` de tipo `i32` guardaba un `i32` en una variable declarada `int`: el `.to_string()`
+  siguiente fallaba en codegen con `nyx check` en verde, y la aritmética seguía en 32 bits. La
+  asignación ya convertía; el `let` no. Enteros entre sí y `float`/`f32` entre sí; un `bool`
+  anotado no se trunca. Regresión: `test-452`.
+- **Un método sobre una `const` primitiva** (`K.to_string()`, local o importada) daba «NYX2002:
+  method 'to_string' is not available on the global 'K'»: una const int/float/bool se inlinea y no
+  es variable, así que caía en la rama de globales. Ahora se materializa como variable local y
+  sigue el camino normal; el trío de Map (`contains`/`insert`/`get`) sigue dando NYX2007 sobre una
+  const. Regresión: `test-453`. De paso quedó fichado que ese mismo trío sobre una VARIABLE `int`
+  da IR inválido sin diagnóstico (bug previo). El error genérico de «método no disponible sobre
+  este receptor» (el catch-all de `codegen_method_call`) no llevaba código: ahora es NYX2002,
+  como el de los globales — un método inexistente sobre un const sigue dando NYX2002.
+- **Interno:** `interfaz_de` (la huella por interfaz de `[lib]`, `compiler/build.nx`) compara
+  contra literales `char` en vez de códigos ASCII, ahora que el bug que lo obligaba está arreglado.
+
+- **Toolchain: una versión nueva ya no hereda la marca `.fijada` de la activa.** `install-local`
+  arma la versión nueva copiando la activa, y si esa estaba fijada (hoy, la de producción de
+  nyxerp) la copia se llevaba la marca: la versión nueva quedaba fijada sin que nadie lo pidiera, y
+  la poda nunca la iba a borrar. `nyx_tc_publicar` quita la marca antes de publicar. Guarda:
+  `run_toolchain_versions.sh` (4b), en rojo sin el arreglo.
+
+- **Un valor opaco se puede pasar directo a cualquier builtin** `[arco: builtins-arg-opaco]`. Un
+  elemento de un Array sin tipo (`get_args()[i]`, un Array devuelto por una fn), `m.get(k)` o el
+  retorno de una `Fn` sin firma llegaba a los builtins como `i64`, y nadie lo convertía:
+  `read_file(args[2])` bajaba a `call @nyx_read_file(i8* %<i64>)` —IR inválido que clang rechazaba
+  al enlazar, con `nyx check` en verde—. Medido: 76 de 87 builtins con un parámetro puntero
+  (archivos, entorno, cripto, regex, red/TLS, mutex/canales/condvar/rwlock, `panic`, …). Un helper
+  único (`codegen_arg` y sus cuatro formas, en `compiler/codegen.nx`) convierte el argumento al tipo
+  que el handler ya declara: `inttoptr` hacia un puntero, `ptrtoint` hacia un slot `i64` (así
+  `channel_send(ch, <String>)`, que tampoco enlazaba, funciona). Las cuatro formas no llevan el tipo
+  como literal para no engordar el marco de `codegen_call_expr` (medido: +5,4 KB por nivel con el
+  literal; con las formas, dentro del techo). Guarda nueva: `run_builtin_arg_opaco.sh` (en
+  `test-ai-first`; 76/87 en rojo con el compilador anterior), y `test-451` comprueba el resultado,
+  no solo el IR (sha256, setenv/getenv, write/read_file, un String por un canal, un mutex sacado de
+  un Array). Cierra dos fichas de TASKS.
+
+- **`std/postgres`: el pool es seguro entre hilos** (fricción de nyxerp, 2026-09-27). Con
+  `std/serve` y 16 hilos compartiendo un `pg_pool_new`, el servidor se colgaba en 3 de 6 corridas;
+  con 8, moría con «Índice 0 fuera de rango». `try_pg_pool_get` buscaba un slot libre y lo marcaba
+  en uso en dos pasos sin lock: dos hilos se llevaban la MISMA conexión y mezclaban el protocolo
+  en un socket. `PgPool` lleva ahora un mutex (campo `mu`) tomado solo para el estado de los
+  slots, nunca durante E/S (conectar, el ROLLBACK de `pg_pool_put`, cerrar). Regresión:
+  `tests/postgres/09-pool-hilos.nx` (16 hilos × 300 consultas sobre un pool de 4, cada respuesta
+  comprobada contra su hilo): con el pool anterior falla 4 de 4 corridas, con el nuevo pasa 9 de 9.
+
+- **`std/serve`: una conexión ociosa que vence con un pedido ya llegado se atiende, no se
+  resetea.** El barrido del estacionamiento (`runtime/net.c`) cerraba por plazo sin mirar si el
+  socket ya tenía un pedido que el event loop todavía no había visto; cerrar con datos sin leer
+  hace que el kernel mande RST, y el cliente veía ECONNRESET en un pedido que el servidor sí
+  recibió. Ahora las vencidas con datos se entregan a los workers. Salió al analizar la prueba de
+  carga de nyxerp (ECONNRESET solo bajo saturación); los datos apuntan sobre todo a la carrera de
+  keep-alive del propio generador, así que esto es un blindaje, no la causa medida. Regresión
+  determinista con un gancho `-DNYX_RUNTIME_TESTING` (hilo del estacionamiento quieto):
+  `test_http_park_vencida_con_pedido`, en rojo sin el arreglo (el cliente recibe ECONNRESET).
+
+- **Asignar un valor opaco a una variable ya declarada lo convierte a su tipo** (fricción nyxerp
+  20260925-090024). `let x: S = xs[0]` andaba, pero `var s: S = …` + `s = xs[0]` emitía
+  `store %S %<i64>`: IR inválido, `nyx check` callado y el enlace rechazado por clang. La
+  conversión del valor opaco (`xs[i]`, `m.get(k)`, retorno de una `Fn` sin firma) vivía en línea
+  en `codegen_let` y la asignación tenía una copia parcial (solo `String` y `Array`); ahora las
+  dos usan `coerce_opaque_i64` — struct, enum, `Map`, `bool`, `char`, enteros angostos, float,
+  `Array<T>`, `Fn(...)` — y `n = m.get(k)` sobre un `int` declarado hace el `ptrtoint`.
+  Regresión: `test-450-asignar-valor-opaco-a-var-declarada` (9 familias de tipo).
+- **`std/serve`: `HEAD` ya no contamina la conexión keep-alive.** Un `HEAD` caía al 404 y el
+  404 salía **con cuerpo**; un proxy que reutilizaba la conexión (nyx-gateway) leía esos bytes
+  como el comienzo de la respuesta siguiente y devolvía **502** a otro usuario — visto en
+  producción en serve.nyxlang.com el 2026-09-25. Ahora un `HEAD` sin ruta propia usa la ruta
+  `GET` del mismo path (también en routers montados; una ruta `HEAD` explícita gana) y toda
+  respuesta a un `HEAD` sale sin cuerpo con el `Content-Length` del `GET` (RFC 9110 §9.3.2); un
+  `sse_open` no abre el canal ante un `HEAD`. Regresión: 8 checks nuevos en
+  `test_serve_std_keepalive.py` (`HEAD` + `GET` pipelineados por la misma conexión; 13 → 21).
+
+## [0.34.0] — 2026-09-25
+
+Release grande, empujada casi entera por la fricción de nyxerp (ERP en Nyx) antes de su primera
+producción (Sumain, 2026-09-26). Lo principal:
+- **`[lib] modules` listo para proyectos reales**: cualquier forma de import, transitividad, chequeo de
+  tipos idéntico a sin `[lib]` (el importador lee el módulo entero; codegen declara), nombres
+  `<módulo>__<fn>`, y recompilación por INTERFAZ (un comentario en un módulo central: 1 módulo, no 105).
+  Suite de nyxerp: 1.566 s → ~366-431 s.
+- **Toolchain con versiones lado a lado** en `~/.nyx`: instalar ya no le cambia el compilador a una
+  suite en curso; `nyx update --version <rev>` vuelve a una revisión instalada al instante; versiones
+  `.fijada` que no se podan.
+- **Stdlib nueva**: `std/pdf`, `std/barcode` (Code 128, EAN-13, QR), `std/browser_serial` (Web Serial),
+  LISTEN/NOTIFY en `std/postgres`.
+- **`std/serve`**: una conexión keep-alive ociosa ya no retiene un worker; plazos de inactividad y de
+  cabecera.
+- **Tooling**: runtime precompilado automático (`nyx build` 9,9 s → 1,0 s), CAPABILITIES por firma de la
+  stdlib, `nyx check` sin el protocolo LSP en pantalla, huella del compilador en `nyx test`.
+- **wasm**: una guarda contrasta todos los builtins con el runtime de wasm (25 casos arreglados o con
+  error claro).
+- **Transición**: las llamadas a una fn privada de otro módulo (NYX1036) y las ambigüedades (NYX2010)
+  que un bug del resolvedor ocultaba hasta 0.33.x siguen como AVISO en 0.34.0 y pasan a error en
+  **0.35.0** (se mantuvo un ciclo más para no romper builds ajenos en la víspera de producción).
+
+### Fixed
+- **Seguridad del toolchain compartido** (fricción nyxerp `20260924-020001-team-4`): `nyx update
+  --help` actualizaba de verdad (todo argumento desconocido caía a la actualización); ahora
+  `--help`/`-h` muestran ayuda, `--check` solo consulta y una opción desconocida es error (rc 2).
+  `nyx update` toma el candado del toolchain EXCLUSIVO y `nyx check/vet/fmt` y `nyx archivo.nx`
+  COMPARTIDO (con aviso y `NYX_LOCK_WAIT`). `nyx test` imprime la huella del compilador y avisa si
+  cambió durante la corrida.
+- **CAPABILITIES.md se regenera cuando cambia la stdlib**, no solo el número de versión: por eso
+  el índice de nyxerp no listaba `std/smtp` y lo reimplementaron a mano.
+- **`[lib] modules` con la forma de import de los proyectos reales** (fricción nyxerp
+  `20260924-040001-team-1`): `import "src/x"` sin llaves —la de `nyx init` y la de 3.372 de los 3.373
+  imports de nyxerp— no cruzaba la frontera (NYX1002 en cada llamada). Ahora declarar un módulo en
+  `[lib]` no cambia qué nombres se ven: toda forma de import se comporta como inlineada, transitividad
+  incluida, y viajan también los `struct`/`enum` sin `pub`. Las fns de biblioteca se emiten como
+  `<módulo>__<fn>` igual que inlineadas (dos bibliotecas pueden tener homónimas). Arreglados de paso
+  en el lector de firmas de las declaraciones: la flecha de un parámetro `Fn(...) -> T` se tomaba por
+  la del retorno, una firma en varias líneas perdía el retorno en silencio (`void`), y el tipo
+  genérico del retorno (`Result<T, E>`) se recortaba. Si un módulo usa una fn que no importa,
+  `nyx build` lo dice con una nota y el import que falta. Verificado sobre nyxerp real: 150 módulos
+  en `[lib]` compilan y enlazan; `make test-lib-real` lo vigila.
+- **Privadas homónimas en dos módulos se pisaban según el orden de los imports** (fricción nyxerp
+  `20260924-010014-team-1`): el resolvedor cerraba un import transitivo inlineado volviendo al archivo
+  principal, así que todo lo que el módulo padre declaraba después quedaba atribuido al programa.
+  Ahora el cierre reabre al módulo padre. El mismo bug apagaba NYX1036/NYX2010 en esos tramos: los
+  casos que aparecen solo por la atribución corregida salen como **aviso** (compilan, rc 0) hasta la
+  próxima versión menor. `std/url` y `std/web` comparten el `url_decode` de `std/percent`, nuevo.
+  `test-439`, `test-440`, +4 casos en `test-errors`.
+- **`std/serve`: una conexión keep-alive ociosa ya no retiene un worker** (fricción nyxerp
+  `20260924-200001-team-1`): con N hilos, N navegadores quietos entre clics dejaban el servidor sin
+  responder a NADIE. Tras responder, el worker quedaba bloqueado leyendo el próximo pedido sin plazo.
+  Ahora la conexión se estaciona en el event loop del runtime (como el SSE) hasta que llega otro pedido.
+  Límites: `NYX_HTTP_KEEPALIVE_SECS` (15 s de inactividad) y `NYX_HTTP_HEADER_SECS` (10 s para la
+  cabecera completa: 408 contra slowloris); `serve_idle_connections()`. 13 checks E2E nuevos (6 fallan
+  con el código viejo), receta 120.
+- **Una fn privada de un módulo `[lib]` competía con la propia del que importa** (regresión de la
+  entrega anterior, fricción nyxerp `20260924-220014-team-1`): NYX2010 «AMBIGUA» en 8 archivos de
+  pruebas. Una privada ajena ya no le gana a una visible; `nyx test` solo atribuye un archivo de
+  pruebas a su módulo si está en `[lib]`. Una versión del toolchain con `.fijada` no se poda nunca.
+- **Cinco bugs viejos**: `import { K }` de una `const` daba NYX1013; la visibilidad de las `const`
+  dependía del orden de los imports; asignar `charAt()` a un `var` de ancho fijo emitía IR inválido;
+  tres lecturas `.node_type` sobre Arrays en el propio parser se compilaban como 0 en silencio (los
+  patrones `E.V(a, b)` nunca salían como `match_pattern`; ese catch-all ahora aborta con NYX2007); y
+  `try_tcp_read_timed` no drenaba primero el buffer por fd. `test-447..449`.
+- **`std/postgres`: las notificaciones que llegaban durante una consulta se tiraban** (fricción nyxerp
+  `20260924-180024-team-1`). Ahora se guardan en la conexión y las entrega la próxima espera. Nuevo
+  LISTEN/NOTIFY: `try_pg_listen`, `try_pg_unlisten`, `try_pg_notify` y `try_pg_wait_notifications`
+  (con tiempo límite), en claro y con TLS. El bus de tiempo real entre varios procesos sobre
+  PostgreSQL, sin Redis; con el SSE de `std/serve` cierra el caso. `std/net`: `try_tcp_read_timed`.
+  `test-446` (servidor falso), `tests/postgres/08` (PostgreSQL real), receta 119.
+- **`[lib]` recompila por interfaz, no por contenido** (fricción nyxerp `20260924-150024-team-1`): un
+  comentario en un módulo central recompilaba 105 de 171 módulos de nyxerp (216 s); ahora 1 (22 s).
+  La huella mira de cada biblioteca importada sus firmas, tipos, constantes y globales, no los cuerpos
+  ni los comentarios.
+- **`[lib]` ya no tiene hueco de tipos en la frontera** (fricción nyxerp `20260924-150024-team-1`):
+  un `String` donde iba un `int`, llamando a una fn de otra biblioteca, pasaba `nyx build` en verde y
+  llegaba como el puntero del texto impreso como número. Quien importa lee ahora el fuente completo de
+  cada módulo de `[lib]` (el chequeo de tipos es idéntico a sin `[lib]`, por construcción) y codegen
+  emite sus fns como `declare` desde el AST, con la firma exacta. Se retiró la interfaz armada a mano
+  (imports sintéticos, tipos inyectados, firmas leídas del texto). Los globales de una biblioteca los
+  sigue inicializando el programa, en orden, como inlineados (guarda en `run_lib_modules.sh`).
+- **Toolchain con versiones lado a lado** (fricción nyxerp `20260924-020001-team-4`)
+  `[arco: toolchain-atomico]`: `~/.nyx` guarda cada versión completa en `versions/<id>/`, y
+  `current`/`active` dicen cuál está activa; las entradas de la raíz son enlaces, así que las rutas
+  de siempre (`~/.nyx/bin`, `~/.nyx/VERSION`) siguen andando. `make install-local` y `nyx update`
+  arman la versión nueva aparte y la activan con un `rename`: una suite a mitad de corrida sigue
+  entera con la versión con que arrancó, instalar ya no espera a nadie, y un update que falla no
+  deja la instalación rota. `nyx update --version <rev>` vuelve a una revisión ya instalada al
+  instante (415 ms). La poda (`NYX_KEEP_VERSIONS`, 3) nunca borra una versión en uso. La primera
+  instalación con el toolchain nuevo migra el layout plano sola. `make test-toolchain`.
+- **`nyx check` muestra solo los diagnósticos**: volcaba cientos de líneas `SYM:`/`DEF:`/`END` del
+  protocolo del LSP aunque el archivo estuviera sano. El protocolo sigue disponible con `--lsp`. Y
+  después de un NYX1040 (el mismo `struct` en dos módulos) ya no sale la cascada de NYX1017/NYX1032
+  contra la primera definición, que mandaba a buscar el error donde no está.
+- **Ningún builtin muere en wasm-ld con «undefined symbol»**: `string_from_bytes` (y con él
+  `base64_decode`) no enlazaba en wasm32-wasi porque su runtime vivía fuera de `wasm.srcs`. Una guarda
+  nueva (`run_wasm_builtin_symbols.sh`, en `make test-wasm`) contrasta todos los builtins con el
+  runtime de wasm y encontró 25 casos. Las funciones de C puro se mudaron a unidades portables; las que
+  dependen de procesos, red, señales u OpenSSL dan un error claro con archivo y línea. `test-wasm-50`.
+- **Una mención de `compiler/` en un comentario o string quitaba el prelude**: `println` no
+  declarado. Ahora solo cuenta un `import "compiler/..."` o la marca `// nyx:sin-prelude`.
+  `test-435`.
+
+### Added
+- **Runtime C precompilado automático** en `~/.cache/nyx/rt/` para `nyx build` y `nyx test` (clave
+  por contenido; `NYX_NO_RT_CACHE=1` lo apaga): `nyx build` 9,9 s → 1,0 s, un archivo de
+  `nyx test` 9,7 s → 1,2 s, sin configurar nada.
+- **`std/barcode`** (fricción nyxerp `20260923-210010-team-1`) `[arco: std-barcode]`: Code 128 (juegos
+  B/C elegidos solos), EAN-13 (calcula o valida el control) y QR versiones 1-10 con niveles L/M/Q/H
+  (`qr_matrix`), en Nyx puro y con paridad en wasm. El QR se verifica con los vectores publicados
+  del estándar y con un decodificador independiente escrito en el test. `test-436..438`,
+  `test-wasm-42..44`, receta 116.
+- **`std/browser_serial`** (fricción nyxerp `20260924-020001-team-2`): Web Serial con `await` en wasm
+  para impresoras de punto de venta y fiscales (`serial_request_port`, `serial_open`, `serial_write`,
+  `serial_read` con tiempo límite, `serial_close`). Los bytes cruzan como `Array<int>`. Sin Web
+  Serial (Firefox, Safari, sin HTTPS) da `Err` de tipo `io`. WebUSB queda para una fase 2.
+  `test-wasm-41` (con un mock), receta 117.
+- **`std/pdf`** (fricción nyxerp `20260924-020001-team-1`) `[arco: std-pdf]`: PDF en Nyx puro, también
+  en wasm. Tamaños carta, A4, media carta y ancho libre; posiciones en mm desde arriba a la izquierda.
+  Texto con las fuentes estándar y WinAnsi (tildes, ñ, ¿¡, €), con `/Widths` y `pdf_text_width` para
+  alinear montos. Líneas, rectángulos, JPEG (también progresivo, con orientación EXIF) y PNG (alfa en
+  SMask). Verificado con pypdf estricto, pdfminer y el motor de PDF de Chrome (pdfium), renders
+  mirados. `run_pdf_verify.sh` (opcional). `test-441..445`, `test-wasm-45..49`, receta 118 (una factura).
+- **CAPABILITIES.md indexa las `async fn`**: `std/browser_idb` y `std/browser_serial` no aparecían.
+- **Specs en BORRADOR** para aprobar: `std/pdf` y toolchain atómico (versiones lado a lado).
+
+### Fixed (anteriores)
+- **NYX2010 también en `nyx check`** (fricción nyxerp `20260923-210010-team-3`): una llamada sin
+  calificar a una fn que existe en dos módulos importados salía recién en `nyx build` (en nyxerp, 3,5
+  minutos después de un `check` en verde). El checker ya detectaba la ambigüedad pero solo apagaba el
+  chequeo de firma. Resolver por aridad cuando difiere queda como decisión de diseño abierta.
+- **`json_parse` de un escape `\uXXXX` trapeaba en wasm** («unreachable»). Causa en codegen: un
+  argumento i64 no se truncaba al ancho de un parámetro `char`/i8/i16/i32; en nativo pasaba
+  desapercibido. `test-wasm-40`.
+- **`json_stringify` lineal** (fricción nyxerp `20260923-210010-team-2`): escribir un texto de 32 KB
+  pasaba de 504 ms a 0,66 ms — antes crecía con el cuadrado del largo. Un solo `StringBuilder`
+  recorre el árbol y los tramos sin escapes se copian de una vez.
+- **`"".trim()` bajo la arena de wasm devolvía largo 1 o 2** (fricción nyxerp `20260923-100024`,
+  terminaba en «memory access out of bounds»). La causa no era `trim`: el String vacío que comparte
+  todo el runtime nacía en memoria del turno si se pedía por primera vez durante un evento, y la
+  arena lo reciclaba. Afectaba a `trim`, `repeat(0)` y a los ~200 `nyx_string_from_cstr("")` del
+  runtime. Ahora es un objeto estático. `test-wasm-39`.
+- **`json_parse` en wasm: 5.000 registros de 6,3 s a ~0,15 s en node y de 235 a 35 MB** (fricción
+  nyxerp `20260923-100024`). La región persistente pide memoria en bloques geométricos (64 KB → 8
+  MB) en vez de hacer crecer el wasm de a una página, y `parse_string` copia por tramos en vez de
+  concatenar byte a byte (cuadrático). Lo que queda (~18 B por byte de JSON) es el tamaño del árbol.
+- **Dos `struct` o `enum` con el mismo nombre en módulos distintos: NYX1040** en vez de «redefinition
+  of type» sobre un archivo temporal (fricción nyxerp `20260923-160005`). Sale en `nyx check` y en el
+  build, nombrando los dos archivos y líneas. Dos `enum` idénticos se aceptan (hoy compilaban). El
+  nodo `struct`/`enum` ahora lleva la línea del NOMBRE, no la de la `}` de cierre.
+- **wasm: un Array o StringBuilder global que crecía durante un evento quedaba apuntando a memoria
+  del turno** `[arco: wasm-arena-persistir]`. Con la arena encendida, el `realloc` del crecimiento
+  alocaba el bloque nuevo en la arena, que se recicla al terminar el evento: 1.000 `push` de enteros
+  a un global daban una suma basura. Ahora cada bloque persistente lleva una marca en su cabecera y
+  `realloc` conserva la región de origen (O(1), sin tocar alloc/reset/pin). `test-wasm-38`.
+- **Los enteros calculados llevan tag en el Array** `[arco: wasm-arena-persistir]`: antes solo los
+  literales. La evidencia es la forma del AST (aritmética, `length()`, `: int` explícito), nunca el
+  tipo inferido. Efecto visible: `a.push(n * 3)` leído como String pasa de SIGSEGV a un abort ordenado.
+- **El compilador ya no se queda sin pila con expresiones largas: de 52 a ~2.400 operandos con la
+  pila por omisión** `[arco: pila-del-compilador]`. La causa, medida con `clang -fstack-usage`: el
+  toolchain se enlaza en `-O0` y cada nivel de una expresión apilaba ~151 KB de marcos de codegen.
+  Tres piezas: (1) `codegen_binop` y `codegen_expr` partidos para que la recursión pase por marcos
+  chicos —refactor puro, IR idéntico en 524 archivos— (151 → 23 KB por nivel, techo 322); (2) SROA
+  sobre las semillas cuando hay un `opt` de la misma versión que clang, +2 s por bootstrap (23 KB →
+  2 KB por nivel, techo ~2.400; sin `opt`, 322); (3) **el desborde de pila del hilo principal tiene
+  nombre**: una recursión infinita en `main` imprime «desborde de pila del hilo principal» con el
+  límite, en vez de un «Segmentation fault» mudo (POSIX; Windows queda para W4). Guarda nueva
+  `run_stack_frame_audit.sh` en `make test-ai-first`, un ratchet de los marcos del camino recursivo.
+  El piso que queda es `CodegenContext` por valor: su raíz es el arco en borrador `structs-byval`.
+- **Una expresión de 53 operandos hacía caer al compilador con SIGSEGV y sin mensaje** (fricción nyxerp
+  `20260920-200024`: una hoja de estilos de 75 concatenaciones, una hora de bisección a mano; `nyx check` y `nyx vet`
+  daban verde). Causa medida: el toolchain se enlaza sin `-O` y cada nivel de una expresión binaria apila ~151 KB de
+  marcos de codegen (`codegen_binop` solo, 132.880 B en `-O0` contra 1.488 B en `-O2`), así que 53 niveles agotaban
+  los 8 MB por omisión. **Mitigado**: `nyx`, `nyx build` y `nyx test` suben a 64 MB la pila DEL COMPILADOR —el
+  programa del usuario conserva la suya— (techo de ~52 a ~430 operandos), y si igual muere, el mensaje nombra la
+  causa en vez de dejar solo «Segmentation fault». Las recetas del Makefile también la suben (desde
+  `scripts/with_testroot_lock.sh`): `make recompile-all` ya no podía compilar `lexer.nx` en 8 MB. La causa de raíz
+  queda en el spec `pila-del-compilador` (BORRADOR, GO pendiente).
+- **Recorrer un `String` con `for … in` mataba el programa con SIGSEGV y sin ubicación** (fricción nyxerp
+  `20260921-100001`). `nyx check`, `nyx vet` y `nyx build` daban verde: codegen no tiene camino de String, así que
+  el iterable caía al de arrays y el `%nyx_string*` se leía como `{ i64, i8* }*`. Ahora es **NYX1038** con archivo
+  y línea, y la pista del recorrido por índice (bytes con `substring`, caracteres UTF-8 con `char_substring`); la
+  misma regla vive en codegen para cuando semantic está apagado. Es error y no una capacidad nueva a propósito:
+  recorrer un string obliga a decidir entre bytes y codepoints, y eso queda abierto. **La variante dinámica** —un
+  String dentro de un `Array` pelado, recorrido con `for g: Array in xs`— reventaba en el bucle INTERIOR, lejos del
+  culpable: ahora el `for` lee el slot chequeando su tag y aborta en el exterior con **NYX2018** nombrando el slot y
+  su tipo real (y `for s: String in xs` sobre un slot `int` usa la lectura chequeada que ya existía). Gotcha
+  `for-in-string-rejected`.
+- **`semantic` era CUADRÁTICO en el tamaño del cierre: las tablas de símbolos y de firmas se
+  recorrían enteras, comparando strings** `[arco: semantic-indice-simbolos]`. `scope_lookup` y
+  `fn_sig_index` escaneaban `g_sym_names` y `g_fn_sig_names` completos en cada consulta. Como el
+  resolvedor inlinea el cierre de imports en una sola unidad de traducción, esas tablas crecen con
+  el número de módulos mientras el número de búsquedas crece con el volumen de código: el producto
+  es el cuadrático. Ahora hay un **índice por nombre** (`Map<String,int>` + un array paralelo que
+  encadena los homónimos en orden de declaración) sobre las dos tablas, y los otros seis
+  consumidores —`scope_get_arity`, `lookup_var_type`, `name_is_builtin`, `fn_es_privada_de`,
+  `fn_module_resolve`, `scope_has_in_current`— recorren la cadena del nombre en vez de la tabla.
+  > **Medido** (aarch64, mediana de 3, con la máquina quieta verificada), sobre un proyecto
+  > sintético de 175.375 líneas de IR —la escala del cierre de nyxerp, que medía 184.080—:
+  > **front-end 4.680 → 2.700 ms (−42,3%)**, exponente sobre cuatro tamaños **1,20 → 1,04**, y el
+  > costo por línea de IR de **26,7 → 15,4 µs** (antes se duplicaba entre 7,5k y 175k líneas; ahora
+  > es plano). Pico de RSS sin cambios: 288 → 286 MB. `make bench-test-cache` lo reproduce.
+  > **El perfil cambió de forma**: semantic pasa de 54,9% a 16,8% del front-end, y
+  > `nyx_string_equals` de primera hoja con 24,4% a sexta con 4,9%. El próximo cuello es la
+  > alocación (`GC_generic_malloc*`, 40%), fichado en `TASKS.md`.
+  > **Confirmado desde afuera del core** (nyxerp, 2026-09-21): su suite completa —112 archivos,
+  > 1.200 pruebas, contra PostgreSQL— pasó de **23 min 07 s a 20 min 43 s (−9,2%)**, medido contra
+  > MÁS trabajo (1.191 → 1.200 pruebas) y sin ventana tranquila, así que no es comparable con el
+  > 42% del front-end aislado: ahí el front-end es una fracción del reloj total. **Y el efecto en
+  > MEMORIA resultó ser el que más les sirve**: el pico de compilar y correr su archivo más pesado
+  > (39 pruebas) pasó de **1.357 MB a 198 MB** — eso es el efecto conjunto de este arco y del fix
+  > del `emit` cuadrático (v0.32.2), porque su medición previa es del 2026-09-17. Con 2 núcleos y
+  > 3,8 GB, dos compilaciones a la vez **ahora entran y antes no**: el arco les destrabó un factor
+  > 2 que van a buscar por su cuenta.
+  > **Cómo se verificó que no cambia comportamiento**: cada función migrada corrió EN PARALELO con
+  > su escaneo original y un gate que abortaba la compilación si los dos caminos diferían, sobre
+  > `make test` (449), `test-errors` (309), `test-m08-types` (18) y la matriz de dispatch — **~776
+  > pruebas, cero discrepancias**, en las tres tandas. Recién con eso en verde se retiró cada
+  > escaneo. Los gates se verificaron saboteando el índice y el `scope_pop`, porque un gate que no
+  > se puede probar que falla no prueba nada.
+  > **Un hallazgo que el sabotaje destapó**: con el `scope_pop` sin deshacer su tramo del índice,
+  > `make test-errors` da **309/309** — el corpus entero del repo NO caza ese bug, y el compilador
+  > resuelve símbolos con el `kind` equivocado sin decir una palabra. Por eso todas las consultas
+  > pasan ahora por `indice_cabeza()`, que valida que la cabeza de la cadena esté viva **siempre**,
+  > sin variable de entorno: cuesta una comparación de enteros y convierte ese silently-wrong en un
+  > error ruidoso.
+  Tests: `test-432-module-fn-homonyms-caller` (450 archivos / 449 ARM64) fija la resolución NO
+  calificada desde dentro de un módulo —la regla de la que dependen `scope_get_arity` y
+  `fn_sig_index`—, que `test-353` no cubría. Diseño: `docs/design/specs/2026-09-21-semantic-indice-simbolos-design.md`.
+- **Voseo en cinco líneas de `std/smtp.nx`**, dos de ellas mensajes que ve el usuario («probá el
+  465», «Pedí STARTTLS primero … o conectá al 465») `[arco: std-smtp]`. La guarda
+  `run_voseo_messages.sh` estaba en rojo desde el 2026-09-20, así que `make test-all` no pasaba.
+- **Escribir por TLS a un peer que ya cerró MATABA EL PROCESO por SIGPIPE** `[arco: serve-sse]`.
+  OpenSSL escribe con `write()` crudo y este runtime no instala un `SIG_IGN` global de SIGPIPE a
+  propósito (`os_sock_send` se protege con `MSG_NOSIGNAL`, y su comentario aclara que eso es
+  «load-bearing»), así que la capa TLS quedaba sin esa protección: un `tls_write_conn` contra un
+  peer ido mataba el proceso entero. `runtime/tls.c` ahora usa un **BIO propio** que escribe por
+  `os_sock_send`, en vez de ignorar la señal en el arranque del runtime —que le habría cambiado la
+  semántica a todo programa que enlace Nyx, un `nyx prog | head` incluido—. Los 5 `SSL_set_fd` del
+  archivo pasan por `tls_attach_fd`, con el mismo contrato (`BIO_NOCLOSE`: el fd lo cierra el
+  llamador) y sin depender de los `BIO_meth_get_*`, deprecados desde OpenSSL 3.5.
+  > **Por qué recién ahora**: en una respuesta HTTP normal la ventana entre «el cliente cerró» y
+  > «el servidor escribe» es de milisegundos. En un TÚNEL dura lo que dure el stream, así que
+  > alcanzaba con cerrar una pestaña para tirar abajo un gateway que sirve todos los dominios.
+  > Lo encontró la sesión de `nyx-proxy` armando el túnel SSE (medido: rc=141 = 128+SIGPIPE).
+  > `ws_tunnel` tenía el mismo agujero desde 2026-07-01 y queda cubierto por el mismo fix.
+  Tests: `test_tls_write_to_gone_peer_no_sigpipe` en `tests/runtime-unit/test_tls.c` (+4 asserts,
+  264 → 268), que mide si la señal SE GENERA en vez de si el proceso sobrevive — la suite tenía
+  `signal(SIGPIPE, SIG_IGN)` en su `main` y por eso no podía ver este bug.
+  > **Confirmado desde afuera del core** (nyx-proxy, 2026-09-20): con el gateway recompilado contra
+  > este runtime y **sin mitigación en ningún lado**, un cliente SSE sobre TLS que corta en seco con
+  > RST a mitad del stream deja el proceso vivo; el mismo caso moría con `rc=141` contra el runtime
+  > anterior. El relay no cambió (primer evento a 0.01 s, el segundo a 0.31 s contra una pausa de
+  > 0.3 s del backend): rutear por `os_sock_send` no metió latencia ni buffering. Quedó como control
+  > positivo permanente de ese lado — si vuelve a morir con 141, la regresión es del runtime.
+- **`test-377-try-http` fallaba por puertos, no por código**: usaba 58744-58749, que caen dentro de
+  `/proc/sys/net/ipv4/ip_local_port_range` (32768-60999), así que el kernel se los daba como puerto
+  de ORIGEN a cualquier conexión saliente y el test moría con «cannot bind port NNNNN: Address
+  already in use». Cayó tres veces el 2026-09-15 y otra el 2026-09-20. Movidos a 187xx, por debajo
+  del rango efímero. **Un rojo que no es regresión tapa las reales.**
+- **El E2E `tests/integration/test_ws_proxy.py` SKIPeaba en silencio** desde la migración a `~/nyx/`
+  (2026-07-22): su `NYX_PROXY_SRC` por defecto apuntaba a `~/nyx-proxy-stack`, que ya no existe.
+  Default corregido a `~/nyx/products/proxy` y skip más explícito.
+
+### Added
+- **`nyx update --sync-docs` conserva el bloque propio del proyecto en `AGENTS.md`** (pedido de
+  nyxerp, 2026-09-24: les borró cuatro veces sus «Reglas de este proyecto»). Lo que esté entre
+  `<!-- proyecto:inicio -->` y `<!-- proyecto:fin -->` sobrevive al resembrado, y una corrida que
+  no cambia nada ya no deja un `.bak` nuevo (antes lo dejaba siempre). Documentado en la plantilla.
+- **`nyx test` con `[lib] modules`** `[arco: compilacion-separada]`: las bibliotecas se compilan una
+  vez por suite y cada archivo de prueba solo las enlaza (6,4 s → 1,4 s por archivo en el banco de
+  250 módulos).
+- **`form_values`/`query_values` en `std/web`** (fricción nyxerp `20260923-160005`): todos los valores
+  de una clave repetida (casillas, `<select multiple>`), en orden; `parse_form_data_all` y
+  `parse_query_string_all` devuelven los pares sin colapsar. `req.form` no cambia: con claves
+  repetidas sigue ganando la última, y ahora la doc lo dice. Receta 115.
+- **`[lib] modules` en nyx.toml: compilación separada con reutilización de objetos**
+  `[arco: compilacion-separada]`. `nyx build` compila cada módulo declarado una vez a
+  `target/nyx-lib/` y lo reutiliza mientras no cambien él ni su cierre de imports; tocar un módulo
+  hoja y recompilar cuesta el 41% (88 módulos) y el 23% (250) de hacerlo sin `[lib]`. Cruzan
+  funciones, structs y enums, por `import { f } from` y por `import "m" as a`; los genéricos, `impl`
+  y traits caen al inlining con el aviso NYX0302, que ahora se ve aunque el build salga bien.
+  `nyx build` además honra `NYX_RT_ARCHIVE`. Límites: sin chequeo de tipos de los argumentos en la
+  frontera, y `nyx test` todavía no usa `[lib]`.
+- **`arena_persist(x)` y `arena_stats()` en wasm** `[arco: wasm-arena-persistir]`, fase 1 PARCIAL:
+  copia un String o un Array (de String/int/float/bool) de la arena del evento a la región
+  persistente, para guardarlo entre eventos; `arena_stats()` mide bytes persistentes y del turno
+  desde adentro. Un struct/Map/Fn es NYX1039 (hoy en codegen; el chequeo en semantic y la
+  documentación siguen pendientes).
+- **`std/browser_idb`: IndexedDB para PWAs sin conexión** `[arco: browser-indexeddb]` (pedido de
+  nyxerp). `idb_get`/`idb_put`/`idb_delete`/`idb_keys` asíncronos (`await`, Asyncify) con
+  `Result<_, Error>` y los kinds de siempre (`not_found`, `in_use`, `oom`, `io`); una sola base con
+  clave compuesta `[store, key]`, para que un store nuevo no dispare una subida de versión que
+  bloquee entre pestañas. Módulo aparte: solo paga Asyncify quien lo importa. `opts.idb` inyectable
+  en el shim para testear sin navegador (`test-wasm-35-idb`), receta `114-idb-offline-wasm`.
+- **`make bench-test-cache`** — banco de medición del costo de compilar un archivo de prueba, por
+  fases (`front` / `clang_ll` / `link` / `run` / `hash`), sobre proyectos sintéticos en tres capas
+  con reuso, de 8 a 250 módulos `[arco: semantic-indice-simbolos]`. Nació para re-medir la ficha de
+  la caché de binarios por hash del cierre y terminó siendo el instrumento del arco.
+  > **Exige una ventana tranquila antes de medir**: espera a que no haya compiladores ajenos, y si
+  > alguno entra a mitad de una repetición la descarta y la repite. Si la espera vence, ABORTA
+  > nombrando el proceso que ocupa la máquina en vez de reportar ruido. No es paranoia: la primera
+  > línea de base del arco salió **9% alta** porque otra sesión corría su suite en la misma máquina
+  > de dos núcleos, y con la guarda puesta el banco repite al **0,1%**.
+- **`std/smtp` — mandar correo desde Nyx** `[arco: std-smtp]` (pedido de nyxerp, que se quedó sin
+  forma de mandar un enlace de recuperación de contraseña: la única salida que su sistema pudo
+  ofrecer fue crear un usuario nuevo). Conexión por los dos caminos reales —587 con `STARTTLS` y
+  465 con TLS desde el saludo—, `AUTH PLAIN`/`LOGIN`, y el mensaje con headers, cuerpo de texto o
+  HTML y adjuntos binarios en base64. **Cero builtins nuevos**: la pieza de bajo nivel ya existía
+  (`tls_upgrade_fd`, que es la forma exacta de STARTTLS y que `std/postgres` ya usaba así).
+  > **Lo que el módulo resuelve solo, que es donde se rompen las implementaciones a mano**: el
+  > **dot-stuffing** (una línea del cuerpo que empieza con `.` sale duplicada; sin eso el servidor
+  > da el mensaje por terminado ahí y entrega la mitad, SIN ERROR de ningún lado), la
+  > normalización a CRLF, el base64 cortado a 76 columnas, el `Message-ID` con el dominio del
+  > remitente, y el segundo `EHLO` después de cifrar —obligatorio, porque las capacidades cambian—.
+  > **`AUTH` sobre un canal en claro se rechaza y no hay flag para forzarlo**: la comprobación mira
+  > el estado real del canal, no lo que el servidor anuncia. Y se **verifica el certificado por
+  > omisión**, con variantes `_insecure` que lo dicen en el nombre — mismo criterio que se le
+  > aplicó a `https_get` el 2026-09-11.
+  >
+  > Fuera de alcance por decisión del arco: recibir (IMAP/POP3), colas y reintentos, multipart
+  > anidado, `quoted-printable`, nombres de archivo RFC 2047 y DKIM/SPF/DMARC.
+  Doc: `docs/SPEC.md` §Correo saliente, `LLM.md` §std/smtp. Receta:
+  `examples/by-example/113-smtp.nx`. Tests: stdlib 5 → 9 (parseo y diálogo, STARTTLS/TLS/AUTH,
+  armado del mensaje y envío E2E, y errores distinguibles por valor).
+- **`scripts/run_stdlib_tests.sh` enlaza el runtime COMPLETO**: tenía una lista recortada (sin
+  `compress.c`, `scheduler.c`, `event_loop.c` y ocho más), así que un módulo de std que usara un
+  builtin de cualquiera de esos no se podía testear ahí — fallaba en el linker con «undefined
+  reference», no en el test. Un runner que enlaza un runtime distinto del que enlaza el toolchain
+  no prueba lo que la gente corre.
+
+### Changed
+- **SSE ya funciona detrás del gateway** `[arco: serve-sse]`: `nyx-proxy` 0.4.4 tuneliza el stream
+  (detecta `Content-Type: text/event-stream` y deja de acumular), desplegado en `:443` el
+  2026-09-20 con los 8 dominios verificados por SNI. Se retira el aviso «detrás del gateway SSE
+  todavía no funciona» de `LLM.md` §std/serve, `docs/SPEC.md` §SSE y `examples/by-example/110-serve-sse.nx`.
+  Del lado del proxy: 8 casos de túnel + 1 sobre TLS, con las 11 de `pool_framing` intactas.
+
+---
+
+## [0.33.0] — 2026-09-20
+
+> **Sube MINOR porque rechaza código que antes compilaba** — código que compilaba y reventaba al
+> correr, pero la regla del repo no distingue: lo que el compilador deja de aceptar cambia de minor.
+
+### Changed
+- **Llamar a un valor `Fn` SIN FIRMA ahora se rechaza al compilar cuando el contexto espera un
+  struct por valor o un `float`** (`NYX1037`) `[arco: fn-sin-firma]`. Es la tercera aparición de la
+  misma causa —un `Fn` sin firma no lleva su convenio de retorno y la llamada indirecta asume
+  `i64`—, y esta vez se cierra en vez de parchearse: con un struct eso era un **SIGSEGV** (el `i64`
+  que llega es el primer campo, y se desreferencia) y con `float`, **basura en silencio**
+  (`0.16` → `281472821301216.0`). Lo reportó **nyxerp** desde un middleware que compilaba limpio,
+  pasaba `nyx check` y `nyx vet`, y moría en el primer pedido.
+  > **Lo que NO cambia**: `int`, `String`, `bool`, `char`, `Result`, `Option`, cualquier puntero y
+  > el resultado descartado siguen funcionando a través de un `Fn` sin firma — para esos el convenio
+  > asumido coincide, medido con valores. Tampoco cambia `let f: Fn = una_fn` seguido de `f()`:
+  > codegen refina ese slot con la firma real desde el 2026-08-06.
+  > **Por qué no el convenio uniforme con thunks**, que era la recomendación de la spec: es cirugía
+  > en el codegen de cierres —lo que sostiene `dom_on_fn`, los `browser_*_fn` y `Result.map`—,
+  > cuesta una asignación por llamada, y ni siquiera cierra el caso residual, porque el problema de
+  > `let r = f()` sin anotar no es el ABI sino la ausencia de tipo. Lo que lo hizo innecesario es
+  > una medición: en los casos que fallan el compilador YA conoce el tipo esperado.
+  > **El reparto entre capas es lo que cada una puede ver**: `semantic` mira parámetros (`nyx check`
+  > los ve); `codegen` es el backstop y lee el tipo DESPUÉS del refinamiento, así que agarra el `Fn`
+  > que viene de un campo de struct —que reventaba y ni W004 cubría— y el camino
+  > `NYX_SKIP_SEMANTIC=1`.
+  > **Migración**: `nyx vet` avisa con W004 desde 0.32.4, así que la forma peligrosa se puede
+  > encontrar antes de que el compilador la rechace. El arreglo es declarar la firma:
+  > `f: Fn(T) -> R`.
+
+---
+
+## [0.32.4] — 2026-09-20
+
+> **La jornada la marcaron dos cosas que nadie había visto**: `make test-ai-first` llevaba dos días
+> en rojo en `main` —y su primera guarda rota escondía a todas las que venían después—, y dos
+> carreras distintas hacían fallar compilaciones concurrentes de formas que parecían bugs del
+> compilador. Lo primero lo destapó terminar `include_bytes`; lo segundo, un usuario bisectando
+> commit por commit un error que no era suyo.
+
+### Added
+- **`include_bytes` completo: intérprete, wasm y los diagnósticos que faltaban** `[arco: include-bytes]`
+  (la capacidad salió en 0.32.3 funcionando solo al compilar; el arco cierra acá).
+  > **Intérprete y REPL**: responden **NYX3007** («solo existe al compilar»). Antes la llamada caía
+  > al catch-all y evaluaba a nil, o sea un recurso «incluido» que llegaba **vacío y sin una sola
+  > señal** — el mismo silently-wrong que el intérprete viene cerrando desde NYX3001.
+  > **wasm32-wasi**: paridad medida contra nativo con un recurso de 40.960 bytes que recorre los 256
+  > valores (NUL incluidos): mismo largo, misma suma de control, los 256 presentes. El recurso ocupa
+  > sus bytes **una sola vez** en el `.wasm` (medido: 1,01×).
+  > **Dos chequeos de SEGURIDAD que faltaban en el camino de codegen**: ruta absoluta y escape con
+  > `..`. `semantic` los tenía, pero con `NYX_SKIP_SEMANTIC=1` `include_bytes("/etc/...")` se leía y
+  > se embebía igual. Ahora las dos capas rechazan lo mismo, con el mismo código NYX1034, y ninguna
+  > deja un `.ll` escrito. También se sumó el tope de 8 MiB (NYX1035) a esa capa.
+  > **Tests**: 11 casos nuevos en `test-errors` —uno por diagnóstico y variante, en las dos capas,
+  > con control positivo—, el de wasm, el del REPL y la receta `112-include-bytes`, que muestra el
+  > caso real en chico: servir una tipografía empotrada como cuerpo de una respuesta HTTP.
+- **`nyx vet` avisa W004: un parámetro `Fn` sin firma cuyo resultado se usa.** Nace de una fricción
+  de **nyxerp** (2026-09-19): un middleware con `siguiente: Fn` compilaba limpio, `nyx check` y
+  `nyx vet` daban verde, y el binario moría con `exit 139` en el primer pedido. La causa es el
+  convenio de retorno — un valor `Fn` sin firma no lo lleva, así que la llamada indirecta asume
+  `i64`: un callback que devuelve un struct por valor hace SIGSEGV (el `i64` que llega es el primer
+  campo, y se desreferencia) y uno que devuelve `float` devuelve **basura en silencio**
+  (`0.16` → `281472821301216.0`); con `int` o `String` el convenio coincide de casualidad y anda.
+  > **Por qué solo cuando el resultado se USA**: la idea obvia —un patrón textual sobre `: Fn`— ya
+  > se había evaluado y descartado el 2026-09-04 por ruido. Al medirlo de nuevo apareció el corte:
+  > de los **44** `Fn` pelados de la stdlib, solo **4** llaman al parámetro y usan lo que devuelve.
+  > Guardar el callback, pasarlo a otra función o llamarlo descartando el retorno no tiene el bug y
+  > no avisa. Auditoría de falsos positivos: **0 avisos en 173 archivos** de `by-example` + `std`.
+  > **El arreglo de fondo NO está hecho** y pide decisión: spec
+  > `docs/design/specs/2026-09-20-fn-sin-firma-design.md` (D-2 a D-4 abiertas). Es la tercera
+  > aparición de la misma causa; las dos anteriores se parchearon el 2026-09-13.
+
+### Fixed
+- **Un candado impide que `make install-local` cambie el toolchain a mitad de una compilación
+  ajena.** `~/.nyx` es de toda la máquina, así que instalar mientras otro proyecto corre su suite le
+  cambia el compilador y la stdlib bajo los pies: esa corrida mezcla dos versiones y su resultado
+  —verde o rojo— no sirve para integrar. Pasó dos veces con **nyxerp**: el 2026-09-18 (13 minutos de
+  máquina) y el 2026-09-20 otra vez, con **5 fallos falsos** que al correrlos solos pasaban.
+  > Ahora `install-local` toma `~/.nyx/.toolchain.lock` **exclusivo antes de copiar el primer
+  > archivo**, y `nyx test` y `nyx build` lo toman **compartido por archivo**, solo mientras
+  > compilan y enlazan: la suite ajena termina el archivo en curso, el install entra, y lo que sigue
+  > usa el toolchain nuevo de punta a punta. Si no lo consigue en `NYX_LOCK_WAIT` segundos (600 por
+  > omisión), FALLA nombrando el proceso que lo tiene, en vez de colgarse mudo o pisar. Sin `flock`
+  > instalado avisa y sigue, sin bloquear nada.
+  > **La regla anterior era «mirar `ps` y avisar antes», y falló por los dos lados**: el permiso se
+  > había dado para un alcance menor («es solo documentación») y quien instala no siempre mide bien
+  > lo que cambió. La idea del candado la propuso la sesión de nyxerp, que ya usaba uno propio.
+- **`nyx test` compilaba con nombres COMPARTIDOS y dos corridas simultáneas se pisaban.** Reportado
+  por **nyxerp** (2026-09-20) como `clang: error: unable to execute command: Bus error` seguido de
+  `no such file or directory: 'script.ll'`, que estuvieron bisectando commit por commit como si
+  fuera un bug de generación de código. No lo era: cada archivo de prueba se compilaba dentro del
+  `~/.nyx` compartido escribiendo `script.nx` y `script.ll` con el nombre FIJO, y borrándolos al
+  terminar. La segunda compilación le borra a la primera el `.ll` que clang tiene mapeado en
+  memoria, y un archivo mapeado que desaparece bajo el proceso es SIGBUS.
+  > **Y había una segunda carrera encima**, encontrada al reproducir la primera: los temporales se
+  > nombraban con `time_ms()`, así que dos corridas del mismo milisegundo compartían el binario —
+  > `timeout: failed to run command: Text file busy`, reportado como un FAIL con 0 passed y 0
+  > failed. Ahora cada compilación usa un directorio propio (`mktemp`) para el fuente, el `.ll`, el
+  > binario, el script y la salida.
+  > **Medido**: 2 proyectos compilando en paralelo, 32 corridas. Antes: **3 fallos**. Después:
+  > **0**. La guarda es estática (`run_tooling_gates.sh`, con control positivo), porque reproducir
+  > la carrera falla ~1 de cada 10 veces y un gate por estrés sería lento y tembloroso.
+  > **De paso**: los diagnósticos de `nyx test` ya no dicen `script.nx` sino el nombre real del
+  > archivo de prueba, y la cobertura dejó de depender del literal `script.nx;` como prefijo de las
+  > funciones internas — con el scratch propio ese prefijo cambia, y hardcodeado habría dado
+  > cobertura 0 en silencio.
+- **`make test-ai-first` estaba en rojo en `main` desde el 2026-09-18**, y el rojo no era del
+  código: `tests/ai-first/30-std-privada-homonima-de-builtin.nx` entró sin que ningún gotcha lo
+  citara, y `run_gotcha_coverage.sh` exige que cada test de esa carpeta pertenezca a un ítem de
+  `LLM.md`. El test cubría un arreglo real y no documentado, así que se escribió el gotcha que le
+  faltaba (`std-private-shadows-builtin`, `kind: fixed`): una privada de un módulo de `std/`
+  homónima de un builtin ya no se apropia de la llamada sin calificar. La guarda corta la batería
+  en ese punto, así que todo lo que corre después llevaba dos días sin ejecutarse.
+- **Tres callbacks de la stdlib declaraban `Fn` sin firma y usaban su resultado**: `http_serve`
+  (`handler: Fn(Array) -> String`), `h2_connection_loop` (`cb: Fn(String, String, Array, String) -> Array`)
+  y la receta `10-closures` (`f: Fn(int) -> int`). Eran los tres casos que W004 encontró en el
+  propio repositorio: un handler de usuario que devolviera un struct reventaba dentro de `std/http`.
+  Ahora la firma está declarada, así que la llamada usa el convenio real y el checker valida
+  aridad y tipos en el sitio de llamada.
+
+---
+
+## [0.32.3] — 2026-09-18
+
+### Added
+- **`include_bytes("ruta") -> String`: un archivo binario embebido en el ejecutable al compilar.**
+  (fricción de nyxerp `20260915-170001-team-1`.) La ruta se resuelve desde la raíz del proyecto, el
+  archivo se lee al COMPILAR y sus bytes quedan en el binario. El valor sirve tal cual para el
+  cuerpo de una respuesta HTTP: los NUL no truncan, porque el internado es *length-aware*.
+  > **El caso que lo motivó**: un ERP que promete instalarse copiando un ejecutable servía sus
+  > fuentes `.woff2` desde disco; si alguien copiaba solo el binario, la interfaz se degradaba a
+  > otra tipografía **sin avisar**. Verificado con sus dos archivos reales (14.708 y 45.712 bytes):
+  > salen idénticos a disco.
+  > **Diagnósticos**: `NYX1033` (la ruta debe ser un literal — se resuelve al compilar), `NYX1034`
+  > (cuatro variantes: sin raíz de proyecto, ruta absoluta, escape con `..`, archivo inexistente;
+  > todas dicen la ruta resuelta **y** la base), `NYX1035` (más de 8 MiB, con el tamaño real en el
+  > mensaje). Las dos variantes del medio son de seguridad: sin ellas, un programa podría leer
+  > cualquier archivo del disco de quien compila.
+  > **Limitación declarada**: funciona compilando. El intérprete, el REPL y `wasm32-wasi` todavía
+  > no lo conocen — son las tasks 3 y 4 del arco, pendientes.
+
+### Fixed
+- El emisor de bytes evita `escape_string`, que es cuadrático: un recurso de 400 KB tardaba ~197 s
+  en el camino viejo.
+
+> Vacío por ahora: lo que había se publicó en 0.32.2.
+
+---
+
+## [0.32.2] — 2026-09-18
+
+> **El compilador era cuadrático en el tamaño del IR que emite.** Un proyecto real de 126 módulos
+> pasó de compilar su suite de pruebas en 2 h 14 min a hacerlo en **13 min**. Lo encontró el equipo
+> de nyxerp midiendo, tras tres hipótesis previas que sus propias mediciones fueron descartando.
+
+### Fixed
+- **El compilador era CUADRÁTICO en el tamaño del IR que emite.** `emit` hacía
+  `ctx.output[0] = ctx.output[0] + line + "\n"`: cada línea de IR copiaba todo el IR acumulado. En
+  un `.ll` de 184.080 líneas —un proyecto real de 126 módulos— eso es ~367 s solo en copiar. Mismo
+  patrón en `resolve.nx` (13 sitios), que armaba el texto inlineado línea por línea: era el segundo
+  contribuyente. Los dos pasan a `StringBuilder`.
+  > **Medido en un banco sintético del repo** (1, 8 y 30 módulos): el exponente del tiempo baja de
+  > **1,98 (cuadrático) a 1,03 (lineal)**, el punto grande de 3,70 s a 0,23 s (**16×**), y el `.ll`
+  > sale idéntico —9.437 líneas antes y después—, que es lo que prueba que el cambio no toca
+  > semántica. `seeds-check`: las 9 semillas en punto fijo.
+  > **Medido por el equipo de nyxerp sobre su proyecto real** (126 módulos, 31.853 líneas, 100
+  > archivos de prueba, 954 pruebas): **la suite completa pasó de 2 h 14 min a 13 min**, cero fallos.
+  > Un archivo con cierre de 30 módulos, de 71 s a 8,3 s. Sobre cuatro tamaños con mediana de tres
+  > corridas cada uno: 2.382 líneas de IR → 0,1 s / 1 MB · 11.408 → 0,3 s / 29 MB · 68.262 → 3,3 s /
+  > 112 MB · 184.236 → **32,5 s / 234 MB** (antes 402 s / 1.886 MB). Reproducibilidad de las tres
+  > corridas, excelente en los cuatro tamaños. **Los 13 minutos son el efecto conjunto de los tres arreglos de la jornada** (el `-O2`
+  > fuera de `nyx test`, `NYX_RT_ARCHIVE` y éste), no de éste solo — la comparación aislada es la del
+  > archivo: 71 s → 8,3 s.
+  > **Consecuencia que invalida una conclusión previa**: el pico de ~2 GB del front-end, que este
+  > CHANGELOG daba por estructural («lo que impide correr dos compilaciones a la vez en 3,8 GB»),
+  > era este bug. Con 224 MB entran de sobra.
+
+### Added
+- **`nyx update --version <rev>`**: instalar una revisión concreta en vez de la punta (fricción de
+  nyxerp, 2026-09-17). Acepta lo que git resuelva — un tag (`v0.32.0`), un sha o una rama —, y una
+  ref inexistente se rechaza **antes** de tocar la instalación, para que un error de tipeo no deje
+  fuentes de una versión con binarios de otra. Sin esto, una versión que rechaza código que antes
+  compilaba dejaba al equipo sin salida: es lo que pasó al publicar 0.32.0 con `pub`/NYX1036, y lo
+  que tuvo a una máquina bloqueada una mañana entera.
+
+### Interno — arco reparto-de-carga: el trabajo pesado sale del servidor de producción `[arco: reparto-de-carga]`
+
+Sin cambio observable para un programa Nyx. El repo del lenguaje pasa a vivir en dos máquinas: el
+servidor (aarch64, que además sirve producción) y una laptop (WSL2 x86_64). La exclusión mutua deja
+de ser «un repo, una sesión» y pasa a ser **un subárbol, un escritor**: el candado de `compiler/`,
+`runtime/`, `std/` y `compiler/*.ll` lo declara una línea de `PLAN.md`, los archivos raíz solo los
+escribe quien lo tiene, y `make install-local` es local a cada máquina. Bootstrap de la segunda
+máquina en `docs/CONTRIBUTING.md` §Segunda máquina; encargos por `scripts/sdd/brief --remote`, y
+`~/nyx/ops/handoff/` queda declarado canal muerto con una guarda nueva (`state-check` (j)) que
+rechaza cualquier encargo que cite la ruta absoluta de otra máquina.
+
+**Lo que la segunda máquina verificó, y no se verificaba en ningún lado**: las 9 semillas del
+bootstrap reproducen su `.ll` **byte a byte en x86_64** contra las generadas en aarch64 — el
+compilador es determinista e independiente de la arquitectura del host. Y `test-123-full-asm` corrió
+por primera vez desde que el CI se quedó sin presupuesto, sin ningún hallazgo de ABI.
+
+**Y lo que encontró de paso**: el desborde de stack del compilador en x86_64, el rojo de
+`make test-errors` que vivía en `main`, dos guardas que daban verde sobre lo que no habían medido
+(el gate de semillas y `test-errors`), dos bugs de locale, y `make test-ai-first` corriendo entera
+por primera vez en cualquiera de las dos máquinas. De los cuatro arreglos de compilador de la
+jornada, tres salieron de máquinas que no son ésta.
+
+---
+
+## [0.32.1] — 2026-09-18
+
+> **PATCH de corrección de 0.32.0, publicado el mismo día.** Tres de los cuatro arreglos los
+> encontraron consumidores del lenguaje, no este repo: nyxerp midió que el chequeo de visibilidad
+> nuevo era cuadrático, y la segunda máquina del reparto de carga encontró el rojo de
+> `make test-errors` y el desborde de stack en x86_64. Sube número propio en vez de re-publicar
+> `0.32.0` con otro compilador adentro, que es exactamente lo que el reporte
+> `20260918-000022-team-1` de nyxerp pedía dejar de hacer.
+
+### Fixed
+- **El chequeo de visibilidad (NYX1036) era CUADRÁTICO** (fricción de nyxerp,
+  medida sobre 126 módulos). Llamaba a `fn_module_resolve` —que escanea la tabla entera de
+  símbolos— en CADA validación de llamada, sin el guard `contains` O(1) que la resolución de
+  aridad ya usaba para lo mismo. Medido por ellos en una prueba real: el front-end pasó del orden
+  de 100 s a **466 s**, con 6m19s de *user time* (CPU real, no contención). Ahora un set con los
+  nombres de las privadas filtra antes de resolver: una llamada a un builtin, a una `pub` o a una
+  local paga un `contains` y nada más.
+- **`make test-errors` quedó en rojo en `main` con 0.32.0** (lo encontró la máquina B del reparto).
+  El fixture `vendored-pkg` no declaraba `pub` en sus dos funciones y NYX1036 lo rechaza —
+  correctamente: es justo lo que el cambio atrapa. El fixture quedó atrás, como la stdlib que sí se
+  migró.
+- **Los tests `compiler-unit` quedan fuera del chequeo de visibilidad.** Prueban internals de
+  `codegen.nx` a propósito, y `NYX_INLINE_COMPILER=1` existe con ese propósito declarado
+  (`resolve.nx:54-63`): que los tests «linkeen el símbolo real». En el régimen normal esos módulos
+  no se inlinean, se compilan por separado y se linkean. La alternativa era hacer `pub` funciones
+  como `make_context`, que no son API de nada.
+- **En x86_64, compilar `compiler/lexer.nx` desbordaba el stack default de 8 MB** (medido por la
+  máquina B: SIGSEGV determinista, umbral entre 8704 y 9216 KB). No es memoria sino el ABI —
+  x86-64 SysV spillea más que AArch64, y `codegen_call_expr`/`codegen_method_call` reservan ~512 KB
+  de frame cada una siendo mutuamente recursivas —, y `lexer.nx` lo dispara por PROFUNDIDAD, no por
+  tamaño. `scripts/lib_stack.sh` sube `ulimit -s` donde se compilan módulos del compilador. **No es
+  el arreglo de fondo**: achicar esos frames, o correr el `main` en un hilo propio, toca el codegen
+  —rompe el punto fijo y cambia dónde corre el `main` de todo programa Nyx— y va como arco aparte.
+  El usuario externo no está afectado: el repo público no lleva `lexer.nx` y `install.sh` no lo
+  recompila.
+
+### Changed
+- **`make test-errors` construye `nyx_check` y `nyx_build` antes de correr.** Cinco de sus checks
+  las invocan y sin ellas se SALTABAN en silencio — verde sobre lo que nadie midió. Por eso la
+  suite pasa de **282 a 290** checks: los ocho de diferencia estaban ahí, sin mirarse. Cuesta ~6 s
+  y ~200 MB la primera vez y 0 s después (son targets de archivo con dependencias declaradas).
+- **`run_seeds_check.sh` distingue por qué no pudo medir.** Mira el rc del bootstrap (139 =
+  SIGSEGV = desborde de stack; 137 = OOM) y da el `ulimit` exacto en vez de mandar a liberar
+  memoria a quien tiene un problema de stack. Complementa el arreglo de 0.32.0, que hizo que «sin
+  medir» dejara de salir en verde.
+- Cuatro arreglos de entorno en los gates, todos medidos con antes/después por la máquina B:
+  `#include <sys/time.h>` en `test_terminal.c` (implícito es error desde clang 16), `LC_ALL=C sort`
+  en `run_coverage_tests.sh` (el fixture está en orden de bytes), SKIP limpio sin toolchain wasi en
+  `run_build_manifest.sh`, y desacoplar los dos tests de `test_os_fault_guard` (de 2 asserts a 5).
+
+---
+
+## [0.32.0] — 2026-09-18
+
+> **MINOR y no PATCH por un motivo concreto**: `pub` pasó a proteger también la llamada pelada
+> (NYX1036), y eso **rompe código que hoy compila**. Un programa que llame a una función sin `pub`
+> de otro módulo deja de compilar; el arreglo es marcar `pub` lo que de verdad era interfaz. La
+> migración ya está hecha en la stdlib (16 funciones) y en `nyx-db` (27). Se sube versión
+> justamente porque el reporte `20260918-000022-team-1` de nyxerp mostró el costo de no hacerlo:
+> dos máquinas con el mismo número y compiladores que aceptan código distinto.
+>
+> **Migrar un proyecto existente** es mecánico, no hay que adivinar: un solo
+> `nyx check 2>&1 | grep NYX1036 | sort -u` lista TODAS las funciones a marcar con su módulo
+> dueño (no se corta en el primer error). Referencia de magnitud: 16 funciones en la stdlib,
+> 27 en `nyx-db`. Lo que NO cambia: una privada sigue siendo llamable dentro de su propio
+> módulo, y un builtin homónimo no se ve afectado.
+
+> **La enorme mayoría es INTERNO**: el arco Windows
+> (capa de portabilidad `nyx_os_*`, `os_win32.c`, GC + Fibers) es refactor y CI — **no
+> anuncia soporte Windows** y no cambia el comportamiento observable de un programa Nyx,
+> salvo lo listado en Added/Fixed/Docs. Cada arco tiene su bitácora en `docs/SESSION_LOG.md`
+> y su narración larga archivada en `docs/archive/2026-campaigns-plan.md`.
+>
+> **Convención**: cada sección `### Interno — …` de abajo es un arco SIN cambio observable para
+> un programa Nyx (refactor, portabilidad, CI). Nada de eso anuncia soporte de Windows — el
+> anuncio es una decisión de Ottavio (W6).
+
+### Added
+- **`std/serve`: Server-Sent Events del lado servidor** [arco: serve-sse] (fricción de nyxerp,
+  `20260910-020002-team-1`, punto 2). `sse_open(req, room)` desde una ruta NORMAL abre un canal
+  `text/event-stream` que pasa por el pipeline completo (hooks, middlewares, mounts, wraps: un 401
+  no abre nada); `sse_broadcast(room, evento, datos) -> int` difunde desde cualquier handler o
+  thread; `sse_count()`/`sse_count_room(room)`. El canal NO ocupa un worker: tras el pipeline el
+  worker escribe la cabecera, registra el fd en el room y suelta la conexión. Un solo thread de
+  heartbeat por proceso (`NYX_SSE_HEARTBEAT_SECS`, default 15) detecta clientes caídos escribiendo;
+  un cliente que no lee se corta con `tcp_set_timeout(fd, 2)`. Tope `NYX_SSE_MAX` (default 1024)
+  con 503; `sse_drain_close()` en el drain de SIGTERM. Un evento con `\r`/`\n` se rechaza (0), no
+  se sanea. Cero builtins nuevos. Pareja del cliente `browser_sse_fn` del navegador. **Aviso** (al
+  publicarse): detrás del gateway `nyx-proxy` SSE todavía no funcionaba y podía romper pedidos de
+  otros usuarios — **resuelto el 2026-09-20 en `nyx-proxy` 0.4.4**, que tuneliza el stream. Receta:
+  `examples/by-example/110-serve-sse.nx`; doc en `LLM.md` §std/serve. Tests: regression +1
+  (`test-429-sse-frame`: formato del evento, rechazo de `\r`/`\n`, registro vacío) y smoke de
+  std/serve 70 -> 103 (+33 checks de SSE: cabecera, pipeline y 401, rooms, multilínea, heartbeat,
+  conteo que baja, cien canales sin fuga de fds, tope 503 y comentario final del drain).
+- **`await` en wasm32-wasi, y una `async fn` que ESPERA al anfitrión JS sin callbacks**
+  `[arco: async-real-wasm]` (pedido de nyxerp del 2026-09-10, prioridad ALTA). En wasm, `await f()`
+  de una async fn llamada por nombre baja a llamada directa (antes: error de target). Nuevo atributo
+  `#[suspends]` sobre `extern "js" fn`: el import suspende la pila wasm con Asyncify hasta que su
+  Promise resuelve. Módulo nuevo `std/browser_await`: `browser_fetch_await`/`browser_fetch_await_opts`
+  (`Result<HttpResp, Error>`, kinds `connection`/`timeout`; el status HTTP no es error) y
+  `browser_sleep_await`. Va APARTE de `std/browser` porque los módulos importados se compilan enteros:
+  si viviera ahí, toda app que importa `std/browser` pasaría a necesitar binaryen y cambiaría su
+  `.wasm`. El shim encola los eventos que llegan durante una suspensión (una sola pila
+  suspendida a la vez) y ancla el turno de arena mientras dura: medido sin el anclaje, la pila
+  rebobinada lee Strings pisados en silencio. `nyx build --target wasm32-wasi`, `make wasm` y los
+  runners corren `wasm-opt --asyncify` SOLO si el `.ll` trae `; nyx-asyncify-imports:`; un programa
+  sin `#[suspends]` sale byte a byte igual. Dependencia nueva, solo para esos programas: binaryen
+  (`wasm-opt`, o `NYX_WASM_OPT`). Costo medido: +3,4 % de tamaño y ~0,8 s de `wasm-opt` en un
+  programa chico (`test-wasm-33-await-fetch`: +2,9 %). Tests: `test-wasm-31-asyncify-shim` (shim,
+  cola, arena, 1000 ciclos, entrada anidada), `test-wasm-32-await-puro` (paridad nativo↔wasm),
+  `test-wasm-33-await-fetch`; dos tests de NYX0105; receta `109-await-fetch-wasm`. Sin binaryen,
+  los tests async hacen SKIP contado aparte. `export async fn`/`pub async fn` (necesario para que
+  `std/browser_await` sea importable) no se registraba en semantic/codegen — cazado con `await`
+  de una async fn EXPORTADA; y `let x = await f()` sin anotar no averiguaba el tipo real de
+  retorno (la firma cruda de una async fn es "Fn", el retorno vive en `__async_body_NAME`) —
+  rompía el acceso a campos de `Result<Struct, Error>` awaited, en NATIVO también, no solo wasm.
+  Un tercer hallazgo, ajeno al runtime: una cadena larga de `+` en `compiler/build.nx`
+  (script bash del build wasm) hacía segfaultear al compilador self-hosted compilándose a sí mismo
+  con `NYX_SKIP_SEMANTIC=1` — partida en dos statements, sin tocar el compilador.
+- **`nyx test --coverage`: funciones de `src/` que ninguna prueba llamó** (fricción de nyxerp,
+  reporte `20260914-110000-team-1`, pedido 2) `[arco: nyx-test-cobertura]`. Después del resumen,
+  por archivo de `src/`: `N/M llamadas` y `src/archivo.nx:línea nombre` de las que no. También
+  lista los módulos que ninguna prueba importa y, aparte, los archivos de prueba sin perfil
+  (timeout, crash o sin compilar); las funciones que solo esos archivos importaban quedan como
+  «sin datos», nunca como no llamadas. `--coverage=lcov` escribe además `target/coverage.lcov`.
+  - Cómo mide: PGO de IR de LLVM (`-fprofile-generate` con `-disable-preinline`, porque con `-O2`
+    el inliner previo a la instrumentación dejaba en 0 las fns chicas) y una tabla lateral de
+    codegen (`NYX_COVERAGE_MAP`) con la línea de declaración.
+  - Límites: solo funciones (no líneas ni ramas), corrió/no corrió, no cambia el código de salida,
+    solo el target nativo. Necesita `llvm-profdata` y `libclang_rt.profile`; sin ellos falla con la
+    receta.
+  - Sin `--coverage`, el IR y el enlace de `nyx test` no cambian.
+  - Costo medido sobre una suite real (93 archivos de prueba, 2 núcleos, 2026-09-17): 105m23s sin
+    `--coverage` contra 119m41s con él, **+13,6%**. Ahí cada archivo se compila y enlaza por
+    separado y el enlace domina el sobrecosto: una suite de un solo enlace debería esperar una
+    fracción mayor.
+- **`std/io`: `read_stdin_all() -> String`** (fricción de nyxerp, reporte
+  `20260914-210002-team-2`, pedido 2). Leer la entrada estándar ENTERA (un JSON de una sola
+  línea que un programa wasm recibe del navegador, un filtro, cualquier programa WASI que un
+  anfitrión alimenta por fd 0) no tenía forma directa — había que armarla a mano con
+  `read_line()` sorteando sus dos conductas (ver el `### Fixed` de abajo). Binary-safe (bytes 0
+  incluidos, `fread` por longitud explícita, nunca `strlen`) y sin tocar los saltos de línea del
+  contenido. `extern "C" fn nyx_read_stdin_all()` + wrapper `pub fn` en `std/io.nx` — A
+  PROPÓSITO no es builtin (mismo patrón que `std/tls.nx`/`std/webpushcrypto.nx`): no toca
+  `semantic.nx`/`codegen.nx`, así que no exige re-verificar el punto fijo del bootstrap ni
+  regenerar semillas/`std/builtins.index`. `std/io` ya estaba en el prelude (pre-registrado en
+  `compiler/resolve.nx` para dar `println` sin import), así que la función queda GLOBAL sin
+  `import "std/io"` igual que `read_line` — `make bootstrap` regenera `std/prelude.nx` por su
+  dependencia declarada. Funciona igual en wasm32-wasi (WASI expone fd 0 como
+  el stdin de libc, mismo `runtime/runtime.c` que ambos targets comparten). Documentado en
+  `LLM.md` (sección I/O). Tests self-asserting nuevos en `tests/ai-first/stdin/` (bytes 0 y
+  entrada vacía), corridos en nativo Y wasm32-wasi por `scripts/testing/run_stdin_io_tests.sh`
+  (dentro de `make test-ai-first`).
+- **`std/http`: `HttpOpts` + `try_http_request_opts` — plazos configurables en el cliente HTTP**
+  `[arco: http-tls-cliente]` (fricción de nyxerp 20260914-000000). `http_opts()` arma
+  `HttpOpts { connect_ms: 10000, respuesta_ms: 30000, verificar_tls }` y
+  `try_http_request_opts(method, url, headers, body, opts)` los aplica: `connect_ms` a connect +
+  handshake TLS, `respuesta_ms` como plazo TOTAL de la respuesta (no se reinicia con cada byte).
+  `std/tls` suma `try_tls_connect(host, port, verify_mode, connect_ms) -> Result<int, Error>` y
+  `try_tls_read(h, max_bytes, timeout_ms) -> Result<String, Error>`, sobre
+  `nyx_tls_connect_result`/`nyx_tls_read_timed` (runtime/tls.c, sin builtins nuevos: `extern "C"`).
+  Vocabulario de `std/error` + `kind "tls"` (certificado que no verifica o handshake roto).
+  Receta `examples/by-example/108-http-plazo-y-causa.nx`; spec y plan en `docs/design/`.
+  Conteos (`docs/TESTS.md`): regresión +1 (`test-425-http-plazos-y-causa`, un caso por fila de la
+  tabla de la spec §2 con control positivo), runtime C +68 asserts (`test_tls` 13 casos, `test_net_result` 3), recetas 114 → 115 (la 108 corre).
+- **`std/serve`: `serve_app_en(app, host, port, workers)` — elegir la dirección de escucha**
+  (fricción de nyxerp, 2026-09-14, IDEA). `serve_app(app, port, workers)` no dejaba elegir host:
+  un proyecto con `servidor.direccion` en su config (por omisión `127.0.0.1`, solo la propia
+  máquina detrás de un proxy) no tenía forma de aplicarla, aunque `tcp_listen(host, port)` más
+  abajo en `std/net` ya recibía el host. Al momento de agregar esta función `serve_app` seguía
+  bindeando `0.0.0.0` sin cambios (aditiva); ese default cambió DESPUÉS, en esta misma
+  sección — ver el `### Changed` de más abajo (`serve_app` pasa a `127.0.0.1`; `serve_app_en`
+  es justamente cómo se pide `0.0.0.0` ahora). Misma semántica de `host` que
+  `tcp_listen`/`try_tcp_listen` (`""`/`"0.0.0.0"` = todas las interfaces, una IP numérica puntual
+  liga solo esa — nunca un hostname). Era la única función de arranque de `std/serve` con el
+  hueco (no hay variante TLS ni con opciones ahí todavía). Documentado en `LLM.md` (sección
+  std/serve). Regresión contra el servidor real en `tests/integration/serve_std/server_bind.nx` +
+  `test_serve_std_bind.py`, con `/proc/net/tcp` del proceso real para confirmar el bind exacto
+  (actualizada junto con el cambio de default — ver `### Changed`).
+- **`nyx build --main <archivo.nx>` y `nyx run --main`: otro punto de entrada del mismo proyecto**
+  (fricción de nyxerp, 2026-09-14, IDEA). Un `main` que dibuja (puro) y sirve (sockets) no compila a
+  wasm —`tcp_read_line` no existe ahí— y no había forma de llevar solo la parte pura sin partir el
+  repositorio en dos: `nyx build --target wasm32-wasi --main src/navegador.nx` ahora lo hace, con las
+  mismas dependencias y la misma resolución de imports. El artefacto se llama
+  `<name>-<archivo>` (nativo `target/<name>-navegador`, wasm `target/wasm32-wasi/<name>-navegador.wasm`)
+  para **no pisar el binario principal**: con el nombre del paquete, un `nyx run` posterior habría
+  ejecutado otro programa sin decir nada. El nativo va a `target/` y no a la raíz porque el
+  `.gitignore` que siembra `nyx init` solo cubre `/<name>`, y un patrón `/<name>-*` habría escondido
+  en silencio archivos legítimos del usuario (un script `miapp-deploy`); `run_build_manifest.sh` lo
+  verifica con `git status` sobre la plantilla real, con ese script como control negativo. Ruta absoluta, archivo sin `.nx` o inexistente, y
+  `--main` sin valor son errores antes de compilar; ni la flag ni su valor llegan al programa en
+  `nyx run`. `test-wasm` suma el caso con el proyecto del reporte (control negativo: sin `--main` el
+  build wasm falla por «not supported»; con `--main`, salida wasm idéntica a la nativa) y
+  `run_build_manifest.sh` los errores y el nombre del artefacto. Quedan fichados en `TASKS.md` el
+  error con la cadena de llamadas y la poda de lo inalcanzable.
+- **SSE en wasm: `browser_sse_fn(url, fn(evento, datos) {...}) -> int` y `browser_sse_close(id)`**
+  (fricción de nyxerp, 2026-09-10, IDEA). Una pantalla de wasm solo podía **preguntar** cada tanto.
+  En un ERP eso significa que dos personas mirando el mismo inventario no ven lo que hizo la otra, y
+  que el servidor recibe una consulta por pantalla abierta por intervalo, casi siempre para
+  responder «nada nuevo».
+  Va sobre **`fetch` con el cuerpo en streaming, no sobre `EventSource`**, y las dos razones se
+  midieron antes de elegir: `EventSource` exige registrar cada nombre de evento de antemano —no
+  tiene catch-all— y el contrato que pidió el reporte es `fn(evento, datos)` con nombres arbitrarios
+  («stock», «factura»); y node 20 no trae `EventSource` pero sí `fetch` y `ReadableStream`, así que
+  sobre `fetch` esto **se puede testear** bajo node con el mismo `opts.fetch` que ya inyectan los
+  tests. Es además lo que el propio reporte describe: «un `fetch` que no se cierra».
+  Multi-disparo: el cierre queda anclado hasta `browser_sse_close`, y también se suelta si el stream
+  termina o falla — un canal que se cae no puede dejar el entorno anclado para siempre.
+
+- **`browser_geo_fn(fn(lat, lon) {...})`** — era la última de las asíncronas que solo aceptaba el
+  **nombre** de un export; `fetch`, `timeout` e `interval` ya tenían su variante con cierre. Con eso
+  queda cerrado el primer pedido del mismo reporte: el contexto viaja, y no hace falta una tabla de
+  correlación escrita a mano para saber a qué pedido corresponde cada respuesta.
+- **`try_<S>_desde_fila(fila) -> Result<S, Error>`** [arco: derive-fila-sin-abortar]. La API que
+  pidió el reporte de nyxerp: convertir una fila de la base sin que un dato inesperado tire el
+  proceso. La que aborta (`<S>_desde_fila`) **se queda** — para un script de migración es la
+  correcta.
+  Las tres funciones comparten **una sola definición** de qué hace que una fila no sirva: `try_`
+  consulta a `_valida`, y si la fila está bien construye llamando a `desde_fila`. No hay tres copias
+  de los mismos chequeos que puedan divergir, que era el riesgo declarado del arco.
+  La única incógnita del spec —si un `Result` emitido por un derive resolvería el `match` del
+  llamador sin que el programa escriba `Result<S, Error>` en ninguna anotación— se resolvió a favor:
+  alcanza con pedir `monomorphize_enum` desde el propio derive. El test lo fija, para que si eso
+  dejara de alcanzar lo diga la suite antes que un usuario.
+  Habilitado de rebote por el arco `prelude-descongelado` del día anterior: `Error` vive ahora en el
+  prelude, así que un derive puede devolver `Result<S, Error>` sin exigirle al usuario que importe
+  `std/error` ni romper a quien no lo hace.
+- **`<S>_desde_fila_valida(fila) -> String`: preguntar si una fila se puede convertir, sin morir**
+  [arco: derive-fila-sin-abortar]. `<S>_desde_fila` del `#[derive(Fields)]` aborta ante cualquier
+  dato que no cuadre —un NULL, un índice fuera de rango, un booleano irreconocible— y la fila la
+  arma la **base**, no el programa. Un solo booleano raro en una tabla de auditoría de hace dos años
+  volteaba el servidor de un ERP entero, con todos los usuarios adentro, en vez de mostrar «este
+  registro está corrupto». Consecuencia medida en el reporte: **no usaban `desde_fila` para nada que
+  viniera de la base**, que es justo para lo que existe.
+  La nueva devuelve `""` si la fila se puede convertir, o el problema nombrando struct, campo y
+  valor. La que aborta **se queda**: para un script de migración es la variante correcta, y el
+  reporte lo pidió explícito.
+  **Una sola tabla de qué es un booleano válido.** `nyx_bool_text_parse` es ahora la única
+  definición, y tanto el conversor que aborta como el sondeo que pregunta la usan. Era la
+  restricción que el plan del arco puso primero, porque este repo duplicó una lista tres veces en la
+  semana anterior —los builtins void, los módulos del prelude, los builtins globales— y las tres
+  derivaron. El unitario de C verifica la invariante valor por valor: para cada una de las diez
+  formas aceptadas, el sondeo dice «sí» **y** el conversor la convierte. Si divergieran, `_valida`
+  aprobaría una fila que después mata el proceso — el peor de los dos mundos.
+  Con control de no-regresión (la que aborta sigue abortando, con el mismo mensaje) y su control
+  positivo (la misma fila mala por la variante que pregunta no mata el proceso), los dos en
+  `run_silent_failure_checks.sh` y **verificados en rojo** invirtiendo la expectativa a propósito.
+  `try_<S>_desde_fila -> Result<S, Error>` es la Task 2 del mismo arco.
+- **`pg_sqlstate(e: Error) -> String`** (fricción de nyxerp, 2026-09-10). `pg_parse_error` extrae el
+  campo `C` del ErrorResponse —lo tiene ESTRUCTURADO— y lo vuelve a meter dentro del texto, porque
+  el SQLSTATE es alfanumérico (`"42P01"`) y no entra en el `int` de `Error`. Quien necesitaba
+  distinguir una violación de unicidad de cualquier otra falla —un ERP, en cada alta— tenía que
+  buscar ese sufijo dentro de una cadena, y el día que el formato cambiara se rompía cada proyecto
+  que lo leía por su cuenta. Leerlo en el mismo módulo que lo escribe es lo que permite que el
+  formato cambie sin romper a nadie. Devuelve `""` cuando no vino: los errores de transporte no
+  traen SQLSTATE porque el servidor nunca respondió.
+- **`CAPABILITIES.md` incluye los 191 builtins globales — antes no tenía ni uno** (fricción de
+  nyxerp, 2026-09-11, DOC). El índice que `AGENTS.md` le dice a un agente que consulte para saber
+  QUÉ EXISTE se arma escaneando `std/*.nx`, y los builtins globales no viven ahí: los declara el
+  compilador. Faltaban los 191, **incluida toda la criptografía** — `sha256`, `hmac_sha256`,
+  `pbkdf2_hmac_sha256`, `constant_time_eq`.
+  El costo no fue teórico: un equipo pidió una KDF de contraseñas, la KDF **ya existía**, no la
+  encontraron, y estuvieron a punto de escribir PBKDF2 a mano sobre `hmac_sha256` —con un ADR
+  planificado para justificarlo—. Su frase, que es la tesis de este cambio: «una primitiva
+  criptográfica que existe y no se puede encontrar es, en la práctica, una primitiva que no existe:
+  quien la necesita termina escribiendo la suya».
+  `std/builtins.index` es el catálogo nuevo, generado por `scripts/gen_builtins_index.sh` (`make
+  builtins-index`) desde las llamadas `scope_declare_fn(..., "builtin", N)` de `semantic.nx` — que
+  es lo que el CHECKER conoce, o sea exactamente lo que un programa puede llamar sin `import`. Viaja
+  junto a la stdlib (`install-local` y `sync_to_public.sh` lo copian) y `nyx capabilities` lo lee.
+  Las descripciones y la categoría salen de `LLM.md` §4, en tres redes: los nombres de la CABEZA de
+  cada bullet (precisa, da descripción), cualquier mención dentro de una sección (da categoría), y
+  el prefijo del nombre (`math_`, `datetime_`, `atomic_`…). Sin la tercera, 84 de 191 caían en
+  «Otros», que es tanto como no estar; con ella quedan 6. Un builtin sin descripción sale igual, con
+  su aridad: el índice responde «¿existe?» antes que «¿cómo se usa?», y omitirlo reproduciría el bug.
+  Tres guardas en `run_capabilities_test.sh`, cada una para un fallo distinto: el catálogo stale
+  respecto de `semantic.nx`, el índice generado sin secciones de builtins (nyx_build viejo), y los
+  builtins del reporte ausentes por nombre. **Las tres verificadas en rojo**: la segunda y la tercera
+  no son alcanzables mutando el catálogo —la primera se dispara antes—, así que se probaron con un
+  `nyx_build` que deliberadamente no emitía la sección.
+  Se resuelven además los otros dos pedidos del reporte: `LLM.md` §Crypto dice ahora explícitamente
+  que **NO existen `argon2`, `argon2id`, `scrypt` ni `bcrypt`** (probaron esos nombres y quedaron sin
+  saber si existían con otro), con la receta de hash de contraseñas y las palabras que uno teclea al
+  buscar; y que `csprng_bytes` vive en `std/webpushcrypto` —un módulo cuyo nombre viene de su primer
+  consumidor, no de su alcance—. De paso, `std/postgres.nx` tenía DOS comentarios contradictorios a
+  410 líneas de distancia sobre de dónde viene `csprng_bytes`; el falso decía `std/random`, que es
+  justo el generador que NO es criptográficamente seguro.
+- **`nyx --version` identifica la INSTALACIÓN, no solo el número de release** (pedido de nyxerp,
+  2026-09-12, nombrado al margen de un reporte de bloqueo). Decían: «`nyx --version` dice 0.31.0 y
+  `~/.nyx/VERSION` también, pero durante esta misma sesión llegaron tres cambios de comportamiento
+  sin que ese número se moviera; si hay una forma de saber qué compilación exacta tenemos instalada,
+  nos sirve para el próximo reporte». Tenían razón, y de más maneras de las que decían: el bug que
+  estaban reportando **era** una discrepancia entre las dos mitades del toolchain —prelude nuevo con
+  compilador viejo—, o sea justo la clase de problema que un número indistinguible vuelve
+  irreportable.
+  ```
+  $ nyx --version
+  nyx 0.31.0 (compiler 6940d0de, prelude eb431d7a)
+    home:     /home/admin/.nyx
+    compiler: /home/admin/.nyx/nyx_bootstrap
+  ```
+  Las huellas se **calculan** de los archivos reales (`sha256sum`, con caída a `shasum` y `cksum`),
+  no se leen de un sello escrito al instalar: un sello es exactamente lo que puede quedar viejo, que
+  es el modo de fallo que se está arreglando. Se muestran las DOS mitades a propósito, porque
+  compilador y prelude se instalan por separado: dos instalaciones con el mismo número de versión y
+  distinto par de huellas no son la misma cosa, y ahora se ve. Verificado contra el escenario del
+  bloqueo — con el prelude viejo instalado la huella cambia de `eb431d7a` a `dc859382`.
+  Con dos guardas en `run_silent_failure_checks.sh`: el formato y que las dos huellas sean
+  distintas entre sí, más un control de que la huella del prelude **sigue al contenido** (sin eso, un
+  helper que devolviera una constante pasaría el primero).
+
+- **El driver crudo ya no imprime `nyx vunknown`** — invocarlo sin el wrapper (que es quien setea
+  `NYX_HOME`) y fuera del repo dejaba la versión en `unknown`, y esa línea existe justamente para
+  que el usuario sepa qué versión citar al reportar fricción: no decírsela es un fallo del propósito
+  de la línea. Ahora cae a `~/.nyx/VERSION`, espejando la cadena que `resolve_module_path` ya usa
+  para encontrar la stdlib instalada. Cierra la ficha BAJA UX de `TASKS.md`.
+- **`std/time.nx` y el camino UTC que no existía** `[arco: std-time]`. `runtime/time.c` siempre llamaba `localtime()`, así que el
+  mismo `datetime_parse` daba dos epochs distintos según `TZ` — y `std/serve` emitía una cabecera `Date` rotulada `GMT` que era
+  incorrecta en toda máquina con huso local, presentándolo en un comentario como «restricción de despliegue». Ahora la aritmética
+  civil es entera pura y **no usa `gmtime_r`/`timegm` a propósito**: ninguna existe en la CRT de MSVC y ese archivo ya compila en
+  el port de Windows. Es reentrante por construcción y exacta incluido pre-1970. La capa Nyx nueva trae ISO 8601 con offset
+  extendido, aritmética de calendario y `time_breakdown` como vista — que le ahorra a `std/serve` siete llamadas FFI y siete
+  `localtime()` por cabecera.
+  **Ningún camino inventa un valor**: `try_time_from_iso("2020-06-15 12:30:00")` da `Err` porque ese texto no dice qué instante
+  es, y la suposición se declara en el nombre (`try_time_from_iso_assuming_utc`); `2021-02-29` es `Err`, no el 1 de marzo
+  normalizado; y `try_time_utc_offset` falla si la plataforma no resuelve el huso, en vez de devolver un `0` que afirmaría que es
+  UTC. El centinela `-1` de `datetime_parse` —que colisionaba con 1969-12-31, así que una fecha mal tipeada se guardaba como 1969
+  en silencio— se reemplaza por uno fuera de rango, **sin cambiar ninguna firma**: los 67 usos existentes siguen andando.
+- **Cierres asíncronos en wasm: `browser_fetch_fn`, `browser_timeout_fn`, `browser_interval_fn`** `[arco: wasm-closure-lifetime]`.
+  Aceptan un cierre donde antes iba el nombre de un export, que al ser global perdía el contexto. La pieza que lo hace posible es
+  la retención por turno en el allocador: si durante un turno alguien ancló un cierre, el reset no recicla la cadena de bloques de
+  ese turno, así que **todo lo que el cierre capturó queda vivo por construcción**. Arregla además `dom_on_fn`, que ya estaba roto
+  bajo la arena — dos listeners distintos colapsaban en un mismo entorno. El desanclaje vive en el binding y no en el usuario.
+- **`nyx build --target wasm32-wasi` documentado, endurecido y probado** `[arco: nyx-build-wasm]`. El equipo de nyxerp pidió
+  poder compilar un PROYECTO a WebAssembly y **el comando ya existía desde julio**: la resolución de imports no vive en el camino
+  de wasm sino en el driver del compilador, que recibe un archivo y cierra el grafo solo. El pedido era de DESCUBRIBILIDAD —
+  `--target` no aparecía en `nyx --help`, ni en `LLM.md`, ni en el README, ni en las plantillas que siembra `nyx init`; lo único
+  publicado era `make wasm FILE=...`, así que hicieron lo lógico y leyeron el Makefile. Es el cuarto pedido del día de algo que ya
+  existía.
+  Lo que este arco sí agrega: **una fuente única** para la lista de fuentes del runtime wasm (`runtime/wasm.srcs`), que estaba
+  copiada en TRES lugares con un comentario «mantener en sync» — cuando W1 sumó `os_wasm.c` hubo que agregarlo a los tres, y
+  olvidarse de uno rompe el link con símbolos indefinidos. Un **destino con convención**, `target/<triple>/<name>.wasm`, con el
+  triple adentro para que el target de Windows no colisione, y `/target/` en el `.gitignore` sembrado (antes eran ~350 KB sin
+  trackear en el repo del usuario). Y **la prueba que el reporte pedía y no podía automatizar**: un fixture de proyecto con dos
+  módulos cuya salida en wasm se compara contra la nativa — contra una salida escrita a mano probaría mi idea de lo que hace el
+  programa; contra el nativo prueba lo único que importa, que los dos coinciden. Ninguna suite cubría ese camino hasta hoy.
+- **`std/postgres` deja de obligar a mantener el esquema en dos lugares: nombres de columnas, lectura tipada y
+  ligado tipado** `[arco: postgres-tipado-erp]`. Sale de un reporte de fricción del equipo de **nyxerp** (2026-09-09) que
+  pedía cuatro cosas ordenadas por importancia; **las dos que más le importaban ya estaban hechas** unas horas antes en
+  `postgres-wire-v3` (el SQLSTATE viaja en `Error.code`, y el NULL tiene centinela propio con `pg_is_null`), así que lo
+  que quedaba era ergonomía — y ergonomía que se paga con bugs. Sin nombres de columnas, quien quería saber en qué
+  posición viene `monto` tenía que escribir el orden del `SELECT` a mano en su código: el esquema en dos lugares, que es
+  exactamente el problema que `#[derive(Fields)]` resuelve del otro lado. **`try_pg_query_cols(conn, sql)` devuelve
+  `[columnas, filas]` y NO cuesta un viaje extra**: el `RowDescription` ya venía en la respuesta y el módulo lo leía
+  para descartarlo. `try_pg_query` no cambió — el que ya lo usa (los tests E2E incluidos) sigue igual. Los nombres son
+  los del `SELECT`, no los del `CREATE TABLE`, y el test lo prueba pidiendo las columnas en otro orden.
+  **`pg_col(columnas, nombre)` ABORTA si el nombre no existe**, listando los que sí: devolver `-1` haría que el accesor
+  de al lado leyera la columna equivocada o se fuera de rango, y un typo en un nombre de columna es un bug del programa,
+  no un dato ausente. **`pg_row_str`/`pg_row_int`/`pg_row_float`/`pg_row_bool(fila, i)` son ergonomía y no corrección**
+  —toda celda llega como `String` en formato text, así que convertir a mano da el mismo valor—, pero aportan lo que a
+  mano se olvida: **un NULL leído como número NO es `0`, ABORTA**, y una fila más corta que el índice pedido tampoco es
+  una celda vacía. `pg_row_bool` entiende el `t`/`f` que manda PostgreSQL además de `true`/`false` y `1`/`0`, y
+  cualquier otra cosa aborta nombrando el valor en vez de asumir `false`. **`pg_int`/`pg_text`/`pg_float`/`pg_bool` no
+  cambian lo que viaja** (formato text del protocolo, exacto para enteros, sin configuración regional en el medio):
+  existen porque Nyx no tiene `Array` heterogéneo tipado y `[7, "ana"]` no se puede escribir tal cual, así que el
+  código DICE qué es cada parámetro — el 80% del pedido, sin bloquearlo meses detrás de un arco de lenguaje. El bug
+  silencioso que el reporte denunciaba —leer un `INTEGER` como `int` y obtener el PUNTERO— **es de `std/sqlite` y no
+  existe acá**. Verificado contra un PostgreSQL real en `tests/postgres/07-tipado.nx`, con el caso que a un ERP le
+  importa: un `bigint` de `5000000000` vuelve entero, sin truncar.
+- **TLS para `std/postgres`: `sslmode` y el `SSLRequest`** `[arco: postgres-tls]`. Sin esto el cliente solo servía contra un
+  PostgreSQL local o autoalojado sin cifrar: **RDS, Supabase, Neon y Azure rechazan la conexión antes del StartupMessage**, así que
+  era una capacidad de desarrollo y no de producción. El bloqueante real no era el protocolo sino `std/tls`, que no sabía subir a
+  TLS un fd YA CONECTADO —sus cuatro caminos cliente abren el socket ellos mismos, y el único que recibe un fd es el lado
+  servidor—, y PostgreSQL exige exactamente eso: conectarse en claro, mandar un `SSLRequest`, y solo si el servidor responde `'S'`
+  hacer el handshake sobre ese mismo socket. La pieza nueva es `nyx_tls_client_upgrade` en el runtime, expuesta como
+  `tls_upgrade_fd` / `tls_upgrade_fd_verified` / `tls_upgrade_fd_ca_only` — por `extern "C"`, no como builtin, así que no toca el
+  compilador ni el fixed point. Sirve para cualquier protocolo que negocie el cifrado después de conectarse (STARTTLS de SMTP e
+  IMAP tienen la misma forma).
+  **`sslmode` soporta `disable` (default), `require`, `verify-ca` y `verify-full`, y RECHAZA `prefer` y `allow`** — los dos modos
+  de libpq que caen a texto plano si el servidor rechaza TLS. Con SCRAM eso no es «degradar»: es mandar la contraseña en claro
+  creyendo que va cifrada, y `prefer` es justamente el default de libpq. El default de Nyx es `disable` porque con `disable` nadie
+  CREE estar cifrado, que es el pecado que este diseño evita.
+  Verificado contra un PostgreSQL 17.11 real: la aserción central la responde el BACKEND (`SELECT ssl FROM pg_stat_ssl WHERE pid =
+  pg_backend_pid()` devuelve `t`), no el cliente, y el caso negativo —`verify-full` contra `127.0.0.1`, que falla porque el
+  certificado no trae SAN de tipo IP— prueba que verificar es verificar. Gotcha `pg-require-no-verifica`: `require` cifra pero NO
+  valida el certificado, igual que libpq; es la garantía que la mayoría cree tener y no tiene.
+- **`#[derive(Fields)]`: un struct se describe a sí mismo** `[arco: struct-campos-reflexion]`. Nace de un reporte de
+  fricción: hoy cada modelo se escribe DOS veces —el `struct` y su descripción a mano— y nada detecta que divergieron;
+  renombrar un campo compila, pasa `nyx vet`, y la descripción sigue mintiendo. El derive emite tres funciones que
+  comparten un contrato, el orden de declaración: `<S>_campos()` (el esquema, `"nombre:tipo"`), `<S>_valores(s)` (los
+  datos, en el mismo orden) y `<S>_desde_fila(fila)` (la vuelta desde una fila de la base). Con eso se escribe un ORM sin
+  repetir cada modelo. **Ningún camino inventa un valor**: un campo `Array`/`Map`/struct anidado ABORTA la compilación
+  (NYX2013) en vez de heredar el `"ptr"` que aplana el `Display` derivado —que habría escrito un dato falso en una
+  columna—, una fila más corta que el struct aborta en vez de leer basura, y un booleano ininteligible aborta nombrando
+  el texto en vez de asumir `false`. Acepta las tres formas de booleano de los productores reales (`true`/`false`,
+  `t`/`f` de PostgreSQL, `1`/`0`). Verificado de punta a punta contra un PostgreSQL 17.11 real.
+- **`std/postgres`: cliente PostgreSQL nativo, sin libpq ni ninguna dependencia**
+  `[arco: postgres-wire-v3]`. Un reporte de fricción del 2026-09-08 mostró que un proyecto que
+  exige PostgreSQL quedaba FUERA de Nyx. Ahora el protocolo v3 se habla en Nyx puro sobre
+  `std/net`: `try_pg_connect` (cadena de conexión con el formato de libpq), `try_pg_exec` /
+  `try_pg_query` (filas como `Array` de String en formato text), `try_pg_query_params` /
+  `try_pg_exec_params`, transacciones, migraciones (`pg_migrate*`, con el estado en una tabla del
+  servidor) y pool de conexiones. Todo con la forma de `std/sqlite`: `Result<_, Error>` con
+  `kind: "db"`, conservando el SQLSTATE en el mensaje.
+  **Autenticación SCRAM-SHA-256**, que es lo que exige cualquier PostgreSQL moderno, con la firma
+  del servidor verificada en tiempo constante —saltear esa verificación es aceptar un servidor
+  impostor— y el nonce sacado de `csprng_bytes`, no de `random_bytes`, que es un PRNG.
+  **Los parámetros van por VALOR** en el mensaje Bind, nunca interpolados en el SQL: el test E2E
+  pasa `'; DROP TABLE t_par; --` como valor y verifica después que la tabla sigue existiendo.
+  **NULL con sentinel** (`pg_is_null`): un NULL y un string vacío son valores distintos, y
+  confundirlos es un bug esperando en cualquier `WHERE campo IS NULL` (gotcha `pg-null-sentinel`).
+  Un error del servidor deja la conexión USABLE: el lector consume hasta ReadyForQuery en vez de
+  cortar y desincronizar el socket. Suite E2E contra un PostgreSQL real (`run_postgres_tests.sh`,
+  4 programas) con SKIP limpio y la receta para montarlo si no hay servidor.
+- **`pbkdf2_hmac_sha256`, `constant_time_eq`, `hmac_sha256_raw` y `sha256_raw`** en
+  `runtime/crypto.c` `[arco: postgres-wire-v3]`. SCRAM las necesita, y cierran de paso el pedido
+  de una KDF de contraseñas con coste configurable del otro reporte del 2026-09-08. El
+  `hmac_sha256` histórico devuelve HEX y sigue igual: las variantes `_raw` dan los 32 bytes del
+  digest, que es lo que necesita cualquier protocolo que COMPONGA hashes.
+- **Andamiaje SDD opcional: `nyx init --sdd` y `nyx sdd init`** `[arco: andamiaje-sdd]`. Un
+  segundo nivel, **opt-in y reversible**, para proyectos donde lo caro no es teclear sino
+  decidir: siembra `docs/constitution.md` (7 secciones vacías con el marcador
+  `SDD_INCOMPLETE` y una nota de qué va y qué no en cada una), `docs/glossary.md`,
+  `docs/adr/0000-template.md`, `specs/README.md` (el ciclo constitución → spec → plan →
+  tasks, con los nombres de Spec Kit) y `docs/sdd/onboarding.md` (la guía que le dice al
+  agente que **ofrezca** las 7 preguntas —una por sección, respuestas textuales, sin
+  inventar ni sugerir defaults— y que quite el marcador solo con las 7 completas). Dos
+  piezas son **GENERADAS** desde la misma tabla de gotchas que alimenta `AGENTS.md`,
+  `LLM.md` y `nyx vet`: `docs/evidence/nyx-<ver>.md` (las trampas y reglas vivas de la
+  toolchain instalada, con ancla y test, más los retirados) y `tests/constitution_test.nx`
+  (un bloque `test` por gotcha grep-able, que falla con `archivo:línea`, más un test que
+  caza archivos en `tests/` sin bloques `test`). El único archivo existente que se toca es
+  `AGENTS.md`, con **2 líneas** marcadas (`<!-- sdd:trigger -->`) que disparan la oferta.
+  `nyx init` sin la bandera **no cambia en nada** (el listado dorado por defecto sigue
+  intacto), correrlo dos veces no modifica un byte, nada de lo sembrado nombra un proveedor
+  de IA, y el comando imprime al terminar qué borrar para volver a un init normal.
+  `nyx update` regenera las dos piezas generadas del proyecto desde el que se llama.
+  Guardia: `scripts/testing/run_sdd_init.sh` (10 checks por idioma + `nyx test` real, verde
+  en el proyecto sembrado y rojo citando `src/bad.nx:1` con un `Shape::Circle(1)` plantado).
+- **`sync.wg_wait_timeout(wg, ms) -> bool`** (`std/sync`): como `wg_wait` pero con techo —
+  `true` = el contador llegó a 0 (quiesció), `false` = timeout con workers pendientes.
+  Deadline absoluto re-calculado por vuelta (los despertares espurios re-esperan el
+  REMANENTE). Es el idiom de drain/shutdown: salir al quiescer, con el deadline como mero
+  techo — antes el drain de nyx-serve dormía el deadline COMPLETO (10 s muertos por restart).
+  test-380 + ai-first 23.
+- **`std/serve` + `std/template` + `std/multipart` entran al core**: el framework web deja de
+  ser un producto vendorizado repo por repo y pasa a la stdlib. Los cuerpos son
+  **byte-idénticos** a los de nyx-serve v0.7.1 (los diffs son solo comentarios) y la **API
+  pública queda INTACTA** — los 5 sitios y el ERP externo que dependen de esos nombres no
+  cambian una línea. `std/serve` fusiona server + files + ws (keep-alive, drain con SIGTERM,
+  dispatcher de App, static con ETag/304, traversal 403, rooms de WS); `std/template` es el
+  motor Flask-like (`{{}}`, `#if`, `#each`, partials) como módulo propio; `std/multipart`
+  parsea los form-data. E2E de contrato 10/10 y `make test-stdlib` 3→5.
+- **Los 5 ejemplos serve de `examples/by-example/` ARRANCAN servidores reales** —
+  auto-verificados (server + self-request + shutdown, sin dejar nada bloqueante) en vez de
+  imprimir texto que fingía ser un servidor; y `102-template-flask-style` nuevo para el motor
+  de templates.
+- **Absorción de serve al core CERRADA** `[arco: absorcion-serve]` (2026-09-03): los 5 sitios
+  de producción (`~/nyx/web/sites` ×4 + venezuelainfo) pasan de vendorizar `packages/nyx-serve/`
+  a `import "std/serve"` (sin deploy: los binarios se regeneran en el próximo deploy normal); el
+  índice `/docs/` de serve.nyxlang.com se renderiza con `std/template` (`{{#each}}`, render
+  byte-idéntico al estático); el producto `~/nyx/products/serve` queda **congelado** (README →
+  core, v0.7.1 última) y su smoke de **63 checks** se porta al monorepo como
+  `tests/integration/test_serve_std_smoke.py` (`make test-integration`: 8→9 sub-suites; el E2E
+  serve+kv vuelve a correr — llevaba meses en SKIP por rutas del layout viejo — contra el fixture
+  de `std/serve` y el daemon de `~/nyx/products/kv`); `make test-stacks` 6→5. Hallazgo con
+  ruling: «sin deploy» no protege `static/` servido en vivo (PROJECT_STATE, error #20).
+- **`?` exige el mismo `E` en callee y caller — NYX1025** `[arco: e6-throw-panic]`: hasta ahora
+  el camino `Err` de `?` reenviaba el enum `Result` entero sin comparar el `E` — un `%nyx_string*`
+  del callee llegaba a un caller que lo leía como `%MiError*` (ambos bajan a `i8*`, `clang`
+  callado): corrupción de memoria SILENCIOSA. Cierra el repro R4
+  (`docs/design/reviews/2026-08-13-arco-e1-e2-repros/R4-error-type-mismatch-silencioso.nx`), que
+  ahora falla en compile-time. Se diagnostica solo cuando ambos `E` son conocidos y no-comodín
+  (`ty_eq`, la misma igualdad del chequeo de retorno); los casos con tipo desconocido/genérico
+  conservan el free-pass histórico como `sem_blind` (ceguera VISIBLE, ficha en TASKS.md). Sin
+  conversión (`From`) en v1 mientras `Error` sea el struct único de la std — E7 queda diferido.
+- **`throw`/`panic`: payload tipado (`String`/`int`) — NYX1026** `[arco: e6-throw-panic]`: el
+  runtime solo transporta un `nyx_string*`; antes, un payload `float`/struct/enum pasaba crudo al
+  IR — un `float` producía IR mal tipado que `clang` rechazaba sin línea de usuario, y un enum
+  CONSTRUIDO (`panic(Shape.Circle(1))`) era peor: `clang` no objetaba nada bajo punteros opacos y
+  el runtime leía el buffer del enum como si fuera un `nyx_string` — corrupción de memoria
+  SILENCIOSA, el caso más peligroso de los dos. Ahora ambos son NYX1026 en semantic, antes de que
+  exista IR. Un solo emisor en codegen (`emit_panic_payload`) reemplaza las tres copias que tenían
+  `codegen_throw` y las ramas builtin `panic`/`throw`. Incluye la variante UNITARIA
+  (`panic(Color.Red)`), que el parser produce como field access y no como `method_call`: se
+  escapaba del chequeo y el binario segfaulteaba (hallazgo I-1 de la review final del arco; errors
+  260→262).
+- **`catch (e: T)` honesto — NYX1027** `[arco: e6-throw-panic]`: la anotación de tipo del catch
+  existía en la sintaxis pero el parser la descartaba en silencio y el catch siempre bindeaba
+  `String` — una promesa de catch tipado que el lenguaje no cumplía. Ahora se guarda como cuarto
+  hijo del nodo `try_catch` (cambio aditivo, ASTNode intacto) y cualquier anotación distinta de
+  `String` es diagnóstico: `catch` es y sigue siendo intencionalmente NO tipado, no se promete un
+  catch tipado futuro.
+- **`nyx vet`: W108, `throw(x)` deprecado** `[arco: e6-throw-panic]`: sexto patrón vivo del
+  linter (`docs/gotchas/throw-deprecated.md`) — `throw(x)` es un alias de `panic(x)` (mismo
+  canal, mismo `catch`); marca el uso y sugiere `panic()`.
+- **`?` sobre `Option` + `ok_or(e)` — NYX1028** `[arco: e7-option-try]`: dentro de una función
+  que devuelve `Option<U>`, `expr?` sobre un `Option<T>` ahora propaga `None` y entrega el `T`
+  de `Some` — la misma mecánica que `?` sobre `Result` (antes: cerrado a `Result`, NYX1023 sin
+  excepción). Mezclar `Option` y `Result` a través de `?` deja de compilar mal en silencio (el
+  caso `Option` en una función `-> Result` compilaba y propagaba basura — silently-wrong
+  medido) y pasa a ser **NYX1028** en las dos direcciones, con hint (`.ok_or(e)?`, o `match`/
+  `unwrap_or`); NYX1023 se mantiene para retornos que no son ni `Result` ni `Option`, mensaje
+  ampliado. El puente explícito es `ok_or(e)`, builtin nuevo de `Option<T>`: `Some(x).ok_or(e)`
+  = `Ok(x)`, `None.ok_or(e)` = `Err(e)` con `e` de cualquier tipo `E`; no se agrega `ok()` en
+  `Result` (YAGNI). Fix general de yapa, destapado por `ok_or`: `codegen_try_op` no
+  monomorfizaba el combo `<T,E>` de un `Result<T,E>` antes de decodificar el payload de `?` —
+  un `?` sobre un `Result<T,E>` armado por una ruta que no pasa por el constructor de superficie
+  (hoy `ok_or`, que construye el enum a mano) decodificaba el puntero como número (payload no
+  escalar); el orden de declaración en el archivo NO lo dispara (medido sobre la base); arreglado con
+  `ensure_enum_mono`, el mismo mecanismo que ya usaba `codegen_match`. `From` para conversión
+  implícita de `E` heterogéneos sigue fuera de alcance — el idiom es `.map_err(f)?` — y solo se
+  retoma si algún dominio de error diverge del `Error` único de la std (ruling 2026-09-07,
+  `docs/design/specs/2026-08-11-errores-tipados-design.md` §6 ítem 7). Regression 403→405
+  archivos (test-383 de la propagación `?`/NYX1028, test-384 de `ok_or`), error paths 262→266
+  (2 tests NYX1028 de las mezclas, 2 tests de aridad/tipo de `ok_or`).
+- **`checked_add/sub/mul/div(a, b) -> Option<int>`, `mul_div_round`/`try_mul_div_round(a, b, c,
+  mode) -> int` / `Result<int, Error>`, `enum RoundMode`** (`std/math`) `[arco: checked-math]`.
+  Mitigación real para el gotcha `int-wraps-silently`: las cuatro `checked_*` DETECTAN el
+  overflow de `+`/`-`/`*` (`None` en vez de envolver en silencio); `checked_div` además cierra
+  los dos casos UB de la división (`b == 0`, `INT_MIN / -1`) con `None`. Para el patrón
+  financiero `a*b/c`, `mul_div_round`/`try_mul_div_round` calculan el producto intermedio
+  `a*b` EXACTO en 128 bits (`__int128` en el runtime C) antes de dividir, con el modo de
+  redondeo explícito en `mode: RoundMode` (`Truncate`/`Floor`/`Ceil`/`HalfUp`/`HalfEven`, empates
+  documentados con signo en las dos direcciones); `mul_div_round` panica con `c == 0` o un
+  cociente fuera de `int`, `try_mul_div_round` da `Err(invalid, …)` para los mismos dos casos.
+  `checked_*`, `mul_div_round` y `enum RoundMode` son globales vía el prelude, sin `import`;
+  `try_mul_div_round` vive en `std/math_ext` (`import "std/math_ext"`) porque `std/prelude.nx`
+  es una foto congelada que no puede nombrar `Error`/`err_new` sin romper todo programa que no
+  importe `std/error` (mismo motivo por el que `std/fs` existe aparte de `std/file`). Nombres
+  globales que el prelude reserva desde este arco: `INT_MIN`, `INT_MAX`, `RoundMode`,
+  `checked_add/sub/mul/div`, `mul_div_round` (una `const INT_MAX` propia ahora da NYX1013; un
+  `enum RoundMode` propio reemplaza al del prelude y el error apunta a `round_mode_code` en una
+  línea del prelude — fichado). El enum se llamó `Round` durante el desarrollo del arco y se
+  renombró a `RoundMode` antes de publicar (colisión con nombres de usuario, decisión de
+  Ottavio 2026-09-08). test-387
+  (`checked_*`) y test-388 (`mul_div_round`/`try_mul_div_round`, con oráculo validado contra
+  `fractions.Fraction` de python); regression 407→409 archivos.
+
+- **`nyx vet` W109: el dominio de reloj de los builtins `time_*`** (gotcha
+  `clock-domain-time-builtins`, test `tests/compiler/systems/test-410-clock-domain.nx`). Tres
+  builtins comparten el prefijo `time_` y contestan preguntas distintas: `time_epoch()` es el
+  reloj de pared (`time(NULL)`, segundos desde 1970) y `time_ms()`/`time_us()` son
+  `os_monotonic_ns()` escalado — el reloj MONOTÓNICO, desde que arrancó la máquina. El nombre
+  invita a tratarlos como la misma familia en distintas escalas.
+  Un barrido del 2026-09-10 encontró **seis sitios en cuatro bases de código, escritos por manos
+  distintas**: un rate limiter cuya ventana de un segundo avanzaba una vez cada 11,6 días (todas
+  las peticiones de casi dos semanas caían en el mismo cubo); un access log que escribía `1789` en
+  vez de `1789048733`; un gauge de uptime clavado en 0; tokens de auth con la expiración calculada
+  en el reloj monotónico **y persistida**, así que un reboot del host dejaba tokens de 24 h
+  vigentes años; y un snapshot cuyo campo «timestamp» guardaba un uptime. Ninguno rompía nada:
+  el valor seguía creciendo, al ritmo o desde el origen equivocado.
+  El lint marca una división aplicada **directamente** sobre `time_epoch()` — el reloj de pared ya
+  está en segundos, no hay divisor legítimo. Una diferencia entre dos lecturas —que es el único uso
+  correcto del monotónico— no se marca, y por eso el patrón da **cero avisos en los 165 archivos**
+  de `examples/by-example` + `std`. Junto con W110 (abajo) quedan marcados todos los sitios del
+  barrido salvo uno: un epoch del cliente guardado en un campo que se compara contra el monotónico
+  no tiene forma textual —es de tipos— y queda fuera a propósito en vez de fingirse cubierto.
+  El gotcha es un `.md` con `pattern:`, y `make gen-agent-docs` lo lleva al lint, a `LLM.md` §5 y a
+  los dos `AGENTS.md` sin tocar el compilador.
+- **`monotonic_ms()` y `monotonic_us()`: los nombres honestos del reloj monotónico** (gotcha
+  `time-clock-names-deprecated`, `nyx vet` **W110**). El lint de arriba ataca el síntoma; la causa
+  era el nombre. Había **cuatro nombres para dos relojes** y ninguno decía cuál: `time()` y
+  `time_epoch()` son los dos `time(NULL)`, mientras que `time_ms()` y `time_us()` son
+  `os_monotonic_ns()` escalado y cuentan desde que arrancó la máquina. Quien leía `time_ms()` al
+  lado de `time_epoch()` concluía —razonablemente— que eran el mismo reloj en otra unidad.
+  Los dos builtins nuevos son **alias exactos** del mismo `nyx_time_ms`/`nyx_time_us`: no hay reloj
+  nuevo, hay un nombre que dice cuál es. `test-410` fija esa igualdad, para que la deprecación no
+  pueda convertirse en un cambio de comportamiento disfrazado de rename.
+  `time()`, `time_ms()` y `time_us()` quedan **deprecados** y `nyx vet` los marca con W110. Siguen
+  compilando —retirarlos sería MAJOR— pero `std/` y `examples/by-example/` ya están migrados
+  (`std/sync`, `std/serve`, `std/tls` y cinco recetas). De paso, `time`/`time_ms`/`time_us` no
+  tenían tipo de retorno declarado en el checker (caían a `TyUnknown`); ahora los cinco nombres
+  devuelven `int` explícitamente.
+
+### Fixed
+- **Español neutro: la plantilla de `nyx report` decía «Completá las secciones», y la guarda no lo
+  veía** (fricción nyxerp `20260914-210002-team-3`). `lib_voseo.sh` era una lista de palabras
+  sueltas y distinguía mayúsculas: se escapaba toda forma que nadie había anotado. Ahora
+  `voseo_filter` (compartida por `run_voseo_messages.sh` y `run_templates_parity.sh`) suma una
+  REGLA GENERAL para el imperativo voseante en -á, sin distinguir mayúsculas, que excluye el futuro
+  (vocal/b/d + «rá»: hará, podrá, tendrá) y cuatro adverbios (acá, allá, está, quizá): medido, cero
+  falsos positivos en compilador, runtime, std, scripts, templates y tests. Las formas en -é/-í
+  siguen en la lista explícita porque coinciden con el pretérito de primera persona («probé»,
+  «subí»). Al activarla aparecieron 28 formas más, casi todas en texto que ve un usuario, corregidas:
+  `build.nx` (3 de `nyx report`, más «avisale»), hints de `codegen.nx` («bindeá», «accedé»,
+  «asigná»), `semantic.nx` («envolvé»), el gotcha `dyn-trait-needs-annotation` («tipá»,
+  regenerado), `runtime.c` y `scheduler.c` (mensajes de memoria agotada y de stack de goroutine),
+  `std/postgres.nx`, `std/http.nx` y seis scripts. La guarda mira también los runners de `tests/`
+  (`run_error_tests.sh` imprimía «corré») y trae autotest: rojo con «Completá», «Corré» y
+  «CHEQUEÁ», verde con español neutro.
+- **`nyx check` ve el NYX2013 de `#[derive(Fields)]`: ya no sale con 0 sobre un programa que
+  `nyx build` rechaza** (fricción nyxerp `20260914-210002-team-3`). El límite de tipos del derive
+  (campo que no es int/bool/float/String, o struct de tupla) solo lo detectaba codegen, así que
+  `build` fallaba después de imprimir `check OK` y un proyecto grande no podía usar `check` como
+  puerta. `check_derive_fields_campos` (semantic.nx) lo detecta nombrando el struct, el campo y su
+  tipo, con la línea del nodo struct (la del cierre de su declaración); el abort de codegen queda como red bajo `NYX_SKIP_SEMANTIC`. La lista de tipos
+  vive en dos representaciones (tipo Nyx en el checker, tipo LLVM en codegen) y no se puede
+  compartir: la guarda `nyx2013-paridad-checker-codegen` compila un struct por cada uno de 27 tipos
+  de campo con los dos y exige el mismo veredicto. Tests en `run_error_tests.sh`: checker con
+  línea, red de codegen, `nyx check` sobre el caso del reporte y el struct de tupla (cada uno con su
+  NYX2013), control positivo y la paridad.
+- **El checker resuelve las fns POR MÓDULO, como el codegen: dos módulos con una fn privada
+  homónima de firmas distintas ya no se chequean uno contra el otro** (fricción nyxerp
+  `20260914-200001-team-1`). `semantic.nx` registraba aridad y firma por nombre pelado: la aridad
+  salía del ÚLTIMO registro (`scope_get_arity`) y los tipos del PRIMERO (`lookup_fn_sig`), así que
+  `src/uno.nx` con `fn ayuda(x: String)` y `src/dos.nx` con `fn ayuda(a: int, x: String)` daban
+  NYX1006 en `uno_saludo` y NYX1005 en `dos_saludo` en `nyx check` y `nyx build`. Agregar un archivo
+  rompía el chequeo de otro que nadie tocó. Ahora cada fn top-level lleva su módulo (las marcas
+  `//#module` que ya mira el codegen) y `fn_module_resolve` elige la firma con las mismas reglas que
+  `resolve_module_fn_soft`: propio módulo, principal/prelude para un caller del principal, match
+  único entre módulos. Solo los nombres declarados en más de un módulo pagan la resolución. Una
+  llamada ambigua apaga el chequeo de firma (el codegen la corta con NYX2010). Guarda: 3 checks
+  nuevos en `run_tooling_gates.sh` (firmas distintas + la misma firma + `pub fn` de otro módulo sin
+  calificar compilan y CORREN con el valor de cada módulo; el negativo acusa cada error contra la
+  firma de SU módulo).
+- **`try`: una salida temprana (`return`, `?`, `break`, `continue`) ya no deja un nivel de try
+  colgado — PRODUCCIÓN, 901 caídas** (2026-09-15). `codegen_try_catch` hacía `nyx_try_push()` +
+  `setjmp` al entrar y solo emitía `nyx_try_pop()` cuando el cuerpo terminaba SIN terminador; el
+  `catch` quedaba equilibrado porque `nyx_throw` hace `--depth` antes del `longjmp`. Un `return`
+  desde adentro del `try` salía de la función sin quitar su nivel de la pila `_Thread_local` de 64
+  (`runtime.c`, `NYX_TRY_STACK_MAX`): en un hilo de larga vida la llamada 64 moría con
+  `panic: try-catch nesting too deep`. `std/serve` hace `return __finalize(...)` dentro de su `try`
+  en cada pedido, así que los 5 sitios sobre `std/serve` se caían ~26 veces por día desde agosto.
+  `CodegenContext` suma `try_depth` (tries cuyo cuerpo se está generando en la fn en curso) y
+  `loop_try_base` (su valor al entrar al bucle); `emit_try_exit_pops` emite un pop por nivel
+  abandonado antes del terminador: `return` y `?` (camino Err/None) quitan todos los de la fn,
+  `break`/`continue` solo los abiertos dentro del bucle (`for` rango e iterador, `while`,
+  `while let`), el `catch` corre con el nivel ya quitado, y las fns anidadas, lambdas, `spawn` y
+  cuerpos `async` cuentan desde cero. Sin `try` el IR no cambia (semillas en punto fijo). Test
+  `test-431-try-salida-temprana-pop` (regresión 446 → 447 archivos): cada caso 200 vueltas, dentro
+  de un `try` exterior que detecta un pop DE MÁS. Gotcha `try-early-exit-pop` (`kind: fixed`).
+- **`nyx build --main <archivo.nx>` ya no reescribe `nyx.lock` con el main de esa corrida**
+  (fricción de nyxerp, 2026-09-14, reporte `20260914-210002-team-4`, sobre la flag `--main` del
+  mismo día). `nyx build --target wasm32-wasi --main src/web/dibujante_main.nx` compilaba el
+  artefacto correcto y no tocaba el binario principal, como anuncia `--main`, pero `write_lockfile`
+  recibía el `ProjectConfig` YA pisado por el flag (`config.main_file = main_flag`, la misma
+  variable que usa el compilador para saber qué compilar) y dejaba el `nyx.lock` VERSIONADO
+  diciendo que el punto de entrada del proyecto era el de esa única corrida — un `git add` de
+  rutina lo hubiera commiteado. `ProjectConfig` suma `manifest_main_file` (el main del manifiesto,
+  fijado en `parse_toml` antes de que `--main` pise `main_file`); `write_lockfile` escribe ese
+  campo, nunca el efectivo. De paso, `write_lockfile` salta la escritura entera si el contenido
+  calculado es idéntico al que ya está en disco (antes reescribía — y tocaba la fecha del
+  archivo — en CADA build, aunque nada cambiara). `--target` y el resto de las flags de una sola
+  corrida no llegan al lock (nunca tocan `config` fuera de `main_file`/`bin_name`); dependencias
+  resueltas SÍ lo siguen actualizando (control positivo). `run_build_manifest.sh` suma 6 checks
+  (14 → 20): `--main` nativo y con `--target wasm32-wasi` no tocan `nyx.lock` en un repo git real,
+  el lock sigue diciendo el main del manifiesto/`[build]`, y agregar una dependencia sí lo cambia.
+- **`std/json`: `try_json_parse`/`json_parse` ya no aceptan un JSON truncado como si estuviera
+  completo — CAMBIO DE COMPORTAMIENTO** (fricción de nyxerp, 2026-09-14, PRIORIDAD MÁXIMA —
+  silencioso). `try_json_parse("{\"a\": [1, 2], \"b\": \"x\""` (sin la `}` final) devolvía `Ok`
+  con un objeto/arreglo sintetizado a partir de lo que había, indistinguible de uno completo — un
+  ERP que leyera una respuesta HTTP cortada a mitad de una lista de facturas mostraba menos filas,
+  o un monto recortado, sin ningún error. `parse_object`/`parse_array`/`parse_string` siempre
+  sintetizaban una estructura y nunca propagaban el tag `"null"`, así que la desambiguación
+  existente de `try_json_parse` (E5.4, basada en el tag) no lo detectaba — límite conocido y
+  fichado en `LLM.md`/`test-378` como "arco de parser con pos-tracking". Fix: `std/json.nx`
+  trackea la posición de lectura end-to-end (`pos = [posicion, error_flag, mensaje]`); cualquier
+  fin de entrada dentro de un objeto/arreglo/string, una clave sin valor, una coma final, un
+  número o literal a medias, o contenido no-blanco sobrante tras el valor raíz (RFC 8259: un
+  documento es UN valor) ahora es `Err{5,"parse"}` con un mensaje que dice qué se esperaba y el
+  byte donde. `json_parse` (la centinela) comparte la misma pasada y colapsa cualquiera de estos
+  casos a `["null"]` — el mismo centinela que ya usaba para basura sin estructura, sin sumarle
+  ambigüedad nueva. Efecto colateral esperado (RFC 8259 estricto): un token inválido en cualquier
+  punto de un arreglo/objeto ahora invalida el documento ENTERO, no solo ese elemento —
+  `json_parse("[true,tomato]")` pasa de `Ok(["array",[true,null]])` a `Ok(["null"])`
+  (`test-319`, actualizado). Sin `json_parse_tolerante`: no se encontró ningún consumidor real
+  (`std/web.nx#req_json` sale mejor parado — antes poblaba un `Map` con datos parciales/corruptos,
+  ahora devuelve el `Map` vacío ya documentado para "no es JSON válido") que dependiera de la
+  tolerancia vieja. Caso nuevo en `tests/ai-first/27-json-truncado.nx`: los 4 ejemplos exactos del
+  reporte, fin de entrada en cada tipo de estructura, escape `\u` a medias sin cierre, número/
+  literal a medias, clave sin valor, coma final, basura tras el valor raíz, y una PROPIEDAD (todo
+  prefijo propio de un documento objeto/arreglo válido es `Err`). `test-378-try-json` y
+  `test-319-json-parse-strict` actualizados a la conducta nueva.
+- **`write_file(path, content)` ya NO trunca el contenido en el primer byte NUL — arreglo de raíz**
+  (fricción 20260914-190001-team-1, equipo nyxerp; seguimiento del fix de doc de más arriba, mismo
+  reporte, 2026-09-15). `nyx_write_file` (runtime/file-io.c) recibía `content` como `char*` y
+  dimensionaba el `fwrite` con `strlen(content)` — un `String` con un NUL embebido (`"AB" +
+  char_to_string(0) + "CD"`) se cortaba a los primeros 2 bytes en disco, sin error ni aviso: el
+  mismo defecto que ya se había arreglado en `nyx_file_write_string`/`nyx_file_write_result` en
+  2026-07-30, pero nunca se propagó a la centinela simple. El fix vive en una función NUEVA,
+  `nyx_write_file_safe(path, content: nyx_string*)`, que escribe `content->length` bytes reales, no
+  `strlen` — **`nyx_write_file` en sí NO cambió de firma**: sigue tomando `char*` y con el bug
+  viejo intacto, a propósito. Motivo medido en vivo durante esta sesión: `compiler/nyx.nx` (el
+  propio driver del compilador) usa `write_file()` para volcar su `.ll` de salida, así que cualquier
+  semilla `.ll` ya compilada con el codegen anterior (`compiler/codegen.ll`/`compiler/nyx.ll` sin
+  regenerar) trae ese `call` horneado con la firma vieja — cambiarle el tipo al segundo argumento de
+  `nyx_write_file` habría roto la ABI en el acto: la semilla vieja sigue pasando un `char*` crudo
+  donde la función ahora leería `->length`/`->data` de un `nyx_string*`, un `write_file()` mudo
+  volviéndose un `write_file()` que corrompe memoria. `compiler/codegen.nx` emite el `call` al
+  símbolo nuevo (mismo patrón que `file_write_string`: `%nyx_string*` directo, con `inttoptr` de
+  respaldo si el tipo estático no lo garantiza) y declara ambos símbolos. Auditoría del resto de
+  `runtime/` (`tcp_write`, `tls_write`/`tls_write_conn`, `https_post`, `udp_sendto`, `exec`) no
+  encontró otro caso: todos ya sizeaban por longitud real desde arreglos previos (2026-07-25/30);
+  `nyx_write_file` era el único sobreviviente, y ahora es aditivo, no reemplazado. `read_file` no
+  cambia — siempre fue binary-safe en lectura. `compiler/codegen.ll` SÍ se regeneró en esta sesión
+  (`make recompile MODULE=codegen` + rebuild del bootstrap, verificado con el nuevo símbolo en el
+  `.ll` y con `tests/ai-first/29-read-file-nul-safe.nx` compilando y corriendo contra el bootstrap
+  nuevo); `compiler/nyx.ll` (el driver) queda sin regenerar — su propio `write_file()` interno sigue
+  la ruta vieja, sin riesgo (nunca escribe un `.ll` con NUL embebido) — fichado en `TASKS.md` para
+  el próximo `chore(seeds)` que traiga las 9 semillas a punto fijo. Blindado en
+  `tests/ai-first/29-read-file-nul-safe.nx` (escritura + relectura byte a byte, incluidos los dos
+  NULs internos y el final) y en `tests/runtime-unit/test_file_io.c`
+  (`test_write_file_binary_safe`, +5 asserts — `make test-runtime` 35 suites / 1680 asserts).
+  Documentado en `LLM.md` y en el gotcha `chr-zero-nul-byte` (EN+ES).
+- **`await`, `spawn { }`, `select` y el executor async en wasm32-wasi ya no mueren en el enlace sin
+  decir dónde.** Medido el 2026-09-14 contra la toolchain instalada, construcción por construcción:
+  `await` y `run()` (nyx_goroutine_spawn_closure/join), `spawn { }` (…_detached), `go_sleep`,
+  `spawn_task`/`task_await` (nyx_thread_*) y `task_race`/`task_cancel` pasaban el codegen y `wasm-ld`
+  moría con `undefined symbol`, sin archivo ni línea; `select` igual en cuanto la función se usa
+  (`nyx_channel_try_recv`). `thread_*`, `channel_*` y `mutex_*` ya los frenaba el guard. Ahora
+  `await`, `run`, `spawn`, `select`, `go_sleep`, `spawn_task` y `task_*` pasan por
+  `codegen_target_guard` con `archivo:línea` y función (`spawn { }` se nombra `spawn`, no el
+  `__go_spawn` desazucarado), acumulados, más UNA nota: wasm no tiene threads ni
+  planificador, y en el navegador la alternativa son los callbacks con cierre de `std/browser`
+  (`browser_fetch_fn`, `browser_timeout_fn`, `browser_interval_fn`). Caso nuevo en `make test-wasm`
+  («[guard] concurrencia en wasm», sin toolchain): con el compilador anterior el fixture salía rc 0 y
+  escribía el `.ll`. De paso, el parser fija en los nodos de `spawn { }` y `select { }` la línea de
+  la palabra clave: tomaban la del `}` de cierre, así que todo diagnóstico sobre ellos señalaba el
+  final del bloque.
+- **wasm con arena: un cierre que se cancela o se re-registra DESDE SU PROPIO DISPARO ya no lee
+  memoria liberada.** Es el patrón normal de una interfaz: un click que llama a `update()` y el VDOM
+  re-registra el listener de ese mismo botón, un `browser_interval_fn` que se apaga a sí mismo, un
+  `browser_sse_fn` que se cierra al recibir «fin», un router que re-suscribe `hashchange`. El
+  binding desancla el cierre viejo en ese momento —es su cancelación— y `nyx_arena_unpin_turn`
+  liberaba la cadena de bloques del turno MIENTRAS el cierre seguía corriendo: medido trap
+  `memory access out of bounds` en `nyx_string_concat` dentro del cierre, apenas leía su captura
+  después de re-registrarse. Ahora `anchorClosure` (shim) cuenta las llamadas en curso y posterga el
+  desanclaje hasta que la última vuelve. La retención por turno ya existía desde `33be4a01`; la ficha
+  ALTA de TASKS.md que la pedía había quedado abierta, y los tests con arena solo cubrían
+  `browser_fetch_fn` y `dom_on_fn`. `test-wasm-29-arena-autocancelacion` (arena) y
+  `test-wasm-30-autocancelacion-sin-arena` (mismo `.nx`) cubren los ocho bindings con cierre,
+  miden desde adentro del cierre que su turno sigue retenido mientras corre, y verifican que nada
+  llega después de `browser_sse_close` ni de un timeout cancelado. Shim del playground sincronizado.
+- **`f().campo` (NYX2003) ahora dice DÓNDE, y `nyx check` lo ve** (fricción nyxerp 2026-09-14). Leer
+  un campo sobre una llamada, un índice o un literal de struct no está soportado, y el mensaje lo
+  explicaba bien, pero sin archivo, línea ni función: en un archivo de pruebas de 128.000 fichas hubo
+  que buscar cada `).` con grep. Y como el error nacía en codegen, `nyx check` —la puerta rápida que
+  recomienda `AGENTS.md`— daba el archivo por bueno. Ahora semantic caza la FORMA del receptor
+  (llamada, índice, literal de struct o método) con el mismo código, NYX2003 en lectura y NYX2006 en
+  escritura, con función y línea como NYX1003; el chequeo es por forma y no por tipo, así que coincide
+  exactamente con lo que codegen rechaza (cadenas `a.b.c`, `self`, tuplas `t.0` y métodos siguen
+  pasando: control positivo `positive-nyx2003-receptores-soportados`). Los aborts de codegen
+  NYX2001-NYX2007 quedan como red para `NYX_SKIP_SEMANTIC` y ahora imprimen `--> archivo:línea, in
+  function 'f'` —o `in test "nombre"` dentro de un bloque test—, el mismo formato del guard de target;
+  queda sin ubicación solo `abort_method_type_mismatch` (fichado). Gotcha nuevo
+  `field-access-complex-receiver`.
+- **`read_line()` ya no parte una línea larga en trozos, y la última línea sin salto final ya no
+  se pierde** (fricción de nyxerp, reporte `20260914-210002-team-2`, medido igual en nativo y
+  wasm32-wasi bajo `wasmtime`). Dos conductas, ninguna documentada:
+  1. `read_line()` leía con `fgets(buf, 4096, stdin)` — un `char[4096]` fijo — así que una línea
+     de más de 4095 bytes volvía PARTIDA en varias llamadas sin nada que distinguiera un trozo de
+     una línea entera; quien las reunía con `"\n"` (lo natural) metía saltos de línea que nadie
+     había escrito. Fix de raíz: el buffer CRECE (lectura byte a byte con `fgetc` + `GC_REALLOC`
+     doblando capacidad, binary-safe — no usa `strlen`), sin cota de largo, en `runtime/runtime.c`
+     — el mismo `.c` en los dos targets (`runtime/wasm.srcs` lo incluye; stdin bajo WASI es el
+     mismo `FILE*` de libc).
+  2. La última línea sin salto final llegaba con `stdin_eof()` ya en verdadero, y el bucle que
+     mostraba la documentación (`while true { let l = read_line() if stdin_eof() { break } ... }`)
+     la descartaba: con `"uno\ndos"` (sin `\n` final), `dos` nunca se procesaba. Esto es
+     INHERENTE a la semántica de stdio — para saber que no queda nada más, `read_line` tiene que
+     tocar el EOF físico del stream en esa misma lectura, así que `stdin_eof()` no puede demorar
+     su señal sin romper su propio contrato («se activa tras la lectura que tocó el EOF»,
+     v0.24.21). El fix es el bucle de EJEMPLO: procesar la línea devuelta ANTES de mirar
+     `stdin_eof()`, usar `stdin_eof()` solo para decidir si sigue — nunca descartar por el solo
+     hecho de que ya esté en verdadero. Corregido en `LLM.md` (sección I/O).
+  Otras lecturas con el mismo buffer fijo de 4096 (`nyx_file_read_line` en `runtime/file-io.c`,
+  `nyx_tcp_read_line`/`buffered_read_line` en `runtime/net.c`) comparten el patrón pero NO el
+  cambio — archivo y socket son código distinto (fread por handle / recv bufferizado) y quedan
+  fichados en `TASKS.md`, fuera de alcance de este fix (el reporte es específicamente sobre
+  stdin). Tests self-asserting nuevos en `tests/ai-first/stdin/` (línea de 10000 bytes con y sin
+  salto final, `"uno\ndos"`, entrada vacía), corridos en nativo Y wasm32-wasi por
+  `scripts/testing/run_stdin_io_tests.sh` (dentro de `make test-ai-first`).
+- **Un `spawn` o una lambda escritos dentro de un bloque `test` (o `bench`) no veían los locals
+  del bloque** (fricción de nyxerp, 2026-09-14). `test "x" { let x: int = 5; spawn { .. x .. } }`
+  daba `NYX1002 in '__spawn_0': 'x' not declared`, y lo mismo una lambda (`__lambda_N`); el mismo
+  código dentro de `main` andaba. Dos causas en dos capas: el parser bajaba el cuerpo del `test` y
+  del `bench` con `parse_block` en vez de `parse_fn_body_block`, así que las fns sintéticas
+  quedaban pendientes y el drain final del programa las hoisteaba al top-level, fuera del scope; y
+  codegen emitía `__test_N` con un `define` a mano más `codegen_block`, sin la maquinaria de
+  closures (SharedEnv, fns anidadas) que un cuerpo de función sí tiene. Ahora los dos bloques se
+  parsean como cuerpos de función y codegen los baja por `codegen_function` con un nodo sintético
+  (`synth_void_fn_node`); el cuerpo del bench va en `__bench_body_N`, que el loop llama. Guarda:
+  check `test-captura` de `run_tooling_gates.sh` (spawn que captura un `int` y un `String` y manda
+  por un channel un `int` que codifica los dos, lambda que captura un local; comprueba el VALOR, no
+  solo que compile) y `test-428-bench-captura` para el bench. Aparte, fichado: `channel_send` de un
+  `String` emite IR inválido en cualquier contexto, también en `main`.
+- **`try_http_*` ya no devuelve `Ok` con un cuerpo truncado, ni se queda esperando a un servidor
+  que gotea** `[arco: http-tls-cliente]`. Medido el 2026-09-14 contra `main` 09583185 con servidores
+  locales: un cuerpo cortado antes de `Content-Length` volvía `Ok` con 10 de 100 bytes (en `http://`
+  y en `https://`); un servidor que mandaba un byte cada 2 s daba `Ok` a los 40 s; uno que aceptaba
+  y callaba daba `parse`/5 a los 92 s en `http://` (30 s POR lectura, tres lecturas) y a los 10 s en
+  `https://`. Ahora la respuesta se verifica contra `Content-Length`/chunked (`io`/5 si falta) y el
+  plazo es total (`timeout`/110). La afirmación del reporte de que un servidor mudo esperaba «sin
+  límite» no se confirmó tal cual: el límite existía, pero era por lectura. `test-425`.
+- **«'X' is not supported on target 'wasm32-wasi'» ahora dice DÓNDE, y lista todos los usos de una
+  vez** (fricción nyxerp 2026-09-14, lo que `--main` no cubría). El error nombraba solo el builtin y
+  salía con `exit(1)` en el primero: en un proyecto con imports no había forma de saber qué archivo
+  lo arrastraba, y arreglar un uso para descubrir el siguiente costaba otra compilación entera (1m59s
+  en el proyecto del reporte). Ahora cada uso lleva `archivo:línea` —el módulo importado, el prelude
+  o el archivo principal, con el nombre real también bajo `nyx build`, que compila una copia
+  temporal— y la función que lo contiene, sin el prefijo de manglado de módulo. Los usos se
+  acumulan con `note_codegen_error`, sin duplicados, y el driver aborta al terminar el codegen sin
+  escribir el `.ll`. Una nota única recuerda que un módulo importado se emite entero y apunta a
+  `--main`. Los 7 sitios de `codegen_target_guard` (inline asm ×2, `try`/`catch`, builtins no
+  portables, 3 atómicos) pasan el nodo. Caso nuevo en `make test-wasm`, que corre aunque falte el
+  toolchain: tres usos en tres archivos listados con archivo:línea y función, rc != 0 y sin `.ll`;
+  control positivo con un programa wasm válido.
+- **`nyx test` ya no acepta opciones desconocidas en silencio** (fricción de nyxerp,
+  2026-09-14, reporte `20260914-110000-team-1`, pedido 1 de 3). `nyx test --coverage
+  archivo.nx` daba rc 0, salida idéntica a sin la flag y nada en disco — quien lo puso en
+  un script de CI creyó que estaba midiendo cobertura. El parser de `compiler/test.nx`
+  (`main()`) caía al fondo del if/else sin match y seguía como si nada; ahora cualquier
+  argumento que empieza con `-` y no es `--filter`, `--verbose`/`-v` o `--timeout` es un
+  error explícito con el nombre de la opción y la lista de válidas, detectado ANTES de
+  compilar o correr ningún test. `--coverage`/`--cover` llevan un mensaje aparte que dice
+  que la cobertura todavía no existe, sin prometer fecha (la cobertura real — funciones
+  nunca llamadas, % por línea/rama, lcov — es otro arco, pedidos 2 y 3 del mismo reporte).
+  `nyx help` documenta las tres opciones reales de `test` (antes solo decía «Run
+  tests/*.nx»). Guarda nueva en `run_tooling_gates.sh` (dentro de `test-ai-first`):
+  `--coverage` y una opción inventada dan rc≠0 nombrando la opción; control positivo con
+  `--verbose --filter` sigue pasando.
+- **`std/serve`: un 3xx con `Location` puesta SOLO en `headers_flat` llegaba con la cabecera VACÍA
+  a un cliente real** (fricción de nyxerp, 2026-09-14, ALTA — silencioso). `__format_http_response`
+  armaba siempre `Location: ` + `resp.body` (la convención de `response_redirect`) y descartaba
+  explícitamente cualquier `Location` de `headers_flat`; un handler que arma el `Response` a mano
+  (`response_new(303, "")` + `r.headers_flat = ["Location", "/x"]`, con `body` en `""`) mandaba la
+  cabecera vacía — el navegador no iba a ningún lado. Invisible en tests: un `Request`/`Response`
+  sintético (`request_with`) no pasa por `__format_http_response`, así que una prueba con la API de
+  testing daba verde. Regla nueva: un `Location` explícito y no vacío en `headers_flat` gana sobre
+  `body`; si ninguna de las dos fuentes trae dirección, no se emite `Location` (nunca vacía); nunca
+  se emiten dos. De paso, `http_status_text` (std/http) sumó los `303/307/308/409/415/422/429/504`
+  que le faltaban de RFC 9110 — el mismo reporte notaba `303 Unknown` en vez de `303 See Other`.
+  Documentado en `LLM.md` (campos de `Response`, y cómo pedir un 303 tras un POST); Content-Length/
+  Connection tienen un patrón de duplicado (no de vacío) relacionado pero distinto, fichado en
+  `TASKS.md` sin caso de uso conocido. Regresión en `tests/integration/serve_std/standalone.nx` +
+  `test_serve_std_smoke.py` (7 checks nuevos, contra el servidor real, con socket crudo para ver la
+  línea de estado y las cabeceras exactas — `docs/TESTS.md`).
+- **Windows: nada que enlazara el runtime linkeaba desde `main` — faltaba `__divti3`.** Medido en la
+  laptop: los 12 fixtures del gate de concurrencia fallaban con `undefined symbol: __divti3`, pedido
+  por `nyx_mul_div_round` (arco checked-math), que dividía en `__int128`. clang resuelve esa división
+  con un builtin de compiler-rt que libgcc provee en Linux y que la CRT de MSVC no trae, en x64 ni en
+  arm64; el único gate que lo habría visto, el CI de Windows, está apagado por billing. Arreglo B (GO
+  de Ottavio): la función hace el producto 64x64 y la división 128/64 **a mano** sobre pares de
+  `uint64_t`, con el signo aplicado al final, en vez de enlazar `clang_rt.builtins` (arreglo A, que en
+  arm64 no se podía verificar). Resultado bit a bit idéntico: diferencial de 48.477.042 casos contra
+  la versión `__int128` —bordes de `INT64_MIN`/`INT64_MAX`, los cinco modos más el inválido, empates
+  exactos, productos cerca de 2^126, overflow del cociente— con 0 diferencias; compilada para los dos
+  triples MSVC ya no pide ningún `__*ti3`. Guarda nueva `run_no_compiler_rt_builtins.sh` en
+  `test-ai-first` (compila los 25 TUs del runtime portable en -O0 y -O2 y falla ante cualquier builtin
+  de 128 bits; `--self-test` es su control negativo) y suite C nueva `test_mul_div_round.c` (tabla de
+  bordes generada con la versión vieja + 1M de casos contra una referencia de 64 bits).
+- **`make install-local` podía instalar herramientas compiladas por un compilador anterior sin
+  reconstruirlas.** Las reglas de `nyx_check`, `nyx_vet`, `nyx_fmt` y `nyx_test` declaraban como
+  prerequisito su propio `.ll`, pero `build-*` **regenera** ese `.ll` compilando la fuente con
+  `nyx_bootstrap`: se declaraba la SALIDA como entrada. Así, ni editar `compiler/test.nx` ni
+  reconstruir el bootstrap volvían a armar la herramienta. Medido el 2026-09-13: `make nyx_test`
+  respondía «up to date» con el binario cuatro horas más viejo que el bootstrap, y el único rastro
+  era el aviso «MÁS VIEJO» que `install-local` imprime pero no corrige.
+  Importa porque el arreglo del `continue` cambió lo que el compilador EMITE: sin esto, `nyx test`
+  podía seguir instalándose con el `for` que colgaba. Cada herramienta depende ahora de su fuente
+  `.nx` y de `nyx_bootstrap`; el aviso queda como red, ya no como la única defensa. Guarda nueva en
+  `run_toolchain_recipe_audit.sh` (dentro de `test-ai-first`): lee la base de reglas de make y
+  falla si una herramienta no depende de su fuente o declara su propio `.ll`; contra el Makefile
+  anterior da 14 fallos (control negativo medido).
+- **`[build]` de `nyx.toml` ya no se ignora en silencio** (fricción de nyxerp, 2026-09-14). La ayuda
+  de `nyx build` dice «por defecto, el de [build] en nyx.toml», el spec del arco nyx-build-wasm lo
+  documenta y el fixture de `test-wasm` lo usa, pero el parser solo leía `[package]` y
+  `[dependencies]`: `[build] target = "wasm32-wasi"` construía un binario NATIVO y salía 0, y
+  `[build] main` compilaba `src/main.nx` dijera lo que dijera. Ahora `[build]` acepta `main` y
+  `target` (las dos siguen valiendo en `[package]`), una clave desconocida en `[build]` es un error
+  con su nombre, y declarar la misma clave en las dos secciones con valores distintos también.
+  `nyx info` muestra el target efectivo. Guarda nueva `run_build_manifest.sh` en `test-ai-first`
+  (7 checks, 4 negativos + 3 controles positivos, con una compilación real).
+- **test-374, test-375 y test-376 dejan los puertos fijos del rango efímero, y `std/net` gana
+  `try_local_port(fd)`.** Los tres tests de red en Nyx hacían `listen`/`bind` sobre puertos fijos
+  (58735, 58740-58743) dentro del rango del que el kernel reparte los puertos locales de las
+  conexiones salientes de cualquier proceso (32768–60999): la misma fragilidad que
+  `test_net_result.c` mostró el 2026-09-13, cuando fallaba 5 de 5 con otra sesión conectada. No se
+  había arreglado porque desde Nyx no había forma de saber qué puerto asignó el kernel a un
+  `listen` en 0. Ahora sí: `try_local_port(fd)` (getsockname; TCP y UDP; `Err` con el errno real,
+  EBADF 9 o ENOTSOCK 88) y los tests piden puerto 0 y lo leen. Sirve igual para un server que
+  quiera loguear dónde quedó escuchando. Sin builtin nuevo: es un extern de `std/net` sobre
+  `os_sock_local`, así que no toca semantic ni codegen. Control negativo con los puertos viejos
+  ocupados y conteos: ver `docs/TESTS.md`. Un socket sin puerto asignado da `Ok(0)`, no un `Err`
+  con code 0 que no nombra ningún errno (caso C `test_local_port_result_unbound`).
+- **`float_to_string` y `print(float)` emiten ahora los dígitos mínimos que releen al mismo double,
+  en vez de las 6 cifras significativas de `%g`** (fricción de nyxerp, 2026-09-13, DOC + IDEA).
+  `0.013426971` salía `0.013427`, `1.0 / 9.0` salía `0.111111` y `123456789.0` salía `1.23457e+08`:
+  un double guarda unas 17 cifras y el texto tiraba 11 en silencio. nyxerp lo encontró guardando
+  embeddings en pgvector: cada componente leído de JSON y reescrito vía `float` cambiaba.
+  Es el comportamiento de Rust, Go, JS y Python. Dígitos: se prueba con 1..17 cifras y se toma la
+  primera que `strtod` relee idéntica. Notación: la de `repr` de Python —decimal fija si el exponente
+  decimal está en [-4, 16), científica fuera—, así `1000000.0` sale `1000000.0` y no `1e+06`.
+  **Cambia salidas visibles**: `0.1 + 0.2` imprime `0.30000000000000004`, que es el valor que el
+  programa tiene de verdad. Medido sobre 2M de doubles (bits crudos, decimales típicos, subnormales):
+  0 fallos de ida y vuelta, salida más larga 24 bytes. **Una revisión independiente del parche
+  encontró tres cosas antes de mergear**, las tres corregidas: con exponente 16 y 17 cifras salía
+  en notación fija, contra la regla documentada (ahora `%.*e`); formatear un `f32` como el double al
+  que se ensancha imprimía `0.1` como `0.10000000149011612` (ahora tiene su propio formateador, que
+  busca entre 1 y 9 cifras con `strtof`, y codegen lo llama desde `print` y `to_string`); y el peor
+  caso costaba ~25 veces un `%g` —justo un embedding de 1536 componentes—, que el camino rápido de
+  15→16→17 cifras con recorte de ceros baja a ~6, idéntico al algoritmo completo en 2M de valores. Los dos formatos (`nyx_string_from_float` y
+  `nyx_print_float`) eran copias del mismo `%g` en archivos distintos; ahora comparten
+  `nyx_float_format`.
+  Parte del reporte **no se confirmó al medirlo**: decía que un documento JSON «no se puede volver a
+  emitir como entró». `json_parse` guarda el TEXTO original de cada número, así que
+  `json_stringify(json_parse(doc))` ya devolvía `0.013426971` exacto; los dígitos se perdían solo al
+  pasar por un `float` (`json_as_float` + `float_to_string`, o `json_float(x)`). Y el texto crudo
+  que pedían con `json_as_raw` ya existe: `json_stringify(nodo)` de un número —o de un array de
+  números, que es su literal de pgvector— devuelve los dígitos tal como vinieron. Queda documentado.
+  `test-418-float-ida-y-vuelta` fija los tres casos del reporte, los bordes de la notación, el `f32`
+  y 2000 valores de ida y vuelta (regresión: 443 archivos / 442 ARM64).
+- **El cliente de `std/http` mandaba `Host` sin el puerto cuando el puerto NO era el de omisión
+  del esquema** (fricción de nyxerp, 2026-09-14). RFC 9110 §7.2: `Host = uri-host [ ":" port ]`,
+  y el puerto solo se omite si coincide con el de omisión (80 http / 443 https). Pidiendo
+  `http://127.0.0.1:8124/x`, el servidor recibía `Host: 127.0.0.1` en vez de
+  `Host: 127.0.0.1:8124` — **silencioso**: la conexión y la respuesta eran normales, solo el
+  header salía mal. Rompía cualquier defensa CSRF que compara `Origin` (que un navegador manda
+  CON puerto) contra `Host`, y cualquier servidor virtual por nombre+puerto o proxy que
+  reconstruye la URL desde `Host`. Causa raíz: `http_build_request` (único sitio de `std/http.nx`
+  que arma la cabecera) recibía el hostname pelado, nunca el puerto — los 8 call-sites (`http_get`,
+  `http_post`, `http_request` y la tipada `try_http_exec`, cada una en su variante TLS y plana)
+  pasaban `host` directo. Ahora todos pasan por `http_host_header(host, port, default_port)`
+  (nueva, `pub`, en `std/http.nx`), que arma `host` o `host:puerto` según el criterio del RFC.
+  `http_parse_url` no soporta literales IPv6 (`[::1]:puerto`) hoy — parte host:puerto por el
+  primer `:`, así que un host IPv6 nunca llega entero a la cabecera — fuera de alcance de este
+  fix, respetado tal cual. Regresión `tests/ai-first/28-http-host-port.nx`: server RAW
+  (`tcp_listen`/`tcp_accept`, sin `std/serve`) que devuelve el valor EXACTO de `Host` recibido por
+  `http_get` y por `try_http_request` contra un puerto no-privilegiado no-estándar (control
+  positivo: CON puerto), más el control del caso de omisión vía `http_host_header` directo (no se
+  puede bindear 80/443 sin privilegios en CI) — falla con el código anterior, pasa 5/5 corridas
+  seguidas con el fix.
+- **SEGURIDAD: el primer HTTPS de `std/http` hacía que el `sslmode=verify-ca`/`verify-full` de
+  `std/postgres` aceptara certificados de cualquier CA pública.** Hallado revisando la fricción del
+  cliente HTTP/TLS de nyxerp (2026-09-14). Desde el arreglo de verificación del 2026-09-11,
+  `std/http` llamaba `tls_set_ca_file("")` en su primera petición https y conectaba con
+  `tls_connect_verified`. Ese almacén de CAs es **uno para todo el proceso y acumula**: es el
+  mismo en el que el usuario carga su CA privada para postgres. Un programa que confiaba solo en
+  esa CA, después de un `http_get` a cualquier sitio, aceptaba en `verify-ca` un servidor con
+  certificado de cualquier CA pública, y a la vez `std/http` confiaba en la CA privada.
+  Ahora `std/http` usa `tls_connect_verified_system` (nueva en `std/tls`, modo 4 de
+  `nyx_tls_connect_ex`), que verifica cadena y nombre contra el almacén del sistema de
+  `https_get` sin leer ni escribir el explícito. De paso, la creación de ese contexto pasó a
+  `os_once`: publicaba el puntero antes de cargar las CAs y dos hilos podían crear dos.
+  Regresión `test-424-http-no-contamina-cas` (dos CAs generadas en el test, `SSL_CERT_FILE` como
+  almacén del sistema, listeners locales): falla con el código anterior («tls_connect_verified NO
+  acepta una CA que el usuario no cargó») y verifica las dos direcciones con control positivo.
+  Regression: 442 → 443 archivos.
+- **Un cambio en el runtime C no rearmaba nada de lo que `install-local` instala.** Las herramientas
+  compilan `$(RUNTIME_SRCS)` en su línea de clang, pero ninguna regla lo declaraba: tocar
+  `runtime/strings.c` o `runtime/tls.c` dejaba `nyx_check`/`vet`/`fmt`/`test` «up to date» con el
+  runtime anterior. Peor con el compilador: `nyx_bootstrap`, `nyx_build` y `nyx_gendocs` se
+  instalan y no tenían regla de archivo, así que `install-local` copiaba lo que hubiera. Ahora las
+  seis herramientas dependen del runtime (fuentes y headers), `nyx_bootstrap` es target de archivo
+  (semillas + el subconjunto del runtime que enlaza `build_bootstrap.sh`, sin `http2.c` ni
+  `llama_adapter.c`, para no rearmarlo de más) e `install-local` depende de él, y de `nyx_build` y
+  `nyx_gendocs` cuando existen. La guarda de `run_toolchain_recipe_audit.sh` exige la dependencia
+  sin copiarla del Makefile: los `.c` salen de `RUNTIME_SRCS` y de la lista real de
+  `build_bootstrap.sh`, y los headers de sus `#include`, transitivos. Contra el Makefile anterior da
+  218 fallos (control negativo medido).
+- **`tests/postgres/` (7 programas E2E) estaba roto desde antes de esta sesión y nadie se enteró:
+  1 de 7 pasaba.** Dos causas independientes, ninguna del runner: (1) el arco postgres-tls
+  (cerrado 2026-09-09) agregó el campo `tls` a `PgConn` y los literales `PgConn { fd: .., abierta:
+  .. }` de las funciones `conectar()` de prueba (02, 03, 04, 05) quedaron sin ese campo — `NYX1032`,
+  no compilaban; (2) el commit d54216cf (2026-09-13) separó el `kind` de los errores de
+  `std/postgres` en `"connection"` (falla de transporte/autenticación, antes de que el servidor
+  respondiera), `"db"` (el servidor respondió con un `ErrorResponse`, trae SQLSTATE) e `"in_use"`
+  (pool sin conexiones libres), y `tests/postgres` no se tocó desde el 2026-09-10 — seguía
+  esperando `"db"` para los tres. Se revisó cada aserción contra el código actual, no al revés:
+  puerto cerrado (01), `sslmode` rechazado antes de tocar la red y el handshake TLS fallido sin
+  CA o por nombre que no coincide (06) pasan a `"connection"`; pool de 2 conexiones agotado (04)
+  pasa a `"in_use"`; los `ErrorResponse` reales del servidor (contraseña incorrecta, usuario
+  inexistente, tabla inexistente, sintaxis inválida — 01, 02, 03, 06) se quedan en `"db"`, que
+  sigue siendo el `kind` correcto para esos casos. Verificado corriendo la suite completa contra
+  un PostgreSQL 17 local: 7 pasados, 0 fallidos.
+  **La causa raíz de fondo**: `run_postgres_tests.sh` nunca estuvo enganchado a ningún `make
+  test-*` que corra siempre — ni a `test-integration` (que sí lo documentaba `docs/TESTS.md`, mal)
+  ni a ningún otro target del `Makefile` — así que dos arcos sucesivos rompieron sus tests sin que
+  ninguna corrida automática lo notara. Enganchado después a `make test-integration`
+  (`run_integration_tests.sh`), con el SKIP limpio que ya traía (`psql`/servidor ausentes → SKIP,
+  no fallo), para que la próxima rotura falle a la vista.
+- **REPL: un `return` dentro de un `for` o un `while` se ignoraba en silencio, y los rangos,
+  `break` y `continue` no funcionaban.** `fn f() { for x in [1, 2, 3] { if x == 2 { return x } }
+  return 9 }` devolvía **9**: `eval_for`/`eval_while` solo miraban si el cuerpo había dado error y
+  descartaban el `return`, así que la función seguía iterando. Además `for i in 0..n` y `1..=n`
+  daban NYX3002 aunque la cabecera del intérprete los prometía, `break`/`continue` también, y
+  `for x in 5` no corría ni una vuelta sin decir nada. Ahora `break`, `continue` y `return` viajan
+  como valor de control que los bucles consumen; los rangos de int se recorren con los extremos
+  evaluados una sola vez (como en el compilado); un iterable de otro tipo da NYX3002; y un
+  `break`/`continue` fuera de todo bucle da NYX1015, el mismo código que el checker. `make
+  test-repl` pasa de 15 a 25 checks (casos 15-19, con control positivo de que los programas
+  válidos no emiten ningún error).
+- **Voseo rioplatense en diagnósticos del compilador, runtime, `std/` y scripts — 67 líneas en
+  22 archivos, todas a español neutro (tú)** (barrido completo del toolchain, 2026-09-14). La
+  guarda de español neutro (`run_templates_parity.sh`) solo vigilaba `templates/` y los gotchas;
+  nadie miraba lo que imprime el compilador. Afectaba mensajes que ve cualquier usuario: hints de
+  `codegen.nx` (NYX2002/2004/2007/2010/2013 y otros), `semantic.nx` (NYX1013/1023/1025/1026/1027/
+  1028/1031), `build.nx` (`nyx build`/`nyx run`/`nyx report`), `nyx.nx`, `parser.nx` (NYX0106),
+  runtime C (`nyx_row_cell`, slots), `std/postgres`, `std/kvclient`, `std/time`, `scripts/sdd/
+  arc-close`, `scripts/sync_to_public.sh` y varios `scripts/testing/*.sh`; también
+  `templates/gitignore` (sembrado por `nyx init`) y el skill interno `.claude/skills/
+  kv-friction-pull/SKILL.md`. La lista de formas prohibidas se extrajo a `scripts/testing/
+  lib_voseo.sh`, compartida por `run_templates_parity.sh` (recableado para sourcearla) y la guarda
+  nueva `scripts/testing/run_voseo_messages.sh`, sumada a `make test-ai-first`. Las 9 semillas del
+  bootstrap recompiladas y verificadas en punto fijo (`make seeds-check`); `nyx_build` reconstruido
+  (`build.nx` cambió).
+- **Una lambda o una función ligada a un `let` sin anotar devolvía basura en silencio al llamarla.**
+  `let g = fn(s: String) -> String { return s + "!" }` y después `print("x|" + g("y"))` imprimía
+  `x|281473650728896`: el número del puntero al string. Lo mismo con `let f = saludar` para cualquier
+  función que no devuelva `int`. Compilaba sin aviso, corría y el valor era falso. Con la anotación
+  `let g: Fn(String) -> String = …` funcionaba, y el patrón sin anotar es el que escribe cualquiera.
+  **Se encontró revisando el arreglo del campo `Fn`**: una sonda de «lambda que llama a un `Fn`
+  capturado» salía con basura, y al aislarla resultó que la captura no tenía nada que ver; bastaba
+  una lambda sin anotar que devolviera `String`. Causa: `codegen_let` registraba la variable con el
+  tipo `"Fn"` a secas, sin firma; `fn_annotation_return_type("Fn")` no encuentra retorno y la llamada
+  indirecta usaba `i64`. Ahora el `let` toma la firma completa de la función (`Fn(String) -> String`),
+  la misma forma que una anotación escrita a mano. **Eso solo alcanzó para las funciones nombradas**
+  (con el compilador anterior, `let m = mitad` con retorno `float` ni siquiera enlazaba): una lambda
+  el parser la hoistea como función ANIDADA, y a las anidadas codegen les registraba el retorno pero
+  no los tipos de parámetros, así que no había firma que armar. Ahora se registran igual que las de
+  nivel superior. Las funciones `void` o con firma incompleta siguen con `"Fn"`, que no tenía el bug. `test-419` cubre lambdas y funciones sin anotar que devuelven
+  `String`, `float` y `bool`, una lambda con captura, y `int`, `void` y el caso anotado como control.
+- **`let f = c.hacer` con `hacer: Fn(...)` ya no rompe el enlace con un error crudo de clang**
+  (fricción de nyxerp, 2026-09-13, LENGUAJE + DOC). Pasaba `nyx check` y `nyx vet`, y `nyx build`
+  fallaba con `use of undefined value '@f'` (retorno `String`) o `'%708' defined with type 'i64' but
+  expected 'ptr'` (retorno `Result`): dos mensajes distintos para la misma causa, sin archivo ni
+  línea del programa. Con el tipo anotado ya funcionaba.
+  **La causa estaba solo en codegen**: `semantic` infería bien `TyFn` con la firma del campo —por eso
+  ningún checker decía nada—, pero `codegen_let` no miraba el tipo de un `field_access` y tipaba la
+  variable como `"Map"`. `codegen_call_expr` decide la llamada indirecta solo si el tipo guardado
+  empieza con `Fn(`; con `"Map"` emitía `call @f` directo, con retorno `int` por defecto (de ahí el
+  `i64` del segundo mensaje). Ahora el `let` sin anotar toma el tipo Nyx del campo del struct.
+  Es el patrón que recomienda NYX1016 («ligar el campo a una variable antes de llamarlo»), así que
+  cualquiera que siguiera el consejo sin anotar caía acá. `test-417` cubre retorno `String`,
+  `Result` (Ok y Err) e `int`; receptor parámetro, puntero y campo anidado; y el caso anotado de
+  control.
+  **Arreglar solo el `let` no alcanzaba**, y lo midió una sonda por forma de receptor: el parámetro por
+  valor andaba, pero el parámetro puntero (`c: *Contrato`, que se registra con el tipo crudo
+  `"*Contrato"`) y el campo anidado (`r.contrato.hacer`) seguían en `@f` indefinido, porque
+  `struct_field_nyx_type` solo resolvía un receptor identificador con el nombre exacto del struct.
+  Ahora resuelve en recursión un receptor que sea a su vez un campo y deriva el símbolo con
+  `normalize_struct_type_symbol_ex`, la función que ya usaba el acceso a campos (puntero, referencia,
+  alias, genérico), en vez de una quinta copia a mano. Una **revisión independiente** del arreglo
+  encontró un hueco más: en una función con closures, el pre-scan que arma el entorno no tipaba
+  `let f = c.hacer`, así que una lambda que capturaba `f` volvía a llamar a `@f`; ahora también lo
+  tipa. Los otros usos de `struct_field_nyx_type` (tag de `push`, value-type de un `Map`) reciben la
+  misma información que ya tenían con un identificador. La misma revisión, al aislar una sonda, llevó
+  a un bug distinto y silencioso —una lambda ligada sin anotar devolvía basura— que va en el commit
+  siguiente. Queda fichado aparte que NYX1016 diga «método no reconocido (¿typo?)» para `c.hacer(x)`,
+  y que leer un campo de un parámetro `Caja<int>` rompa el enlace (no depende de `Fn`).
+- **`make install-local` decía «✓ Toolchain sincronizado» aunque no hubiera instalado el
+  compilador.** Cada `cp` de la receta iba encadenado con `;`, así que un fallo seguía de largo
+  hasta el `✓`. El fallo real fue `Text file busy`: al publicar el arreglo del `continue`, algo
+  estaba ejecutando `~/.nyx/nyx_bootstrap`, `cp` no pudo sobrescribirlo, y ese binario —el que el
+  wrapper prefiere sobre `bin/nyx`— quedó con el codegen anterior. Se descubrió porque, antes de
+  archivar el reporte de fricción, se repitió el caso literal de nyxerp con el `nyx` instalado y
+  seguía colgando. nyxerp vive en esta misma máquina: el arreglo estaba publicado y no le llegaba.
+  Ahora cada binario se instala copiándolo al lado y **renombrándolo encima** (`mv` sobre un
+  ejecutable en uso funciona: el proceso que corre conserva el archivo anterior), y la receta corre
+  con `set -e`, así que ningún paso puede fallar y terminar con `✓`. Verificado sobre un `NYX_HOME`
+  de prueba: con los binarios ocupados, la receta vieja los deja viejos y la nueva los actualiza
+  sin dejar temporales; con un archivo de solo lectura, la vieja da `rc=0` y `✓` y la nueva
+  `rc=2` sin `✓`. `nyx update` tenía el mismo patrón, peor (`cp … 2>/dev/null || true`), y recibió
+  el mismo arreglo, verificado igual.
+- **`continue` dentro de un `for … in` colgaba el programa en un bucle infinito** (fricción de nyxerp,
+  2026-09-13, LENGUAJE). Afectaba a todo `for` sobre un **array** (`for x in arr`, `for x: T in arr`)
+  y sobre un **rango** (`for i in 0..n`, `0..=n`). `codegen_for` apuntaba el destino de `continue` a
+  `for_cond`, pero el incremento del índice vivía al final del cuerpo: `continue` saltaba a la
+  condición **sin incrementar**, y el bucle volvía a visitar el mismo elemento para siempre. Bajo
+  `nyx test` aparecía como un corte por tiempo con `0 passed, 0 failed` y la salida ya emitida
+  perdida, lejos de la línea culpable — al equipo le costó «una hora larga» encontrarla.
+  El reporte creía que era solo `continue` + brazo de `match` + `for … in`. **Al reproducirlo, un
+  `if` pelado alcanzaba**: el `match` no tenía nada que ver, y la versión con `while` funcionaba
+  solo porque el incremento lo escribía el usuario antes del `continue`. No había un solo test de
+  `continue` dentro de un `for … in` en toda la suite, que es como sobrevivió.
+  Ahora rango y array tienen un bloque `for_step` con el incremento, al que caen tanto `continue`
+  como el final del cuerpo. El camino de **iterador** (`for x in arr.iter()`) nunca tuvo el bug —su
+  avance es el `nyx_iter_next` que vive dentro de `for_cond`— y se dejó como estaba, con un caso de
+  control en el test para que un arreglo futuro no lo rompa en la dirección opuesta.
+  `test-416` cubre el caso literal del reporte, el `if` pelado, array sin anotar, rango exclusivo e
+  inclusivo, strings, bucles anidados, `continue` como última sentencia, el iterador y `break`, cada
+  uno con tope de vueltas para que una regresión **falle con mensaje en vez de colgarse**.
+  **nyx-db lo tenía latente, y en una capacidad que anuncia**: diez `continue` dentro de `for … in`
+  sobre arrays, uno de ellos incondicional al final de cada fila de un JOIN (`store.nx:858`) y otro
+  para saltar NULL en MIN/MAX (`executor.nx`). Medido con un programa que hace INNER JOIN, LEFT JOIN
+  y MIN sobre una columna con NULL: con el compilador anterior se colgaba hasta el timeout y perdía
+  la salida ya impresa; con este termina (`LEFT JOIN filas=3`, `MIN filas=1`). Ningún test de
+  nyx-db arma un JOIN, que es por lo que `make test-stacks` pasaba. De paso se
+  verificó que el intérprete del REPL no tiene el bug —no implementa `break` ni `continue` y los
+  rechaza con NYX3002— y quedó fichado aparte.
+- **`test_net_result.c` dejaba de pasar cuando otro proceso del equipo tenía una conexión abierta —
+  y no era mala suerte.** Sus tres casos de error de red usaban puertos fijos (58732 y 58733) con el
+  comentario «improbable colisión real». Los dos caen **dentro del rango de puertos efímeros** del
+  kernel (32768–60999 en Linux por defecto), que es de donde sale el puerto LOCAL de cualquier
+  conexión saliente de cualquier proceso. Medido con `ss -tanp`: otra sesión tenía el 58732 como
+  puerto local de un HTTPS a `:443`, y mientras esa conexión vivía el primer `listen` del test
+  fallaba **5 de 5** (`Errno 98`). La ficha de `TASKS.md` llamaba a esa colisión «no vista».
+  Se descubrió porque `make test-runtime` falló durante la verificación de un cambio de semillas que
+  no podía afectarlo —el runtime no había cambiado desde la última corrida verde—, y en vez de
+  reintentar hasta que pasara se midió qué ocupaba el puerto.
+  Ahora los puertos los asigna el kernel (puerto 0) y se leen con `getsockname()`: el segundo
+  `listen`/`bind` apunta al puerto que el primero retiene, así que la colisión es la que el test
+  provoca y ninguna otra. Para `ECONNREFUSED`, un socket **bindeado sin `listen`** retiene su puerto
+  y el kernel rechaza con RST, así que no hay carrera. Lo que el test afirma —el errno exacto— no
+  cambió. Verificado bajo la condición que lo rompía: con la otra sesión reteniendo los puertos, el
+  test original falla y el corregido pasa 5 de 5 (109 asserts). El tercer caso, un `bind` UDP que
+  usaba el puerto fijo + 1, apareció al revisar el parche antes de compilarlo.
+  `test-374-try-net.nx` tiene la misma fragilidad en sus `listen` al 58735 y queda pendiente: es un
+  test Nyx y el runtime no expone `getsockname`.
+- **Las nueve semillas `.ll` del bootstrap vuelven a describir al compilador actual** — siete
+  estaban atrasadas. Se regeneran A MANO (`make recompile MODULE=x`), así que un cambio del
+  compilador que afecte lo que EMITE se propaga solo a los módulos que alguien se acuerde de
+  recompilar.
+  **Los 40 cambios de código eran todos la MISMA sustitución**: `nyx_array_get` →
+  `nyx_slot_as_int_checked`, el slot-check de NYX2014. No eran siete derivas independientes sino un
+  solo cambio sin propagar. Consecuencia concreta: el `nyx_bootstrap` que construye el proyecto —y
+  el que `scripts/install.sh` construye en la máquina de un usuario externo— corría **sin esa red**
+  en `lexer`, `parser`, `types`, `borrow` y `licm`. No producía código incorrecto; le faltaba una
+  protección que el compilador actual sí emite. El resto de la diferencia eran `declare` de builtins
+  agregados después.
+  **Cierra en UNA vuelta**: regenerar las siete y reconstruir el bootstrap deja las nueve en punto
+  fijo, incluidas `semantic` y `codegen`, que no se tocaron. No había nada que no convergiera.
+  Guarda nueva: `make seeds-check` (`scripts/testing/run_seeds_check.sh`), invocada desde
+  `release-check`. **Fuera de `test-ai-first` a propósito** — son nueve compilaciones del compilador
+  y en máquinas chicas `codegen` muere por OOM —, y dentro de `release-check` porque es ahí donde
+  importa: publicar semillas viejas le entrega al usuario un compilador distinto del que este repo
+  probó. El criterio es PUNTO FIJO, no «idéntico siempre», y el mensaje de error lo dice: tras un
+  cambio que altere lo que el compilador emite hacen falta dos vueltas, porque la primera usa el
+  bootstrap viejo.
+- **Los dos shims WASI vuelven a ser una sola copia.** `playground/static/nyx-wasi-shim.js` llevaba
+  desde el 4 de julio sin tocarse —253 líneas de atraso respecto de
+  `examples/browser/nyx-wasi-shim.js`, que es el mismo archivo— sin que nada lo dijera. Sincronizado,
+  con guarda que falla si vuelven a diferir (`run_silent_failure_checks.sh`, `shims-wasi-identicos`),
+  verificada en rojo contra la versión vieja.
+  **Lo que la medición desmintió, y vale decirlo**: la ficha suponía que el playground «iba a fallar
+  distinto que el real», y no era así. La divergencia entera era maquinaria de cierres y bindings
+  DOM/browser, que el playground NO provee a los programas del usuario —su `index.html` llama a
+  `runNyxWasm(bytes, {onOutput})` y nada más—, así que el núcleo WASI no difería en una sola línea y
+  tres programas reales corrieron idéntico por las dos versiones. El riesgo era FUTURO, no presente.
+  Lo que vale es la guarda: una copia que deriva en silencio se descubre el día que la diferencia sí
+  importa, que es el peor día para descubrirla.
+- **Los errores de `std/postgres` distinguen transporte de servidor** (fricción de nyxerp, pedido
+  dos veces: 2026-09-09 y 10). Los 37 decían `kind = "db"`: servidor caído, contraseña equivocada,
+  tabla inexistente y unicidad violada llegaban **idénticos** salvo por el texto. Para un ERP no es
+  lo mismo — ante una falla de conexión corresponde reintentar y avisar que el sistema está caído;
+  ante una unicidad violada, decirle a la persona que ese RIF ya existe. La diferencia ya estaba
+  clara adentro del módulo; solo no salía.
+  Clasificados por función contenedora, no a ojo: **34 `connection`** (transporte y autenticación),
+  **2 `db`** (el servidor respondió con un ErrorResponse) y **1 `in_use`** (el pool sin conexiones
+  libres — no es ninguna de las dos: ni la red ni el servidor fallaron, y `in_use` ya estaba en el
+  vocabulario cerrado de `std/error`).
+  `code` se queda en `0` y queda documentado como definitivo: es un errno y el protocolo de
+  PostgreSQL no tiene errno, así que inventar uno haría que `errno_to_kind(code)` contradijera al
+  `kind` real. Lo que el protocolo sí tiene es el SQLSTATE.
+
+- **`<S>_desde_fila` dice qué campo falta cuando la fila viene corta.** El error era «Índice fuera
+  de rango [0..1)», que no nombra ni el struct ni el campo — el propio reporte lo puso al lado de
+  los otros mensajes del derive: «los mensajes del booleano y de `pg_col` son de otra calidad; este
+  desentona». Ahora: «`Contacto_desde_fila`: la fila trae 1 columna(s) y el struct espera 3 — falta
+  el campo `'rif'` (posición 1)», con la pista de que la fila la arma el servidor y hay que revisar
+  el `SELECT`. Es `nyx_row_cell` en el runtime, que el derive invoca con el contexto que solo el
+  compilador conoce.
+  Es la mitad acotada del pedido 3; que `desde_fila` **no tire el proceso** ante un dato inesperado
+  queda montado como arco (`docs/design/specs/2026-09-13-derive-fila-sin-abortar-design.md`), con la
+  medición que lo ordena: las dos salidas posibles —una función que valida y la variante `Result`—
+  necesitan el MISMO sustrato de sondeos que no aborten, así que la barata no es trabajo tirado sino
+  la primera mitad de la cara.
+- **El test de paridad nativo↔wasm ya no dice `PASS` cuando no comparó nada.** Sin `wasmtime` en la
+  máquina, la rama que solo verifica que el `.wasm` se construyó ponía la MISMA etiqueta `PASS` que
+  el caso completo. Quien leyera la salida creería que la paridad se verificó, cuando lo único
+  verificado fue que el archivo se generó. Ahora dice `PASS (solo build — sin wasmtime no se comparó
+  la salida)`. Encontrado al MEDIR si el pedido de wasm de nyxerp ya estaba resuelto, que es
+  exactamente para lo que sirve medir antes de trabajar: el pedido lo estaba, esto no.
+- **`toLower()`/`toUpper()` convierten Unicode, no solo ASCII** (fricción de nyxerp, 2026-09-10).
+  Convertían byte a byte con `tolower()`/`toupper()`, así que con cualquier letra acentuada devolvían
+  el texto **a medio convertir y sin avisar**: `"FERRETERÍA".toLower()` daba `"ferreterÍa"` —con la
+  `Í` en mayúscula en medio de una palabra en minúsculas— y `"Ñandú".toLower()` no tocaba la `Ñ`.
+  Lo grave no era la limitación —es razonable que una stdlib joven empiece por ASCII— sino que el
+  resultado no es ni el original ni el convertido: es una tercera cosa que no sirve para comparar y
+  que **se ve casi bien**, así que el error sobrevive a la inspección visual. Quien lo reportó lo
+  encontró escribiendo la búsqueda de contactos de un ERP: «PEÑA» no encontraba «Peña».
+  **Alcance**: ASCII + Latin-1 Supplement + Latin Extended-A — español, portugués, francés, italiano,
+  alemán, polaco, checo, croata, rumano, húngaro, báltico. Griego y cirílico quedan intactos (fuera
+  del alcance declarado, igual que antes: no empeora nada). Excluidos a propósito, cada uno con su
+  razón: `ß` (su mayúscula son dos letras), `ŉ` y `ſ` (mayúsculas de largo distinto), el par turco
+  `İ`/`ı` (el mapeo correcto depende del idioma y una stdlib sin locale no puede decidirlo), `µ` (su
+  mayúscula es griega) y `×` `÷` (símbolos, no letras).
+  **Todo par mapeado conserva la longitud en bytes**, y eso sostiene el resto del diseño: se escribe
+  sobre un buffer del mismo tamaño, no se mueve ningún índice de bytes que el llamador tuviera
+  calculado, y no hay reasignación que pueda fallar. El UTF-8 inválido se copia crudo, así que un
+  string con bytes binarios no se corrompe al cambiar de caja.
+  Se eligió arreglar las funciones existentes en vez de agregar un par nuevo —el reporte ofrecía las
+  dos salidas— porque el comportamiento viejo era silently-wrong: nadie puede depender de un texto a
+  medio convertir. Medido antes de decidir: 54 usos en el core y los cinco stacks, **ninguno** con
+  texto no-ASCII.
+  Tests: `test-415` fija conversión, exclusiones e invariante de longitud; el unitario de C agrega
+  los cuatro rangos par/impar de Latin Extended-A por separado, porque el pie cambia dos veces y una
+  regla única daría mal la mitad. Y `LLM.md` dice ahora el alcance **en la tabla de métodos de
+  String**, que era el segundo pedido del reporte: hasta acá aparecían sin ninguna nota y uno asume
+  que hacen lo que dice el nombre.
+- **BLOQUEO TOTAL corregido: `import "std/error"` definía `%Error` dos veces y clang rechazaba el
+  programa entero** (fricción de nyxerp, 2026-09-12, LENGUAJE y urgente). Un equipo se quedó sin
+  poder compilar, probar ni ejecutar nada en medio de su jornada, **sin haber tocado nada**:
+  `script.ll:6:1: error: redefinition of type / %Error = type { i64, %nyx_string*, %nyx_string* }`.
+  Causa: la lista de módulos que el prelude pre-registra como «ya importados» vivía DUPLICADA entre
+  `scripts/gen_prelude.sh` y `compiler/resolve.nx`. El compilador es un **binario** y el prelude es
+  un **archivo** en `$NYX_HOME/std`: se instalan por separado y pueden quedar desparejos. Un prelude
+  NUEVO —con `std/error` adentro, desde el arco `prelude-descongelado` del mismo día— leído por un
+  compilador VIEJO —que no pre-registraba `"std/error"`— hace que el `import` explícito re-inlinee
+  el módulo, y el IR define `%Error` dos veces.
+  **La lista viaja ahora DENTRO del prelude**, en la línea de contrato
+  `//#prelude-modules: io math array file map error` que escribe el generador, y `resolve.nx` la lee
+  del archivo que está usando (`prelude_module_list`). Las dos mitades ya no pueden discrepar. Sin
+  la línea —prelude anterior a este cambio— cae a los cinco módulos históricos, que es exactamente
+  lo que ese prelude trae: el fallback es correcto por construcción, verificado en las dos
+  direcciones (compilador nuevo + prelude nuevo, y compilador nuevo + prelude viejo de 471 líneas).
+  Las dos guardas que comparaban ambas listas hacen ahora lo contrario: **prohíben** que la copia
+  reaparezca en `resolve.nx`, y el gate de divergencia deriva su propia lista del prelude en vez de
+  mantener una cuarta a mano. Probado que las dos fallan al reintroducir la copia.
+  **Por qué no lo cazó la verificación del arco anterior**: se probó `test-372` (que hace
+  `import "std/error"`) y se leyó `check OK` + `✓ script.ll` como verde. `redefinition of type` es un
+  error de **clang**, no de la generación de IR — `✓ script.ll` dice que el IR se escribió, no que
+  sea válido. Además el fallo NO aparece por `nyx run`, solo por `nyx build`, que es la vía que usa
+  un proyecto. De paso: el banner del prelude anunciaba `std/{io,math,array,file,map}.nx` sin
+  `error`, un literal que ya mentía.
+- **El prelude ya puede devolver `Result<T, Error>`: `std/error` entró al prelude, y los nombres del
+  prelude ahora colisionan con NYX1013 en vez de ganar en silencio** [arco: prelude-descongelado].
+  La ficha ALTA que motivó esto describía un problema que **ya no era el que describía** — medido
+  antes de escribir una línea: el prelude dejó de ser una copia a mano el 2026-09-09
+  (`scripts/gen_prelude.sh`, con guarda de staleness verde), las «6 funciones `array_*` divergidas»
+  no existen (las 10 de `std/array.nx` son `pub` y el prelude es su copia generada), y la colisión
+  con `test-372` que daba por refutado el camino elegido tampoco ocurre.
+  Lo que SÍ seguía vivo era una sola restricción, y era la que forzó a crear `std/fs.nx` y
+  `std/math_ext.nx`: **el checker valida el prelude COMPLETO se use o no**, así que nada adentro
+  podía nombrar algo de afuera. Sonda: una `pub fn try_x(...) -> Result<int, Error>` en
+  `std/math.nx` rompía TODO programa Nyx —incluido un hello world que nunca la llamaba— con
+  `'err_new' not declared` sobre una línea del prelude.
+  El arreglo son dos líneas: `std/error` a `MODULES` de `gen_prelude.sh` y a los pre-registrados de
+  `resolve.nx` (el generador ya verifica que ambas listas coincidan — un módulo pre-registrado que
+  no esté en el prelude simplemente NO EXISTE para el usuario). `std/error.nx` calificaba y no era
+  un candidato cualquiera: 80 líneas, **sin imports**, autocontenido, que es exactamente la
+  condición que el prelude impone. El pre-registro es además lo que evita la doble definición del
+  `import "std/error"` explícito: `test-372` sigue verde.
+  **El costo, decidido explícitamente**: `Error`, `err_new`, `errno_to_kind`, `error_to_string` e
+  `is_eof` pasan a existir en el namespace de todos los programas Nyx. Cero colisiones en el
+  ecosistema propio (core, los 5 stacks, web), pero `Error` es un nombre común afuera — así que la
+  colisión se volvió **ruidosa**, que era la condición para meterlo: `register_struct` acusa NYX1013
+  nombrando al prelude y pidiendo renombrar. Antes la declaración del prelude ganaba EN SILENCIO y
+  los errores que salían después hablaban de campos que el usuario nunca escribió
+  (`field 'codigo' does not exist in struct 'Error'`, sobre SU línea), mandando a depurar el
+  programa equivocado — la ficha de `TASKS.md:1047`, aplicada a un nombre mucho más común que
+  `RoundMode`. Solo se acusa prelude→usuario, distinguidos por el offset de línea (`//#line 1000001`).
+  Tres tests: `Result<T, Error>` usado SIN import y ejecutado (test-414), el negativo de la colisión,
+  y su control positivo (`struct ErrorDeNegocio` tiene que seguir compilando — sin ese control, un
+  chequeo roto que acusara toda declaración pasaría el negativo en verde rompiendo todo programa).
+  Habilita las dos fichas BAJA que esperaban esto: re-exportar `try_read_file`/`try_write_file` desde
+  `std/file.nx` y mover `try_mul_div_round` a `std/math.nx`. Cada mudanza va en su propio cambio.
+- **`nyx build` volvió a chequear tipos: NYX1001 estaba apagado para todo archivo que importara un
+  módulo del proyecto** (fricción de nyxerp, 2026-09-11, clasificado LENGUAJE; medido el 12).
+  El reporte decía que el nombre de un archivo importado, capitalizado, se aceptaba como tipo
+  (`import "src/conversion"` hacía compilar `let x: Conversion = ...` sin que existiera ningún
+  `struct Conversion`). Al reproducirlo apareció que el alcance era mayor: **ningún** tipo
+  desconocido se rechazaba — `let a: NoExiste = ...` compilaba igual.
+  Causa: `nyx build` hace `cd $NYX_HOME` antes de invocar al driver y le pasa `NYX_PROJECT_DIR`.
+  El resolver honra esa variable, pero `scan_module_types` (semantic.nx) tenía su propia copia de la
+  resolución, de solo dos tiers —CWD y `std/` CWD-relativo—: buscaba `src/x.nx` dentro de `~/.nyx`,
+  no lo encontraba y devolvía 0. El caller marca entonces `g_import_unscanned`, que degrada a
+  comodín silencioso TODA anotación desconocida del archivo, no solo la del módulo ilegible. Bajo
+  `nyx check` (que no hace `cd`) los mismos programas SÍ daban NYX1001: **la misma anotación
+  verificaba o no según con qué herramienta se la mirara**, y la que no verificaba era la que se usa
+  para construir.
+  Es el MISMO bug que ya se había arreglado en `resolve.nx` el 2026-09-08 por el otro lado (su
+  comentario lo narra: «el único consumidor era `nyx build`, que hace `cd $NYX_HOME`»). Eran dos
+  copias de la resolución de imports arregladas de a una; ahora `scan_module_types` llama a
+  `resolve_module_path` y hay una sola.
+  Gate: `run_tooling_gates.sh` suma su TERCERA puerta (`build-cwd`) — el driver corriendo desde
+  fuera del proyecto tiene que dar NYX1001 sobre un tipo inexistente, con control positivo (el tipo
+  REAL del módulo importado tiene que compilar; sin ese control, un scanner que no leyera ningún
+  módulo pasaría el negativo en verde rechazando todo proyecto multi-módulo válido). Verificado que
+  la puerta falla contra el compilador de antes del fix: `rc 0` y sin NYX1001.
+- **Una función anidada (y el cuerpo de una `async fn`) ya ve los traits, los genéricos y las
+  constantes de su módulo**. `codegen_nested_function` y `codegen_async_fn` construían su
+  `CodegenContext` compartiendo ~45 campos con el padre y dejando **33 al relleno silencioso** del
+  literal de struct — entre ellos `trait_methods`, `trait_impls`, `type_traits`,
+  `generic_fn_templates`, `monomorphized` y los tres `pending_*`. No era cosmético:
+  - un método de trait dentro de una fn anidada daba `method 'hola' is not available on a receiver
+    of type '%P'`, que es **falso** — el `impl` existe, el contexto anidado no lo veía;
+  - una llamada genérica dentro de una fn anidada abortaba codegen con **rc=1 y ningún mensaje**:
+    ni error de Nyx, ni de LLVM, ni `.ll` generado.
+  Los campos se comparten ahora con el padre por la misma razón que los otros ~45: son tablas de
+  consulta del MÓDULO, no estado de la función. Los acumuladores
+  (`monomorphized`/`pending_*`/`dyn_impls`/`meta_counter`) también, a propósito — lo que la anidada
+  encola tiene que emitirlo el loop del padre o se pierde. `unsafe_depth` sí arranca de cero, que es
+  estado por función como `temp_counter` y `label_counter`.
+  **Lo destapó NYX1032**, el error de literales de struct con campos faltantes agregado el mismo día:
+  al correr el checker sobre el propio compilador, `codegen.nx` resultó el ÚNICO de los veinte
+  módulos que no pasaba su propio chequeo. Estaba tapado porque el bootstrap compila con
+  `NYX_SKIP_SEMANTIC=1`. [test: compiler/language/test-413-fn-anidada-ve-traits-y-genericos]
+
+- **Guarda nueva: cada `compiler/*.nx` pasa el checker del propio compilador**
+  (`scripts/testing/run_self_check.sh`, dentro de `make test-ai-first`). El bootstrap compila los
+  módulos con `NYX_SKIP_SEMANTIC=1`, así que un módulo del compilador podía dejar de pasar su propio
+  chequeo semántico sin que ninguna suite lo notara — y eso fue exactamente lo que pasó con
+  `codegen.nx`. Usa `nyx_check` (que respeta `NYX_SRC` y devuelve exit code real) en vez de
+  recompilar: mide lo mismo sin pagar el codegen, 20 módulos en ~47s. Trae control positivo (un
+  error de tipos real tiene que dar rc≠0) y se niega a correr si `nyx_check` quedó más viejo que las
+  semillas que enlaza, que es la trampa del binario stale que ya documenta `CLAUDE.md`.
+  Verificado que caza el bug: contra el `codegen.nx` de antes del fix da rc=1 con 4 NYX1032.
+- **Ligar el resultado de una builtin que no devuelve nada ahora es ERROR con línea (NYX1003)**
+  (fricción de nyxerp, 2026-09-11, clasificado LENGUAJE). `let x: int = sleep(1)` pasaba el chequeo
+  semántico con «check OK» y recién moría en clang con `void type only allowed for function results`,
+  apuntando a una línea de un `.ll` temporal que quien escribió el programa nunca ve. El mismo
+  programa con una función `void` **definida por el usuario** sí daba NYX1003: el checker conocía el
+  retorno de las funciones del programa y no el de las builtins, que caían a `TyUnknown` y por diseño
+  son compatibles con todo.
+  Lo caro es que el error es fácil de cometer *siguiendo una regla correcta*: el equipo tiene la
+  costumbre —nacida de otro reporte— de ligar SIEMPRE el resultado de una llamada, porque una llamada
+  con `?` en posición de sentencia no se ejecuta. Esa regla lleva derecho a escribir
+  `let _c: int = f(...)`, y cuando `f` es `void` el programa deja de compilar sin que el mensaje
+  nombre ni el archivo ni la función.
+  `builtin_fn_ret` (semantic.nx) devuelve ahora `ty_unit()` para los **35 builtins void** de
+  codegen.nx, así que el diagnóstico es el MISMO que el de una fn void del usuario:
+  `expected int, got ()`. La lista queda duplicada por fuerza entre las dos capas —codegen la tiene
+  como 35 bloques `if name == "X"`, no como tabla— y esa duplicación es justamente la trampa que ya
+  mordió a este repo varias veces, así que viene con guarda: `scripts/testing/check_void_builtins.py`
+  reextrae la lista de codegen siguiendo la profundidad de llaves (un `grep` hacia atrás atribuye el
+  `return` al `if` equivocado en ramas anidadas) y compara. Las dos direcciones del drift no son
+  simétricas y el script las trata distinto: *semantic dice void y codegen no* rechaza código válido
+  y es **error duro**; *codegen dice void y semantic no* solo pierde el diagnóstico para ese builtin
+  y es **aviso**.
+  Con test negativo y control positivo (las mismas builtins como sentencia tienen que seguir
+  compilando — sin ese control, un checker que rechazara toda llamada void pasaría el negativo en
+  verde y rompería el bootstrap, porque el compilador se compila a sí mismo llamando a `print()`).
+  Cero ocurrencias de ligadura en `compiler/`, `std/`, `tests/`, `examples/`, `playground/` y los
+  cinco stacks.
+- **Un literal de `struct` al que le faltan campos ahora es ERROR (NYX1032)** (fricción de nyxerp,
+  2026-09-11, clasificado LENGUAJE). `P { a: 7 }` sobre un struct de tres campos compilaba, pasaba
+  `vet` y **corría**, rellenando los ausentes con el cero de su tipo (`0`, `""`, `false`). Sin error
+  y sin aviso.
+  Lo caro no era el caso aislado sino su consecuencia: **agregarle un campo a un `struct` dejaba
+  TODOS los literales existentes construyendo valores incompletos, en silencio**, y el compilador no
+  señalaba ni uno. En un ERP eso es un valor que el constructor jamás habría dejado pasar —una tasa
+  de cambio sin fuente— entrando por la puerta de al lado, y descubierto con el dato ya guardado.
+  El diagnóstico nombra TODOS los campos que faltan en una sola línea, porque la lista completa es
+  la que dice qué escribir. Respeta el guard que ya tenían los otros chequeos del literal: si el
+  struct vino de `scan_module_types` (solo el nombre, sin campos declarados) no se dice nada —
+  inventar un error ahí sería peor que callarse.
+  **Cero ocurrencias en los 432 tests de la regresión**, que era la pregunta que decidía si esto
+  podía ser un error y no un aviso: nadie dependía del relleno silencioso. Con test negativo y
+  control positivo (el mismo struct completo tiene que compilar y correr — sin eso, un checker roto
+  que rechazara todo literal pasaría el negativo en verde).
+
+- **SEGURIDAD: `https_get`, `https_post` y el HTTPS de `std/http` no verificaban el certificado del
+  servidor** (fricción de nyxerp, 2026-09-11). Medido contra `badssl.com`: un certificado **vencido**,
+  uno **autofirmado** y uno **emitido para otro nombre** devolvían los tres `200 OK`. HTTPS por esas
+  vías daba CIFRADO pero **no AUTENTICACIÓN** — cualquiera en el camino podía responder por el
+  servidor y el programa no se enteraba.
+  Eran **dos caminos independientes**, y arreglar uno solo habría dejado el otro abierto: `std/http`
+  usaba `tls_connect` (la variante que no verifica) mientras `tls_connect_verified` existía sin
+  usarse, y los builtins `https_get`/`https_post` iban por un `SSL_CTX` con `SSL_VERIFY_NONE`
+  explícito. Ahora los dos verifican cadena **y** nombre de host contra el almacén de CAs del
+  sistema. Verificado: los tres certificados malos fallan y un servidor legítimo sigue andando.
+  El opt-out es explícito y para desarrollo contra un servidor autofirmado: `http_tls_inseguro(true)`
+  en `std/http`, `NYX_TLS_INSECURE=1` para los builtins. El API TLS **crudo** (`tls_connect`) sigue
+  sin verificar a propósito: es su contrato, y el modo «checked» de un escáner depende de él.
+  La decisión vieja estaba documentada en `runtime/tls.c` («para mantener el runtime sin
+  dependencias, quien necesite verificar que use el API crudo»). El almacén del sistema no es una
+  dependencia nueva —es el que usa cualquier cliente HTTPS de la máquina— y si faltara, la conexión
+  falla ruidosamente en vez de fingir seguridad.
+- **`std/http` no detectaba una conexión TLS caída** (encontrado arreglando lo anterior). El chequeo
+  era `if h < 0`, pero las dos funciones TLS devuelven **0** al fallar, así que nunca era cierto: un
+  handshake roto seguía de largo y escribía sobre el handle 0.
+
+- **`hacer_algo()?` en posición de SENTENCIA no se ejecutaba** (fricción de nyxerp, 2026-09-10,
+  clasificado LENGUAJE y urgente). Ni corría la llamada, ni propagaba el `Err`, y `nyx vet` decía
+  «No issues found»: un camino de error escrito explícitamente desaparecía del binario y la función
+  seguía de largo devolviendo `Ok`. El repro del reporte lo muestra limpio — los casos con `void`,
+  con `int` y con `Result` SIN `?` andaban bien; los dos que llevaban `?` no imprimían nada.
+  **La causa no era el `?`**: el despachador de sentencias del codegen conocía `call` y
+  `method_call` pero no `try_op`, y su caso por defecto era un `return 0` MUDO — cualquier tipo de
+  sentencia que el parser produjera y el codegen no tuviera listado se descartaba en silencio. Eso
+  convertía cada nodo nuevo en una bomba: alcanzaba con olvidarse de agregarlo acá.
+  Arreglado en las dos capas: `try_op` entra al despachador, y el default pasa a ser **NYX2017**,
+  que dice explícitamente que es un bug del COMPILADOR y no del código del usuario. El próximo nodo
+  que alguien olvide falla en compilación, que es donde se arregla barato.
+  `tests/compiler/language/test-412-try-op-sentencia.nx` cubre las dos mitades con un contador —que
+  la llamada CORRA y que el `Err` CORTE—, porque un test que solo mirara el `Result` final no
+  distingue «no ejecutó» de «ejecutó y dio Ok». Punto fijo verificado; NYX2017 no disparó en
+  ninguno de los 432 tests, o sea que ningún tipo legítimo caía en ese default.
+
+- **`go_sleep` perdía goroutines para siempre a partir de la 257ª concurrente** (encontrado midiendo el
+  techo de goroutines en Windows, W3 Task 6 M2, pero el bug era del runtime COMPARTIDO y en POSIX era el
+  que fallaba en silencio). `nyx_goroutine_sleep` marcaba la goroutina `BLOCKED`, llamaba a
+  `nyx_event_loop_add_timer` **descartando su valor de retorno** y hacía el `os_ctx_swap` igual. Cuando el
+  add fallaba —tabla de timers llena— la goroutina quedaba suspendida sin nada que la despertara: parada
+  para siempre, con su stack registrado como raíz del GC hasta que muriera el proceso. No era teórico: la
+  medición perdió **7920 goroutinas en una sola corrida**, y el límite era de timers CONCURRENTES, que un
+  servidor con un timeout por conexión pasa sin despeinarse.
+  Arreglado en dos capas. (1) `nyx_goroutine_sleep` chequea el retorno: si no hay slot, NO suspende —
+  restaura el estado a `RUNNING` y duerme de verdad, el mismo fallback que ya usaba para el caso
+  off-goroutine. Cuesta el worker, que es estrictamente mejor que perder la goroutina, y vale para las dos
+  plataformas. (2) La tabla del event loop dejó de ser un techo duro de 256: arranca ahí y crece al doble
+  por demanda hasta un freno de 65536 entradas (~2,6 MB). El claim de slot quedó en UNA función — estaba
+  duplicado en `add()` y `add_timer()`, así que el arreglo habría que aplicarlo dos veces.
+  La capa (2) es la que importa y la (1) es la red: medido con `test-411`, con el fallback pero sin
+  crecimiento despiertan **76** de 400 —peor que las 256 del bug original— porque cada fallback quema uno
+  de los 4 workers durante todo el sleep y las que sí se suspendieron se quedan sin quién las reanude.
+  `tests/compiler/systems/test-411-go-sleep-mas-de-256.nx`: 400 goroutinas durmiendo a la vez, todas
+  tienen que despertar. RED verificado con el bug puesto (`rc=1`, «expected 400, got 256»).
+  Pendiente aparte: `runtime/os/event_loop_win32.c` conserva sus 256 slots (`EVW_MAX_SLOTS`). Con la capa
+  (1) ya no pierde goroutinas —y ahí sí imprime el fallo— pero el muro sigue; fichado.
+
+- **`make install-local` copiaba las herramientas sin reconstruirlas.** `nyx_check`, `nyx_vet`, `nyx_test` y `nyx_fmt` se
+  compilan con su propio target y `install-local` solo hacía `cp`: tras tocar `compiler/semantic.nx` el toolchain quedaba con las
+  herramientas del día anterior y nadie avisaba. Se descubrió verificando NYX1031 — `nyx check` daba rc=0 sobre el mismo programa
+  que el compilador rechazaba. Es la familia de «artefactos derivados que no se regeneran solos» que `CLAUDE.md` ya documentaba
+  para `nyx_build`, pero peor: **la herramienta que miente es justo la que un usuario usa para confiar en que su código está
+  bien**. Ahora cada binario declara como prerequisitos las semillas que enlaza, así que `make` reconstruye solo lo que quedó
+  viejo y no reconstruye nada si todo está al día (verificado en las dos direcciones). Y si por algún camino una herramienta
+  igual queda vieja, la copia avisa en vez de sincronizar en silencio.
+- **Los argumentos de un builtin no se chequeaban NUNCA.** Había una tabla de tipos de RETORNO de los builtins pero de sus
+  parámetros solo se registraba la aridad, así que llamar a uno con el tipo equivocado pasaba el checker sin una palabra y
+  codegen emitía IR inválido — el error salía de clang y no nombraba la línea del usuario. Es la causa raíz detrás del reporte
+  de `datetime` de nyxerp: `datetime_year(datetime_now())` compilaba en silencio hasta que clang lo rechazaba. Ahora existe
+  `builtin_fn_params` y el error es **NYX1031**, con la línea: `'datetime_year' expects int for argument 1, got String`.
+  **Incremento 1: solo la familia datetime/time**, que es donde se midió el daño. La tabla toca a todos los builtins de un
+  compilador que se compila a sí mismo, así que un falso positivo no rompe un test sino el bootstrap; se agrega una familia por
+  vez, midiendo entre cada una. Y un `unknown` pasa en cualquier posición: si no, el tipado gradual deja de ser gradual. Radio
+  medido de este incremento: cero falsos positivos en la suite, en los tests de error y en los cinco stacks.
+  El diagnóstico vivió unas horas en codegen (NYX2016) y se RETIRÓ al llegar a semantic: ahí no tenía la línea del usuario y no
+  servía ni a `nyx check` ni al intérprete. Queda una nota en el sitio para que nadie lo vuelva a poner ahí.
+- **Los accesores `datetime_*` emitían IR inválido y el compilador no decía nada.** `datetime_year(datetime_now())` producía
+  `call i64 @nyx_datetime_year(i64 %<string*>)` y el error lo tiraba clang, sin la línea del usuario (fricción nyxerp). Ahora es
+  **NYX2016** en los siete accesores, y el mensaje dice cuál es el camino correcto: `datetime_parse` sí devuelve un epoch. Al
+  medirlo apareció que **las 16 funciones de la familia están coherentes** —firma emitida y firma C coinciden una a una—: el
+  problema no son dos firmas mal sino DOS MUNDOS en la misma familia (epoch `int` y texto `String`), donde `datetime_now()`, que
+  es el nombre que todos escriben primero, resulta ser el único productor que no devuelve la moneda canónica. La causa raíz de
+  fondo es que el checker registra el tipo de RETORNO de los builtins pero solo la aridad de sus parámetros: los argumentos de un
+  builtin no se chequean nunca. Este diagnóstico es la red mientras el arco `std-time` decide la representación.
+- **`nyx run --target wasm32-wasi` ejecutaba el binario NATIVO.** Construía el `.wasm` y después corría `./<name>`, el ELF de un
+  build anterior: imprimía la salida correcta y salía 0, así que parecía que había corrido el wasm. No corría. Ahora se ejecuta el
+  artefacto del target con `wasmtime`, o se falla diciendo qué falta y cómo hacerlo a mano — nunca otra cosa en silencio. Y un
+  target no nativo sin runner conocido falla explícito.
+- **`#[derive(PartialEq)]` no enlazaba, y detrás del crash comparaba `String` por DIRECCIÓN.** Un struct con un campo
+  `String` y ese derive hacía que clang rechazara el módulo entero: «instruction expected to be numbered '%N' or
+  greater». El registro del resultado se pedía ANTES de la rama y la rama de punteros pedía dos temporales más que
+  emitía antes, así que la numeración SSA salía al revés (reporte de fricción de nyxerp). Al arreglar eso apareció lo
+  que el crash tapaba: esa rama comparaba los `String` con `ptrtoint`, o sea por identidad de puntero — dos structs con
+  el mismo texto habrían dado DISTINTO. El día que alguien arreglara solo la numeración, `eq` habría empezado a mentir
+  en vez de no compilar. Ahora los `String` se comparan por contenido con `nyx_string_equals`. Y un tercer caso que
+  nadie había visto: un campo `float` emitía `ptrtoint double`, que es IR inválido — tampoco compilaba; ahora usa
+  `fcmp oeq`, con la semántica de IEEE 754 (NaN != NaN). Los punteros opacos (structs anidados, `Array`, `Map`) siguen
+  comparándose por identidad, que es lo único honesto sin recorrer la estructura. test-407 cubre los cinco tipos de
+  campo y el caso que distingue contenido de identidad: un `String` armado en pedazos compara igual que el literal.
+- **`let x: int = a[i]` sobre un slot que guarda un String o un float devolvía el PUNTERO como un número plausible
+  (NYX2014).** Es la tercera pata del reporte del ERP —la que en su momento se fichó como «causa raíz aparte, no es de
+  `sqlite`»— y la más venenosa de las tres, porque no rompe nada: `a.push("hola")` seguido de `let x: int = a[0]`
+  imprimía una dirección de memoria de 12 dígitos y salía con **exit 0**. Un número creíble en un lugar donde se
+  esperaba un número. Ahora el mismo par aborta ordenadamente con `NYX2014` nombrando el tipo real del slot, apoyado en
+  los tags por slot que ya existían desde v0.22.15 (mismo mecanismo que `NYX2008`, que cubría el lado `float`).
+  **Solo se denuncian esos dos tags**, que son donde el `i64` crudo significa otra cosa (una dirección, o los bits de un
+  double): `bool`, `int`, los slots sin tag y los punteros opacos siguen devolviendo el valor crudo, así que
+  `let b: int = a[0]` sobre un `bool` sigue dando `1` y ningún programa que hoy corre se convierte en un abort.
+  El alcance es igual de deliberado del lado del receptor: solo aplica donde el codegen caía al `get` CRUDO (`Array` y
+  `Array<int>`), porque un `Array<float>` o un `Array<String>` ya devuelve un valor TIPADO por su propio camino —
+  chequear ahí convertiría programas que hoy funcionan en aborts, que es otra decisión y otro arco. `NYX_SLOT_CHECK=off`
+  lo desactiva.
+- **Un literal entero fuera de rango se truncaba en SILENCIO (NYX2015).** `[arco: decimal-exacto-dinero]` El lexer guarda el TEXTO del literal y el
+  codegen lo emitía verbatim al IR, así que `clang` recibía una constante que no entra en `i64`, la truncaba y no decía
+  nada: ni error de Nyx, ni error de LLVM, ni un warning. Medido el 2026-09-09 mientras se estudiaba un tipo de 128
+  bits: `let c: int = 170141183460469231731687303715884105727` (2¹²⁷−1) imprimía **`-1`**, y
+  `let d: int = 18446744073709551616` (2⁶⁴) imprimía **`0`**. El chequeo es **textual, sobre los dígitos**, porque
+  convertir es justamente lo que desborda — y porque el literal viaja como texto a propósito, que es lo que haría gratis
+  un futuro tipo de 128 bits. El tope inclusivo es `2^63` y no `2^63-1` **a propósito**: `-9223372036854775808` es
+  INT_MIN y es perfectamente válido, pero el lexer ve el literal POSITIVO con un menos aplicado aparte, así que rechazar
+  `9223372036854775808` rompería `const INT_MIN` de `std/math` y del prelude — y el prelude viaja en TODO programa, o
+  sea que rompería el lenguaje entero. La forma positiva de ese único valor sigue envolviendo a INT_MIN, que es el
+  comportamiento estándar de complemento a dos. El wraparound de la ARITMÉTICA no cambia (gotcha `int-wraps-silently`):
+  esto solo cierra el literal, que es el caso donde el valor ya estaba mal antes de que corriera una sola instrucción.
+- **Comparar dos variables `char` emitía IR inválido y clang rechazaba el programa.** Los seis comparadores
+  (`==`, `!=`, `<`, `>`, `<=`, `>=`) extendían a `i64` **solo el operando izquierdo** y emitían
+  `icmp i64 %ext, %i8` — un mismatch de anchura que LLVM no acepta. Sobrevivió tanto tiempo porque la forma común es
+  `c == '0'`, con un LITERAL a la derecha: un literal `char` ya sale como `i64`, así que ese caso siempre anduvo, y solo
+  se rompía al comparar dos variables (`c1 == c2`, `c1 < c2`) — justo lo que hace cualquier comparación lexicográfica de
+  dos cadenas byte a byte. La resta de `char`, tres ramas más arriba en el mismo `codegen_binop`, ya extendía los dos
+  lados desde siempre; era una omisión, no una decisión. Ahora los seis extienden el lado derecho también cuando es
+  `i8`.
+- **`std/sqlite`: tres silently-wrong reportados desde un ERP, verificados con valores reales
+  antes de tocar nada.** (1) **Truncamiento a 32 bits.** `runtime/sqlite_adapter.c` usaba
+  `sqlite3_column_int`/`sqlite3_bind_int`: todo valor ≥ 2³¹ se truncaba SIN ninguna señal, tanto
+  al leer como al escribir. Medido: se guardaba `5000000000` y volvía `705032704`. Lo peor es
+  que la vía que la documentación recomendaba como la SEGURA para columnas numéricas
+  (`sqlite_query_int`/`sqlite_query_one_int`) era justo la que truncaba — un importe en centavos
+  o un id grande de un ERP cae de lleno en ese rango. Ahora las cuatro funciones (lectura y
+  bind, columna y parámetro) usan las variantes `_int64`. (2) **`NULL` indistinguible del texto
+  `'NULL'`.** Una celda SQL NULL llegaba como la cadena `"NULL"`, idéntica byte a byte a una
+  columna TEXT que dijera literalmente eso: dos valores distintos colapsaban en uno, sin señal.
+  Ahora hay un centinela explícito — `sqlite_null()`/`sqlite_is_null()` —, la MISMA
+  representación (un String de un byte `0x00`) que `std/postgres` ya usa (`pg_null`/
+  `pg_is_null`, gotcha `pg-null-sentinel`): quien migra de una base a otra no aprende una tercera
+  convención. El centinela viaja en los dos sentidos — también se puede PASAR un NULL como
+  parámetro con `sqlite_bind_cell`, donde antes se ligaba como texto y llegaba a la base como
+  cadena vacía. (3) **Leer una celda como `int` devolvía el PUNTERO como número.** La causa raíz
+  no es de `sqlite` — es la lectura de slots de `Array` sin tag, fichada aparte —, pero la vía
+  tipada (`sqlite_query_int`) ahora sí es la salida segura que la doc siempre dijo que era.
+  Test: `test-406-sqlite-tipos-null`, gotcha `sqlite-null-sentinel`.
+- **Los dos silencios de la maquinaria de `#[derive(...)]`.** Encontrados al investigar el derive de campos que hace falta para
+  escribir un ORM; los dos existían desde antes y ninguno daba un error. (1) Un derive **desconocido** se ignoraba sin decir nada:
+  `#[derive(Displai)]` compilaba, no emitía nada, y el usuario descubría el problema como un `NYX1002` en el sitio de uso
+  —«'X_to_string' no declarada»— sin ninguna pista de que el derive había sido descartado. Ahora es **NYX1029**, con did-you-mean
+  sobre los siete derives válidos. (2) Un derive sobre un struct **genérico** mentía dos veces: el checker declaraba el símbolo sin
+  mirar los type params y el codegen ni siquiera llama a los derives para un template, así que `Caja_default()` pasaba `nyx check`
+  en verde y fallaba recién al ENLAZAR con «undefined symbol», sin línea del usuario. Ahora es **NYX1030** en la declaración.
+  Los dos sitios que registraban derives (struct pelado y `pub struct`) estaban duplicados y ahora comparten un solo helper — la
+  duplicación era justo la que produjo, tres veces en dos días, un fix aplicado a la mitad de los caminos.
+- **Un campo `bool` en `Debug`/`Display` derivados se mostraba como `1`/`0`.** El campo es `bool` y la salida decía otra cosa,
+  mientras `print(un_bool)` fuera de un derive ya imprimía `true`/`false` por el mismo helper del runtime. Las dos ramas —`Debug` y
+  `Display`— tenían el código duplicado y las dos se corrigieron.
+- **Leer una TUPLA desde el payload de un genérico devolvía 0, en silencio.** `fn f() ->
+  Result<(int, String), E>` + `match` + `par.0` daba `0` con el dato INTACTO en memoria: el
+  programa compilaba, enlazaba, disparaba el arm correcto y mentía en la lectura. Causa raíz: un
+  guard del codegen (A5, agosto 2026) degradaba a propósito cualquier payload con sintaxis de
+  tupla al camino histórico —el i64 crudo— y después el indexador de tuplas no encontraba la
+  clave, imprimía un error que nadie mira y devolvía el literal `i64 0`. Las DOS premisas del
+  guard ya eran falsas: el nombre inventado que temía lo producía el splitter de type-args roto
+  (arreglado en test-403), y las tuplas SÍ se registran como tipo. El guard se retira y
+  `ensure_tuple_struct_registered` garantiza el tipo antes de decodificar —en `decode_payload`,
+  que es donde cubre de una a los seis callers (`?`, `unwrap`, `unwrap_or`, `expect_err`, el
+  `match` y la construcción)— en vez de depender del ORDEN de declaración, que lo habría vuelto
+  intermitente. test-404 cubre 2 y 3 campos, `Option` y el arm hermano; test-367, que documentaba
+  la degradación, ahora documenta que no volvió.
+- **`dyn Trait` funciona fuera del paso de parámetros: `let` anotado, `Array` y acceso por índice**
+  (reporte de fricción 2026-09-08). Guardar structs en un `Array` y recorrerlo con
+  `for x: dyn T in arr` compilaba limpio —`nyx vet` sin quejas, «build complete»— y SEGFAULTEABA
+  sin imprimir nada, ni siquiera la línea anterior al bucle; la variante por índice
+  (`let y: dyn T = arr[0]`) no compilaba. Causa: el fat pointer `{ dato, vtable }` se construía
+  SOLO en el sitio de llamada cuando el parámetro era `dyn`. Un `let d: dyn T = concreto` guardaba
+  el struct PELADO mientras el consumidor —el despacho por vtable y el `for`— asumía el fat
+  pointer: se leía el primer campo del struct como vtable y se saltaba ahí. El upcast se extrajo a
+  `emit_dyn_upcast` y ahora lo comparten el sitio de llamada, el `let` anotado, el acceso por
+  índice y las dos ramas del `for` (la de iteradores y la de arrays, que son caminos distintos en
+  `codegen_for` — parchear una sola fue el primer intento fallido).
+- **`Array<dyn Trait>`: el tipo en el contenedor hace funcionar la lista heterogénea.** La solución de
+  raíz del punto anterior: convertir a `dyn` cambia la representación, así que tiene que ocurrir
+  cuando el valor se ESCRIBE — una vez en el array todo elemento es un `i64` indistinguible y el
+  lector no puede saber si tiene un struct o un fat pointer. Con el tipo declarado en el array, el
+  `push` upcastea cada elemento a SU propia vtable al entrar, y así conviven varios impls en la misma
+  colección: `var r: Array<dyn Saluda> = []` + `r.push(Es{…})` + `r.push(En{…})` recorre y despacha
+  bien. El upcast vive en un helper único (`upcast_for_array_elem`) usado por los DOS sitios de
+  `push` del codegen —hay uno por forma de receptor, y parchear el equivocado fue el primer intento
+  fallido acá también—. Límite documentado en el gotcha `dyn-trait-needs-annotation`: un `Array` SIN
+  tipo con structs pelados leído como `dyn` sigue reventando, y no se puede rechazar al compilar sin
+  romper el caso legítimo del array pelado que sí contiene fat pointers. Test:
+  `test-391-dyn-trait-array`, las cinco formas.
+- **`std/toml` entiende `[[arrays de tablas]]`** (reporte de fricción 2026-09-08). Un manifiesto con
+  `[[campos]]` repetido producía UNA sola clave, literal `[campos.nombre` —con el corchete de
+  apertura ADENTRO, porque `toml_parse_section` buscaba el `]` desde la posición 1 en vez de la 2—
+  y las entradas se pisaban entre sí, así que solo sobrevivía la última. Ahora cada `[[t]]` abre un
+  elemento y el índice entra en la clave (`campos.0.nombre`, `campos.1.nombre`), con
+  `toml_array_len(parsed, "campos")` para recorrer sin adivinar dónde termina la lista. Las tablas
+  normales `[t]` no cambian. Test: `test-392-toml-array-tables`, con control de que `[server]` sigue
+  funcionando igual.
+- **Un valor `Fn` que devuelve `Option<T>`/`Result<T,E>` conserva el payload** (reporte de fricción
+  2026-09-08). `let g: Fn(String) -> Option<String> = f` y después `match g("hola")` entregaba el
+  String como PUNTERO crudo (`187650925231008`), sin error ni warning — el peor modo de fallar; con
+  `Result<String, Error>`, la rama `Err` además MATABA el proceso pidiendo ~10^19 bytes, que es lo
+  que se obtiene al leer un puntero como longitud. Causa: `infer_enum_subject_type` buscaba el
+  nombre del callee en `function_return_types`, pero el callee de una llamada INDIRECTA es una
+  VARIABLE, no una función, así que devolvía `""`; sin tipo, el `match` decodifica el payload como
+  `i64` crudo. El tipo estaba en la anotación `Fn(...) -> R` todo el tiempo. Misma clase que el fix
+  de `ensure_enum_mono` en el `?` (E7). El parseo del `->` se EXTRAJO a `fn_annotation_return_type`
+  y lo comparten los dos consumidores, en vez de copiarlo al segundo. Andaba ya y sigue andando
+  (controles en el test): llamada directa, `Fn -> String` pelado y `Fn -> Option<int>`.
+  Test: `test-390-fn-value-generic-return` con la matriz completa del reporte.
+- **`<` `<=` `>` `>=` entre dos `String` comparan el TEXTO, no el puntero** (reporte de fricción
+  2026-09-08). Los cuatro operadores de orden emitían `icmp slt i64` sobre dos `%nyx_string*`: IR
+  inválido que clang rechazaba al enlazar («'%618' defined with type 'ptr' but expected 'i64'»),
+  mientras `nyx check` y `nyx vet` daban el programa por bueno. La causa era un HUECO, no una
+  decisión: la rama de comparación de punteros excluye `%nyx_string*` a propósito —comparar
+  direcciones no es comparar texto— pero nunca se agregó la rama que compara por contenido, así que
+  caía al fallback entero; `==`/`!=` sí tenían la suya desde siempre. El ladrillo ya estaba:
+  `nyx_string_compare()` vivía en `runtime/strings.c` sin que el codegen lo llamara nunca. Semántica: lexicográfica por BYTES (prefijo común, y a igual prefijo gana la más corta),
+  coherente con «Strings = bytes» del resto del lenguaje — no por codepoints ni con locale. Cubre
+  también el caso mixto `i64`/`String` (el que llega de `arr[i]`/`Map.get`), igual que `==`. Caso de
+  uso del reporte: ordenar fechas `AAAA-MM-DD` comparándolas como texto, que para ese formato es el
+  idioma natural. Tests: `test-389-string-order-compare` (regression) y `tests/ai-first/26` (tabla de
+  vigencias por fecha, el programa que una IA escribe sin pensarlo).
+- **`nyx check` y `nyx test` vuelven a ser la puerta de tipos que la doc promete**
+  `[arco: tooling-type-gates]`. Dos reportes de fricción del 2026-09-08 mostraron que
+  `nyx check && nyx test` —el paso 5 de `AGENTS.md`, el «terminado» de un agente— dejaba pasar
+  un error de tipos inequívoco en un proyecto multi-módulo: solo `nyx build` lo detectaba. La
+  causa era **una sola para los dos síntomas**: la resolución de módulos estaba TRIPLICADA (la
+  buena en `nyx.nx`, una copia de abril degradada en `nyx_check.nx`, y `test.nx` esquivándola
+  con `NYX_SKIP_SEMANTIC=1` desde el Sprint 12). Se extrae `compiler/resolve.nx` y los tres
+  drivers lo consumen; `nyx test` compila con el checker encendido. En el camino se cerraron
+  cuatro defectos que ninguna ficha registraba: (1) `nyx check` daba rc 1 sobre proyectos
+  **correctos** —no era ciego, era inservible—; (2) el tier de `NYX_HOME` duplicaba el prefijo
+  (`NYX_HOME/std/` + `std/web` → `std/std/web.nx`), invisible mientras el único consumidor fue
+  `nyx build`, que hace `cd $NYX_HOME`, y responsable de que el prelude entero no resolviera
+  fuera del repo (el `map_new not declared` del reporte); (3) `scripts/nyx` exportaba
+  `NYX_PROJECT_DIR` DESPUÉS del `exec` de la rama `check|vet|fmt`, así que `nyx check` nunca lo
+  recibía; (4) los `DEF:` del LSP salían con las líneas del prelude (`println:1000003`) porque
+  el offset se restaba a mano en vez de filtrar por la marca `//#line`. Verificado:
+  `serve.nyxlang.com/src/main.nx` pasa de 44 errores a 0. Guarda permanente:
+  `scripts/testing/run_tooling_gates.sh` (en `make test-ai-first`), que ejerce las tres vías de
+  resolución —proyecto, prelude y `std/`— con control positivo, porque el bug rompía las tres y
+  probar una sola da falso verde.
+- **Sello de versión en lo que siembra `nyx init`** (F3 del informe de fricción del scaffold,
+  hallazgo A2 «cero marcas»): cada archivo de contexto IA (AGENTS.md, CLAUDE.md, .cursorrules,
+  CHEATSHEET.md, LLM.md, copilot-instructions y las 3 skills) termina con
+  `<!-- nyx-version: X -->` — el mismo marcador que CAPABILITIES.md — puesto al FINAL para no
+  tocar la línea 1 ni el frontmatter de las skills. `nyx build`/`nyx run` avisan en stderr (WARN,
+  nunca fatal, sin tocar el archivo) cuando AGENTS.md no lleva el sello de la toolchain instalada;
+  `nyx update --sync-docs` resiembra con el sello nuevo. Antes un proyecto creado con una versión
+  vieja seguía guiando al agente con manuales desactualizados para siempre, en silencio. Guarda
+  `seed-version-stamp` en `run_silent_failure_checks.sh` con control positivo (sello viejo/ausente
+  → WARN; vigente → silencio).
+- **`nyx init` siembra `.gitignore`** (F4 del informe de fricción del scaffold, hallazgo A1,
+  confirmado empíricamente): plantilla `templates/gitignore` con el binario de `nyx build`
+  (`/{{binary}}` = `[package].name`), `packages/` (con la nota para quien prefiera vendorizar
+  commiteado), `*.ll`, `*.o` y los `.bak` de `--sync-docs`. Nunca pisa un `.gitignore` existente y
+  NO corre `git init` (decisión del usuario). Antes el primer `git add .` se llevaba el binario y
+  las dependencias clonadas. Guarda `seed-gitignore` en `run_silent_failure_checks.sh`.
+- **Gotchas renumerados en los manuales sembrados** (F5 del informe de fricción, hallazgo A6):
+  `templates/AGENTS.md` (12/13/14 → 11/12/13) y `templates/CLAUDE.md` (11/12 → 10/11) tenían un
+  hueco por un borrado sin renumerar — el informe lo leyó como contenido perdido; no se perdió
+  nada (el gotcha borrado, `arr[i] = float`, estaba arreglado y documentado). Solo cambian los
+  números.
+- **`nyx init` ya no siembra CERO archivos en silencio** (F6 del informe de fricción, hallazgo
+  nuevo #3): el scaffold resolvía `NYX_HOME` con un `getenv` pelado — vacío, buscaba
+  `/templates/…`, nada existía y el proyecto quedaba sin AGENTS.md ni CAPABILITIES.md sin decir
+  una palabra. Ahora `resolve_seed_home` cae a `~/.nyx` (si trae `templates/`) o al monorepo, y
+  si no hay toolchain imprime un error ruidoso (no fatal: `nyx.toml` y `src/main.nx` se crean
+  igual) con la receta (`NYX_HOME` o `install.sh`, luego `nyx update --sync-docs`). Guarda
+  `seed-home-fallback` en `run_silent_failure_checks.sh` (3 escenarios).
+- **`nyx init` deja de sembrar `.vscode/extensions.json`** (F6 del informe de fricción, hallazgo
+  nuevo #4, decisión de Ottavio): recomendaba la extensión `nyxlang.nyx-language`, que no existe
+  en el marketplace (404), y la plantilla estaba gitignored — solo se sembraba en instalaciones
+  hechas desde el disco de desarrollo. Ficha en `TASKS.md` para resembrarla cuando haya una
+  extensión publicada; `sync_to_public.sh` ya no copia esa carpeta.
+- **`nyx_sleep()` reintenta `EINTR`** (vía `os_sleep_ms`): antes una señal a mitad de sleep lo
+  cortaba antes de tiempo; ahora duerme lo pedido. Única diferencia observable del arco W1 —
+  mejora estricta.
+- **Los DOS flakies históricos de `test_tls` MUERTOS, con causa real medida** (5/20 corridas
+  rojas con el host OCIOSO → 40/40 verde): ninguno era de `runtime/tls.c` ni tenía que ver con
+  la carga. (a) `large_write`: el server pedía más bytes de los que faltaban y `nyx_tls_read` no
+  retorna corto → dependía de una carrera de teardown; y el cliente cerraba sin leer los
+  `NewSessionTicket` de TLS 1.3, así que `close(2)` mandaba **RST** y el kernel del server
+  descartaba lo encolado (reintentar hasta un deadline era imposible por diseño). (b)
+  `eof_after_nonblock`: el drenaje cortaba en el primer `""` de `read_nonblock`, que significa
+  tanto WANT_READ como muerte. Las 3 hipótesis viejas («contención de CPU») quedaron
+  DESMENTIDAS en `TASKS.md`. Fichado aparte el footgun de producción: `nyx_tls_close` sin
+  drenar emite RST — es el patrón exacto de `nyx report --send`.
+- **Los threads crudos de los tests se registran en Boehm** (`GC_THREADS` en `test_tls.c` /
+  `test_thread.c`): cerraba un agujero engañoso del arnés.
+- **`examples/57-mutex` al contrato vigente de handles**: usaba la convención vieja
+  (`let m: int = mutex_new()`), que trunca el puntero y hoy es el error NYX1003 a propósito →
+  `let m: Map`. 101/101.
+- **`nyx update --sync-docs` migra el layout viejo y ahora sí refresca los adaptadores** (Task 6
+  del arco andamiaje-sdd, spec §2 «Migración de proyectos existentes»): un proyecto sembrado
+  antes de ADR-1 (LLM.md/CHEATSHEET.md en la raíz, CLAUDE.md/.cursorrules/copilot-instructions
+  con marca, `.claude/skills/`) se quedaba con ese layout para siempre — `--sync-docs` sabía
+  resembrar AGENTS.md/docs/nyx/** pero nunca tocaba lo viejo. `_migrate_seeded_layout()` en
+  `scripts/nyx` migra CADA archivo que lleve NUESTRO sello (`.bak` siempre antes de mover,
+  reemplazar o borrar) y deja intacto — con un aviso — cualquiera sin sello (lo escribió el
+  usuario). Idempotente: la segunda corrida no migra nada. Cierra la ficha de `TASKS.md` «`nyx
+  update --sync-docs` no refresca CLAUDE.md, .cursorrules ni copilot-instructions». Guarda
+  `run_sync_docs_migration.sh` (5 escenarios, incluida una copia real de
+  `~/nyx/web/sites/nyxlang.com`).
+- **What's new de gotchas arreglados tras `nyx update`**: además del extracto del CHANGELOG,
+  ahora imprime «Gotchas que ya no hace falta esquivar» vía `nyx_gendocs fixed-since
+  $OLD_VERSION` (Task 2) — la lista de trampas que documentaba `LLM.md`/`AGENTS.md` y que la
+  nueva versión ya arregló, para que el agente deje de esquivarlas. `install-local` instala
+  `nyx_gendocs` junto a `nyx_vet`/`nyx_check`.
+- **`make install-local` purga los restos de `templates/` pre-ADR-1**: copiar `templates/.` sin
+  purgar dejaba `CLAUDE.md`, `CHEATSHEET.md`, `LLM.md`, `.cursorrules`, `.github/` y `.claude/`
+  muertos al lado del árbol nuevo (`templates/{en,es}/`, `templates/adapters/`) en toda
+  instalación hecha antes de esta rama. `scripts/install_purge_legacy_templates.sh` es la ÚNICA
+  fuente de esa lista de rutas — la usa `install-local` Y la guardia, sin duplicar la lógica.
+
+### Changed
+- **CAMBIO DE COMPORTAMIENTO — `pub` ahora protege también la llamada PELADA (NYX1036)**
+  (fricción de nyxerp, `20260918-000022-team-3`). Una `fn` sin `pub` es privada de su módulo: se
+  llama desde el archivo que la define y de ningún otro. Hasta ahora `pub` filtraba **solo** el
+  namespace de la llamada calificada (`alias.fn()`, `resolve.nx:295`); la llamada pelada resolvía
+  igual, porque el resolvedor inlinea el texto del módulo importado y la función quedaba como una
+  top-level más — `nyx check` daba rc 0, compilaba y corría. La consecuencia era que **ninguna
+  librería podía ofrecer una API estable**: todo lo que un módulo definía era de hecho su interfaz,
+  y cualquier renombre interno rompía a quien la importaba sin haber anunciado nunca esa función.
+  **Qué puede romperse**: un programa que hoy llame a una función no-`pub` de otro módulo deja de
+  compilar; el arreglo es agregarle `pub` a esa función (si era parte de la interfaz de verdad) o
+  dejar de llamarla. Lo que NO cambia: una privada sigue siendo llamable dentro de su propio
+  módulo, y el prelude —que se antepone crudo, no se importa— queda fuera de la regla. El chequeo
+  va antes que el de aridad, porque una privada ajena no es «la función correcta con los argumentos
+  equivocados». Se apoya en `g_sym_modules`/`g_cur_module`/`fn_module_resolve`, que ya existían
+  desde la fricción de funciones homónimas del 2026-09-14. Gates: `check-pub-privada` (NYX1036
+  nombra la fn y el módulo dueño) y `check-pub-exportada` (control positivo: una `pub` que por
+  dentro usa su privada sigue chequeando).
+- **CAMBIO DE COMPORTAMIENTO — `nyx test` ya no compila las pruebas con `-O2`** (fricción de
+  nyxerp, `20260917-234222-team-2`). Por omisión las pruebas compilan SIN optimizar, igual que
+  `nyx build` (que solo optimiza con `--release`); la opción nueva `nyx test --release` recupera
+  `-O2` para quien mida rendimiento real dentro de una prueba. Un `-O2` fijo era el único camino
+  de la toolchain que forzaba la optimización máxima, y lo hacía sobre binarios que viven segundos
+  y se borran al terminar. Quien tenga una prueba que mida rendimiento tiene que pasar `--release`
+  para seguir viendo los números de antes. **Cuánto ahorra, medido por nyxerp el 2026-09-18** sobre
+  una prueba real (cierre de 88 archivos → 184.080 líneas de IR): `-O2` → `-O0` son **9,3 s por
+  archivo**, que en su suite de 100 son ~15 minutos. **Corrección de una afirmación previa de este
+  changelog**: se dijo que lo que se ganaba era memoria y que era lo que les impedía usar el segundo
+  núcleo. Su desglose lo desmiente — el pico de una compilación lo hace el FRONT-END
+  (`nyx_bootstrap`, 1.754 MB), no clang (276 MB con `-O2`, 137 MB con `-O0`). Bajar la optimización
+  da tiempo y algo de memoria de clang; lo que bloquea el paralelismo en 3,8 GB es el front-end, que
+  es además el 96% del costo de compilar una prueba.
+- **`nyx test` honra `NYX_RT_ARCHIVE`: el runtime C se compila una vez, no una por archivo de
+  prueba** (fricción de nyxerp, `20260917-234222-team-1`). Si la variable apunta a un archivo
+  estático que existe, `nyx test` linkea contra él en vez de compilar las 24 unidades del runtime;
+  si no está o no existe, todo sigue igual que antes. Es el mismo contrato que ya usaban
+  `run_integration_tests.sh` y `run_dispatch_matrix.sh` —que lo miden en ~4s -> ~0.3s por celda—
+  pero hasta ahora solo lo leían esos scripts, así que ningún proyecto de afuera se beneficiaba:
+  una suite de 100 archivos compilaba cien veces los mismos objetos. Medido acá: 8,9 s -> 1,1 s en
+  una suite de tres archivos. Una ruta relativa se resuelve contra el proyecto (el runner hace
+  `cd $NYX_HOME` antes de llamar a clang) y una ruta inexistente cae a las fuentes en vez de
+  romper el link.
+- **`nyx test` ejecuta las pruebas en orden alfabético y reproducible** (fricción de nyxerp,
+  `20260917-234222-team-3`). `discover_tests` usaba `readdir` sin ordenar, así que dos corridas
+  seguidas podían ejecutar en orden distinto: eso vuelve intermitente cualquier cruce entre
+  pruebas que comparten un recurso externo (ellos comparten una base PostgreSQL) y hace imposible
+  perseguirlo. El desorden además se leía como señal de que el runner era paralelo — no lo es y no
+  lo fue nunca: el bucle es estrictamente en serie, y ahora `LLM.md` lo dice.
+- **CAMBIO DE COMPORTAMIENTO — los `Err` de `try_http_*` sobre `https://` dicen la causa real**
+  `[arco: http-tls-cliente]`. Antes todo fallo TLS era `Err{5, "connection"}` con cuatro causas en
+  el texto. Ahora: `connection`/111 puerto cerrado, `timeout`/110 connect/handshake/respuesta
+  vencidos, `tls`/`X509_V_ERR_*` certificado (18 autofirmado, 10 vencido, 62 nombre, 64 IP),
+  `tls`/71 handshake por protocolo, `io`/113 host sin resolver, `io`/5 respuesta cortada. Quien
+  compare `e.code == 5` deja de coincidir (buscado en ~/nyx/products, ~/nyx/web y nyxerp: ningún
+  consumidor lo hace; nyxerp propaga con `?`). **Aviso a nyxerp**: su reporte queda resuelto.
+  También cambian los plazos por defecto: `http://` conecta con 10 s (antes 3 s) y las dos
+  respuestas tienen 30 s TOTALES (antes 30 s por lectura en `http://`, 10 s por lectura en
+  `https://`). `nyx_tls_connect` y `nyx_tls_connect_ex` conservan su contrato (handle o 0), pero su
+  connect + handshake pasa de 10 s POR operación a 10 s en total.
+- **CAMBIO DE COMPORTAMIENTO — `std/serve`: `serve_app` ahora escucha SOLO en `127.0.0.1`
+  (antes `0.0.0.0`)** (GO de Ottavio, 2026-09-14, sobre la fricción de nyxerp 20260914-180000
+  que trajo `serve_app_en`). Un servidor recién creado con `serve_app(app, port, workers)` y
+  cero líneas más quedaba expuesto a toda la red sin que nadie lo pidiera — el propio reporte lo
+  mostró: nyxerp creía escuchar solo en la máquina local (su `servidor.direccion` por omisión es
+  `127.0.0.1`) y no tenía forma de lograrlo. Seguridad por defecto: el bind amplio pasa a ser una
+  decisión explícita, no heredada de usar la función corta. **Migración**: quien necesitaba
+  `0.0.0.0` (sin proxy delante, o detrás de un LB que reenvía tal cual) llama
+  `serve_app_en(app, "0.0.0.0", port, workers)` en vez de `serve_app(app, port, workers)`.
+  Documentado en `LLM.md` (sección std/serve); regresión actualizada en
+  `tests/integration/serve_std/server_bind.nx` + `test_serve_std_bind.py` (confirma, leyendo
+  `/proc/net/tcp` del proceso real, que `serve_app` liga `127.0.0.1` y que `serve_app_en(...,
+  "0.0.0.0", ...)` sigue ligando todas las interfaces cuando se pide a propósito).
+- **`nyx init` cambia lo que siembra por defecto (ADR-1, decisión de Ottavio 2026-09-04)**
+  `[arco: andamiaje-sdd]`. Un proyecto nuevo recibe ahora **`AGENTS.md` + `CAPABILITIES.md` +
+  `docs/nyx/`** (la referencia densa `docs/nyx/LLM.md` y tres guías neutrales:
+  `guides/write-a-program.md`, `guides/fix-a-compile-error.md`, `guides/report-friction.md`).
+  **Dejan de sembrarse** `CLAUDE.md`, `.cursorrules`, `.github/copilot-instructions.md`,
+  `.claude/skills/` y `CHEATSHEET.md` (que muere), y `LLM.md` deja de ir en la raíz del
+  proyecto. *Por qué*: eran seis archivos con marca comercial que repetían el mismo núcleo
+  con distinta redacción, arrastraban trampas ya arregladas y ninguna guardia los cruzaba;
+  el default de un lenguaje no puede estar atado a un proveedor de IA. *Cómo recuperar los
+  archivos por proveedor*: `nyx init --agent=claude,cursor,copilot` (también
+  `nyx init --agent claude`), que siembra **adaptadores de 3 líneas** — quién eres, «lee
+  `AGENTS.md`», «las guías están en `docs/nyx/guides/`» — sin contenido propio; para Claude,
+  solo `CLAUDE.md` (nada bajo `.claude/`). Un valor inválido (`--agent=foo`) falla con exit 1.
+  *Idioma*: un proyecto es monolingüe — `nyx init --lang es` (o `NYX_LANG=es`) siembra el
+  juego castellano completo, en español neutro; sin bandera, inglés. El sello de lo sembrado
+  pasa a `<!-- nyx-version: X nyx-lang: xx -->` y `nyx update --sync-docs` resiembra desde el
+  juego del idioma del proyecto (deja `.bak`). Los proyectos ya existentes NO se tocan hasta
+  que corran `--sync-docs`; la migración del layout viejo llega en el mismo arco.
+  Guardia nueva: `scripts/testing/run_init_golden.sh` (listado dorado por idioma, neutralidad,
+  adaptadores, `--lang`/`--agent`), dentro de `make test-ai-first`.
+
+### Deprecated
+- **`throw(x)` es un alias deprecado de `panic(x)`** `[arco: e6-throw-panic]` (GO Ottavio
+  2026-09-06, D1 de la spec de errores tipados): mismo canal, mismo `catch`, los mismos límites.
+  Sigue compilando — retirar la sintaxis sería un cambio MAJOR — pero `nyx vet` lo marca (W108) y
+  la std/los ejemplos publicados ya no lo usan (`examples/by-example/35-error-handling.nx`
+  migrado a `panic`). Código nuevo: `panic()` para lo irrecuperable, `Result<T, E>` para lo
+  esperable.
+
+### Docs
+- **El ledger de un arco nace con las marcas que su cierre va a exigir** (método SDD-nyx).
+  `arc-close` pide, por cada task del plan, `Task N: review` seguida de `Task N: complete` (o
+  `skipped` con su ruling) y un `task-N-report.md`; nada obligaba a escribirlas DURANTE la
+  ejecución, así que la falta se descubría al cerrar, con los ejecutores ya fuera y el cierre
+  firmado por quien no hizo el trabajo — les pasó a `nyx-test-cobertura` y a `http-tls-cliente`,
+  los dos el 2026-09-17. Ahora `ledger-new` siembra «## Marcas por task» con una línea
+  `- [ ] Task N — <título>` por cada `### Task N` del plan (mismo patrón de heading que
+  `task-brief` y `arc-close`, fences respetados: un `### Task 9` dentro de ``` no es una task),
+  más el formato exacto de las dos líneas ancladas y el recordatorio del report.
+  - Lo sembrado **no puede hacer cerrar un arco que nadie revisó**: el ejemplo va indentado, así
+    que no matchea las regex ancladas que lee el cierre, y un caso del selftest lo fija.
+  - `arc-new` NO siembra el ledger: un plan recién nacido está en BORRADOR y todavía no declara
+    sus tasks, así que el checklist saldría vacío y el ledger sería huérfano para `state-check`
+    (h). Solo nombra el paso siguiente, por stderr para no ensuciar la ruta que imprime.
+  - Spec §4 enmendada. `make sdd-check` pasa de 79 a 83 casos, y el fixture de cierre del
+    selftest ahora nace sembrado: su cierre verde prueba E2E que un ledger con checklist cierra
+    igual, que es lo único que la siembra podía romper.
+- **`LLM.md` corrige el contrato de binary-safety de archivos y saca dos funciones inventadas**
+  (fricción 20260914-190001-team-1, equipo nyxerp, DOC). La doc decía que `read_file`/`write_file`
+  NO eran binary-safe con bytes 0 como par — medido contra `runtime/file-io.c` (y confirmado con un
+  test nuevo, `tests/ai-first/29-read-file-nul-safe.nx`), el contrato es asimétrico: `read_file` y
+  `try_read_file` SÍ son binary-safe en LECTURA (`fread` por tamaño real + `nyx_string_from_ptr` con
+  longitud explícita, nunca `strlen`); solo `write_file` trunca en el primer NUL en ESCRITURA
+  (`strlen` en su ABI `char*`) — `try_write_file` tampoco trunca. El ejemplo "Defer for cleanup"
+  llamaba a `file_read_all`, que no existe (NYX1002 al compilarlo) — se reemplazó por la receta real
+  para leer un archivo entero con la API de buffer (`file_seek`+`file_tell`+`file_read_bytes`+
+  `string_from_bytes`), documentada por primera vez. Una auditoría de todos los identificadores
+  llamados en los bloques ```nyx de LLM.md (extraídos y cruzados contra builtins/`std/*.nx`/fns
+  locales del propio bloque) encontró un segundo fantasma sin relación con el reporte: el ejemplo de
+  Structs llamaba a `to_float(...)`, que tampoco existe — es `int_to_float(...)`. Los tres bloques
+  corregidos se compilaron y corrieron a mano para verificarlos (ninguna guardia automática cubre hoy
+  los bloques de `LLM.md` — fichado en `TASKS.md`). Comentarios desactualizados con la misma
+  afirmación incorrecta corregidos en `std/fs.nx` y `runtime/file-io.c`.
+- **`docs/SPEC.md` documenta `continue` en `for … in`, los campos `Fn` de un struct, el formato de
+  ida y vuelta de `float_to_string` y los números JSON que conservan su texto**, con tres recetas
+  nuevas (`105-struct-fn-field`, `106-json-exact-numbers`, `107-for-continue`). Conteos: `make
+  test-examples` 114 (102 ejecutan, 12 solo compilan+enlazan; la tabla decía 109, atrasada en dos
+  recetas previas) y la auditoría de `nyx vet` 168 archivos (107 de by-example + 61 de std).
+- **`LLM.md` §std/serve documenta los 9 campos de `Request`** (F7 del informe de fricción,
+  hallazgo A3c): `method`, `path` (sin la query string), `query` (decodificada), `headers_flat`
+  (+ `http_find_header` es exact-case; `http_find_headers` para case-insensitive/repetidos),
+  `body` (crudo; 413 por el cap antes del handler), `form` (solo urlencoded), `cookies`, `params`
+  y `ctx` (scratch por request), más el contrato `get_or`/`contains` de los Map.
+- **Mutex global: `var MU: Map = mutex_new()` FUNCIONA — MEDIDO** (4 threads × 10000 incrementos
+  lockeados = 40000 exacto, 5/5): los inicializadores globales corren single-threaded antes de
+  `main`. El patrón lazy-init con flag READY es innecesario y UB (3 modos de fallo trazados en
+  `LLM.md` §Threading; el ejemplo 62 gana la nota).
+- **`tcp_write` no tiene timeout por default** (un peer stalled bloquea para siempre →
+  `tcp_set_timeout` primero en write-paths que no pueden colgarse) y **`tcp_close` NO despierta
+  un `recv()` de otro thread — `tcp_shutdown` sí** (patrón reader-ownership, incl. el modo de
+  fallo del fd reciclado): ambos en `LLM.md` §Networking y en los `///` de `try_tcp_write` /
+  `try_tcp_shutdown`, que alimentan el CAPABILITIES generado.
+- **`std/sync` es descubrible desde `LLM.md` §Threading** — el reporte de fricción pedía un
+  waitgroup que YA existía: el gap real era visibilidad.
+- **Piso mínimo `libgc`/bdwgc >= 8.2** documentado en la instalación, con aviso NO-fatal en
+  `install.sh` y `build_bootstrap.sh` (probado con 5 versiones simuladas; el build siempre
+  completa).
+- **`docs/TESTS.md` reconciliado con la realidad** (34 suites / 1444 asserts): la celda de
+  resumen estaba congelada desde E5.2b, con corrida real de respaldo.
+- **Campaña de reestructuración documental CERRADA (2026-08-31, 9 merges)**: cada historia se
+  cuenta UNA sola vez y hay guardas que lo sostienen. `docs/archive/` con extracción LITERAL de
+  la historia; el cuarteto `PROJECT_STATE`/`PLAN`/`TASKS`/`CHANGELOG` repartido por ROLES (foto
+  del presente / campañas activas / backlog / historia por release); `docs/TESTS.md` en una
+  tabla de ≤150 líneas; `docs/SPEC.md` sin las mentiras sobre async, borrow checker y Box/Rc, y
+  sin numeración muerta; `docs/design/INDEX.md` como índice de todo el diseño; `docs/ROADMAP.md`
+  reescrito por arcos; `docs/VERSIONING.md` con los criterios de 1.0 unificados. Todo verificado
+  por `scripts/testing/run_docs_health.sh`, enganchado a `make test-ai-first`.
+  `[arco: campana-docs-restructura]`
+- **El método de trabajo deja de llevar el nombre del plugin**: los documentos de diseño viven
+  en `docs/design/` y el ledger de ejecución de cada arco en su propio directorio gitignored
+  (338 citas reescritas — rutas, nunca contenido). Al cerrar un arco, el ledger se COSECHA a
+  `docs/archive/sdd/`: 15 arcos históricos (E1-E2, E5.5, W0, W1 inc 0-7, W2, W3 pasos 0 y 0b, la
+  campaña de docs) pasaron de vivir en un scratch gitignored a ser evidencia trackeada.
+- **`docs/TESTS.md`**: ai-first cuenta 24 programas (el 24, `24-bare-return-assert.nx`, entró el
+  2026-08-31 sin actualizar el conteo); `test-all` lista sus 15 suites.
+- **Campaña SDD-nyx CERRADA (2026-09-02/03; 11 tasks, 53 commits, 34 rulings)** — el método de
+  trabajo pasa a ser del proyecto y deja de depender del plugin: `docs/design/` (specs, plans,
+  briefs, spikes, reviews; banner de estado en línea 1; `INDEX.md` GENERADO) + un ledger de
+  ejecución efímero por plan (ruta derivable, nunca citada; se COSECHA a `docs/archive/sdd/` al cerrar) + `scripts/sdd/` (10 scripts,
+  selftest de 70 casos) + `run_docs_health.sh` 11/11 checks (8 por generador, 10 duro, 11 =
+  `state-check`). 113 banners canónicos, 15 ledgers históricos cosechados (45 rulings rescatados),
+  cuarteto sincronizado al presente. Saneamiento: mueren 14 skills OFF y los 6 agentes
+  (`runtime/CLAUDE.md` rescata lo no derivable), `scripts/testing/bench/`, 4 scripts huérfanos,
+  `nyx-vscode/`, `benchmarks/`, 19 examples muertos, `.cursorrules` raíz, `templates/product-ci.yml`;
+  `.archive/` y 6 docs históricos a `docs/archive/`; CHEATSHEET único en `templates/`. Tooling:
+  `make test-all` cubre las 15 suites, `bootstrap-asan` linkea `licm.ll`, `scripts/release-check.sh`
+  (2 fallbacks reales de VERSION; `compiler/build.nx` anunciaba 0.22.10), `templates/LLM.md` viaja al
+  mirror (antes `nyx init` fallaba en silencio en instalaciones públicas), `ci.yml` honesto,
+  `CLAUDE.md` reescrito. `[arco: sdd-nyx]`
+- **Poda de CHANGELOG.md y TASKS.md (2026-09-03)** — primer arco nacido con `arc-new`. El CHANGELOG
+  cortó en `[0.20.0]` por extracción literal: 176 KB (0.20.0→0.9.0 + la «Pre-reset development
+  history» v1–v6) a `docs/archive/CHANGELOG-2026H1.md`; el vivo pasa de 333 a 161 KB. TASKS: triage de
+  las 205 fichas con veredicto y evidencia (spike `2026-09-03-tasks-triage`, aprobado por Ottavio):
+  10 HECHAS verificadas con sha o repro compilado (entre ellas las dos ALTA del arco de errores
+  tipados: la clave base `Result:Ok:0` y el camino `Err` de `?`, que SÍ corre `defer` y el drop afín),
+  1 duplicada, 2 MAL UBICADAS que van al repo de nyx-kv (`~/nyx/products/kv`: el truncado de `\n` al
+  guardar y el vaciado del namespace admin), más las fichas del propio archivado y de la poda;
+  36 fichas de julio sin prioridad pasan a `[BAJA]` (re-triage adelantado, 0 NO-SE-HACE); 205→190
+  fichas, 1620→1502 líneas; conteos reales en ROADMAP §5/§6. Hallazgo: `docs/SPEC.md` §Typed Errors
+  sigue afirmando que `?` no corre `defer` (ficha acotada, se corrige a continuación). La rama
+  `feat/errores-tipados-e1-e2` (mergeada en `6b3ec2b`) perdió su marcador «NO MERGEAR» con la ficha 240.
+  `[arco: poda-changelog-tasks]`
+- **`docs/SPEC.md` §Typed Errors deja de mentir sobre `?`**: la nota del 2026-08-31 afirmaba que el camino
+  `Err` de `?` no corría `defer` ni liberaba tipos afines; era falsa desde su redacción (fix real en
+  v0.27.0, `9ef30fa`). Repro compilado 2026-09-03 durante el triage de TASKS; ficha cerrada.
+- **Documentación web: guía paso a paso en nyxlang.com/docs** (instalar, primer programa,
+  proyecto, desarrollar con agentes, CLI, sintaxis) en EN/ES; el libro `/learn/` queda como
+  legado sin enlaces; `GETTING_STARTED.md` apunta a la guía.
+- **`docs/SPEC.md` §Try-Catch Exception Handling reescrita** `[arco: e6-throw-panic]`: `throw`
+  deprecado, el payload tipado (NYX1026) y el catch honesto (NYX1027), tabla de códigos NYX10xx
+  con las filas NYX1022/1023/1025/1026/1027, la política wasm de fail-fast por contrato (dos
+  capas: `codegen_target_guard` + runtime bajo `__wasi__`), y la frontera try-como-aislamiento —
+  el `longjmp` salta los `defer`/drops de T4c, así que un afín con `Drop` vivo entre `throw` y
+  `catch` LEAKEA (documentado, no arreglado), en contraste con el camino `Err` de `?`, que SÍ
+  corre `defer`/drops desde v0.27.0 y exige el mismo `E` (NYX1025). `LLM.md` §Error handling
+  corrige la sintaxis mentirosa (`catch e` → `catch (e)`, paréntesis obligatorios) y suma la
+  tabla de códigos. `docs/design/specs/2026-08-11-errores-tipados-design.md` §6 registra el
+  ruling de Ottavio para cada una de las 8 decisiones pendientes (D1-D5 del plan del arco); banner
+  → VIGENTE con E1-E6 hechos y E7 diferido.
+- **Gotcha nuevo: `int-wraps-silently`** (`docs/gotchas/int-wraps-silently.md`, `docs/SPEC.md`
+  §Aritméticos «Overflow», test-385): la aritmética de `int` (`+`/`-`/`*`) se emite como
+  `add`/`sub`/`mul i64` sin `nsw`/`nuw` — desborda en wraparound silencioso de complemento a dos,
+  sin función chequeada/saturada, sin flag del compilador y sin tipo de 128 bits; la división
+  (`sdiv i64`) tampoco tiene guarda (`INT_MIN / -1` y por cero son UB en el IR). El caso más
+  peligroso en código real: `monto * tasa_ppm / 1_000_000` desborda a NEGATIVO apenas `monto`
+  supera ~9.2e12 unidades mínimas. Mitigación honesta documentada (dividir en dos pasos con el
+  resto); `checked_add`/`checked_sub`/`checked_mul`/`mul_div_round` llegan más arriba en esta
+  misma sección de novedades (bullet `[arco: checked-math]`).
+- **Gotcha `option-struct-multifield-link` deja de estar vivo** (`docs/gotchas/option-struct-multifield-link.md`
+  → `kind: fixed`, `fixed_in: 0.31.0`, test-386 nuevo): la review final del arco E7 (2026-09-08)
+  reprodujo el caso exacto (`Item { id: int, name: String, price: Array }` por `Option<Item>` y
+  `Result<Item, String>`, los cuatro caminos) en `main` y en la base del arco — funciona; no se
+  conoce el commit que lo arregló. El manual sembrado (`AGENTS.md`/`LLM.md`/las guías de
+  `templates/{en,es}/`) dejaba de enseñar la mentira («fails to LINK» / «rompe el LINK») y el
+  workaround de empaquetar los campos en `Option<Array>`/`Result<Array, E>`; retorna el struct
+  directo.
+- **`docs/TESTS.md`**: Regression pasa de 406/405 a 407/406 (test-386-option-struct-multifield).
+
+### Interno — arco nyx-test-cobertura: línea de declaración en el AST `[arco: nyx-test-cobertura]`
+- **Parser**: el nodo `function` (y `async_fn`) lleva la marca aditiva `["__declline__", N]` con
+  la línea del token `fn`. `node.line` es la línea del ÚLTIMO token (la `}`), y la cobertura de
+  `nyx test` necesita la de la declaración. Mismo patrón que `__retlt__`/`__paramlt__`; la firma
+  de ASTNode y `node.line` no cambian, y las 9 semillas siguen en punto fijo. Sin cambio
+  observable para un programa Nyx.
+- **`docs/TESTS.md`**: `make test-unit` pasa de 21 a 22 (`test-parser-declline`, con control
+  negativo: el parser anterior da `__declline__ = -1`).
+- **Codegen**: con `NYX_COVERAGE_MAP=<ruta>`, codegen escribe una fila TSV por función emitida
+  (`nombre_ir`, módulo, línea de declaración, fn de origen, tipo). Sin la variable no hace nada, y
+  con ella tampoco toca el IR. Las filas de nivel superior salen del pase 2 de `generate_llvm`; las
+  anidadas, las monomorfizaciones y las sintéticas se registran con una línea cada una. Cada fila
+  se agrega abriendo el archivo en modo `"a"`, porque codegen no puede tener globales String/Array.
+- **`docs/TESTS.md`**: `make test-ai-first` suma `run_coverage_tests.sh` (9 checks, corrida real) y
+  `run_tooling_gates.sh` pasa de 14 a 15 checks (7 negativos + 8 positivos, corrida real):
+  el positivo que probaba que `--coverage` caía en «unknown option» pasa a probar lo mismo de
+  `--cover` (que sigue sin existir y remite a `--coverage`), y se agrega un positivo nuevo que
+  confirma que `--coverage` ya es una opción válida.
+
+### Interno — arco Windows W3: threads y scheduler M:N nativos `[arco: w3-threads-scheduler-windows]`
+
+Arco CERRADO el 2026-09-11. **No anuncia soporte Windows** —eso es W6, decisión de Ottavio— y no
+cambia el comportamiento de ningún programa Nyx en Linux. Lo que entrega es que el scheduler M:N y
+los threads corran nativos en win32 sobre Fibers, con Boehm escaneando stacks que no son los del
+sistema.
+
+- **El bloqueante estructural, resuelto**: roots por rango COMITEADO medido con `VirtualQuery`
+  (`GetCurrentThreadStackLimits` devuelve la RESERVA y queda PROHIBIDA para roots) más un parche de
+  ~10 líneas a bdwgc 8.2.12 y un corrector de sp por exclusión. Ablación sobre la implementación
+  real: 0/50 muertes con el parche contra 2/50 sin él; sumando las series previas, 0/70 contra
+  5/~140.
+- **El primer `spawn` de Nyx corre en Windows** (Task 4) y el gate de concurrencia completo cierra
+  local con **36/36**: sync/mutex, spawn, scheduler, select, async, canales y WaitGroup con timeout.
+  Manifiesto del CI 26→38 entradas, con el piso subido en x64 y ARM64 (ARM64 preparado; ejecutarlo
+  depende del billing).
+- **Cuatro mediciones que corrigieron lo que creíamos** (Task 6). Los warnings de bdwgc NO inundan
+  la terminal: van a `<exe>.gc.log`, porque `CONSOLE_LOG` está apagado por defecto — la ficha dejó
+  de bloquear W6. El techo de goroutines concurrentes ES el techo de root sets de libgc, medido con
+  goroutines reales: **8176** con `enable_large_config=ON` y **2032** con el vcpkg stock, así que el
+  manifiesto tiene que exigir el build correcto. `SwitchToThread` resultó ejercido por 7 de 12
+  fixtures y **más rápido** con menos cores que con más: el busy-spin del idle cuesta cuando SOBRAN
+  cores, al revés de lo que la ficha temía. Y el pooling de fibers pasó de «probablemente ruido» a
+  **56-68%** del spawn+join.
+- **Diferencias de plataforma documentadas, no escondidas** (`docs/SPEC.md` §Async y §7.6 del spec de
+  Windows): en win32 cada goroutine viva cuesta su stack COMITIDO —N × 256 KB de pagefile, ~0 en
+  Linux— porque es la única forma de que el GC encuentre sus roots; y el techo de goroutines
+  concurrentes existe y depende de cómo se compiló libgc.
+- De la medición del techo salió un bug que **no era de Windows**: `go_sleep` perdía goroutines para
+  siempre pasada la 257ª concurrente, en silencio en POSIX. Arreglado aparte (ver Fixed).
+
+### Interno — arco Windows W1: nace la capa `nyx_os_*` (8 incrementos, 2026-08-20 → 26)
+- **`runtime/os/`**: `nyx_os.h` (header único SIN un solo `#ifdef` de plataforma) +
+  `os_posix.c` + `os_wasm.c` (stub single-thread: sync no-op, threads `-ENOSYS`). W2-W5
+  escriben `os_win32.c` contra ese mismo header.
+- **Dominio threads/sync/tiempo** (inc 0+1): threads, mutex, condvar, rwlock, once, TLS, tiempo
+  monotónico, sleep, yield. `os_posix.c` es el ÚNICO lugar que define `GC_THREADS` (o sea el
+  redirect `pthread_create`→`GC_pthread_create` de Boehm). `thread.c`, `tls.c`, `event_loop.c`,
+  `runtime.c` y `scheduler.c` migrados sin tocar la máquina de estados del scheduler M:N.
+- **Spike `os_ev` THROWAWAY** (inc 0): el contrato de event loop completion-style quedó FIRMADO
+  por evidencia (echo TCP ×16 conexiones, timers cross-thread, cancel en vuelo, EAGAIN re-arm,
+  partial write de 4 MiB; 20/20 + 3/3 bajo ThreadSanitizer). Hallazgo medido:
+  `nyx_goroutine_block_on_fd` (readiness) no tenía NINGÚN caller.
+- **Dominios vm+ctx** (inc 2): `os_vm_map`/`os_vm_protect_none`/`os_vm_release` y
+  `os_ctx_t`/`os_ctx_make`/`os_ctx_swap` (POSIX ucontext; win32 será Fibers). El hack hi/lo de
+  `makecontext` queda como detalle interno de `os_posix.c`.
+- **Dominio sockets** (inc 3): la superficie más grande — `net.c` entero (~100 sitios), el
+  connect/poll de `tls.c` y el `writev` de `http2.c`. `os_addr_t` opaco de 128 B, resolución con
+  espacio de códigos propio (`OS_RES_*`, porque los `EAI_*` de glibc colisionan con `-errno`),
+  `os_sock_poll1` con revents reales, `os_addr_resolve_any` (AF_UNSPEC) + `os_sock_stream_for`.
+  Fidelidad verificada con sonda diferencial byte-idéntica sobre las 26 funciones públicas.
+- **Dominio evloop** (inc 4): `os_ev_*` implementado sobre epoll + eventfd (timers one-shot
+  monotónicos, wake cross-thread, read/write completion-style, cancel, run_once). El spike muere,
+  propósito cumplido. `test_os_ev` con 86 asserts.
+- **Dominio proc** (inc 5): `exec()`/`exec_code()` pasan a `os_proc_run_capture`/`_run_status`;
+  **muere el `#ifdef __wasi__` de `runtime.c`**. Contrato preservado letra por letra (sondas: 100k
+  cruzando el growth, 10k NULs binary-safe, tabla de exit codes en vivo).
+- **Dominio dl** (inc 6): los 3 adapters (zlib/sqlite/llama) sobre `os_dl_open/sym/error/close`,
+  con la semántica `RTLD_LOCAL` de la que depende el esquive de la colisión `inflate` reproducida
+  exacta (18/18 dlsym verificados hunk por hunk).
+- **Dominio señales + fault-guard** (inc 7, cierra W1): `os_sig_install` vs
+  `os_sig_install_no_restart` (la distinción `SA_RESTART` es real y medida), constantes `OS_SIG*`
+  incluidas las síncronas (cierra el agujero F15 de macOS), `os_fault_guard_install/thread_init`
+  (sigaltstack + `SA_ONSTACK` + `si_addr`) con el mensaje del scheduler byte-exacto.
+- **Ratchet `run_os_layer_ratchet.sh`**: 12 headers POSIX prohibidos fuera de `runtime/os/`
+  (crece un dominio por merge) + una regla dormida: si existe `os_win32.c`, el stub W0
+  `win_w0_hello.c` debe haber muerto. Engancha en `make test-ai-first`.
+- **Superficies PINEADAS documentadas con destino**: `process.c` (builtins fork/execvp → W5) y
+  `event_loop.c` (API readiness Nyx-facing, pineada por test-161 → W4+).
+- **Los reviews adversariales pagaron 10+ hallazgos mayores con los gates en verde**:
+  `os_ctx_t` sub-alineado (8 vs los 16 que `ucontext_t` aarch64 exige — UB confirmado con UBSan),
+  `os_ev_write` con `write()` crudo que mataba EL PROCESO por SIGPIPE, un `Err` que se volvía
+  `Ok` en `tcp_write_result`, un fd fantasma, la síntesis de `poll1` que rompía la
+  discriminación de EOF, y **una regresión IPv6 real en TLS/HTTPS** (la capa era IPv4-only).
+- **El audit de recetas descubre en vez de listar**: cualquier archivo trackeado que linkee el
+  runtime debe llevar `os_posix.c`/`os_wasm.c`; aparecieron 18 listas de fuentes donde el plan
+  había mapeado 7, y 4 recetas rotas EN VERDE por un glob que no desciende a subdirectorios.
+
+### Interno — arco Windows W2 y W2-ARM64: 26 programas Nyx CORREN en Windows
+- **Hito de ejecución**: el subset de regresión (26 tests reales de strings/formateo/arrays/
+  maps/json/file-I/O/lenguaje) se compila en Linux con el triple MSVC, se linkea en
+  `windows-latest` contra el runtime real y **se ejecuta**, con salida comparada byte a byte
+  (CRLF normalizado, `rc==0` exigido, piso de 26 en el gate).
+- **Fórmula honesta**: subset MENOS sqlite-runtime (sqlite compila y linkea; su ejecución llega
+  en W5 con los nombres `.dll` de los 3 adapters — ficha ALTA). Threads gateados por
+  `win_forbidden_builtin` hasta W3.
+- **`os_win32.c`** (~100 fns, `-Werror` como gate, LLP64 limpio): SRWLOCK + CONDITION_VARIABLE
+  (elegidos sobre CRITICAL_SECTION porque su init estático en ceros es UB), `GC_beginthreadex`,
+  QPC/FILETIME, VirtualAlloc, LoadLibrary, VEH con 3 códigos de excepción, consola, `_pipe`/`_commit`.
+- **Fase A**: dominios fs (`os_fs_stat`/`mkdir`/`listdir`) y term+fd (raw mode, winsize,
+  self-pipe, fsync) en la capa; `file-io.c` y `runtime.c` quedan SIN headers POSIX (ratchet 12→15).
+  Residuo cerrado: `os_env_set` + `os_time_parse`.
+- **La regla dormida del ratchet se cobró su pieza**: `win_w0_hello.c` MURIÓ.
+- **W2-ARM64**: el mismo manifiesto en runner `windows-11-arm` hosteado — EJECUCIÓN real, no
+  cross-compile. **CERO deltas de ABI**: el IR de ambos triples es byte-idéntico salvo la línea
+  `target triple`, 26/26 en ambas arquitecturas en la misma corrida, `-Werror` limpio en aarch64
+  y Boehm GC funcionando en ARM64-Windows (su escaneo de stack es por-arquitectura).
+- **Gotchas del runner documentados**: Git Bash del runner ARM64 reporta AMD64 (emulación) y su
+  workspace vive en `C:` — ese job solo jamás habría cazado el hallazgo del drive.
+- **16 hallazgos de review en 4 rondas**, entre ellos el silently-wrong de SIGTERM (el CRT win32
+  NUNCA lo genera: `persist` habría creído tener shutdown), el last-error pisado por `free()`, el
+  gate ciego al exit code, y el hallazgo estrella: **`/tmp` es drive-relativo en Windows** (deuda
+  de LENGUAJE, decisión pre-anuncio fichada ALTA). 7 carries fichados con destino W3/W4/W5.
+
+### Interno — arco Windows W3 pasos 0 y 0b: mueren los DOS bloqueantes del scheduler
+- **Paso 0** — el fault-guard de la capa **ENCADENA** al handler previo (snapshot atómico
+  release/acquire, instalación once-only): muere el SEGV **determinista** de `test_scheduler` y se
+  cierra el kill-switch de `GC_ENABLE_INCREMENTAL` (Boehm MPROTECT_VDB es dueño legítimo de
+  SIGSEGV; pisarlo sin encadenar rompía el write-barrier).
+- **Paso 0b** — root cause del «`GC_push_all_eager` faultea sobre una guard page bajo carga,
+  ~50%»: con un worker suspendido corriendo una goroutine, el colector escaneaba
+  `[sp_goroutine, stack_end_NATIVO)`, un rango de VA arbitrario que cruza guards `PROT_NONE`
+  (sonda decisiva: gap de 136 MB vía `GC_get_my_stackbottom`).
+- **Las 2 hipótesis de la ficha quedaron REFUTADAS**: en Linux libgc NO fusiona roots adyacentes
+  (ese merge es código Windows-only) y `stack_pool_put` nunca libera con un root vivo.
+- **Fix**: `GC_set_sp_corrector` POR DIRECCIÓN (la alternativa de swapear `stack_end` tenía
+  ventana de carrera). Gate de carga: 30/30 y 15/15-incremental contra 6/12 y 10/12 muertes de
+  base.
+- **Review adversarial con matriz 2×2 de mutaciones**: el corrector carga TODO el peso; la
+  `sa_mask` heredada se queda por CONTRATO (mecanismo de `os_dep.c` verificado con sonda, y la
+  atribución se corrigió con reword de historia). Fix round: pin de máscaras no-vacuo,
+  invariantes escritos en el código, `test_gc_goroutine_stack` determinista.
+
+### Interno — cosecha del paso 0b: la infraestructura de tests deja de mentir
+- **`make test-load`** (y en `test-all`): `tests/stress/gc_goroutine_load.nx` (300 goroutines ×
+  Array de 20k, oráculo determinista) + `run_load_gate.sh` (5 corridas + 3 incrementales por
+  default; `LOAD_GATE_RUNS`/`_INC` para los ×30 de investigación). Anti-vacuidad probada: la
+  variante rota da 0/3 y `rc=1`.
+- **Los runners del repo NO eran paralelizables**: `flock` en 12 runners vía
+  `lib_testroot_lock.sh` (timeout medido de 3600 s). La contención se probó con conteos EXACTOS
+  donde antes había fantasmas (256/256 y 18/18 contra 256/254, 2/242, 14). El review cazó un
+  CRITICAL de composición (self-deadlock anidado: `flock` no es reentrante entre fds) →
+  `NYX_TESTROOT_LOCK_HELD`. Después se extendió a los 4 scripts fuera de `scripts/testing/`.
+- **Red de seguridad M5** en `nyx_gc_sp_corrector`, 100% bajo `#ifdef NYX_RUNTIME_TESTING` (cero
+  producción), con `write(2)` crudo porque corre con el GC lock tomado y el mundo parado. Tests
+  en ambas direcciones (sp bogus grita / sp válido calla).
+- **«goroutine stack overflow» como diagnóstico potencialmente MENTIROSO**: barrido read-only de
+  todo el histórico con resultado NEGATIVO — el bug 2 era INOBSERVABLE antes del paso 0, así que
+  no hubo ventana para mal-etiquetarlo. Los 3 overflows reales del histórico siguen válidos.
+
+### Interno — arco Windows W3 Tasks 1-3: GC + Fibers RESUELTO en win32
+- **Modo de trabajo nuevo**: la laptop Windows de Ottavio como «manos win32» y esta sesión como
+  coordinador, sincronizados POR GIT (los encargos se commitean; un relay de chat se pierde).
+  Iteración local en minutos contra ~35 min de CI facturado.
+- **Task 1 (spike)** — la Opción E original quedó REFUTADA por el spike (`GC_gcollect` colgaba con
+  Fibers) y el root cause NO eran las Fibers: era un root con páginas `MEM_RESERVE`, porque
+  `GetCurrentThreadStackLimits` devuelve la RESERVA (el kernel clampea commit==reserve). Esa
+  función queda **PROHIBIDA para roots**.
+- **E′**: roots por rango **COMITEADO**, medido con walk de `VirtualQuery` y verificación página
+  por página. Las muertes residuales de 4-6% se SIMBOLIZARON a `GC_mark_from` (mark.c:716/726):
+  es el bug de Linux del paso 0b, en win32, por el camino `thread->id==me` (`may_be_in_stack`
+  sondea el sp de la fiber y esquiva todos los clamps).
+- **Parche B a bdwgc 8.2.12** (~10 líneas, en el repo bajo `docs/design/spikes/`,
+  upstream-able) + **ablación estadística**: 5/~140 muertes sin parche contra **0/120** con
+  parche y el corrector activo (~25k correcciones por corrida).
+- **Techo real de root sets ~2033** → el build vendoreado lleva `enable_large_config=ON`
+  (~8150 goroutines); el O(n²) de `GC_add_roots` en win32 quedó medido como inmaterial.
+- **Task 2 — `os_ctx_*` v2 (POSIX)**: el contexto es DUEÑO de su stack
+  (make/remake/stack/guard/free/thread_init; mmap + guard adentro). Scheduler migrado sin tocar
+  la máquina de estados; pool por puntero (struct 4896→96 B, spawn+join 378→217 ms); el camino
+  diferido de `GC_add_roots` ya escrito para que win32 lo herede. Review 21/21 + re-review con
+  mutación reproducida independiente.
+- **Task 3 — Fibers win32**: `os_ctx_*` v2 real sobre `CreateFiberEx`, con el rango comiteado
+  medido y el root publicado desde `goroutine_entry` ADENTRO de la fiber (ruling de la laptop
+  aceptado en review), corrector de sp **POR EXCLUSIÓN** (sp fuera del rango nativo cacheado →
+  `native_hi`; 3 reglas de decisión testeadas), header `nyx_os_win32.h`, y la estrategia bdwgc en
+  3 niveles (build local / overlay vcpkg para el CI / PR upstream = decisión de Ottavio).
+  Review Approved sin Critical + re-review 11/11; Linux verificado (regresión 100%, scheduler
+  270/270).
+- **El falso «S3 con canarios corruptos» no era real**: era el VEH del propio spike matando AVs
+  first-chance que el SEH de `GC_mark_some` maneja rutinariamente (los VEH corren ANTES que el
+  SEH). Hazard fichado: el fault-guard real de `os_win32` tiene el MISMO patrón.
+- **Residuo**: los jobs del spike quedaron gateados a `feat/w3-**` (no queman runner en `main`) y
+  el re-run verde de la matriz espera el billing de GitHub Actions.
+
+### Interno — arco Windows W3 Task 4: el primer `spawn` de Nyx CORRE en Windows
+- **`runtime/thread.c` + `runtime/scheduler.c` linkean en win32** y el primer `spawn` corre:
+  **25/25 fixtures** de concurrencia verdes en la laptop.
+- **Ablación n=50 sobre la implementación REAL** (no sobre el spike): **0/50** muertes con el
+  parche a bdwgc + el corrector de sp (5k-53k correcciones por corrida) contra **2/50** stock,
+  que además grita 50/50 con el aviso ruidoso. Es la evidencia de que el fix es el fix.
+- **`scheduler.c` posix-limpio**: los `unistd.h`/`fcntl.h` muertos salen vía la capa `nyx_os_*`,
+  con la equivalencia verificada 1:1 en review (incluido el caso de páginas de 64K).
+- **`event_loop_win32.c` timers-only por link** (IOCP queda para W4), con la advertencia del
+  cuelgue de `block_on_fd` escrita donde se va a leer.
+
+---
+
+## [0.31.0] — 2026-08-20 — E5 completo: `http` + `json` + `sqlite` en la regla de dos niveles (+ W0 Windows interno)
+
+> MINOR agrupado autorizado explícitamente por Ottavio (2026-08-20,
+> «confirmado v0.31.0»). Cierra el arco E5 de la spec de errores tipados
+> §4.2 de punta a punta: `file` (E4, v0.28.0) → `net` (E5.1/E5.2/E5.2b,
+> v0.29.0-v0.30.0) → `http` + `json` + `sqlite` (este release). Tres
+> ramas paralelas sobre v0.30.0 (E5.3/E5.4/E5.5) + el arco W0 de Windows
+> (INTERNO — nada de esto anuncia soporte Windows, decisión todo-o-nada
+> §1.3 de la spec: la sección W0 documenta ingeniería en construcción).
+> Gates del merge: regression 400 archivos / 399 ejecutados ARM64 100%,
+> errors 256/0, ai-first 22, fixed point ×2, stacks 6/6, CI de main
+> verde (Nyx CI + Nyx Windows W0). En el merge se aplicó la enmienda
+> LLP64: la receta FFI de LLM.md §5.1 ítem 4 es `int64_t` ÚNICA (NO
+> `long` — Win64 es LLP64, 32 bits).
+
+### W0: fundaciones del target Windows (INTERNO — esto NO anuncia soporte Windows)
+
+> Rama `feat/w0-windows-target` sobre `main` v0.30.0, MERGEADA 2026-08-20. Primera
+> etapa del arco Windows nativo (spec
+> `docs/design/specs/2026-08-19-windows-nativo-design.md`, decisión
+> todo-o-nada §1.3: nada se publica como soportado hasta W6).
+
+### Added
+- **`NYX_TARGET=x86_64-pc-windows-msvc` / `aarch64-pc-windows-msvc`**: el
+  triple se emite tal cual en el .ll (sin forzar `no_gc` — Boehm soporta
+  win32/win64, a diferencia de wasm32). Un `NYX_TARGET` NO reconocido es
+  ahora error fatal bilingüe que nombra los targets válidos — antes caía
+  MUDO al triple linux (silently-wrong de toolchain).
+- **`win_forbidden_builtin` (guard TEMPORAL W0-W5)**: los builtins de
+  net/scheduler/process/tls/señales fallan fast con error bilingüe «aún
+  no está portado a Windows» bajo un target windows, en vez de un
+  `unresolved external symbol` críptico del linker. La capa `nyx_os_*`
+  (W1+) lo vacía etapa por etapa.
+- **`make win-compile FILE=x.nx [ARCH=arm64]`** → `x.win.ll` /
+  `x.arm64.win.ll`.
+- **CI `windows.yml` — el primer .exe Nyx nativo CORRIÓ en CI** (run real
+  verde, la evidencia ejecutada que pide la spec §4-W0): fixture-freshness
+  en ubuntu (reconstruye el bootstrap desde seeds, re-emite el IR del
+  hello y lo diffea contra el fixture commiteado), hello-x64 en
+  windows-latest (vcpkg bdwgc + clang→MSVC + lld-link + ejecución con
+  salida assertada), hello-arm64 cross (compile+link + artefacto; no hay
+  runner ARM64-Windows público). Subset de runtime W0: `strings.c` +
+  `runtime-arrays.c` + `maps.c` + `runtime/os/win_w0_hello.c` (stub W0-TEMP
+  de 6 símbolos que W1 borra).
+- Tests: errors 253→256 (builtin prohibido con control positivo nativo,
+  target desconocido, triple emitido ×2 archs). Auditoría ABI Win64
+  MEDIDA en la spec §9 (c_fn_ptr por-triple, struct by-value sin
+  byval/sret, LLP64 — `long` C es de 32 bits en Win64 —, paths/HOME del
+  driver) con 4 fichas en TASKS.md, cosecha `[arco:W0-windows]`.
+
+### E5.5: `std/sqlite` — el canal lateral muere dentro del Error
+
+> Rama `feat/e5-5-sqlite-try` sobre `main` v0.30.0, MERGEADA 2026-08-20 —
+> cuarta hermana de la migración E5 (junto a E5.2b `std/net`, E5.3
+> `std/http`, E5.4 `std/json`).
+
+### Added
+- **`std/sqlite.nx`**: `try_sqlite_open(path) -> Result<*int, Error>` /
+  `try_sqlite_exec(db, sql) -> Result<int, Error>` (`Ok(affected)` real) /
+  `try_sqlite_query(db, sql) -> Result<Array, Error>` /
+  `try_sqlite_query_named(db, sql) -> Result<Array, Error>` — reemplazan
+  el patrón NULL/-1/bool mudo + `sqlite_error(db)` a mano de las
+  centinelas viejas (`sqlite_open`/`sqlite_exec`/`sqlite_query`/
+  `sqlite_query_named`, intactas). Nyx puro, CERO cambios en
+  `runtime/sqlite_adapter.c`. `begin`/`commit`/`rollback`/`exec_int`/
+  `exec_str`/`query_int` quedan sin hermana `try_` (ficha `E5.5b`,
+  TASKS.md, cosecha `[arco:E5.5-sqlite]`).
+- **Kind `"db"`** en el vocabulario cerrado de `std/error.nx` — los result
+  codes de sqlite (1-27) colisionan con el espacio errno (rc 2 =
+  SQLITE_INTERNAL ≠ ENOENT); espacio de código propio, mismo precedente
+  que `"eof"` (E5.2b).
+- Tests: regression +test-379-try-sqlite (open/exec/query Ok, SQL
+  malformado vía exec y vía query, tabla inexistente, PK duplicada vía
+  query, open de path imposible — todos con expected MEDIDO); ai-first
+  +22-ffi-int-truncation (blindaje del hallazgo 2, ver abajo).
+
+### Found (documentado, NO arreglado — fuera de alcance de esta rama)
+- **La centinela `sqlite_query`/`sqlite_query_named` se come en silencio
+  un error de STEP real** (ej. `SQLITE_CONSTRAINT` de un `INSERT` con
+  conflicto de PRIMARY KEY): su loop trata cualquier rc no-`SQLITE_ROW`
+  como "query terminada" y devuelve las filas parciales como si nada
+  hubiese fallado. Impacto bajo (un `SELECT` normal nunca dispara esto)
+  pero real para `INSERT`/`UPDATE` corridos por esas funciones. Las
+  hermanas `try_` distinguen correctamente. Ficha `[arco:E5.5-sqlite]`
+  en TASKS.md.
+- **Clase de FFI nueva**: varias funciones de `runtime/sqlite_adapter.c`
+  (`nyx_sqlite_step`/`nyx_sqlite_exec`/`nyx_sqlite_column_count`/
+  `nyx_sqlite_bind_str/int/double`) declaran retorno C `int` (32 bits)
+  contra un `extern "C"` Nyx de 64 bits — un valor negativo cruza
+  ZERO-extendido, no sign-extendido (`-1` llega como `4294967295`). La
+  clase potencialmente afecta a CUALQUIER `extern "C" fn ... -> int` del
+  repo, no solo sqlite (`runtime/net.c` ya se cubre declarando
+  `int64_t` explícito). Auditoría del resto de los adapters fichada
+  `[arco:E5.5-sqlite]` en TASKS.md. Visible en LLM.md §5.1 item 4.
+
+### E5.4: `std/json` — el `null` ambiguo muere
+
+> Rama `feat/e5-4-json-try` sobre `main` v0.30.0, MERGEADA 2026-08-20 —
+> paralela a `feat/e5-3-http-try` (ambas parten del mismo v0.30.0).
+> CERO C, CERO `compiler/` — `std/json.nx` es Nyx puro.
+
+### Added
+- **`std/json.nx`**: `try_json_parse(input) -> Result<Array, Error>` /
+  `try_json_get(obj, key) -> Result<Array, Error>` /
+  `try_json_array_get(arr, i) -> Result<Array, Error>` — hermanas
+  `Result`-returning de `json_parse`/`json_get`/`json_array_get`. Las
+  centinelas viejas quedan INTACTAS (sin cambios, sin deprecar).
+- **La desambiguación EXACTA del `null`**: `json_parse`/`json_get`/
+  `json_array_get` devuelven el mismo `["null"]` centinela tanto para un
+  `null` JSON legítimo como para "no había nada que parsear" / "clave
+  ausente" / "índice fuera de rango" — indistinguibles mirando solo el
+  valor. `try_json_parse` resuelve la ambigüedad de parseo comparando el
+  input recortado contra el literal `"null"` (no delegando en el tag del
+  resultado); `try_json_get` la resuelve re-recorriendo las keys del
+  objeto en vez de llamar a `json_get` (clave presente con valor `null` →
+  `Ok`; clave ausente → `Err{2,"not_found"}`); `try_json_array_get` hace
+  lo análogo con el índice (`Err{22,"invalid"}` fuera de rango).
+- **`json_trim` (helper interno, fix de review)**: la desambiguación de
+  `try_json_parse` recorta el input con un helper propio que espeja el
+  set de whitespace de `skip_whitespace` (espacio/`\t`/`\n`/`\r`, RFC 8259
+  §2) — NO con `.trim()` del runtime, que delega en `isspace()` de libc y
+  también considera whitespace a `\v`/`\f`, dos bytes que JSON no
+  reconoce. Con `.trim()` genérico, un input con VT/FF pegado a `null`
+  colaba como `Ok(null)` legítimo cuando debía ser `Err` — hallado en
+  review, no en el diseño original (`.trim()` estaba documentado como
+  "alcanza sin helper" y era falso).
+- **Límite estructural conocido, fichado, NO resuelto acá**: basura
+  ESTRUCTURAL dentro de un objeto/array sin cerrar (`"{oops"`) NO activa
+  la desambiguación — `parse_object`/`parse_array` siempre sintetizan
+  alguna estructura (parcial/corrupta) en vez de propagar tag `"null"`,
+  así que ese tipo de basura pasa como `Ok` con contenido corrupto.
+  Detectarlo requiere que el parser trackee posición/buena formación
+  end-to-end — arco propio (`TASKS.md`, ficha `[MEDIA-ALTA] parser con
+  posición`).
+- Test `test-378-try-json` (regression, 398 archivos): parse válido con
+  navegación de dos niveles, `"null"` con/sin whitespace JSON alrededor
+  (incl. `\t`/`\n`), basura pura y vacío → `Err "parse"`, `"{oops"` → `Ok`
+  corrupto (pin de comportamiento actual), trailing garbage tras `"null"`
+  (`Err`, gratis) vs. tras un valor válido (`Ok`, leniente heredado),
+  clave presente con valor `null` (`Ok`, EL assert central) vs. clave
+  ausente (`Err "not_found"`), receptor que no es objeto/array
+  (`Err "invalid"`), índice fuera de rango, VT (`chr(11)`, sin escape
+  literal en Nyx) delante de `"null"` → `Err` (fija el fix de
+  `json_trim`), no-regresión de las 3 centinelas viejas.
+
+### E5.3: `std/http` — cliente HTTP tipado, el primer consumer real de `std/net`
+
+> Rama `feat/e5-3-http-try` sobre `main` v0.30.0, MERGEADA 2026-08-20.
+> CERO C, CERO `compiler/` — `std/http.nx` es Nyx puro sobre la familia
+> `try_` de `std/net`.
+
+### Added
+- **`std/http.nx`**: `try_http_get(url)` / `try_http_post(url, body)` /
+  `try_http_request(method, url, headers, body) -> Result<Array, Error>`
+  — cliente HTTP tipado que mata el status `-1` centinela de las viejas
+  `http_get`/`http_post`/`http_request` (INTACTAS, sin cambios). Helper
+  interno compartido `try_http_exec` centraliza el pipeline parse→
+  connect→timeout→write→read→close sobre `try_tcp_connect`/
+  `try_tcp_write`/`try_tcp_set_timeout` de `std/net` (E5.1/E5.2) — el
+  primer consumer real de esa familia.
+- **Contrato de dos niveles**: CUALQUIER respuesta HTTP bien formada —
+  200, 404, 500 incluidos — es `Ok(response)`: el servidor respondió, eso
+  es éxito de transporte; un status es información de aplicación, no un
+  fallo de red. `Err` es exclusivo de fallos de transporte reales: URL
+  sin host parseable (`Err{22, "invalid"}`, detectado por `host == ""` de
+  `http_parse_url`), connect rechazado/timeout/DNS (el `Error` real de
+  `try_tcp_connect`), o una "respuesta" que no es HTTP válido con la
+  conexión abierta (`Err{5, "parse"}`, `status <= 0`).
+- **TLS degradado honesto**: `http_tls_request` (canal propio del
+  runtime) no expone errno real, solo un centinela `-1` con mensaje libre
+  — las `try_` lo mapean a `Err{5, "connection", msg}` en vez de fingir un
+  errno que el canal no da (ficha para un canal `nyx_tls_connect_result`
+  tipado en `TASKS.md`).
+- Test `test-377-try-http` (regression): URL inválida, connect rechazado
+  (kind `"connection"`, code 111), camino feliz canned local (`Ok`,
+  status 200, body), 404 canned (sigue siendo `Ok` — el assert central del
+  contrato), smoke de `try_http_post`/`try_http_request`. No-regresión:
+  `test-374`/`test-375`/`test-376` y la centinela `http_get` intactos.
+
+---
+
+## [0.30.0] — 2026-08-14 — E5.2+E5.2b: `std/net` — la familia try_ completa (E/S, resolución, y las 7 restantes)
+
+> MINOR agrupado autorizado explícitamente por Ottavio (2026-08-14,
+> «sigue con E5.2b y luego release agrupado»).
+
+> Rama `feat/e5-2-net-io` (E5.2) + `feat/e5-2b-net-resto` (E5.2b) sobre
+> `main` v0.29.0 (E5.1), sin mergear. `VERSION` sin tocar, sin tag —
+> release AGRUPADO E5.2+E5.2b autorizado por Ottavio por adelantado.
+
+### Added
+- **`nyx_tcp_accept_result`/`nyx_tcp_read_result`/`nyx_tcp_write_result`/
+  `nyx_udp_sendto_result`/`nyx_udp_recvfrom_result`/`nyx_resolve_result`**
+  (runtime, `runtime/net.c`, E5.2): espejo de mecánica de las 6 centinelas
+  correspondientes (accept/read/write/sendto/recvfrom/resolve), sin
+  stderr, `-errno` (fd/bytes) o `[errno, datos]` (read/recvfrom/resolve)
+  en vez de abortar.
+- **`nyx_tcp_read_line_result`/`nyx_tcp_read_partial_result`/
+  `nyx_tcp_read_exact_result`/`nyx_tcp_shutdown_result`/
+  `nyx_tcp_set_timeout_result`/`nyx_getpeername_result`/
+  `nyx_resolve_ptr_result`** (runtime, `runtime/net.c`, E5.2b): las 7
+  centinelas de red restantes ganan su versión `_result`. `runtime/net.h`
+  ganó las 16 declaraciones `_result` en total (E5.1+E5.2+E5.2b) más
+  `#define NYX_NET_EOF 1000` — código fuera del rango de errno de Linux
+  (todos <1000) para el EOF limpio de read_line/read_exact, traducido por
+  la capa Nyx antes de llegar al caller (nunca ve el 1000 crudo).
+- **`std/net.nx`**: `try_tcp_accept(listen_fd)` / `try_tcp_read(fd, max)`
+  / `try_tcp_write(fd, data)` / `try_udp_sendto(fd, data, host, port)` /
+  `try_udp_recvfrom(fd, max)` / `try_resolve(host)` (E5.2) +
+  `try_tcp_read_line(fd)` / `try_tcp_read_partial(fd, max)` /
+  `try_tcp_read_exact(fd, n)` / `try_tcp_shutdown(fd, mode)` /
+  `try_tcp_set_timeout(fd, secs)` / `try_getpeername(fd)` /
+  `try_resolve_ptr(ip)` (E5.2b), las 13 `-> Result<..., Error>` —
+  completan la familia `try_` de `std/net` junto al trío E5.1 (16
+  funciones en total).
+- **`std/error.nx`**: kind nuevo `"eof"` (code 0) en el vocabulario
+  cerrado — fin de stream ESPERADO, NO un fallo (precedente `io.EOF` de
+  Go); `errno_to_kind` no lo mapea, lo arma el caller directo vía
+  `err_new(0, "eof", ...)`.
+- Tests E5.2: regression +test-375-try-net-io; runtime `test_net_result`
+  +11 tests / 48 asserts totales (loopback TCP/UDP real,
+  `make_loopback_pair`/`make_udp_socket_bound`).
+- Tests E5.2b: regression +test-376-try-net-lines (397 archivos); runtime
+  `test_net_result` 48→**99 asserts** totales (línea vacía real vs EOF
+  distinguidos, read_exact feliz y cortado, getpeername, resolve_ptr
+  inválido, shutdown+set_timeout, EOF real cerrando el peer, fragmento sin
+  `\n` descartado).
+
+### Semánticas contractuales (decididas en el plan, auditadas en review)
+- `try_tcp_accept`: BLOQUEA hasta que llegue una conexión — semántica
+  normal de `accept(2)`, sin timeout.
+- `try_tcp_read`: `Ok("")` = EOF limpio (el peer cerró) — NO es error.
+  Con la conexión abierta, pedir `max` mayor a lo disponible BLOQUEA
+  (loopea `recv()` hasta juntar `max` bytes exactos, sin short-read).
+- `try_tcp_write`: `Ok(bytes)` reales (nunca un placeholder); short-write
+  con fallo a mitad de camino reporta los bytes ya escritos (criterio
+  POSIX `write(2)`), no un Err que perdería esa información.
+- `try_udp_sendto`: `host` debe ser IP numérica (mismo guard `inet_pton`
+  que el trío E5.1 — no resuelve DNS).
+- `try_udp_recvfrom`: mismo contrato Ok/Err que `try_tcp_read`, pero UN
+  SOLO `recvfrom()` — nunca loopea hasta `max`, devuelve el datagrama que
+  llegue. El remitente no viaja en el resultado (ficha futura).
+- `try_resolve`: mapea `EAI_*` a kinds propios vía `err_new` explícito —
+  `not_found` (code 113, EAI_NONAME/EAI_NODATA/resto) y `timeout` (code
+  110, EAI_AGAIN) — sin tocar `errno_to_kind` (el trío E5.1 sigue viendo
+  113 → `"io"` en su propio contexto).
+- **La asimetría EOF (E5.2b, EL gotcha de este arco)**: `try_tcp_read`/
+  `try_tcp_read_partial` devuelven `Ok("")` en EOF — un `""` de bytes
+  crudos nunca es ambiguo. `try_tcp_read_line`/`try_tcp_read_exact`
+  devuelven `Err{code:0, kind:"eof"}` en EOF, NO `Ok("")` — ahí `Ok("")`
+  YA significa algo real (una línea vacía real, o `n<=0`), y reusarlo para
+  EOF haría indistinguibles "terminador de headers HTTP" de "conexión
+  cortada" — exactamente el bug que `try_tcp_read_line` existe para
+  prevenir (precedente `io.EOF` de Go). `try_tcp_read_line` es la forma
+  CANÓNICA de leer una línea en código nuevo: la centinela vieja
+  `tcp_read_line` (con su `""` ambiguo entre línea vacía y EOF) queda
+  legacy, solo por compatibilidad hacia atrás.
+- `try_tcp_read_exact`: éxito = EXACTAMENTE `n` bytes; si el peer cierra
+  antes, los bytes parciales se DESCARTAN (`Err{0,"eof"}`, no un `Ok`
+  truncado) — mismo criterio que el fragmento sin `\n` de read_line.
+- `try_tcp_shutdown`: `mode` 0=SHUT_RD, 1=SHUT_WR, cualquier otro valor
+  (MEDIDO) cae a SHUT_RDWR. `try_tcp_set_timeout`: segundos enteros
+  (SO_RCVTIMEO+SO_SNDTIMEO), 0 o negativo = sin timeout.
+- `try_resolve_ptr`: mismo patrón de kinds no-estándar que `try_resolve`
+  — code 113 (sin PTR) → `"not_found"` vía `err_new` explícito; IP
+  inválida → code 22 (EINVAL) → `"invalid"` vía `errno_to_kind` normal.
+
+### Scope
+- Las 16 funciones de la spec §4.2.2 de `std/net` (trío E5.1
+  connect/listen/bind + 6 de E/S y resolución de E5.2 + 7 restantes de
+  E5.2b) tienen su hermana `try_` — familia `std/net` CERRADA. Próximo
+  módulo del arco E5, por orden de la spec §4.2: `http` (E5.3).
+
+---
+
+## [0.29.0] — 2026-08-14 — E5.1: `std/net` — la familia try_ de conexión/bind
+
+> MINOR autorizado explícitamente por Ottavio (2026-08-14, «sigue 1 luego 2»).
+
+> Candidato a release futuro — rama `feat/e5-net-try` sobre `main` v0.28.0,
+> sin mergear. `VERSION` sin tocar, sin tag.
+
+### Added
+- **`nyx_tcp_connect_result`/`nyx_tcp_listen_result`/`nyx_udp_bind_result`**
+  (runtime): mismo mecanismo que las centinelas `tcp_connect`/`tcp_listen`/
+  `udp_bind` (getaddrinfo/socket/connect/bind/listen), pero sin stderr y
+  devolviendo `-errno` en vez de abortar — el errno real llega al llamador.
+- **`std/net.nx`** (módulo nuevo): `try_tcp_connect(host, port)` /
+  `try_tcp_listen(host, port)` / `try_udp_bind(host, port)`, las tres
+  `-> Result<int, Error>` — las primeras hermanas Result-returning de red,
+  conviven con las centinelas viejas (`tcp_connect`/`tcp_listen`/
+  `tcp_close`/`udp_bind`, builtins intactos).
+- **Kind `"in_use"`** en el vocabulario cerrado de `std/error.nx`
+  (EADDRINUSE, 98) — sin este kind, un listen duplicado caía en `"io"`
+  genérico, indistinguible de cualquier otro fallo de bind/listen.
+- Tests: regression +test-374-try-net; runtime `test_net_result`
+  (14 asserts, `tests/runtime-unit/test_net_result.c`).
+
+### Scope
+- Piloto deliberadamente CHICO (mismo criterio que E4/file): solo el trío
+  que abre un socket y devuelve el fd, donde errno más importa
+  (ECONNREFUSED, EADDRINUSE, ETIMEDOUT, EACCES). Las familias
+  accept/read/write/sendto/recvfrom/resolve quedan para E5.2 (fichado en
+  `TASKS.md`, cosecha `[arco:E5-net]`) — `accept` en particular tiene
+  semántica distinta (bloquea en vez de fallar con errno), no es un
+  simple espejo del trío.
+
+---
+
+## [0.28.0] — 2026-08-14 — E4: piloto de errores tipados de E/S (`std/error` + `std/fs`)
+
+> MINOR autorizado explícitamente por Ottavio (2026-08-14, segundo de la
+> sesión — autorización del dueño de la política).
+
+**Candidato MINOR v0.28.0 — decisión de release PENDIENTE de Ottavio** (política:
+1 MINOR por sesión, v0.27.0 ya salió). Rama `feat/e4-std-error-file`, sin
+mergear a `main`. `VERSION` sin tocar, sin tag.
+
+### Added
+- **`std/error.nx`**: `Error { code, kind, msg }` — UN solo shape para toda
+  fn falible de la stdlib, con `Result<T, Error>` como firma estándar
+  (`Option<T>` queda para ausencia-sin-causa). `err_new`/`errno_to_kind`/
+  `error_to_string`; `kind` usa vocabulario CERRADO v1 de 8 valores
+  (`not_found`, `permission`, `connection`, `parse`, `timeout`, `io`,
+  `invalid`, `oom`).
+- **`nyx_file_read_result`/`nyx_file_write_result`** (runtime): E/S con
+  errno real, binary-safe, nunca abortan el proceso.
+- **`std/fs.nx`**: `try_read_file(path) -> Result<String, Error>` /
+  `try_write_file(path, content) -> Result<int, Error>` — las primeras
+  hermanas Result-returning de I/O, conviven con la centinela vieja
+  (`read_file`/`write_file` de `std/file.nx`, intacta).
+- Receta `examples/by-example/101-file-errors-two-tier.nx` (la regla de
+  dos niveles: `Result` cuando el caller reacciona, panic cuando morir es
+  correcto) + sección nueva en `LLM.md` (§2 y §5.3).
+- Tests: regression +test-372-std-error, +test-373-try-file; runtime
+  `test_file_result` (15 asserts).
+
+### Hallazgo (no bloqueante, catalogado)
+- `std/prelude.nx` es una copia física congelada de `std/file`/`math`/
+  `io`/`array`/`map` (desde v0.12.0), pre-registrada como "ya importada"
+  para todo programa — `import "std/file"` es un no-op para cualquier
+  función agregada a ese archivo después de esa foto. Por eso las
+  hermanas `try_*` viven en `std/fs.nx` (módulo nuevo), no en
+  `std/file.nx`. Detalle de los 4 caminos explorados y la recomendación:
+  `TASKS.md`, ficha `[arco:E4-std-error]`.
+
+---
+
+## [0.27.0] — 2026-08-13 — Errores tipados E1+E2: Result<T,E> real de punta a punta
+
+**MINOR autorizado por Ottavio (2026-08-13).** Cambio de
+política incluido: NYX1023 (el `?` exige fn que devuelva Result o un enum
+declarado del usuario) convierte en error programas que antes compilaban mal.
+
+### Added
+- **NYX1023**: el operador `?` fuera de una fn que devuelve `Result` es error
+  bilingüe con hint; enums declarados del usuario reciben free pass VISIBLE
+  (`NYX_STRICT=warn`). **NYX2012**: variante de enum irresoluble en `match`
+  es diagnóstico bilingüe (antes: panic del runtime de Maps del compilador).
+- Tests de regresión 355-365 y 367-371 (+16 netos) cubriendo payload struct,
+  clases de payload en `?`, familia unwrap, bindings de match/while-let,
+  convivencia de instanciaciones, defer en el camino Err, tuplas degradadas,
+  sujetos no-identifier y aridad de la mono implícita.
+
+### Fixed
+- **`Result<Struct,E>`/`Option<Struct>` end-to-end**: construcción boxea por
+  `coerce_to_i64` (GC-safe medido) y TODA extracción decodifica por
+  `decode_payload`, inverso exacto del encoder con whitelist por clase —
+  `?`, `unwrap`/`unwrap_or`/`unwrap_err`, los 4 sitios de binding de
+  match/while-let. Antes: link error o corrupción silenciosa.
+- El binding de `match` COPIA el payload (mutarlo ya no escribe dentro del
+  enum); `while let` con payload struct ya no segfaultea.
+- `monomorphize_enum` ya no registra tipos bajo la clave base global
+  (último-escritor-gana): dos instanciaciones de `Result` conviven y el
+  resultado no depende del orden de monomorfización.
+- Inferencia de sujeto compartida (`infer_enum_subject_type`): `match f()`,
+  `while let Option.Some(x) = f()` y `x.metodo()?` resuelven el tipo real
+  (antes: puntero impreso como número, exit 0).
+- El constructor coerciona a la clase DECLARADA del slot (`Result<float,E>`
+  con `Ok(3)` da `3.0`, no bits); el camino Err del `?` pasa por
+  `defer_cleanup` (defer y drop de `#[affine]` corren en el early-return) y
+  una fn sin anotación con `defer`+`?` vuelve a ser error ruidoso.
+- La mono implícita respeta la aridad del template (fin del crash "Índice 1
+  fuera de rango" del compilador); payload tupla degrada a i64 seguro en vez
+  de romper el IR.
+
+### Notas
+- 16 residuos catalogados con causa raíz en TASKS.md
+  (`[arco:errores-tipados-E1E2]`); los preexistentes D2/D3 del review
+  original siguen abiertos a propósito (gated por decisiones E7/spec).
+- Fixed point global byte-idéntico (6 módulos); suites completas verdes.
+
+## [0.26.0] — 2026-08-12 — S4: stacks de goroutine con guard page (Track 5c inc.1)
+
+Cierre de la campaña multi-arco. Spec deliberada con Ottavio
+(`docs/design/specs/2026-08-11-stacks-growables-design.md`).
+
+### Arreglado
+- **Un overflow de stack de goroutine ya no corrompe memoria en silencio**:
+  los stacks pasan de `malloc(64KB)` fijo SIN detección a `mmap` RW con
+  **guard multi-página** (16 páginas `PROT_NONE`, coste RSS cero). Tocarla
+  reporta `[nyx] goroutine stack overflow — subí NYX_GOROUTINE_STACK_KB
+  (actual: N KB)` y sale con 1; antes era un SIGSEGV mudo (exit 139) o,
+  peor, escritura silenciosa sobre el mapeo vecino. test-354 + check en
+  errors.
+- **`signal_reset`/`signal_ignore` rechazan las señales síncronas** (agujero
+  adyacente hallado en el review): `signal_ignore(11)` ponía SIG_IGN en
+  SIGSEGV — UB con bucle infinito de faults.
+
+### Cambiado
+- **Default de stack 64KB → 256KB**, tuneable con `NYX_GOROUTINE_STACK_KB`
+  (clamp [64, 8192] KB CON aviso — antes un valor fuera de rango se
+  ignoraba en silencio).
+- **Pool de stacks reciclados**: el A/B mostró que mmap+mprotect+munmap
+  costaba 1.8× en spawn (58→103 ms/4000 spawns) y que el costo era 100%
+  syscalls (idéntico con 64KB y con 1024KB). Con el pool el spawn vuelve a
+  52-58 ms: **4× de headroom y detección de overflow a costo cero**.
+
+### Alcance honesto
+La detección cubre stacks de GOROUTINE. Una recursión infinita en el thread
+principal sigue muriendo con SIGSEGV mudo (sin regresión, pero sin cubrir).
+El crecimiento on-demand real (PROT_NONE + commit en el fault) NO entra: el
+escaneo conservador de Boehm sobre rangos no comiteados es un crux que
+exige spike propio — incremento 2, catalogado.
+
+Gates: regression 375/375, errors 252/252, m08 18/18, ai-first, unit 21/21,
+stacks 6/6, integración (incl. serve+kv real), WASM 23/23.
+
+## [0.25.0] — 2026-08-12 — S3: las funciones resuelven POR MÓDULO
+
+MINOR de la campaña multi-arco (spec:
+`docs/design/specs/2026-08-11-namespacing-modulos-spec.md`).
+Autorizado por Ottavio: "resolver por módulo".
+
+### Arreglado (silently-wrong, dos reportes)
+- **La llamada calificada ejecutaba la función de OTRO módulo**: con dos
+  módulos exportando `set`, `moda.set(2, 99)` corría `modb.set()` — el
+  prefijo se ignoraba al resolver, ganaba la última definición y ni la
+  aridad frenaba. En el proyecto real del reporte (raycaster):
+  `render.px(x,y,c)` vs `player.px()` → todas las escrituras de píxel
+  no-ops, pantalla negra SIN error. test-353.
+- Las fns de módulo se emiten como `<path>__<fn>`; el archivo principal y
+  el prelude conservan nombres pelados (programas de un archivo: cero
+  cambio de IR). Espeja el mecanismo A2 de globales homónimas.
+- **Inferencia por alias** (TASKS.md:880): `let x = alias.fn()` sin
+  anotación ya infiere el tipo de retorno real (antes caía a i64 y el
+  concat corrompía).
+
+### Agregado
+- **NYX2010**: llamada NO calificada ambigua entre dos módulos importados
+  → error nombrando ambos y sugiriendo la forma calificada (antes: se
+  resolvía en silencio a la última definición).
+- **NYX2011**: template genérico ausente en `generic_call` → error con
+  contexto en vez del panic crudo del Map.
+
+### Notas
+- `pub` sigue siendo cosmético: este arco cambió CÓMO se resuelven los
+  nombres, no qué es visible (enforcement de privacidad = arco futuro).
+- La prueba de fuego fueron los propios consumidores: el canario de
+  stacks y las suites cazaron tres caminos que el diseño inicial no
+  cubría (genéricos de módulo, imports con llaves sin alias, y las fns
+  del pipeline bajo NYX_INLINE_COMPILER).
+
+## [0.24.32] — 2026-08-11 — S2 de la campaña multi-arco: señales allocation-safe
+
+### Cambiado
+- **Signal handlers vía self-pipe**: el closure de `signal_handle` corre
+  en un thread drenador dedicado (contexto normal — **puede alocar,
+  printear, leer env**); el trampolín de señal es async-signal-safe puro
+  (un write de 1 byte). Señales síncronas (SEGV/BUS/FPE/ILL) rechazadas
+  con warning (reservadas para el arco de stacks). test-352.
+- **Semántica**: el closure corre en OTRO thread y la entrega es
+  asíncrona. Regla para consumidores (aprendida del E2E, que refutó la
+  spec inicial): para despertar a otro thread bloqueado en I/O usar
+  `tcp_shutdown(fd, 2)`, NO `tcp_close` — en Linux close() de otro
+  thread no despierta un accept() bloqueado. serve y edit migrados
+  (63/63 y 41/41).
+
+## [0.24.31] — 2026-08-11 — S1 de la campaña multi-arco: literales binary-safe
+
+Primera sesión de la campaña multi-arco (plan
+`docs/design/plans/2026-08-11-campana-namespacing-stacks-escapes-signals.md`,
+orquestada con agentes de exploración + diseño + review).
+
+### Arreglado
+- **Literales con NUL embebido**: `"a\0b"` emitía el byte crudo → IR
+  inválido; y el interning (strlen) habría truncado a length 1 en
+  silencio. escape_string con tabla completa (\XX para <0x20, `"`, `\`,
+  DEL) + `nyx_intern_ptr` length-aware en los 3 sitios cstr-based.
+  El patrón de match con NUL también es binary-safe ahora. test-350.
+- **Nombres de test escapados en el runner**: `test "con \"comillas\""`
+  o UTF-8 rompían el .ll del runner (texto de usuario interpolado
+  crudo). E2E verificado.
+
+### Agregado
+- **`request_with(method, path)`** en std/web: requests sintéticos para
+  tests de handlers en una línea (fricción ERP; request_new era
+  0-args). test-351.
+- **Spec de errores tipados** (S∥, agente redactor):
+  `docs/design/specs/2026-08-11-errores-tipados-design.md` —
+  recomendación híbrido Result+panic; PENDIENTE de review de Ottavio,
+  nada se implementa sin su OK.
+
+Review de agente aplicado (3 sitios unificados a str_byte_length).
+Refutado por evidencia: `\r` crudo y el global no-ASCII ya compilaban.
+Gates: regression 372/372, errors 250, m08 18, ai-first, unit 21,
+stacks 6/6, fixed point global ×2.
+
+## [0.24.30] — 2026-08-11 — cierre de la campaña del inbox: float×entero + vet/fmt instalados
+
+Cierre de la campaña de fricciones (Tandas D-E + un reporte nuevo que
+llegó post-triage, 20260810-220013).
+
+### Arreglado
+- **float×entero en binops promueve con sitofp**: `vel() * 10` (literal
+  entero) pasaba el check y emitía `fmul double %x, 10` — IR inválido
+  que moría en clang sin file:line; mismo bug en ambas posiciones, con
+  variables int, y en comparaciones mixtas (`vel() > 2`). Normalización
+  única pre-dispatch en codegen_binop. test-349.
+- **`nyx vet` y `nyx fmt` se construyen e instalan** (extensión de C4
+  por el reporte nuevo): seeds compiler/vet.ll (nuevo) y fmt.ll;
+  install.sh + nyx update + install-local cablean los tres tools.
+
+### Docs (Tanda D)
+- LLM.md: contrato empírico de `std/sqlite` (celdas String incluidas
+  INTEGER, query_named N+1 con headers, params String, NULL → "NULL"),
+  handles de concurrencia como Map opaco (NOT int!), y
+  term_write/term_flush como vía MT con flush. El ítem "campos Map
+  necesitan binding tipado" quedó OBSOLETO: req.ctx.insert(...) ya
+  compila y corre (verificado — el gap de v0.24.25 se cerró por trabajo
+  intermedio).
+
+### Catalogado (Tanda E, TASKS.md)
+- Namespacing/privacidad de módulos — gravedad SUBIDA: la llamada
+  calificada `moda.set()` ejecuta la homónima de OTRO módulo
+  (silently-wrong, reporte raycaster). request_new(method, path).
+  Signal handler allocation-safe (self-pipe). Literal `"\0"` → IR
+  inválido. serve_app → -1 en bind fallido (repo serve).
+
+Los 6 reportes del inbox de fricción quedaron respondidos en el archivo
+y archivados a resolved/. Gates: regression 370/370 (121 comparadas),
+errors 250/250, m08 18/18, ai-first verde, unit 21/21, stacks 6/6,
+fixed point global ×2.
+
+## [0.24.29] — 2026-08-11 — Tanda C del inbox ERP: el ciclo de test funciona
+
+Cuatro fricciones P2 del triage (baratas, alto impacto AI-first). Dos de
+los diagnósticos de los reportes eran incorrectos y se corrigieron con
+evidencia.
+
+### Arreglado
+- **`nyx test` mentía tres veces** (el reporte decía una): el volcado de
+  stdout estaba invertido (mostraba el de los que PASAN, nunca el de los
+  que FALLAN), los errores de compilación iban a /dev/null (FAIL sin
+  explicación), y un archivo caído daba "ALL TESTS PASSED" + exit 0 (CI
+  verde con la suite rota). Los tres cerrados.
+- **`assert(a == b)` dice "expected X, got Y" + línea**:
+  `nyx_assert_eq_int/_str` eran código muerto desde siempre; conectadas
+  con decisión POR AST (inferencia conservadora, camino genérico
+  intacto) y el mensaje default lleva "assert @ line N". `eq_str` pasó
+  de strcmp a longitud+memcmp (binary-safe). test-348 + check en errors.
+- **`nyx check` se construye e instala** (install.sh + nyx update +
+  install-local): AGENTS.md lo promociona como paso 5 y el binario nunca
+  se construía — mismo bug y misma solución que tuvo `nyx test`.
+
+### Aclarado con medición
+- **"print no es line-atomic" REFUTADO**: la fn citada
+  (nyx_print_hstring) es código muerto; el camino real es un solo
+  printf("%s\n") y el stress MT dio 4000/4000 líneas intactas. La fn
+  muerta quedó single-write igual. Lo real del reporte: print no
+  flushea — term_write+term_flush es la vía MT con flush (docs en D).
+
+Colateral descubierto (catalogado, pendiente): el literal `"\0"` emite
+el NUL crudo en la constante del .ll → IR inválido.
+
+Gates por commit: regression 368→369 (120 comparadas), errors 249→250,
+m08 18/18, ai-first verde, unit 21/21, stacks 6/6, fixed point global
+×2 (seeds regenerados dos veces en C2: la 1ª ronda llevaba un fast path
+con 3 defectos que el propio gate cazó).
+
+## [0.24.28] — 2026-08-11 — Tanda B del inbox ERP: compila, o decí por qué
+
+Cuatro fricciones P1 (IR inválido / lexer descarrilado) del mismo triage.
+
+### Arreglado
+- **Handle de builtin capturado en closure → IR inválido**: `mutex_new()`
+  capturado por un closure tipaba el campo del SharedEnv como i64 con el
+  registro real i8*. `pre_scan_closure_env` gana el fallback de handles y
+  `builtin_fn_ret` los declara como `Map` opaco — el `*int` que el plan
+  proponía fue REFUTADO por la evidencia (std/sync tipa `mutex: Map //
+  handle (opaque)` y Map baja a i8*, el tipo real). Anotar
+  `let m: int = mutex_new()` ahora es NYX1003. test-345.
+- **`datetime_*` sin diagnóstico**: la familia entera entró a
+  `builtin_fn_ret` con sus tipos reales — `let now: int = datetime_now()`
+  (lo que el SPEC viejo enseñaba) es NYX1003 en vez de checker mudo → IR
+  inválido. test-datetime-now-int-annotation (errors 249).
+- **`get_or` sobre campo de struct** (DOS reportes): existía solo en el
+  cluster de receptor variable; ahora ambos clusters comparten
+  `emit_map_get_or` — la duplicación de clusters causó el gap. test-346.
+- **`\"` dentro de `${...}` descarrilaba el lexer**: el `\` caía al
+  fallback mudo del dispatcher ("String sin cerrar" sin ubicación, o 15
+  NYX0101 en cascada lejos del problema). Un string abierto con `\"`
+  dentro de una interpolación ahora se cierra con `\"`; la comilla pelada
+  sigue igual. test-347.
+
+Gates por commit: regression 366→368, errors 248→249, m08 18/18,
+ai-first verde, unit 21/21, stacks 6/6, fixed point ×2 por módulo tocado
+(semantic, codegen, lexer) byte-idéntico.
+
+## [0.24.27] — 2026-08-11 — Tanda A del inbox ERP: no corrompas datos
+
+Tres fricciones P0 del reporte real de un ERP greenfield (triage en
+`docs/design/plans/2026-08-10-plan-fricciones-erp.md`).
+
+### Arreglado
+- **Globales/const sin store → 0 mudo**: `__nyx_init_globals` solo emitía
+  store para 4 formas (call/method_call/array/string) — `const NEG = -1`
+  (unop), binop, char, cast y var/let globales quedaban en su
+  zeroinitializer EN SILENCIO. Ahora todo global no-literal emite store, y
+  una forma no emitible al arranque aborta con NYX2009 nombrando la
+  constante (nunca más un 0 mudo). test-342.
+- **`Map.get` de clave ausente es capturable**: antes `exit(1)` directo —
+  un servidor moría porque una request no traía una cookie y el try/catch
+  no podía hacer nada. Los tres gets (genérico/str/int) pasan por
+  `nyx_panic` → throw capturable con try activo; sin try, mismo contrato
+  de siempre (mensaje con hint de `get_or` + exit 1). test-343.
+
+### Agregado
+- **`datetime_format_epoch(epoch, fmt)`**: la format de 2 args que el SPEC
+  prometía y no existía. Hallazgo colateral del triage (nadie lo reportó):
+  `datetime_format(fmt)` IGNORA el instante — siempre formatea `time(NULL)`
+  — y quedó documentada como lo que hace ("formatea AHORA"). SPEC §DateTime
+  reescrito contra el runtime real. test-344.
+
+Gates por commit: regression 363→365 (116 comparadas), errors 248/248,
+m08 18/18, ai-first verde, unit 21/21, stacks 6/6, fixed point global
+byte-idéntico (seeds .ll regenerados: el declare nuevo aparece en todo
+programa generado).
+
+## [0.24.26] — 2026-08-10 — App.access_log en std/web
+
+### Agregado
+- **`std/web` gana `App.access_log` + `app_access_log(&mut app)`**: flag
+  booleano en `App` (default `false`) para habilitar el access-log built-in
+  de nyx-serve v0.6.0. test-341-access-log-field fija el contrato del campo
+  y del setter.
+
+Gates: test-341 PASS, test-runtime 19/20 (test_tls flake catalogado).
+
+## [0.24.25] — 2026-08-10 — Request.ctx + request_new en std/web
+
+### Agregado
+- **`std/web` gana `Request.ctx`**: estado por-request (referencia compartida
+  entre copias del struct — mutar `req.ctx` en un middleware es visible en el
+  handler y en middlewares posteriores). `request_new()` construye un `Request`
+  con campos vacíos (ctx incluido) para tests y helpers que arman requests
+  sintéticos. test-340-request-ctx fija el contrato de referencia compartida;
+  los 4 `fake_req` de la suite (test-290, test-334, test-338, test-339) migrados
+  a `request_new()`.
+
+Gates: 361/361, test-runtime 20/20. Fixed point ×2.
+
+## [0.24.24] — 2026-08-09 — Router montable + contrato wrap en std/web
+
+### Agregado
+- **`std/web` gana vocabulario Router/Mount**: struct `Router` (routes/middlewares/
+  wraps) + `Mount`, `App` gana `wraps`/`mounts`, registro `router_*`/`app_wrap`/
+  `app_mount` (todo push por valor — los Arrays son referencias). Contrato wrap:
+  `Fn(Request, Fn) -> Response` con `next: Fn(Request) -> Response`. Vocabulario
+  del bloqueador 2 de nyx-serve (router montable + middleware con `next()`).
+  test-338-router-vocabulary + test-339-wrap-next-closure, este último fija el
+  patrón next-como-closure (captura array+int+Fn en SharedEnv + recursión vía fn
+  de módulo).
+
+Gates: 360/360, test-runtime 20/20 (re-run; el fallo del primer run fue el flake
+catalogado test_tls_large_write). Fixed point ×2.
+
+## [0.24.23] — 2026-08-07 — Un `Fn` pelado ya puede devolver structs
+
+### Corregido
+- **`let f: Fn = fn_que_devuelve_struct` + llamada indirecta era SEGV**: el emisor de
+  llamada saca el retorno de la anotación `Fn(...) -> T`; con `Fn` pelado asumía `i64`
+  y el consumidor hacía `inttoptr` sobre un struct devuelto POR VALOR. Ahora el slot se
+  REFINA con la firma real de la función asignada. (El diagnóstico original culpaba al
+  argumento struct — el bisect mostró que ese caso siempre funcionó: era el retorno.)
+  test-337 con las 3 formas, incluido el control de no-regresión.
+
+Gates: 358/358 (109 comparadas, 0 conocidos), errors 248/0. Fixed point ×2.
+
+## [0.24.22] — 2026-08-06 — Red introspectable: reverse DNS + interfaces
+
+### Agregado
+- **`resolve_ptr(ip) -> String`**: reverse DNS (hostname de una IPv4; "" si no hay
+  PTR o la IP es inválida — NI_NAMEREQD evita el falso nombre).
+- **`net_interfaces() -> Array`**: interfaces IPv4 locales como tripletas planas
+  `[nombre, ip, máscara, ...]` (stride 3) — autodetectar la red a escanear sin
+  `exec("ip addr")`.
+
+Con esto el reporte de fricción de red queda 6/6: EOF de stdin (v0.24.21), reverse
+DNS e interfaces (hoy), introspección TLS (ya existía), connect-timeout y
+udp-binary-safe (catalogadas). test-336 con invariantes deterministas.
+
+Gates: 357/357, errors 248/0. Fixed point gen2==gen3.
+
+## [0.24.21] — 2026-08-06 — stdin_eof(): los servidores stdio terminan limpio
+
+### Agregado
+- **`stdin_eof() -> bool`**: la señal INEQUÍVOCA de fin de stdin (fricción del
+  servidor MCP — el sentinel `":EOF:"` de read_line es ambiguo con una línea
+  literal). Patrón: leer, después preguntar. E2E con pipe real en la suite de
+  errores; LLM.md enseña ambas vías.
+
+Gates: 356/356, errors 248/0, ai-first, stacks. Fixed point gen2==gen3.
+
+## [0.24.20] — 2026-08-06 — try/catch cuenta como retorno
+
+### Corregido
+- **NYX1008 reconoce try/catch exhaustivo**: una función que termina en
+  `try { return X } catch(e) { return Y }` ya no exige un `return` inalcanzable
+  (fricción del dispatcher de serve, reportada y arreglada el mismo día). Un `throw`
+  que escapa del try no rompe la exhaustividad. try-sin-return sigue siendo NYX1008
+  (check doble en errors). test-335 cubre el patrón real con throw condicional.
+
+Gates: 356/356 (107 comparadas, 0 conocidos), errors 247/0. Fixed point ×2.
+
+## [0.24.19] — 2026-08-06 — Ronda de fricción: serve v0.4.0 destrabado
+
+Los 2 reportes del inbox procesados de punta a punta.
+
+### Corregido (reporte de nyx-serve — sus DOS bloqueadores)
+- **try-stack thread-local**: `__nyx_try_depth`/`__nyx_try_stack`/`__nyx_exception_msg`
+  eran globals compartidos — con threads concurrentes un throw podía saltar al jmp_buf
+  de OTRO thread (UB reproducido). `_Thread_local` los tres; test-333 (4 threads ×
+  1000 try/throw/catch) + runtime C 20/20. LIMITACIÓN documentada: un try no debe
+  cruzar un yield de goroutine (el scheduler es work-stealing).
+- **std/web: error handlers registrables**: `App.not_found_handler`/`error_handler`
+  con defaults reales desde `app_new` (el 500 NO ecoa el mensaje interno al cliente) +
+  `app_not_found`/`app_error`. El TEST refutó la premisa del plan dos veces: el
+  registro es **`&mut App`** (un campo escalar vía parámetro por valor muta la copia —
+  y de paso `serve_static` de nyx-serve está rota en silencio, ficha para su repo) y
+  los handlers se leen con **anotación tipada** `Fn(Request) -> Response` (el `Fn`
+  pelado con arg struct SEGVea — gap catalogado).
+
+### Documentado (reporte anónimo — servidor MCP stdio)
+- **El contrato EOF de `read_line()`**: devuelve el sentinel `":EOF:"` (legacy
+  load-bearing) — estaba sin documentar y el reporte loopeaba infinito. LLM.md lo
+  documenta con el caveat de ambigüedad y la alternativa binary-safe (`read_byte()<0`).
+  Fichas nuevas: `stdin_eof()` builtin, reverse DNS, enumeración de interfaces.
+  La introspección TLS que pedía YA EXISTE (el reporte venía de v0.24.6).
+
+Gates: 355/355 (106 comparadas, 0 conocidos), errors 246/0, ai-first, stacks.
+
+## [0.24.18] — 2026-08-06 — ty_eq estricto: el arco gradual CIERRA
+
+La última ficha del arco "la anotación manda" (v0.24.9 → v0.24.18, diez releases).
+
+### Agregado
+- **ty_eq estricto v1** — dientes quirúrgicos donde la anotación es inequívoca, sin
+  tocar el ty_eq global (la lección de julio): `let f: Fn = "texto"` es NYX1003
+  (antes mudo, explotaba al llamar; int sigue permitido — slot nulo y fn pointers) y
+  `let c: dyn Trait = 42` es NYX1012 accionable (los traits no se implementan sobre
+  primitivos; el mensaje sugiere el wrapper). 2 checks con controles negativos
+  (errors 246/0).
+
+### El arco completo, en una línea por release
+dispatch honesto en 3 capas → la anotación manda (structs cortos, mono on-demand,
+match float) → tag estático de fallback (NYX2008) → ceguera visible (NYX_STRICT) →
+runtime que no mata (get_or, decompress) → iteradores que tipan (-53%) → heurística
+por-nombre muerta con medición → un solo motor de unificación → ty_eq estricto.
+
+Gates: 354/354, errors 246/0, m08, ai-first, stacks. Fixed point ×2.
+
+## [0.24.17] — 2026-08-05 — Un solo motor de unificación
+
+Arco gradual, migración unify→por-id 2/2 — COMPLETA.
+
+### Cambiado
+- Los 2 sitios VALIDANTES (args de llamada genérica y de métodos de impl) migran al
+  motor por-id. `uv_pairs` proyecta la subst de TyVars a los pares legacy: mensajes
+  NYX1005 con bindings acumulados y bounds NYX1020 **byte-idénticos** (verificados
+  contra los tests autoritativos). El `unify` string-based queda con CERO call-sites
+  en el checker — el motor real de v0.19.0 (TyVar + occurs-check) es el único camino.
+
+Fixed point ×2. Gates: 354/354 (105 comparadas, 0 conocidos), errors 244/0, m08,
+ai-first, stacks.
+
+## [0.24.16] — 2026-08-05 — El motor por-id absorbe la unificación de inferencia
+
+Arco gradual, incremento de migración unify→por-id (1 de 2).
+
+### Cambiado
+- Los 3 sitios de REPLAY de `ty_of_expr` (fn genérica libre, método de struct, método
+  de enum) migran del `unify` string-based legacy al **motor por-id real** de v0.19.0
+  (TyVar + occurs-check) vía el helper `replay_ret_by_id` — con residuo
+  legacy-equivalente (params sin bindear vuelven como TyGeneric; ningún TyVar se
+  filtra). De 5 call-sites legacy quedan 2 (los validantes, que gatean NYX1005 —
+  incremento final con mensajes idénticos, ficha [~]).
+
+Fixed point ×2. Gates: 354/354 (105 comparadas, 0 conocidos), errors 244/0, m08,
+ai-first, stacks.
+
+## [0.24.15] — 2026-08-05 — Renombrar una variable ya no cambia tu programa
+
+Sesión C del arco gradual: retiro MEDIDO de la última adivinanza léxica.
+
+### Corregido
+- **Las heurísticas por NOMBRE de variable de `nyx_type_to_llvm_for_env` fueron
+  RETIRADAS**: una variable llamada `tokens` en un closure se tipaba `Array` por el
+  nombre; llamarla `toks` cambiaba el programa. Medición previa (patrón v0.22.14):
+  660 archivos + los 10 módulos del compilador → UN hit legítimo (`var done = false`
+  del lexer), con control positivo del instrumento verificado antes de confiar en los
+  ceros. La inferencia A9 del pre-scan de closures aprendió LITERALES (bool/int/float/
+  String) — el único usuario real quedó cubierto por inferencia, y
+  `SharedEnv_tokenize` es byte-idéntico como prueba de equivalencia.
+
+### Mantenimiento
+- Los 10 seeds `.ll` refrescados coherentemente (arrastraban declares stale de varios
+  releases — la clase de drift que ya mordió con fmt.ll) + binarios derivados
+  reconstruidos.
+
+Fixed point ×2. Gates: 354/354 (105 comparadas, 0 conocidos), errors 244/0, m08,
+ai-first, repl, stacks.
+
+## [0.24.14] — 2026-08-05 — Los iteradores tipan: -53% de ceguera gradual
+
+Sesión B del plan post-auditoría — la palanca MEDIDA del dato NYX_STRICT.
+
+### Agregado
+- **La cadena de iteradores TIPA end-to-end**: `iter()` sobre `Array<T>` da
+  `Iterator[T]`; `filter`/`take`/`skip`/`chain` preservan el elemento; `map(f)` con f
+  de firma registrada da `Iterator[ret(f)]`; `collect()` da `Array<T>`. Y muerde:
+  `let s: String = nums.iter().map(doble).collect()` es NYX1003 «expected String, got
+  Array<int>» donde antes compilaba mudo (test en errors).
+- **Firmas de retorno de builtins**: `int_to_string`/`string_to_int`/`read_file`/etc.
+  ya no dan TyUnknown (envenenaban cada binop que los consumía).
+- **Refinamiento de anotación `Array` pelada** cuando el valor es una cadena de método.
+
+### MÉTRICA (100 recetas by-example, NYX_STRICT=warn)
+- **482 → 226 chequeos salteados (-53%)**; archivos afectados 60 → 51; el peor
+  (29-iterator-map-filter) **24 → 0**.
+
+### La lección que el gate cazó (documentada en la spec)
+- La 1ª versión del refinamiento aceptaba array literales → 20 tests rojos: el patrón
+  de arrays etiquetados (`["bool", v]` de std/json) se infiere `Array<String>` por
+  PRIMER elemento → NYX1005 espurio en cada push. Tercera aparición del principio:
+  **la inferencia por primer elemento NUNCA endurece chequeos**. Restringido a
+  method_call. (Y el comparador de salidas cazó mi propio expected/ con la aritmética
+  mal — la red funciona en ambas direcciones.)
+
+Residuo catalogado: next()/for-in sobre Iterator, lambdas inline en map/filter,
+colisión de nombre con struct `Iterator` de usuario. Fixed point ×2. Gates: 354/354
+(105 comparadas, 0 conocidos), errors 244/0, m08, ai-first, stacks.
+
+## [0.24.13] — 2026-08-05 — El runtime no te mata: decompress resucita y Map.get gana salida segura
+
+Sesión A del plan post-auditoría — los dos P1 de runtime para código de usuario.
+
+### Corregido
+- **`decompress()` devolvía `""` SIEMPRE** (sp3-bug-1, desde su creación): la llamada
+  interna de zlib a `inflate` resolvía contra la `pub fn inflate` de std/compress
+  (colisión de símbolos ELF). Ahora delega en el camino streaming con dlopen (patrón
+  D1), inmune a la colisión. `test-169-compress` volvió a verde SOLO — como promete el
+  mecanismo — y **KNOWN_OUTPUT_FAILURES queda VACÍO por primera vez** (352/352, 103
+  salidas comparadas, 0 fallos conocidos). El fix de raíz (mangle de `pub fn`) sigue
+  catalogado.
+
+### Agregado
+- **`Map.get_or(k, default)`**: la lectura SEGURA — clave ausente (o Map NULL)
+  devuelve el default en vez de matar el proceso. Runtime (str/int) + dispatch de
+  codegen (selección por tipo del default) + catálogo de semantic + test-331. El
+  abort de `get` ahora nombra la clave Y sugiere `contains`/`get_or` (check con
+  ejecución real en errors → 243). Alcance v1: receptor variable; campo catalogado.
+
+Fixed point gen2==gen3 en codegen y semantic. Gates completos verdes.
+
+## [0.24.12] — 2026-08-05 — La verdad de los docs: auditoría integral
+
+Auditoría de todo el proyecto (3 agentes: fichas-vs-código, coherencia documental,
+higiene) + primera cosecha real de NYX_STRICT=warn.
+
+### El dato del eje IA
+- **60/100 recetas by-example tienen puntos ciegos del gradual** (482 chequeos
+  salteados; las peores son cadenas de iteradores) y el código de producción
+  disciplinado da 0 → la palanca es inferencia de elemento en iteradores/closures,
+  NO endurecer gates. Ahora encabeza TASKS.md como prioridad medida.
+
+### Corregido (docs — 21 contradicciones)
+- LLM.md declaraba v0.21.0; CHANGELOG "current v0.22.0"; ROADMAP/VERSIONING/SPEC/
+  COMPARISON pineaban v0.16-v0.20 — la versión ya NO vive en ningún doc (puntero a
+  VERSION). El "Package registry ✅" de VERSIONING era FALSO (nyx publish no existe).
+- PLAN.md tenía una campaña "EN CURSO sin mergear" publicada 6 días antes.
+- SPEC.md omitía los 10 códigos de la serie borrow (NYX1021/1201/1210-11/1220-23/1230).
+- CLAUDE.md: limitaciones despineadas de versión + los arcos v0.22-v0.24.
+- COMPARISON.es sincronizada (memoria 3, concurrencia 4, rendimiento 4).
+
+### Higiene
+- 237 MB (.sdd) + logrotate roto + fixture binario des-trackeado +
+  seed fmt.ll regenerado (único par stale) + 9 skills/agentes con paths fósiles
+  (~/NyxLang y compañía, muertos desde la migración de layout 2026-07-22).
+- Skill write-nyx-program: enseñaba `Some()`/`Ok()` pelados que NO compilan —
+  reescrito con las formas calificadas + el gotcha de payload multi-campo.
+
+### TASKS.md depurado
+- 9 fichas cerradas con evidencia (3 verificadas con repro serial), 3 fusionadas,
+  2 degradadas, sección "Ruta A+" (280 líneas de trabajo hecho) archivada, sección
+  ⭐ AHORA con las 5 de mayor valor. 96 → 87 abiertas y las de arriba son las reales.
+
+Gates: 351/351, errors 242/0, ai-first (guardia de coherencia verde tras cada manual).
+
+## [0.24.11] — 2026-08-04 — Modo ceguera visible: la degradación del gradual ya no es invisible
+
+### Agregado
+- **`NYX_STRICT=warn`**: tras una compilación limpia, el compilador reporta cuántas
+  validaciones semánticas se saltearon por tipos desconocidos, con los primeros 6
+  puntos (función + línea, bilingüe) — «anotar tipos en esos puntos enciende los
+  chequeos apagados». 14 sitios de alta señal instrumentados (binop ×8, unop,
+  retorno ×2, args de llamada ×2, let anotado, objetivo de llamada). SOLO cuenta el
+  código del usuario: el prelude va rebasado a línea 1000001+ y los módulos
+  inlineados se excluyen vía los `module_marker` existentes. Con todo anotado:
+  silencio. Instrumentación pura — el exit code no cambia y NINGÚN gate se endurece
+  (la lección de las 5 regresiones de julio). Es el dato que decide si vale la pena
+  endurecer los ~40 gates de leniencia en una campaña futura.
+
+### Mantenimiento
+- Disco de la máquina de dev: 96% → 90% (versiones viejas del CLI, transcripts +21d,
+  journal, git gc).
+- `PLAN.md` refrescado (slots-tag y match-float ya no figuran como pendientes);
+  `docs/TESTS.md` reconciliado (regression **351**, errors **242** — estaba stale
+  desde v0.24.9).
+
+Gates: 351/351 (101 salidas comparadas), errors 242/0, m08, ai-first, stacks.
+Fixed point ×2 en semantic y nyx.
+
+## [0.24.10] — 2026-08-03 — Tag estático de fallback: la familia que corrompía slots está muerta
+
+Implementación completa de la spec del tag estático (el Incremento C de "la anotación
+manda"). Regla estructural en todos los sitios: **el tag estático SOLO gana cuando el
+tag runtime es UNKNOWN** — nunca pisa evidencia real. Con eso no hay quinta ronda de
+precedencias posible: todo cambio es corrección de un silently-wrong o un abort
+diagnosticado, nunca un valor distinto en silencio.
+
+### Corregido
+- **`arr[i] = 5.5` releía `4.61788e+18`** (con o sin anotación del receptor): la
+  escritura indexada ahora taguea el slot con el tipo del VALOR (double → bits + tag
+  FLOAT); un int escrito en un `Array<float>` anotado se PROMUEVE (sitofp). La trampa
+  §5.1.3 de LLM.md pasó a "Already fixed" y la guardia de coherencia la vigila como
+  mentira resucitable (test-328).
+- **`a.unshift(a[1])` imprimía la dirección del puntero**: los 5 sitios de
+  unshift/insert resolvían el tag DESPUÉS de emitir la mutación (slots corridos);
+  ahora antes, como siempre hizo push (test-329).
+- **`push` de un índice sin tag propagable + `let v = src[1]; b.push(v)`** con receptor
+  ANOTADO heredan el tag de la anotación (las 4 formas espejo del residuo); un select
+  en runtime garantiza que el tag propagado conocido siga mandando (test-329).
+- **Literal con destino anotado** (`var b: Array<String> = [src[1]]`) hereda el tag en
+  sus slots UNKNOWN vía `nyx_array_retag_unknown` — solo literales, solo UNKNOWN
+  (test-330).
+
+### Runtime (C1, commit previo 93f8736)
+- `nyx_slot_as_float_st(arr, i, static_tag)`: tabla rt/st completa; slot puntero leído
+  como float → abort **NYX2008** (documentado en SPEC/SPEC.es); rt INT/BOOL conserva el
+  widening numérico. `nyx_array_retag_unknown(arr, tag)`. TDD con test_arrays 63/63.
+
+### Diseño (la decisión que evita la recaída)
+- El registro `annotated_elem_tags` se alimenta EXCLUSIVAMENTE de anotaciones
+  explícitas — let/var anotados, params de fn, campos de struct — nunca del tipo de
+  `ctx.variables`, que incluye la inferencia por primer elemento (`[1,"dos"]` →
+  `Array<int>` transportando un String: la falla probada del round 3).
+
+### Verificación
+- Gates: 351/351 (101 salidas comparadas), errors 241/0, m08, ai-first 17✓ (guardia
+  re-pineada), runtime C 20/20, stacks 6/6. Fixed point ×2 (gen2==gen3 — el compilador
+  taguea sus propias escrituras). El bootstrap se recompiló ×2 con el tagueo nuevo sin
+  un solo aborto espurio (el canario de los 9/11 falsos positivos).
+
+## [0.24.9] — 2026-08-03 — La anotación manda (ronda 1): mueren tres adivinanzas
+
+Arco de endurecimiento del tipado gradual. Principio rector: donde el usuario ANOTÓ,
+el compilador obedece la anotación — nunca la adivinanza. Plan aprobado por Ottavio;
+spec del incremento restante incluida.
+
+### Corregido
+- **Struct de nombre corto ES un struct (A1)**: la heurística "≤2 chars = parámetro de
+  tipo" hacía que `struct Q` bypaseara NYX1020/NYX2004 y el compilador emitiera IR
+  inválido con exit 0 (clang lo cazaba recién al linkear). Registro
+  `g_concrete_type_names` + wrapper `sem_ty_parse` (18 call-sites): si el nombre corto
+  está registrado como struct/enum, es CONCRETO. Ahora: NYX2004 nombrando la firma
+  faltante. Cerró también a su gemela de semantic (`pub struct St` validaba distinto
+  que `pub struct Sto`). Test: `codegen-nyx2004-short-struct-bound` (errors → 241).
+- **Monomorfización de structs genéricos ON-DEMAND (B1, sp4-bug-3)**: una fn declarada
+  ANTES del literal genérico leía campos de un tipo sin registrar → print mudo y el
+  binario devolvía 0 en vez del valor, con exit 0. La rama de `nyx_type_to_llvm` que
+  manglea `Base<Args>` ahora monomorfiza por MENCIÓN de tipo — el orden de declaración
+  dejó de importar. test-326 fija el orden que antes rompía; el comentario de test-321
+  que vendía el workaround como "estilo" quedó saneado.
+- **`match` float preserva el valor (B2)**: `let x: float = match v { 1 => 1.5, _ => 2.5 }`
+  imprimía 1.0 — `match_arm_store` hacía fptosi incondicional. Cuando el match infiere
+  float, el slot pasa a modo BITS simétrico (bitcast store/load, como `coerce_to_i64`)
+  y los arms enteros se promueven (sitofp); `codegen_match` retorna `double` tipado.
+  Con y sin anotación, block-arms incluidos; arms mixtos int-primero conservan el
+  legacy. test-327 cubre los 5 bordes con salida comparada.
+
+### Verificado sin cambio (A2)
+- El orden de fuentes de `nyx_type_to_llvm_for_env` (anotación → inferencia →
+  heurística por-nombre → i64) se AUDITÓ correcto: la heurística léxica solo corre como
+  último recurso. Documentado sobre la fn con la evidencia; su retiro total queda como
+  ficha de medición (patrón v0.22.14).
+
+### Spec (Incremento C — sin implementación)
+- **Tag de fallback ESTÁTICO para slots de Array**
+  (`docs/design/specs/2026-08-03-static-tag-fallback-spec.md`): el tipo DECLARADO
+  del receptor como tercera fuente de verdad — solo gana cuando el tag runtime es
+  UNKNOWN, mismatch → NYX2008 ruidoso. Mata de raíz la familia `arr[i] = 5.5`
+  corrupto + los 4 espejos SEGV del push. Implementación en sesión propia.
+
+### Catalogado
+- 4 fichas nuevas en TASKS.md: retiro medido de la heurística por-nombre, migración de
+  call-sites legacy al unify por-id, `ty_eq` estricto, y "modo ceguera visible"
+  (contador de validaciones apagadas por TyUnknown, candidato `NYX_STRICT=warn`).
+
+Gates: 348/348 (98 salidas comparadas), errors 241/0, m08, ai-first, stacks.
+Fixed point ×2 en semantic y codegen.
+
+## [0.24.8] — 2026-08-03 — Los diagnósticos humanos llevan su código
+
+Dos menores de la cola, cerrados con la disciplina completa:
+
+### Corregido
+- **El formato humano de semantic lleva el código NYX**: `sem_diag` construía
+  «error in 'main' (line N): ...» descartando el código que ya tenía — `nyx_check`
+  (y cualquier consumidor del canal humano) recibía prosa sin identificador estable.
+  Ahora: `error [NYX1002] in 'main' (line N): ...`, también en el protocolo `DIAG:`
+  del LSP. La audiencia AI-first matchea códigos, no prosa (lo destapó el scorer del
+  banco). `NYX0000` (sin código asignado) se omite para no inventar identificadores.
+  Fixed point ×2 byte-idéntico; blindado con `check-diag-carries-code` (errors → 240).
+- **`run_case` en el smoke del REPL**: 14 bloques de boilerplate colapsados a un helper
+  con `timeout 20` (que faltaba — un REPL colgado ya no cuelga la suite). 15/15
+  intactos, control positivo del refactor verificado.
+
+### Catalogado
+- `nyx_check` vía `NYX_SRC` directa reporta la línea corrida por el prelude (la vía del
+  wrapper rebasea bien) — ficha nueva.
+
+## [0.24.7] — 2026-08-03 — El error del intérprete corta la evaluación (nil-cascade resuelto)
+
+El residuo de diseño declarado en v0.24.3: tras un NYX30xx, la expresión contenedora
+seguía computando con nil — `print(a[9] + 1)` emitía el error y DESPUÉS imprimía `1`
+(un valor fabricado presentado como resultado), y un nil raíz podía cascadear errores
+espurios. Ahora existe el Value `"error"` propagable (mismo canal de control que el
+`"return"` de eval_block): los 15 sitios de error lo devuelven, 29 guardas en los
+combinadores lo propagan, los bloques y loops lo burbujean, y `repl_eval` corta el
+input restante sin mostrar nada fabricado. El cuerpo de una función aborta tras el
+error — paridad con el binario compilado (que aborta el proceso); la sesión del REPL
+sobrevive. Smoke `make test-repl`: 12 → **15 checks**, RED verificado por caso.
+También: la guardia de coherencia LLM.md↔manuales sembrados (7ª línea de test-ai-first,
+2026-08-03) — ratchet de 9 mentiras resucitadas + anclas de trampas vivas + pin de §5.1.
+
+## [0.24.6] — 2026-08-02 — El install público estuvo roto 4 días; ahora no puede volver a pasar
+
+`curl install.sh | sh` moría para TODO usuario externo desde el 29/07: `make build-test`
+(paso agregado en v0.22.20) necesita `compiler/test.nx`, fuente privada que no viaja al
+mirror — y no existía seed. Los gates internos, todos verdes; los CI de nyx-proxy y
+nyx-serve lo gritaban en rojo y nadie los miraba.
+
+### Corregido
+- Seed `compiler/test.ll` trackeado + `build-test` dual: con la fuente compila y
+  refresca el seed; sin ella (clon público) construye desde el seed — patrón `build.ll`.
+- **Guard de completitud del install en el sync** (espejo del guard anti-fugas): todo
+  target de `install.sh` que necesite un `compiler/*.nx` debe tener fuente o seed en el
+  mirror, o el sync no commitea. Verificado con control positivo. La clase entera de
+  "feature interna verde / instalador externo muerto" queda cerrada estructuralmente.
+- Ficha meta: los CI de los repos públicos como verificadores-que-nadie-mira (el rojo
+  de nyx-serve llevaba 2+ días visible).
+
+## [0.24.5] — 2026-08-01 — La métrica AI-first re-medida: 4/4 al primer intento
+
+Ottavio pidió "poner a prueba bien el lenguaje y aclarar los manuales". Se hizo ambas.
+
+### El banco de primer intento, contra v0.24.4
+Mismo protocolo del baseline (agente sonnet headless, contexto limpio, SOLO la doc que
+`nyx init` siembra, acceptance a ciegas): **4/4 ACCEPT PASS** — el baseline v0.22.21 era
+7/8. `first_green_attempt = 1` en las cuatro tareas (el PRIMER build de cada proyecto fue
+verde), cero incidentes de silencio, cero fallos sin diagnóstico. La tarea 4 — el único
+FAIL del baseline — ahora pasa: `float_to_fixed` existe, y el examinado que escribió
+`println` recibió el did-you-mean de `nyx check` y corrigió en una invocación. Detalle y
+advertencias honestas (n=1 por tarea) en `docs/BENCH-FIRST-ATTEMPT.md`. **Scorer v2**: el
+instrumento contaba como "fallos mudos" los diagnósticos de `nyx_check` (van por stdout,
+sin código NYX — ficha abierta); corregido con caso de control en el selftest.
+
+### Los manuales dejan de mentir (auditoría completa contra LLM.md)
+Los 3 manuales que `nyx init` siembra en cada proyecto arrastraban falsedades: closures
+"rotos" (arreglados hace 5 días de eso... desde 2026-07-27), la trampa `arr[i].method()`
+muerta desde abril, el CHEATSHEET contradiciéndose a sí mismo dos veces, API inventada
+(`open_file`), `http_get` tipado `String` (retorna `Array`), e import local con sintaxis
+de dependencia. Todo corregido hacia el core; los 3 ganan las 3 trampas vivas de §5.1 que
+les faltaban, NYX1022 y el check del bind. `std/kvclient` gana sus 5 contratos de retorno
+(la lección http_serve generalizada — el resto de las familias de riesgo ya los tenía).
+LLM.md documenta el subconjunto del REPL (§5.4.12).
+
+## [0.24.4] — 2026-08-01 — Dos reportes de fricción: el bind mudo y la feature que no linkeaba
+
+Ciclo de fricción completo (skill kv-friction-pull): dos reportes de usuarios reales,
+ambos reproducidos ANTES de tocar nada, ambos blindados con guardia permanente.
+
+### Corregido — el bind fallido es RUIDOSO (reporte 2026-08-01, usuario en v0.24.1)
+`http_serve(8080, handler)` con el puerto ocupado devolvía -1 **sin un solo mensaje**, y
+el ejemplo canónico de la doc descartaba el retorno: el programa "arrancaba" con exit 0
+y sin servidor (el usuario debuggeó contra el proceso ajeno que ocupaba su puerto).
+- `nyx_tcp_listen` (bind Y listen) + `nyx_udp_bind` (misma familia): fallo → mensaje a
+  **stderr** con puerto y `strerror(errno)` (capturado antes del `close`, que puede
+  pisarlo). El retorno -1 se mantiene (ABI).
+- Los 5 ejemplos canónicos (LLM.md, templates/CLAUDE.md, CHEATSHEET ×2, SPEC) ahora
+  chequean el retorno; docstrings de `http_serve`/`http_serve_mt` documentan el contrato.
+- Blindaje: `tests/ai-first/21-bind-failure-loud.nx` + check `silent-bind-failure`
+  (stderr capturado aparte, control negativo: un bind exitoso NO emite).
+- La IDEA del reporte (`Result<int,String>`) queda catalogada — cambio de firma.
+
+### Corregido — `std/llm` linkea para usuarios (A10 del reporte 2026-07-31)
+Todo `import "std/llm"` moría en el link (`undefined reference to nyx_llm_*`) con el
+toolchain instalado **desde v0.20.x**: `llama_adapter.c` estaba en el Makefile del
+monorepo (gates internos verdes) pero faltaba en las DOS recetas de usuarios
+(`scripts/nyx` y `compiler/build.nx`). Verificado vivo en v0.24.3; agregado a ambas
+(dlopen-lazy, cero dependencia dura). Post-fix el repro linkea y da el error runtime
+accionable. Lección estructural: `run_toolchain_recipe_audit.sh` (6ª línea de
+`make test-ai-first`) exige TODO `runtime/*.c` en ambas recetas — con control positivo.
+Seeds regenerados (`build.ll` + `make build-nyx-build`).
+
+Del resto del reporte 2026-07-31 (navegador): C1 (SIGWINCH) ya era verdad desde
+v0.22.18, C3 (regex en CAPABILITIES) ya resuelto, A1-A9/B/C2/C4 cerrados en v0.22.x.
+Ambos reportes archivados; inbox vacío.
+
+## [0.24.3] — 2026-08-01 — La serie NYX30xx completa, y el bug que el mojibake escondía
+
+La campaña de prints mudos del intérprete (residuo declarado de v0.24.2) terminó
+encontrando algo mejor que ruido: un bug de **datos** silently-wrong presente desde
+siempre.
+
+### Corregido
+- **`eval_array` construía `[nil]` para TODO literal de array**: iteraba `node_data` en
+  vez de `node_data[0]` (el parser emite `make_astnode("array", [elements])`), así que
+  evaluaba como "elemento" a la lista entera — un no-astnode. `[10, 20, 30]` en el REPL
+  medía `length() == 1` con `a[0] == nil`, y el famoso «Expresión no soportada: <bytes
+  basura>» era la lista de elementos impresa como String. Diagnóstico por sondas mínimas
+  (cualquier literal lo disparaba; `let a = 1` no), fix de raíz de una línea.
+- **Los 14 sitios print-mudo del intérprete migrados a la serie NYX30xx** vía helper
+  `interp_err()` (bilingüe + contador `interp_error_count()`): **NYX3002** expresión/
+  operador/feature fuera del subconjunto (catch-all de eval_expr, binop, unop,
+  compound-assign, field_assign), **NYX3003** variable no definida (×3 caminos),
+  **NYX3004** llamada a no-función, **NYX3005** errores de runtime del programa
+  (división por cero ×2, índice fuera de rango ×2, index_assign sobre no-array — el
+  binario compilado aborta en estos; el REPL reporta y sobrevive). Catálogo completo en
+  SPEC.md/SPEC.es.md.
+
+### Corregido (2ª ronda — hallazgos del /code-review pre-release, todos reproducidos)
+- **`for x in [array]` SEGFAULTEABA el REPL** (exit 139, desde siempre): el parser guarda
+  el nombre de la variable del for como String plana en `data[0]`; `eval_for` lo trataba
+  como astnode y leía `[0]` de la String — memoria reinterpretada como puntero.
+- **`5 % 0` devolvía 5 en silencio**: módulo sin el guard que división sí tenía — en
+  ARM64 el udiv-por-cero no trapea (da 0) y el msub deja `a`, un artefacto de hardware
+  disfrazado de resultado. Ahora NYX3005.
+- **Aridad incorrecta (`f(1)` sobre fn de 2 params) MATABA la sesión** (exit 1): el
+  índice fuera de rango de `args[i]` disparaba el abort del binario compilado. Ahora
+  **NYX3006** antes de bindear, y la sesión sobrevive.
+- **`eval_compound_assign` removido**: código muerto inalcanzable — el parser desugarea
+  `x += e` a `x = x + e` y nunca emite ese nodo (la rama tenía el mismo bug latente de
+  eval_for adentro como prueba de que jamás corrió). El bloque NYX3001 ahora usa el
+  helper `interp_err` (hallazgo de reuse de la review).
+
+### Corregido (3ª ronda — reporte final del /code-review)
+- **Bare `return` en fn void emitía NYX3002 sobre código VÁLIDO**: el parser sintetiza
+  el nodo `"integer"` (parser.nx:2831) y el intérprete no tenía rama — la misma lección
+  de NYX2001 (los catch-alls son load-bearing para nodos sintéticos), ahora aplicada acá.
+- **Indexar un no-array reportaba un falso "índice fuera de rango"** (NYX3005): `s[0]`
+  sobre String —que el binario compilado SÍ soporta por bytes— es limitación del
+  subconjunto → NYX3002 honesto, con chequeo de `value_type` (eval_index_assign ya lo
+  tenía; eval_index quedó simétrico).
+- **Llamar un nombre indefinido emitía DOS errores** (NYX3003 + un NYX3004 falso) y el
+  contador subía 2: `env_has` nuevo + pre-check en eval_call — un error, contador +1.
+- Dos guards vacuos del propio smoke (cazados por la review): el grep de length matcheaba
+  por substring (`"nyx> 3"` ⊂ `"nyx> 30"`) y el guard anti-catch-all grepeaba texto en
+  español con el binario emitiendo inglés. Anclado y migrado a códigos neutros.
+- Comentario stale de eval_field_assign («silenciamos silenciosamente» sobre código ya
+  ruidoso).
+
+### Residuo catalogado (ficha en TASKS.md, documentado en el helper)
+- **nil-cascade**: tras un NYX30xx la expresión contenedora sigue computando con nil —
+  `print(a[9] + 1)` emite NYX3005 y después imprime `1`. El error nunca es silencioso,
+  pero puede venir seguido de un valor fabricado. Fix de diseño (value_type "error"
+  propagable) en ficha.
+
+### Tests
+- `run_repl_smoke.sh` 3 → **12 checks** (array literal con datos reales, NYX3003,
+  NYX3004, for-in sin segfault, NYX3005 módulo, NYX3006 aridad con sesión viva, bare
+  return sintético, NYX3002 en indexado de no-array, 1-solo-error en llamada indefinida),
+  todos con RED verificado contra el binario previo.
+
+## [0.24.2] — 2026-08-01 — El intérprete deja de mentir en silencio
+
+La última pata de la familia silently-wrong, declarada como brecha propia en el cierre de
+v0.24.0: `compiler/interpreter.nx` (el evaluador del REPL) despachaba métodos con un
+fallback **print mudo + nil** — el mismo programa daba OTRO resultado que el binario
+compilado, con la sesión en verde. El inventario midió el subconjunto real: String 12
+métodos, Array 3, y **Map cero** — mientras el comentario de cabecera prometía
+`Map: insert, get, contains, length` (ficción pura, desde siempre).
+
+### Corregido
+- **NYX3001** (serie nueva NYX30xx = interpreter-phase, catalogada en SPEC.md/es): método
+  fuera del subconjunto declarado → error bilingüe ruidoso que además dice la verdad útil
+  («el binario compilado sí lo soporta si el lenguaje lo tiene»). La sesión del REPL
+  **sobrevive** (es interactiva; abortar mataría la sesión) y `interp_error_count()`
+  (export nuevo) registra el error para consumidores no interactivos.
+- El comentario de cabecera de interpreter.nx ahora declara el subconjunto REAL.
+- **Drift reparado de paso**: NYX2007 (v0.24.0) faltaba en las tablas de códigos de
+  SPEC.md Y SPEC.es.md.
+
+### Añadido
+- `make test-repl` (dentro de `test-all`): smoke E2E `run_repl_smoke.sh` — NYX3001
+  ruidoso, sesión viva tras el error, control negativo (`s.length()`==4). RED verificado
+  contra el binario previo; el target reconstruye nyx_repl SIEMPRE (un smoke contra
+  binario stale certificaría el pasado).
+
+### Residuo catalogado (ficha en TASKS.md)
+- Quedan prints mudos en el intérprete FUERA del dispatch de métodos (el smoke destapó
+  «Expresión no soportada: <bytes basura>» — mudo y con mojibake — y el «no es una
+  función» + nil de eval_call). Migrarlos a NYX30xx es campaña propia.
+
+## [0.24.1] — 2026-07-31 — El residuo declarado de v0.24.0, cerrado
+
+v0.24.0 dejó UN caso silently-wrong catalogado a conciencia: `m.length` (propiedad, sin
+paréntesis) sobre una **variable** Map local compilaba con rc=0 tras un print mudo («Error:
+campo no encontrado: Map:length») y devolvía 0 — un Map de 2 elementos medía 0. La forma
+anidada (`s.m.length`) ya abortaba desde la campaña; faltaba el camino de identificador.
+
+### Corregido
+- **NYX2007 en el camino de identificador de `codegen_field_access`**: un Map no expone
+  ninguna propiedad — ahora aborta nombrando la propiedad y sugiriendo los métodos
+  (`m.size()`, `m.keys()`, `m.values()`), bilingüe. El guard es SOLO para receptor Map
+  (match exacto o `Map<` sobre el símbolo declarado, resuelto de alias y PRE-mangle): el
+  print mudo general sigue vivo a propósito — es el fallback load-bearing del bootstrap
+  (parser.nx dispara "Array:node_type" al auto-compilarse) — y un struct de usuario llamado
+  `MapEntry` no cae en el guard (control negativo ejecutado).
+- La **matriz de dispatch quedó con la lista de divergencias conocidas VACÍA** — que es el
+  objetivo declarado del mecanismo: la celda `map/local (propiedad)` pasó a rechazo ruidoso.
+
+Test: `codegen-nyx2007-map-local-length-property` (RED verificado; corre SIN
+`NYX_SKIP_SEMANTIC` — NYX1022 mira llamadas, la forma-propiedad es camino normal de codegen).
+Gates: fixed point global ×2 byte-idéntico (recompile-all; cero módulos del compilador caen
+en el guard), regression 346/346, errors 239/0, m08 18/18, ai-first, stacks 6/6, matriz
+17/29 (piso 17).
+
+## [0.24.0] — 2026-07-31 — Un método aplica al tipo de su receptor, o es error
+
+> Cambio de política del compilador (programas que antes compilaban ahora son error) →
+> **MINOR autorizado por Ottavio (2026-07-31)**.
+
+La familia "silently-wrong" del despacho de métodos tenía **dos causas**, y solo una estaba
+muerta. El catch-all mudo (método *no reconocido* → `0` en silencio) se convirtió en error en
+v0.22.14. Esta campaña mata la segunda: **método reconocido pero despachado a la rama del tipo
+equivocado** — `length` sí existe, pero sobre un `Map` entraba a la rama de Array y emitía un
+`nyx_array_length` válido sobre un puntero que no es un array. Nadie preguntaba por el tipo.
+
+La causa raíz estaba en semantic: `check_builtin_method_args` validaba los argumentos de los
+métodos que reconocía y terminaba en `return true` — **nunca validaba que el método existiera
+para ese tipo**. Los cuatro bugs que lo evidenciaban, reproducidos ejecutando:
+
+| Antes | Ahora |
+|---|---|
+| `m.length()` sobre `Map` imprimía `281473395465504` (un puntero como entero, silencioso) | error NYX1022 con sugerencia (*¿quisiste decir 'size'?*) |
+| `s.f.length` (propiedad) sobre campo `String` daba `0`; con paréntesis daba `4` | ambas formas dan la longitud real (test-324) |
+| `s.m.push(x)` sobre campo `Map` compilaba y **segfaulteaba** | error de compilación |
+| `s.f.contains(x)` sobre campo `Array` emitía IR inválido | funciona; invariancia por forma (test-325) |
+
+### Añadido
+- **NYX1022** (semantic): catálogo `methods_for_kind` por tipo de receptor (String/Array/Map/
+  Option/Result) — un método que no está en el catálogo de su tipo es error, con did-you-mean.
+  Regla de oro del tipado gradual intacta: receptor `TyUnknown`/`TyVar`/`TyDyn`/`TyGeneric`
+  nunca produce este error. Catálogo medido contra el corpus real (regresión + errors + stacks
+  + el propio compilador), no derivado por lectura.
+- **NYX2007** (codegen): backstop de tipo de receptor en los sitios que despachaban por nombre
+  sin consultar el tipo que ya tenían (S1 globales, S3 length/contains, S9 push sobre campo,
+  receptores `&String`/`&Array`/`&Map`). Es la única capa que cubre código sin anotaciones y
+  sobrevive a `NYX_SKIP_SEMANTIC=1`.
+- **Matriz de invariancia por forma del receptor** (`make test-dispatch-matrix`): la propiedad
+  única — el mismo método sobre el mismo dato da el mismo resultado sin importar cómo se nombre
+  el receptor (local, campo, retorno, elemento, global). Celdas inaplicables listadas, nunca
+  omitidas en silencio; piso de celdas verificadas (17) para que la matriz no pueda ponerse
+  verde degradada.
+- **Ratchet de divergencia** (`run_codegen_mute_audit.sh`): NYX2007 no puede desaparecer y el
+  catálogo de `methods_for_kind` no puede volverse ilegible sin que `make test-ai-first` falle.
+  Verificado con control positivo.
+
+### Corregido
+- Los 4 bugs de la tabla, como tests de regresión reales (test-324/325 + 8 tests de error).
+- `contains` con la forma de `length` sobre campo: la forma conjunta abría un SEGV.
+- El bloque de acceso anidado de `codegen_field_access` atendía el print mudo «campo no
+  encontrado» y devolvía `i64 0` con exit 0; ahora atiende las propiedades builtin y aborta
+  ruidoso lo que no resuelve (ratchet de prints-mudos: 9 → 8).
+
+### Residuo catalogado (fichas en TASKS.md)
+- `m.length` (propiedad, sin paréntesis) sobre una **variable** Map local: sigue el print mudo
+  con rc=0 y devuelve 0 — divergencia conocida de la matriz, sitio del ratchet.
+- El tagging asimétrico de `f().push(42)` no es de esta familia (el par método/tipo es
+  correcto; se perdió el tipo de *elemento*).
+- El intérprete (`interpreter.nx`) queda fuera del alcance, como brecha propia.
+
+## [0.23.1] — 2026-07-31 — Un usuario reportó lo mismo dos veces
+
+**Alguien está escribiendo una herramienta de seguridad de red en Nyx.** Reportó el 28 y el
+29 de julio, y el segundo reporte solo fue posible porque el primero se había atendido: el 28
+no podía usar UDP porque la documentación no traía las firmas; documentadas esas, encontró el
+bug real.
+
+### `udp_sendto` truncaba el payload en el primer byte nulo
+
+Su repro: `"AB" + char_to_string(0) + "CDE"` — seis bytes — salían dos. Eso hace **imposible**
+escribir probes de DNS, NTP o SNMP, porque los tres llevan nulos en sus cabeceras. La causa
+era `strlen` sobre un `String` que ya sabe su longitud, con el error espejado en `udp_recvfrom`
+(reconstruía con `from_cstr` teniendo el largo real en la mano).
+
+El bug estaba **catalogado** por la auditoría de v0.23.0 como "resto de la campaña de
+binary-safety". Que un usuario lo encontrara solo confirma que esa lista de residuos describe
+problemas que la gente sí se cruza, no deuda teórica. Así que se cerró la familia entera:
+
+- `udp_sendto` / `udp_recvfrom` — el reporte del usuario. **No existía ni un solo test de UDP
+  en el repo**; ahora hay round-trip de los 256 valores de byte.
+- `file_write_string` — un blob binario se truncaba al escribirlo a disco.
+- `https_post` — truncaba el cuerpo **y** mandaba un `Content-Length` que mentía sobre su
+  tamaño; además el `SSL_write` no loopeaba, un bug latente en cuerpos grandes.
+- `ev_write_pipe` / `ev_read_pipe` — el mismo par en el event loop.
+
+### Introspección TLS: `import "std/tls"`
+
+También pidió dos veces poder mirar el certificado del peer para detectar "TLS débil o
+certificado vencido", y dijo que no podía implementarlo. Ahora son una línea:
+**`cert_is_expired(cert)`** y **`tls_is_weak(h)`**.
+
+`tls_peer_cert(h)` devuelve subject, issuer, fechas de validez, serial, algoritmo, huella
+SHA-256 y SANs; más la cadena, el PEM y los accessors de sesión (`tls_version`, `tls_cipher`,
+`tls_cipher_bits`). Todo con accessors con nombre para que nadie escriba índices a mano, y
+totales sobre un array vacío: un handshake fallido nunca rompe a un caller descuidado.
+
+La **verificación** de certificados es aparte y opt-in — `tls_connect_ex(host, port, mode)`:
+
+- **modo 0** — el comportamiento actual, idéntico.
+- **modo 1 "checked"** — el handshake **siempre** completa y después preguntás si habría
+  fallado. Es el modo que un escáner necesita: quiere alcanzar la máquina con el certificado
+  vencido y *reportarla*, no que se la rechacen.
+- **modo 2 "strict"** — verifica cadena y hostname.
+
+Vive en un **`SSL_CTX` separado**: el contexto por el que pasa todo el tráfico saliente en
+producción no se toca, así que ningún camino que hoy funciona lee un byte que este cambio
+escriba. Un guardián de regresión lo confirma en cada corrida.
+
+### Notas
+
+Las funciones TLS se exponen con `extern "C"` desde `std/tls.nx`, sin tocar el compilador —
+por eso este release **no necesitó fixed point**. Se descartó explícitamente que una variable
+de entorno global cambiara el contexto compartido a verificar: es acción a distancia, y su
+modo de fallo (`https_get` devolviendo `""`) es indistinguible de un error de red.
+
+`write_file`/`read_file` (el par simple por path) **siguen sin ser binary-safe** — para
+contenido que no sea texto conocido, usar `file_open`/`file_write_string`/`file_close`.
+
+---
+
+## [0.23.0] — 2026-07-30 — La campaña de corrección: lo que estaba roto y nadie veía
+
+**Una auditoría general de seis frentes preguntó qué hay realmente mal en este proyecto.**
+La respuesta ocupó cuatro sub-proyectos y 66 commits. El hilo común: casi todo lo que se
+encontró llevaba mucho tiempo ahí, tapado por otra cosa.
+
+### Seguridad — cinco rutas de desbordamiento alcanzables desde red
+
+- **WebSocket**: la longitud de 64 bits del frame **envolvía el chequeo de límites**. Catorce
+  bytes en el socket bastaban para una escritura de heap ilimitada. Ahora toda validación de
+  longitud se escribe como resta sobre el lado conocido, nunca como suma que pueda envolver.
+- **msgpack**: se copiaba la longitud anunciada en la cabecera sin compararla nunca con el
+  buffer real. Dos bytes de entrada leían 255 bytes de heap ajeno **y los devolvían al
+  programa como String** — divulgación de memoria, no solo un crash.
+- **HPACK (encoder)**: presupuesto fijo de 128 bytes por header con `memcpy` del valor
+  completo. Un `set-cookie` de 4 KB escribía kilobytes fuera del bloque. Ahora el buffer se
+  dimensiona por el tamaño real y los guards rebobinan a frontera de header, para no dejar un
+  header a medio escribir (HPACK mantiene estado entre frames).
+- **HPACK (decoder)**: el varint acumulaba sin tope, con desplazamiento indefinido y valor
+  negativo. El fix incluye `consumed == 0` en los ocho call-sites: sin eso, topar el varint
+  convertía el desbordamiento en un bucle infinito que agotaba el heap.
+- **RESP**: cotas de bulk y de conteo de array del lado C. `$2147483647` desbordaba la suma a
+  `INT_MIN`; `*2000000000` forzaba una reserva de ~16 GB con catorce bytes, y si fallaba,
+  `exit(1)` — un peer no autenticado podía matar el proceso.
+
+### Corrección de la stdlib
+
+- **`json_stringify` no escapaba nada**, ni en valores ni en claves de objeto. Cualquier texto
+  con una comilla o un salto de línea producía JSON inválido. El parser sí decodificaba, así
+  que el round-trip estaba roto en una sola dirección.
+- **`remove()` no removía** en `std/collections` ni en `std/btreemap`: insertaban un centinela
+  y `has()` seguía diciendo `true`. El mismo set reportaba `has(x) == true` y `size() == 0`.
+  Arreglarlo destapó que **`Map.get` de una clave ausente mata el proceso** — oculto porque el
+  borrado falso impedía llegar a ese caso.
+- **`json_parse` decidía los literales por su primera letra**: `"tomato"` parseaba como `true`.
+- **`float_to_fixed`** en `std/math_ext`, con su límite documentado: el redondeo puede fallar
+  en el último dígito cuando la representación binaria cae del lado equivocado del `.5`.
+
+### La red de verificación
+
+- **El runner de regresión nunca comparó la salida de ningún test.** Había **95 archivos
+  `expected/` escritos que ningún runner consumía**. Ahora compara, una diferencia falla la
+  suite, y el resumen informa cuántos tests siguen **sin ninguna red** (249 de 344) — el número
+  que faltaba para que el problema fuera visible.
+- Marcador `__ANY__` para salida no determinista, con conteo de líneas exacto.
+- Tests que pasaron de decorativos a verificar: punteros crudos y FFI (el área por donde entró
+  un P1 de esta misma campaña), concurrencia, y `test-192-http-mt`, que **decía probar el
+  servidor HTTP multithread y nunca lo llamaba**.
+
+### El compilador
+
+- **Los errores del lexer no se contaban** en ninguno de sus cinco sitios: una comilla sin
+  cerrar se tragaba el resto del archivo y podía emitir binario.
+- **Un `pub struct` no se registraba como tipo**, así que `import { parse } from "std/semver"`
+  usando `Version` **no compilaba**. 67 falsos positivos en siete módulos de la stdlib.
+- **`a.b.c = x` imprimía una línea y descartaba la asignación**: el binario corría con el valor
+  viejo y el build retornaba 0. Ahora la cadena se recorre por dirección, y los casos no
+  soportados abortan con diagnóstico (NYX2005/NYX2006) en vez de evaporarse.
+- **El `inttoptr` decidía por el nombre del método**: `nums[0].contains("x")` sobre un entero
+  segfaulteaba, y con arrays anidados devolvía `false` leyendo la estructura como texto.
+
+### Notas de esta versión
+
+`nyx_type_to_llvm` y `field_assign` comparten ahora un único helper de normalización, cerrando
+la familia de "campo no encontrado" que venía de cuatro derivaciones distintas del nombre de
+struct.
+
+Lo que **no** entró y está catalogado con repro en `TASKS.md`: la épica de unificación del
+dispatch de métodos (con alcance y regla de corte), el residuo del tagueo de slots —donde se
+cortó tras cuatro rondas, porque la evidencia estática no alcanza para decidir algo que solo
+se sabe en runtime— y trece fichas de bugs preexistentes que la campaña destapó sin poder
+cerrar en su alcance, incluido un segfault por alias de tipo cíclico y la descompresión rota
+por secuestro del símbolo `inflate`.
+
+**Gate**: regresión 344/344, error paths 228/0, m08 18/18, ai-first, runtime 20 suites, los
+seis stacks extraídos verdes, y fixed point global byte-idéntico.
+
+---
+
+## [0.22.23] — 2026-07-29 — El error te dice de quién es la culpa: cierre de "Primer intento verde"
+
+**Fases 4 y 5, las últimas de la campaña.** Cuando algo falla, el agente necesita saber dos cosas:
+de quién es la culpa (¿su código o el compilador?) y cómo se llama de verdad lo que quiere llamar.
+Estas dos fases atacan exactamente eso. Con esto, las 6 fases (F0-F5) del plan quedan completas.
+
+### Fixed
+- **Atribución de fallos de clang/link (F4.1, `compiler/build.nx:436`)**: cuando clang falla
+  contra el IR generado (`use of undefined value`, `invalid redefinition`, `undefined reference`,
+  …), `nyx build` antepone al log crudo un bloque bilingüe que dice que es casi seguro un **bug
+  del compilador Nyx, no del código del usuario**, nombra el archivo en curso y apunta a
+  `nyx report`. Antes se volcaba el log de clang tal cual y el agente editaba su código al azar
+  (≥4 incidentes históricos confirmados; los IR inválidos de `Option<Struct>` del banco de F1 son
+  exactamente esta clase).
+- **Did-you-mean real en import no resuelto (F4.2, `compiler/nyx.nx`)**: el error de import dejó
+  el hint fijo `src/<path>` y ahora corre Levenshtein contra los módulos **reales** de `std/` y
+  `src/` del proyecto — con pools por prefijo explícito (pedir `std/x` no sugiere módulos de
+  `src/` ajenos al namespace elegido) y supresión de sugerencias idénticas al path pedido.
+  Código nuevo **NYX0301** (serie resolver, `phase:"resolve"`, catalogado en docs/SPEC.md).
+  Es el error de más alta frecuencia del banco: el agente inventa nombres de módulos de std.
+- **CAPABILITIES.md ya no trunca firmas multi-línea (F5.1, `compiler/build.nx:619`)**: el
+  extractor cortaba en el primer `{` de la misma línea, así que toda firma partida en varias
+  líneas quedaba truncada a medio parámetro (confirmado en `std/proptest.nx`,
+  `std/webpush.nx`) — un documento que le enseña a un agente a llamar MAL. Ahora
+  `capabilities_module_section` junta líneas hasta balancear `(`/`)` antes de cortar en el `{`
+  del cuerpo.
+- **`run_capabilities_test.sh` endurecido y cableado (F5.2)**: solo comparaba nombres (por eso
+  nunca cazó la truncación) — suma balance de paréntesis por firma extraída + spot-check textual
+  de las 3 firmas multi-línea confirmadas + chequeo de frescura de `nyx_build` (mtime vs
+  `build.nx`, FAIL accionable en vez de diff confuso), y pasa de guard manual a **5ª línea de
+  `make test-ai-first`** — un guard que nadie corre es el mismo agujero que la campaña vino
+  tapando cinco fases.
+
+### Tests / seeds
+- errors 215→217 (`test-import-not-found-suggests-std` texto+NDJSON); ai-first +1 check
+  (`clang-link-failure-attribution-ir-bug`, repro real del banco vía `nyx_build`); capabilities
+  1→3 checks + frescura. Fórmula canónica: 604 compiler tests (`docs/TESTS.md`).
+- Seed `compiler/build.ll` regenerado (los dos fixes de `build.nx` no habían llegado al seed —
+  `install.sh` construye desde él; fixed point de `nyx.ll` verificado byte-idéntico).
+
+---
+
+## [0.22.22] — 2026-07-28 — El banco de primer intento: la doc sembrada, medida
+
+**Un modelo con contexto limpio, solo la doc sembrada, escribiendo un proyecto real de cero. ¿Le
+sale al primer intento?** Eso es lo único que esta fase mide, y la única pregunta que importa
+después de tres releases (v0.22.19-v0.22.21) matando fallos silenciosos por capa.
+
+### Added
+- **Banco de primer intento** (`scripts/testing/bench/`): arnés con 4 specs de tareas reales
+  verificables a ciegas — API HTTP JSON, workers con canales, CLI CSV, cliente HTTP. Sandbox con
+  wrapper de logging NDJSON por invocación, acceptance byte-exacta con timeouts, scorer con
+  selftest. Bug de instrumento cazado en su propia review: el acceptance contaminaba el log del
+  examinado, dejando `silent_incident` siempre en false; corregido (grading vía
+  `.bench/toolchain`, sin tocar el log medido).
+- **4 casos de referencia en `tests/ai-first/`** (14→18): control positivo mutation-tested para
+  cada tarea del banco. HTTP y concurrencia, que tenían cobertura 0 en la suite ai-first, pasan a
+  tener control real.
+
+### Resultados
+- **8 runs reales** (claude -p sonnet headless, contexto limpio, solo doc sembrada + TASK.md;
+  arms v0.22.21 vs v0.22.19/f6f6f3e): **7/8 ACCEPT PASS al primer intento, sin ayuda humana, en
+  ≤7 min por proyecto**.
+- **0 incidentes de silencio causados por el lenguaje** en ambos arms — ninguna de las tres
+  fases de fallos-silenciosos-a-cero de esta campaña se disparó durante el banco.
+- **El único FAIL fue un hallazgo de stdlib, no del compilador**: el examinado agotó 80 turnos
+  fabricando a mano el formato de floats a 2 decimales (no existe una función así en `std`) y
+  dejó `print`s de depuración en el entregable; sus datos de salida eran, de hecho,
+  byte-correctos. Baseline honesto (n=1, sin generalizar) documentado en
+  `docs/BENCH-FIRST-ATTEMPT.md`; instrumento reproducible commiteado (`examinee-prompt.txt` +
+  `run_examinee.sh`) para volver a correrlo en cualquier release futuro.
+
+### Known / cosecha [dogfooding:bench]
+- `float_to_fixed` (u homólogo) no existe en `std` — forzó 80 turnos de formato manual a mano.
+- El formato humano de errores de `semantic.nx` no incluye snippet de código NYX, a diferencia
+  del parser que sí lo muestra.
+- `nyx check` vuelca el protocolo LSP crudo en vez de un formato legible en modo normal.
+- `Option`/`Result` con struct de múltiples campos como payload genera IR inválido.
+- `arr[i] = float_value` corrompe el slot cuando el array no fue tagueado como float desde el
+  literal.
+- Un deadlock de canales mal diagnosticado cuelga el proceso sin pista de causa.
+- El skill `write-nyx-program` está desactualizado respecto al estado real del lenguaje.
+- Falta una métrica de "primera build verde" instrumentable de forma continua (no solo ad-hoc
+  como este banco).
+
+## [0.22.21] — 2026-07-28
+
+**Ningún codegen devuelve 0 en silencio.**
+
+Segundo gate caro de la campaña "primer intento verde": el mismo principio de la 0.22.20
+(ningún fallo silencioso en semantic) aplicado a la última capa que quedaba, codegen. El
+catch-all maestro de `codegen_expr` devolvía `i64 0` ante un node_type no reconocido SIN
+imprimir una sola palabra — un binario compilaba y corría con basura silenciosa por un
+camino del AST que el compilador simplemente no sabía bajar. Serie nueva `NYX20xx`
+(codegen-phase; a diferencia de semantic, codegen no tiene registry de diagnósticos —
+el código va en el texto del mensaje, documentado en `docs/SPEC.md`).
+
+### Fixed
+- **codegen (NYX2001)**: el catch-all maestro de `codegen_expr` aborta ahora bilingüe,
+  nombrando el node_type no reconocido + "es casi seguro un bug del compilador, reportalo
+  con `nyx report`". La ronda de review cazó un Critical antes de mergear: el nodo
+  `"integer"` que el parser **sintetiza** para el bare `return` de funciones void caía en
+  este mismo catch-all, y el `i64 0` que devolvía era la bajada **correcta** — sin una
+  rama propia documentada para ese caso, NYX2001 rompía el bare `return` y el compilador
+  dejaba de auto-compilarse (`licm.nx`/`borrow.nx` fallaban). Lección de la fase (misma
+  familia que el catch-all de `codegen.nx:6445` de la fase anterior): un catch-all puede
+  ser load-bearing para nodos **sintéticos** del parser — barrido de corpus obligatorio
+  antes de volver fatal un fallback. Colateral: `let r = 0..n` usado fuera de un `for`
+  ahora rechaza en vez de devolver `0`; `examples/test-dynamic-arrays.nx` (que dependía
+  del `range` fuera de `for`, antes segfault en runtime, luego NYX2001) se migró a
+  `.slice()`.
+- **codegen (NYX2002)**: método no soportado sobre una global — el caso real alcanzable
+  es un `const` de primitivo (`const N: int = 5; N.foo()`); las globales `var`/`let` ya
+  estaban registradas y no se veían afectadas.
+- **codegen (NYX2003)**: `field_access` sobre una expresión compleja (`f().campo`,
+  `a[i].campo`, `Point{...}.campo`) emitía Warning + `0` mudo — **incluso con un campo
+  válido**. Ahora es error duro con hint de binding intermedio (`let p = f(); p.campo`).
+- **codegen (NYX2004) — cambio de comportamiento deliberado**: un bound de trait violado
+  en la monomorfización (`fn f<T: Trait>` con turbofish explícito, o implícito sobre un
+  tipo sin impls locales) imprimía un warning y **seguía monomorfizando** — generando LLVM
+  potencialmente inválido río abajo. Ahora aborta, nombrando la **firma completa** del
+  método que falta implementar (`missing: fn area(self) -> float`, multi-bound incluido)
+  vía el helper nuevo `trait_method_sig_str`. La ronda de review confirmó que este NO es
+  solo un backstop de emergencia: es el camino **normal** con turbofish explícito, o
+  implícito cuando el tipo no tiene impls locales — la heurística de `semantic` (NYX1020)
+  sólo es estricta cuando SÍ hay impls locales del tipo, así que NYX2004 es la única
+  defensa real en esos casos.
+  > **Breaking (comportamiento, no firma)**: un generic call cuyo type-arg no satisface el
+  > trait bound, que antes compilaba con un warning impreso, ahora **aborta la
+  > compilación**. Radio medido ≈ 0 en este repo: barrido de 476 tests de
+  > `tests/compiler/` + `compiler/`, `std/`, `products/`, `web/` sin ningún hit de bound
+  > de trait violado en un generic call — el cambio es puramente correctivo (un programa
+  > que hoy compilaba bajo este patrón ya estaba generando LLVM potencialmente inválido).
+
+### Added
+- **Auditoría-ratchet** `scripts/testing/run_codegen_mute_audit.sh` (4ª línea de
+  `make test-ai-first`): los 4 marcadores NYX20xx no pueden desaparecer del código, y los
+  prints-mudos que quedan (baseline = 10, familia "campo no encontrado" — fallback
+  load-bearing del bootstrap) no pueden crecer. Autotest propio + controles negativos.
+- Tests: 4 fixtures nuevas de `NYX20xx` en `tests/compiler/errors/` + bloques custom +
+  chequeo de NYX2004 en `run_silent_failure_checks.sh` (errors 211→215).
+- `docs/SPEC.md`/`docs/SPEC.es.md`: tabla nueva "Codegen-phase codes" (`phase:"codegen"`,
+  alcanzada solo cuando semantic ya pasó limpio — todo lo que llega ahí es o bien un bug
+  del compilador, o bien un bound de trait que la capa de tipos no pudo cazar sola).
+
+### Known
+- **Limitación declarada del ratchet**: caza el patrón print-y-sigue conocido, NO un
+  catch-all nuevo totalmente mudo (return-default sin print) ni prefijos de mensaje
+  distintos — `grep` no caza silencio absoluto. La promesa completa la sostienen los
+  tests por rama + el barrido de corpus como práctica, no el ratchet solo.
+- 5 hallazgos del review final catalogados en `TASKS.md` (sin resolver en esta versión):
+  bound sobre un trait **inexistente** no dice "trait desconocido" (NYX2004 sugiere
+  implementar un trait que no existe); hint de NYX2004 no accionable sobre primitivos
+  (`impl Display for int` no es sintaxis válida en Nyx); el canal NDJSON (`NYX_DIAG=json`)
+  no cubre los códigos NYX20xx todavía; `NYX1011`/`NYX1012`/`NYX1020` (semantic) nombran
+  trait+tipo pero no la firma del método faltante como sí hace NYX2004; y un hallazgo de
+  composición — un struct con nombre de ≤2 caracteres bypasea tanto NYX1020 como NYX2004
+  (la heurística de type-param corto lo confunde con `T`/`U`), produciendo `.ll` inválido
+  con exit 0 que sólo `clang` detecta al linkear.
+
+## [0.22.20] — 2026-07-28
+
+**El fallo silencioso #1 está muerto: un campo inexistente ya no compila mudo.**
+
+`user.name` cuando el struct declara `nombre` COMPILABA, CORRÍA y evaluaba a `0` sin decir una
+palabra. No hacía fracasar el primer intento de un agente escribiendo Nyx — lo peor posible:
+le hacía *creer* que tuvo éxito y entregar un programa que da números plausibles y mal. Toda la
+maquinaria para atajarlo ya existía (`validate_struct_init` la usa hace tiempo para construcción
+de structs); sólo faltaba cablearla al camino de *acceso* a un campo.
+
+### Fixed
+- **semantic**: `validate_field_access`/`validate_field_assign` (`compiler/semantic.nx`) validan
+  ahora la existencia del campo vía un helper compartido, `check_field_exists`: si
+  `ty_of_expr(objeto)` resuelve a un struct conocido y ese struct tiene campos registrados, un
+  campo que no existe emite `NYX1017` bilingüe con sugerencia "did you mean" (Levenshtein) — en
+  vez de compilar y devolver `0`. Cubre `u.campo`, `u.campo = v`, `f().campo` (por el tipo de
+  retorno declarado de `f`) y, tras la ronda de review, `self.campo` dentro de un `impl` (el
+  self-type se bindea explícitamente para eso; los `impl` genéricos quedan fuera a propósito —
+  miss seguro, no falso positivo). Salvaguarda de cero-falsos-positivos: tipo desconocido o
+  struct sin campos registrados → no valida nada, el tipado gradual queda intacto.
+- **semantic**: los warnings dejaban de existir bajo `NYX_DIAG=json` — se suprimían enteros,
+  así que el mejor mensaje del compilador (el nuevo NYX1017 incluido) era invisible para
+  cualquier agente que consumiera el diagnóstico estructurado. Ahora salen como NDJSON con
+  `"severity":"warning"` (sin campo `code`, a diferencia de los errores), mismo esquema y
+  escapes; el modo texto queda bit-a-bit idéntico, y sólo se emiten en compilaciones válidas,
+  como antes.
+- **parser**: el catch-all de `parse_primary` emitía `print("ERROR: token inesperado en
+  primary")` sin contarlo — un binario que compilaba mudo con exit 0. Ahora es `NYX0107`,
+  contado, bilingüe, con el token real (valor y tipo) y línea/columna exactas vía `peek()`
+  (mismo patrón que el `NYX0105` vecino, más preciso que el `g_last_*` stale del `NYX0106` de al
+  lado). `docs/SPEC.md` ganó las filas `NYX0106` (faltaba en el catálogo) y `NYX0107`, y la doc
+  de `severity` dejó de afirmar "always error today".
+
+### Added
+- Tests: 5 nuevos en `tests/compiler/errors/` (field-access-typo, field-access-typo-fncall,
+  field-assign-typo, self-field-typo, parse-primary-unexpected) + una entrada NDJSON que fija
+  `NYX1017` bajo `NYX_DIAG=json` (errors 203→211).
+- Script nuevo `scripts/testing/run_silent_failure_checks.sh`: 3 checks con control positivo
+  real (campo alucinado por dos vías + warning visible en NDJSON), cableado a
+  `make test-ai-first`.
+
+### Known
+- Una función libre (no método de `impl`) con parámetro llamado `self` Y una anotación de tipo
+  real (`fn toma(self: Usuario)`) no queda cubierta: la rama nueva bindea al self-type
+  top-level en vez de resolver la anotación explícita, así que `self.campo_malo` ahí sigue
+  pasando `semantic` mudo. No es una regresión — antes de esta versión tampoco se validaba
+  nada en ese camino. Catalogado en `TASKS.md` junto con el miss documentado de `impl`
+  genéricos sin self-type binding.
+
+## [0.22.19] — 2026-07-27
+
+**La verdad de los gotchas**: de 21 advertencias a 1 trampa real.
+
+`LLM.md` es lo único que una IA sabe de Nyx — el lenguaje no existe en ningún corpus de
+entrenamiento — así que una advertencia falsa cuesta tanto como un bug. Una auditoría con
+sonda ejecutable por gotcha midió que de los 21 documentados, **4 mentían** (describían
+fallas que ya no ocurrían), **6 no eran advertencias** sino aclaraciones de que algo
+funciona, y sólo **3 eran bugs vivos**. Un quinto falso apareció al intentar escribir su
+test. Los tres bugs reales se arreglaron.
+
+### Fixed
+- **parser**: `let m: Map = {1: "uno"}` (clave no-string en map literal) compilaba con exit 0
+  y producía un binario que **no ejecutaba nada**, ni el `print` siguiente. `parse_primary`
+  sólo reconocía el map literal con lookahead STRING+COLON y el resto caía a un fallback que
+  imprimía el error **sin contarlo**. Ahora es `NYX0106`, contado y accionable.
+- **codegen**: los Maps anidados daban **SEGV al leerlos**, un gotcha documentado desde hacía
+  meses como "usá claves planas" y nunca investigado. La causa no era de memoria sino de
+  tipos: un Map como valor baja al mismo `i8*` que un String ya convertido a cstring, y el
+  `get` lo pasaba por `nyx_string_from_cstr`, leyendo memoria de struct como texto.
+- **codegen**: una lambda-que-captura y una nested-fn-que-captura **no podían coexistir** en
+  la misma función; la segunda perdía su entorno. Causa de una línea: `pre_scan_closure_env`
+  cortaba el scan de locals en la primera nested fn, con un comentario que declaraba la
+  limitación como intencional. Este gotcha, sobre-generalizado como "capture is BROKEN", le
+  costó a un usuario escribir un navegador de 2.400 líneas **sin un solo callback**.
+- **codegen**: un `float` sin anotar en una función con closure dejaba de compilar tras el
+  fix anterior — `infer_nyx_type_from_ast` ahora deduce el tipo de un binop aritmético.
+- **make**: `install-local` no copiaba `LLM.md`, así que la doc corregida **nunca llegaba** a
+  `~/.nyx` ni a los proyectos creados con `nyx init`.
+
+### Added
+- **Guardia anti-mentira**: `make test-ai-first` falla si un ítem de `LLM.md` §5.1-5.2 no
+  cita el test que lo respalda, si la cita apunta a un archivo inexistente, o si queda un
+  test huérfano. Los tres modos verificados con control positivo — más la guarda de que sin
+  `LLM.md` legible no puede reportar éxito.
+- Tests: `test-314` (Maps anidados), `test-315` (coexistencia de capturas),
+  `test-map-literal-nonstring-key`, y los ai-first `13`/`14`.
+
+### Changed
+- `LLM.md` §5 pasa de una lista plana de 21 a cuatro secciones con semántica distinta:
+  **1 trampa**, 6 reglas del lenguaje, 2 límites de plataforma, 8 ya-arreglados.
+
+### Known
+- Maps anidados: el fix es heurístico. Un Map que viene del **retorno de una función** no se
+  detecta y sigue rompiendo; el map externo debe ser homogéneo y el interno exige binding
+  tipado. Documentado con esa precisión.
+
+## [0.22.18] — 2026-07-26
+
+Los arrays que arma el **runtime C** llevan tag, y el tag **se propaga** entre arrays.
+
+### Fixed
+- **runtime (7 archivos C, 50 sitios)**: `split`, la request de `http_serve`, `stat`, `pipe`,
+  las claves de Map, `read_dir`, `read_bytes` y los headers/frames de HTTP/2 construían arrays
+  con todos los slots **sin tipo** — `"x " + partes[0]` imprimía el **puntero**. El workaround
+  (anotar `Array<String>`) no servía para los layouts heterogéneos: `stat` devuelve
+  `[int,int,int,bool,bool]`. Ahora cada constructor escribe el tag que ya conocía.
+- **codegen**: `dest.push(src[i])` **propaga el tag** del slot de origen en runtime — re-pushear
+  un String a otro array perdía el tipo. Restringido a índices sin efectos secundarios (literal
+  o identificador); con `src[f()]` no se propaga antes que evaluar `f()` dos veces.
+- **codegen**: `unshift` e `insert` no tagueaban (solo `push` lo hacía) — `unshift("s")` sobre un
+  Array vacío quedaba sin tipo. Ahora re-escriben el slot con `set_tagged`.
+
+### Changed
+- **semantic**: el warning E1 se **re-acota por tercera vez**, ahora al residuo medido: un slot
+  que vino de indexar una **expresión** (`dest.push(gen()[0])`), único caso donde propagar el tag
+  exigiría re-evaluar la llamada. El mensaje lo dice explícitamente en vez de culpar al runtime C.
+- **Sin tag a propósito** (documentado en el código): los valores de Map y los slots del iterador
+  son `i64` opacos — su tipo vive en el origen, afirmarlo ahí sería adivinar.
+
+### Docs
+- **`LLM.md` gotcha 19 corregido** (fricción C4, ciclo `nyx report --send`): decía que la captura
+  de locals estaba "BROKEN outside the happy path" y empujaba a guardar el estado de los callbacks
+  en globales — un usuario escribió un navegador de terminal entero **sin un solo callback** por
+  ese consejo. Los cuatro caminos que citaba funcionan. El límite real, medido y ahora
+  documentado: una lambda-que-captura y una nested-fn-que-captura **no coexisten** en la misma
+  función (la segunda pierde su entorno; es simétrico, y da error de compilación, no resultado
+  silencioso). Blindado en `tests/ai-first/12-closure-capture-paths.nx`.
+
+### Known
+- `dest.push(gen()[0])` sigue perdiendo el tipo (es lo que E1 avisa). Cerrarlo requiere que
+  `codegen_index` devuelva valor+tag juntos — cambio de contrato de retorno, catalogado.
+- **Maps anidados siguen dando SEGV al leerlos** (`outer.get("i")` de un Map insertado) — estaba
+  en LLM.md como gotcha 15 pero nunca catalogado; ahora sí, con repro. Workaround: claves planas.
+
+## [0.22.17] — 2026-07-26
+
+Lectura tipada de slots CHEQUEADA — cierra el último criterio de la spec de slots-tag
+("lectura de slot con tipo equivocado diagnosticada").
+
+### Fixed
+- **codegen + runtime**: `print(a[i])` inline sobre un Array sin tipo de elemento consultaba el
+  slot como i64 crudo — un float imprimía su **bit-pattern** (`4.6e18` para 1.5) y un String el
+  **puntero**. Ahora consulta el tag (mismo mecanismo que la concatenación de la Etapa 3).
+- **codegen + runtime**: `let f: float = a[i]` de un slot que guarda bits de double los pasaba por
+  `sitofp` (basura). Ahora el runtime decide por tag: FLOAT → bits; INT/BOOL/UNKNOWN → **widening
+  numérico histórico** (`1` → `1.0`, se preserva — NO es error); String → abort diagnosticado.
+- **codegen + runtime**: `let s: String = a[i]` de un slot int era **SEGV** (inttoptr del entero).
+  Ahora un mismatch definido (slot int/float/bool leído como String) **aborta ordenado** con
+  mensaje accionable (slot, tipo real, valor, sugerencia de conversión). `NYX_SLOT_CHECK=off`
+  lo desactiva (escape hatch, espejo de NYX_BORROW).
+
+### Changed
+- **Política de tagueo MEDIDA, no especulada**: un `i64` solo se taguea INT cuando el elemento es
+  un **literal numérico** en el AST (literales de array y push). La política previa (todo i64 →
+  INT) tagueaba punteros re-empacados (`[node.data[0], x]`) y hacía abortar en falso la lectura
+  chequeada — **medido: 9 de los 11 módulos del compilador abortaban al recompilarse**; con la
+  política conservadora el fixed point ×2 es byte-idéntico con el gating activo.
+
+### Known
+- El chequeo cubre `let` anotado (String/float) sobre receiver identificador; `var x: String =
+  a[i]` y receivers de expresión siguen por el camino histórico (catalogado).
+- Un int que viaja por una VARIABLE (`let n = 42; a.push(n)`) queda UNKNOWN → una lectura String
+  de ese slot sigue siendo el SEGV histórico (el tag no puede afirmarse sin riesgo de falso
+  positivo; ficha raíz en TASKS.md).
+
+## [0.22.16] — 2026-07-26
+
+Cierre de **slots-tag**: Etapas 4 y 5 de 5 (spec:
+`docs/design/specs/2026-07-26-array-slots-tag-design.md`).
+
+### Fixed
+- **runtime + codegen**: `contains`/`indexOf` con un needle **String** comparan por **CONTENIDO**
+  (`nyx_string_equals`) los slots tagueados como String — antes comparaban punteros, así que dos
+  strings iguales construidas por vías distintas no matcheaban. La identidad cruda se chequea
+  primero (ints intactos, mismo puntero sigue matcheando) y un slot sin tag jamás se dereferencia.
+  Funciona en el camino bindeado Y encadenado, y en arrays heterogéneos. (test-312)
+- **codegen**: `f().indexOf(s)` (encadenado) con needle String emitía **IR inválido** — ese camino
+  ni coercionaba el puntero. Cazado por el TDD de la etapa.
+- **runtime**: invariante nuevo — **"tags[i] describe siempre a data[i]"**. `insert`/`remove`/
+  `shift`/`unshift`/`reverse` movían los datos SIN mover los tags, y `push`/`set` no limpiaban el
+  tag del slot que escribían: un tag String huérfano sobre un slot int era un **SEGV latente**
+  desde la Etapa 3. Ahora los movimientos llevan los tags en paralelo y toda escritura sin tipo
+  resetea a UNKNOWN.
+
+### Added
+- **codegen**: `push` con argumento estáticamente String **taguea el slot** — pieza de la Etapa 2
+  que faltaba; sin ella la comparación por contenido solo funcionaba en arrays nacidos de literal.
+
+### Changed
+- **semantic**: el warning E1 (`"s" + arr[i]` con Array pelado) pasó de certeza a **condicional
+  honesto**: desde las Etapas 1-4 el caso común funciona (slots tagueados); el residuo son los
+  arrays armados por el runtime C (slots sin tag). Se retirará cuando esos constructores tagueen
+  (catalogado en TASKS.md).
+
+### Known
+- La **lectura tipada** de un slot con tipo equivocado sigue sin diagnóstico (verificado contra
+  este HEAD): `a.push(42); let s: String = a[0]` → SEGV; `a.push(1.5); print(a[0])` → bit-pattern.
+  Cerrarlo = extender el consumo del tag a esos contextos + push tagueando float/bool/int
+  (ficha raíz en TASKS.md, sesión propia).
+- `http_parse_url` ya retorna slots tagueados (literal Nyx) — la migración a struct real queda
+  como follow-up de ergonomía, no de corrección.
+
+## [0.22.15] — 2026-07-26
+
+Arranque de **slots-tag**: los slots de Array llevan etiqueta de tipo. Etapas 1-3 de 5
+(spec: `docs/design/specs/2026-07-26-array-slots-tag-design.md`).
+
+### Fixed
+- **codegen + runtime**: `"x" + a[1]` imprimía el **puntero como número** mientras `a[1] + "y"`
+  funcionaba — el mismo valor con dos resultados según el orden de los operandos, porque el
+  compilador *adivinaba* qué contenía cada slot y adivinaba distinto de cada lado. Ahora cada slot
+  lleva su tipo y la conversión lo consulta. Un array heterogéneo (`[1, "dos", 3.5, true]`) se lee
+  correctamente en sus cuatro elementos. (f16fbeb, test-311)
+- **runtime**: la familia `_ptr` de `runtime.c` era una **segunda implementación de arrays** que
+  construía el struct a mano y hacía su propio resize; ahora delega en la única, así que no puede
+  volver a desalinearse con ella. Los literales de array se construyen por esa vía.
+
+### Added
+- **runtime**: buffer de tags **paralelo** a los datos (`push_tagged`/`set_tagged`/`get_tag`).
+  `data` no cambia de layout, así que siguen válidos los accesos crudos de `maps.c`/`persist.c`/
+  `file-io.c` y los serializadores. Un slot sin taguear conserva el comportamiento previo.
+
+### Known
+- `contains`/`index_of` sobre arrays de String siguen comparando punteros (lo cierra la Etapa 4).
+- `"x" + m["k"]` (concatenar con índice de **Map**) no compila — **preexistente**, verificado
+  retrocediendo 3 commits; esta etapa lo destapó, no lo causó. Catalogado.
+- La inferencia de `Array<T>` mira **solo el primer elemento** del literal, así que `[1,"dos"]` se
+  registra como `Array<int>`. Es la causa próxima del gotcha; los tags le ganan en la concatenación,
+  pero la inferencia sigue siendo incorrecta en otros caminos. Catalogado con propuesta de fix.
+
+## [0.22.14] — 2026-07-26
+
+### Changed (cambio de contrato del compilador)
+- **codegen**: un método NO reconocido sobre un receiver ya no compila devolviendo `0` en
+  silencio — ahora es un error de compilación con diagnóstico accionable (nombra el método y el
+  tipo del receiver, aclara que antes evaluaba a 0, sugiere bindear el receiver y apunta a
+  CAPABILITIES.md). Era la causa **estructural** de una familia de bugs silently-wrong con al
+  menos 3 apariciones en el repo: `f(x).length()` sobre Array (v0.22.13), `obj.campo.remove(k)`
+  como no-op (test-274) y `to_string` sobre primitivos (dogfooding WASM).
+  **Medido antes de aplicarlo**: con el error activo, regresión 330/330, errors y los 6 stacks
+  quedan verdes — cero rutas legítimas del corpus dependían del fallback. Si tu código deja de
+  compilar por esto, antes estaba evaluando a 0 sin avisarte.
+
+### Known
+- `contains` sobre un `Array` está roto en ambos caminos (hallazgo colateral del experimento): el
+  codegen lo despacha por la rama de Map y emite IR inválido, pese a que el runtime ya tiene
+  `nyx_array_contains`. Catalogado en TASKS.md con el diagnóstico completo.
+
+## [0.22.13] — 2026-07-26
+
+### Fixed
+- **codegen**: los métodos de `Array` encadenados sobre el retorno de una función
+  (`f(args).length()`) compilaban sin error y devolvían 0 — el camino de receiver-expresión no
+  tenía ninguna rama de Array y caía a un catch-all mudo. Ahora funcionan `length`, `indexOf`,
+  `join`, `reverse`, `slice`, `push`, `pop`, `shift` y `unshift`, igual que sobre una variable
+  bindeada. `reverse`/`push` conservan su contrato void + mutación in-place para no divergir
+  según cómo se los invoque. (f68fde4, test-309)
+
+### Known
+- `contains` encadenado sobre un retorno `Array` sigue devolviendo 0 — bindear primero (gotcha 24
+  de LLM.md). El catch-all mudo que causa esta familia de bugs queda catalogado para una sesión
+  dedicada, con el método de medición correcto anotado en TASKS.md.
+
+## [0.22.12] — 2026-07-25
+
+Cosecha [dogfooding:friction-portscan] — los 2 P1 del escáner de red.
+
+### Fixed
+- **resolver**: `import "std/prelude" as p` dentro de un submódulo daba link error
+  `use of undefined value '@p'`. No era codegen: `resolve_source` tiene dos loops que procesan
+  imports y no eran simétricos — el del archivo principal emite el `module <alias> = [...]`
+  siempre, el transitivo solo lo hacía para módulos no importados, y prelude viene auto-cargado
+  y pre-registrado, así que el alias nunca se declaraba. (5873f51, test-308)
+- **pm**: `nyx run` en modo proyecto descartaba los argumentos del programa — ejecutaba el
+  binario pelado, así que `get_args()` solo veía argv[0] ni con `--`. Ahora los reenvía,
+  consumiendo los flags propios del PM y tratando como literal todo lo posterior a `--`. Los
+  args se citan en comillas simples POSIX: `exec_code` va por `system()`, así que sin citado un
+  arg con espacios se partía y uno con `;` se ejecutaba. (b06000a)
+
+### Changed
+- **pm/wrapper**: `nyx run --help` muestra la ayuda del comando sin compilar (convención
+  cargo/npm; `nyx run -- --help` se lo pasa al programa) y `nyx help [cmd]` dejó de buscar un
+  archivo llamado "help".
+
+## [0.22.11] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] A2 + A3 + B3 — **cierra la cosecha completa del navegador**
+(A, B, C y D).
+
+### Fixed
+- **compiler (nyx/lexer/parser/semantic/codegen)**: dos módulos con una global homónima (`var g` en
+  cada uno) no linkeaban. El link error era la mitad visible: el registro de globales se keyea por
+  nombre pelado, así que el segundo módulo inlineado PISABA al primero y las fns del módulo A
+  leían/escribían la global de B (scoping roto y silencioso). Como `resolve_source` inlina los
+  imports y el AST no conservaba el módulo de origen, el fix propaga un marcador nuevo por el
+  pipeline: `//#module <path>` → token `MODULE_MARKER` → nodo `module_marker` (contrato ASTNode
+  intacto) → codegen emite `@<modulo>__<global>` y re-afirma por módulo al entrar a cada función.
+  Las globales del archivo principal quedan peladas: cero cambio de IR para lo no importado.
+  (6b9d08e, test-306)
+- **semantic + codegen**: el literal `0` es ahora la constante de puntero nulo, asignable a
+  cualquier `*T` — antes NO había forma de expresar un puntero nulo (ni global ni local), así que un
+  handle no podía vivir en una global vacía y abrirse después. Solo el 0 exacto: cualquier otro
+  entero sigue siendo NYX1003. (test-307)
+- **driver**: el banner imprimía "v0.21.0" hardcodeado con toolchain v0.22.x — el usuario no sabía
+  qué versión citar al reportar. Ahora lee el archivo `VERSION`, como el resto del toolchain. (B3)
+
+## [0.22.10] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] D6 — cliente HTTP: headers repetidos + docs. Cierra la
+cosecha del navegador (D1-D6).
+
+### Added
+- **std/http**: `http_find_headers(headers, name) -> Array` — TODOS los valores de un header
+  en orden de aparición, matching case-insensitive (RFC 9110; los servers HTTP/2 mandan
+  `set-cookie` en minúscula). Set-Cookie repetido ya no pierde cookies (Wikipedia manda 6; el
+  singular devolvía solo la primera). El singular `http_find_header` queda intacto
+  (exact-match, primer valor — contrato legacy ahora documentado). (test-305)
+
+### Docs
+- **std/http**: `http_get`/`http_request` documentan que NO siguen redirects 3xx (el caller
+  decide con Location); `http_parse_url` documenta su layout Array MIXTO con tipos por slot
+  (leer port/secure como String = SEGV — el fix real sigue siendo Array-slots-tag, diferido).
+
+### Known (colateral cazado escribiendo el test, catalogado P1)
+- `f(args).length()` encadenado sobre el retorno `Array` de una user fn devuelve 0 SILENCIOSO
+  — bindear a una variable primero. TASKS.md + gotcha 24 de LLM.md. Familia slots-sin-tag.
+
+## [0.22.9] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] D4 + D5 — columnas de terminal y encodings legacy.
+
+### Added
+- **std/unicode**: `wcwidth(codepoint)` (contrato wcwidth(3)/Kuhn: NUL→0, controles→-1,
+  combinantes/zero-width→0, East Asian Wide/Fullwidth + emoji→2, resto→1; tablas curadas —
+  rangos raros degradan a 1, nunca crash) y `display_width(s)` (columnas de terminal de un
+  String: decodificador UTF-8 propio + suma de wcwidth; controles 0, bytes malformados 1
+  columna por byte). `char_length()` cuenta codepoints; esto cuenta COLUMNAS — las TUIs con
+  CJK/emoji dejan de desalinear. (0093dc4, test-303)
+- **std/unicode**: `latin1_to_utf8` (ISO-8859-1 → UTF-8, byte→codepoint 1:1, total) y
+  `windows1252_to_utf8` (tabla cp1252 en 0x80-0x9F — comillas tipográficas, guiones, €, ™;
+  slots indefinidos pasan como C1, semántica WHATWG de browsers). Páginas legacy dejan de
+  verse como mojibake. (test-304)
+
+## [0.22.8] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] D2 + D3 — codepoints y entidades HTML de punta a punta.
+
+### Added
+- **std/unicode** (módulo NUEVO): `utf8_encode(codepoint) -> String` — codifica cualquier
+  codepoint Unicode a sus 1-4 bytes UTF-8 (`chr()` es byte-level; esta es la mitad codepoint
+  que faltaba). Función total: negativo / > U+10FFFF / surrogates → U+FFFD, la semántica que
+  HTML da a referencias numéricas inválidas. Hogar futuro de wcwidth (D4) y conversiones de
+  encoding (D5). (94419b8, test-301)
+
+### Fixed
+- **std/url**: `html_unescape` reescrito como scanner de pasada única — el encadenado de
+  `replace()` anterior doble-decodificaba (`&amp;lt;` → `<` en vez de `&lt;`) y no soportaba
+  referencias numéricas (`&#233;` / `&#xE9;` quedaban crudas, la fricción real del navegador).
+  Ahora: numéricas dec/hex vía `utf8_encode` (inválidas → U+FFFD, clamp anti-overflow), tabla
+  curada de ~50 entidades nombradas (antes 7), y lo malformado/desconocido queda literal como
+  en los browsers. `std/url` importa `std/unicode`. (test-302)
+
+## [0.22.7] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] D1 — descompresión gzip/deflate para HTTP.
+
+### Added
+- **std/compress**: `inflate(data)` (auto-detecta zlib/gzip), `gunzip(data)` (gzip explícito,
+  para `Content-Encoding: gzip`) e `inflate_raw(data)` (raw deflate) — descompresión por
+  streaming vía zlib (`inflateInit2`, sin necesidad del tamaño original, binary-safe, "" si
+  falla). Desbloquea clientes HTTP reales; el usuario del navegador puede jubilar su inflate
+  propio de ~400 líneas. (aa66abd)
+
+### Fixed
+- **runtime/compress**: la llamada a `inflate` de zlib desde el runtime colisionaba con el
+  símbolo global sin mangle `@inflate` que el codegen emite para `pub fn inflate` → el stub Nyx
+  ganaba el link y `nyx_inflate` se llamaba a sí mismo (parecía loop infinito). Resuelto vía
+  `dlopen("libz.so.1")` + `dlsym` (patrón sqlite_adapter). Landmine general de símbolos
+  catalogada para fix a nivel compilador. (aa66abd)
+
+## [0.22.6] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] A7 + A8 — dos fallos SILENCIOSOS de tipos/aridad.
+
+### Fixed
+- **codegen**: `let r = match v { ... => "str" }` SIN anotación de tipo imprimía el puntero del
+  String como número — `infer_nyx_type_from_ast` no tenía caso para `match`, así que el destino
+  caía a int. Ahora infiere el tipo de la expresión match por sus ramas (primera rama inferible,
+  block-arm por su última sentencia). Fixed point global. (580593b, test-298)
+- **semantic**: los métodos builtin de String aceptaban argumentos DE MÁS en silencio
+  (`s.startsWith("hola", 99)` → true ignorando el 99; `s.trim(42)` → sin error). Ahora una tabla
+  de aridad máxima rechaza el exceso con NYX1006 (mismo código que las user-fns), preservando el
+  overload legítimo `indexOf(needle)`/`indexOf(needle, from)`. (6070dba, test-299 + 3 error tests)
+
+## [0.22.5] — 2026-07-25
+
+### Fixed
+- **codegen (P0, afecta a TODO programa Nyx)**: `alloca` de un `let`/`var`/variable de `for-in`
+  declarado DENTRO del cuerpo de un loop se emitía en el bloque del cuerpo, no en el entry —
+  LLVM solo lo libera al retornar la función → ~16 bytes de stack filtrados por iteración →
+  **stack overflow / SIGSEGV** en loops largos (~500k vueltas con stack de 8MB; solo a -O0,
+  que es como linkea `nyx run` — por eso las suites -O2 nunca lo vieron). Diagnosticado como
+  "corrupción de heap" en el reporte (A9 friction-browser); resultó ser el stack. Fix:
+  `llvm.stacksave`/`llvm.stackrestore` reclaman los allocas de cada vuelta en while/for
+  (range/iterator/array)/while-let. Sound: los valores que escapan del loop se copian al heap
+  GC antes de guardarse (verificado en IR) → stackrestore nunca cuelga un escape bien-definido.
+  Inerte a -O2 (mem2reg elimina el par). Fixed point global byte-idéntico. (61b9821, test-297)
+
+- **runtime (SIGWINCH)**: `read_byte_timeout(-1)` ahora despierta con SIGWINCH — `raw_mode_enter`
+  instala un handler no-op señal-safe (sin pisar el del usuario, sin SA_RESTART) → poll()
+  recibe EINTR y retorna -2 en resize. La promesa de LLM.md §4 se vuelve verdad. (c668a78, C1)
+
+### Changed
+- **pm**: el AGENTS.md que genera `nyx init` apunta a https://nyxlang.com/by-example/ (el
+  directorio local no existía) con salida offline vía `nyx capabilities`. (8fcda34, C2)
+- **pm**: `nyx capabilities` ahora indexa `std/regex` (sus fns son builtins — se agregaron
+  wrappers de índice pub); `map_size` retirado del índice hasta arreglar su bug de tamaño.
+  (dddc9cd/e230267, C3)
+
+## [0.22.4] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] A1 + B1 + B2 — los dos P1 AI-first del reporte del
+navegador y la ambigüedad de parser que los disparaba.
+
+### Fixed
+- **parser**: struct-literal ya no se parsea en posición de cabecera (`if`/`while`/`for`/
+  `if let`/`while let`, estilo Rust/Go) — `if b { }` con then vacío se comía el bloque como
+  struct-init (`b {}`) y moría con NYX0101 en el else. El flag se apaga dentro de los 4 grupos
+  delimitados (parens, call-args, índice, array-literal). (0a2a768, test-296)
+- **pm/wrapper**: `nyx run archivo.nx` YA NO traga los diagnósticos — el wrapper redirigía
+  compilador+clang a /dev/null; ahora el log fluye a stderr (texto y NYX_DIAG=json NDJSON,
+  espejo de nyx build) con exit≠0 conservado. Era "el problema que más tiempo consumió" del
+  reporte. (a77b317, 3 tests del wrapper real)
+
+### Added
+- **pm/wrapper**: `nyx run archivo.nx` deduce el proyecto subiendo hasta nyx.toml (como
+  nyx build) — los `import "src/..."` resuelven sin NYX_PROJECT_DIR; nunca pisa un env
+  explícito; fuera de proyecto sigue igual. (eb78979)
+
+### Notas
+- Catalogados: `match p {}` vacío hereda la ambigüedad struct-init (pre-existente);
+  field-access sobre struct-literal temporal devuelve 0 (gap de codegen).
+
+## [0.22.3] — 2026-07-25
+
+Cosecha [dogfooding:friction-browser] A4-A6 — los 3 bugs de compilador/runtime del reporte
+del navegador de terminal (usuario anónimo, ~2.400 líneas de Nyx), resueltos en <48h.
+
+### Fixed
+- **parser**: el lookahead del turbofish cruzaba límites de sentencia — `while i < xs.length()`
+  seguido de CUALQUIER `>` posterior en el archivo se parseaba como type-args fantasma
+  (NYX0101 "en línea lejana"). Bound monotónico: el escaneo aborta ante el primer token
+  ilegal en una lista de tipos (whitelist verificada token a token contra la gramática;
+  por construcción no puede romper turbofish legítimo). (885cf65, test-294)
+- **runtime**: `chr(0)` colapsaba a `""` (path C-string) — construir Strings binarios por
+  concatenación perdía los NUL en silencio. `nyx_string_from_char` ahora construye con
+  longitud explícita; cubre `chr()` y `String + i8/u8`. (5076734, test-295 + ai-first/11)
+- **runtime/GC**: agotar el heap de Boehm producía SIGSEGV seco (GC_malloc → NULL → deref sin
+  check en strings.c, probado por core dump). Ahora `GC_set_oom_fn` (instalado por constructor)
+  aborta ORDENADO con mensaje bilingüe y exit(1) — cualquier alloc site queda cubierto.
+  Shim wasi actualizado (no-op). Test determinista por fork con cap de heap. (46bbc3a)
+
+### Notas
+- Hallazgo separado catalogado: `nyx_runtime_init` es código muerto — el cap de 512MB del GC
+  nunca estuvo activo en ningún binario; activar un techo = decisión aparte (tuning disponible
+  hoy vía env `GC_MAXIMUM_HEAP_SIZE`).
+- `write_file` no es binary-safe (ABI char*) — catalogado (hallazgo colateral de A5).
+
+## [0.22.2] — 2026-07-24
+
+### Fixed
+- **exec() honra su contrato String** (fricción de usuario real, reportada 3 veces): capturaba
+  NADA y devolvía el exit code como i64 tipado String → SEGV con exit≠0, "" silencioso con
+  exit 0. Ahora `exec(cmd) -> String` captura stdout vía popen (binary-safe, strip de newlines
+  finales estilo `$()`, "" si no se pudo ejecutar, stderr pasa a la terminal) y el nuevo
+  `exec_code(cmd) -> int` devuelve el exit code (comportamiento previo). Callers del toolchain
+  migrados (build/test/playground); `let x: int = exec(...)` ahora es ERROR de compilación
+  accionable (antes miscompile silencioso). Tests: ai-first nuevo + regression + 58 asserts C.
+  (9d60422)
+
+## [0.22.1] — 2026-07-23
+
+Campaña "revisión de pendientes 2026-07-23" — bug fixes del core + saneamiento documental.
+
+### Fixed
+- **std/web**: `req_json` leía un shape de `json_parse` que nunca existió (lista de pares vs
+  arrays paralelos keys/vals) → "Array es NULL"/SEGV en runtime desde su creación. Reescrito
+  sobre `parsed[1]`/`parsed[2]` (patrón `json_get`). Primer test que lo ejercita (test-290). (2ac3064)
+- **driver**: el binario crudo ignoraba argv y compilaba un fuente ausente/vacío como "✓" exit 0.
+  Ahora: argumento desconocido → error bilingüe + hint del CLI wrapper + exit(1); fuente
+  inexistente o vacía → error bilingüe + exit(1). Tests test-driver-unknown-arg /
+  test-driver-missing-source (errors 188→190). (df886b9)
+- **fmt**: `fmt_trait` leía d[1] (supertraits) como si fueran las firmas — **segfault** con
+  cualquier trait con supertrait — y dropeaba los bodies de default methods; `fmt_impl_trait`
+  perdía los assoc types. Ahora: supertraits en el header, `type X = C` emitidos, bodies de
+  default methods, filtrado de __assoc_type__ (GAT params preservados). 2 fixtures round-trip
+  nuevos (idempotencia + recompilación). (e38a56b)
+- **parser**: `#[affine] pub struct` caía a un error-node SILENCIOSO (sin p_diag) → el struct
+  desaparecía y el drop determinista se perdía sin diagnóstico (gap catalogado 2026-07-17,
+  esquivado por std/llm). Rama PUB en el dispatcher de atributos (emite export+attr, codegen/
+  borrow ya lo consumían) + fallback contado. (5cb21e5)
+- **codegen**: nested fns homónimas en outers distintos colisionaban al linkear
+  ("invalid redefinition"). Mangle transversal `<outer>__<inner>` en define/registro/resolución.
+  (2acfd7c; scope: la colisión — captura de Fn-value fuera del outer sigue catalogada)
+
+### Removed
+- **codegen**: `ctx.meta_buffer` (metadata DWARF huérfana — nunca emitida ni referenciada;
+  los attribute-groups reales ya se emiten inline). IR de usuario byte-idéntico. (a6d59f9)
+
+### Docs / proceso
+- TASKS.md saneado: cerradas con evidencia char_substring (E2), cripto Web Push (0.20.0),
+  sig_lookup O(1) (D4); el follow-up del warning E1 investigado y DESCARTADO con evidencia
+  (los contextos tipados ya post-coercionan; FP permanente vía prelude); colas stale de
+  deploys/PERSIST actualizadas; 4 ítems grandes anotados como sesión dedicada. (5ccdafa)
+- CLAUDE.md 78K→37K (bitácoras → docs/SESSION_LOG.md restaurado y fusionado); agentes y
+  skills de .claude/ reparados (frontmatter/formato directorio). (93f7609, f6bc5e7, 47a1229)
+- Paths de la migración de layout ~/nyx/ en deploy/ y scripts/. (d840977)
+
+## [0.22.0] — 2026-07-22 — MINOR: campaña integral — SCAN cursor-estable + borrow sin deuda + warnings + codepoints
+
+Campaña integral de pendientes (fases A–F, autorizada por Ottavio; plan
+`docs/design/plans/2026-07-21-campana-integral-pendientes.md`). Temas: la garantía
+de iteración de Redis hecha real en el core, el borrow checker sin casos unsound ni FP
+conocidos, la primera infraestructura de warnings del semantic, y substring por
+codepoints sin romper el contrato bytes.
+
+### Added — runtime / builtins
+- **`map_scan(m, cursor)` — iteración cursor-ESTABLE ante resize** (dictScan de Redis,
+  reverse-binary por HOME bucket, adaptado a Robin Hood open addressing): una key
+  presente durante todo el scan aparece ≥ 1 vez aunque el Map se redimensione a mitad.
+  `nyx_map_scan`/`nyx_map_scan_page` + builtin; base del SCAN Redis-equivalente de
+  nyx-kv (criterio verificado: 100/100 corridas de `scan_iter` con writer concurrente
+  forzando resizes, 0 keys perdidas). (be5ff7a)
+- **`s.char_substring(from, to)` — substring por CODEPOINTS UTF-8** (aditiva; el
+  contrato "strings = bytes" v0.14 NO cambia): [from, to) en codepoints con clamps,
+  espejo de `substring`. (48e1c74)
+
+### Added — semantic
+- **Primera infraestructura de WARNINGS no-fatales** (`sem_warn`; modo texto — bajo
+  `NYX_DIAG=json` se suprimen). Primer usuario: concatenar `arr[i]` de un `Array` SIN
+  tipo de elemento con un String avisa (el slot i64 crudo se lee sin tag y codegen
+  adivina) y sugiere el idiom `Array<T>` / binding tipado. (9810b98)
+
+### Fixed — borrow checker / T4c (FASE D: sin deuda conocida)
+- **Doble-drop de `x.drop()` explícito RESUELTO** — era el ÚNICO caso unsound de T4c:
+  un método de receiver `self` PLANO sobre un local afín-con-Drop apaga el drop flag
+  del caller en el call-site (semántica de move, igual que un arg by-value); `&self`
+  es el modo nuevo "ref" (presta, no consume). (189fbf5)
+- **`&mut self.f = &x` ahora marca NYX1222** (el receiver viaja por puntero) y
+  **`*p = &x` a través de un ptr-param** gana el check del vector B en `deref_assign`.
+  `self` plano/`&self` no marcan (bajan a copia). (f1b3b90)
+- **FP de capturas en lambdas MUERTO**: las capturas son una tercera categoría de
+  lifetime (slot 6 del tmap — viven en el SharedEnv: ni sobreviven-al-frame ni
+  frame-bound), heredadas SOLO fn→fn-anidada. **`while_let` ganó handler**: su body
+  ahora se borrow-checkea. (8736676)
+- **Registro de firmas inter-proc Array→Map** — `sig_lookup` O(1) por call-site. (0849de8)
+- **Gate de auto-conformidad v1.0 VERDE**: `NYX_BORROW=error` sobre los 16 módulos del
+  compilador + std/owned/llm/arena → 0 diagnósticos.
+
+### Fixed — codegen (FASE A, sesión 2026-07-21)
+- Backlog completo de bugs con repro: `Map.remove()` sobre field-access, coerción
+  let-enum, match block-arm que perdía el valor, combinators Option/Result con payloads
+  tipados, bindings `Fn` de patrones match, fn nombrada cross-module como arg Fn,
+  `fn run()` de usuario vs desugar de spawn, pre_scan de structs capturados. El
+  framework VDOM (std/vdom, std/component) quedó SIN workarounds. (test-274..281)
+
+### Stacks (repos propios, mismos días)
+- **nyx-kv**: SCAN cursor-estable adoptado; follow-ups del review (cap de bytes en
+  MULTI, TTLs inválidos → error como Redis, fsync del dir padre post-rename, métricas
+  sin inflar); política PERSIST cerrada; pestaña Friction del dashboard; backup diario
+  rotado del namespace admin; fix del login (vendor stale). DESPLEGADO.
+- **nyx-serve**: flaky WS resuelto (era del harness — coalescing TCP) + `req[5]==413`
+  adoptado en el keep-alive.
+- **nyx-db**: lock global del executor → RWLock — lecturas concurrentes 232→390 q/s
+  (~1.68x, medido).
+
+### Tests
+- Regression **305** (ARM64) · errors **185/0** · runtime **18 suites / 772 asserts** ·
+  compiler **539**. Fixed point verificado en cada commit de compilador.
+
+---
+
+## [0.21.0] — 2026-07-21 — MINOR: primitivos de runtime + strings binary-safe + LLM bindings + frontend VDOM/router
+
+121 commits desde v0.20.1, agrupados (autorizado por Ottavio). Temas: primitivos de
+concurrencia/durabilidad/red que los stacks venían pidiendo por dogfooding, el contrato
+"strings = bytes" hecho REAL en toda la familia de búsqueda, la primera ruta de
+inferencia LLM (llama.cpp), y el frontend WASM completo (VDOM + router + SPA).
+
+### Added — runtime / builtins
+- **Condition variables**: `condvar_new/wait/signal/broadcast/timedwait` (pthread,
+  CLOCK_MONOTONIC; timedwait → 0 señalado / 1 timeout). (e7ead96)
+- **RWLock** multi-reader/single-writer: `rwlock_new/rdlock/wrlock/tryrdlock/trywrlock/
+  unlock/destroy` (try* → 0/1; NULL-safe). Habilita lecturas concurrentes en nyx-db
+  (adopción = sesión del stack). (5c87329)
+- **`fsync(fd)` / `fdatasync(fd)`**: durabilidad real de I/O — sin esto el WAL/snapshot
+  de los stacks era ilusorio ante corte. (0a5a052)
+- **TLS no-bloqueante**: `tls_wait_readable(h, ms)` (SSL_pending + poll; POLLIN antes
+  que HUP) y `tls_read_nonblock(h, n)`; EOF real detectado vía flag `h->eof` → cierra el
+  busy-spin del túnel WS de nyx-proxy. (26ea0ee, 50d74a3, 6e32786)
+- **`indexOf(needle, from)`**: overload con offset (índice absoluto o -1; clamps;
+  needle vacío estilo JS; binary-safe). El 2º arg antes se DESCARTABA en silencio;
+  semantic ahora tipa el `from` como int (NYX1005). (cd8aa1c)
+- **Cap de body HTTP configurable**: `NYX_HTTP_MAX_BODY` (default 1MiB inclusivo) +
+  slot 6 ADITIVO de error en el request (`0` ok / `413` sobre el cap — antes body ""
+  SILENCIOSO); `http_serve`/`http_serve_mt` responden 413 solos; el parser de std/http
+  gana el cap que NO tenía (allocación dictada por el peer). E2E nuevo
+  `tests/integration/http_body_cap/`. (1538ed2)
+- **`string_to_int_or` / `string_to_float_or`**: parseo seguro con default — un dato de
+  red corrupto ya no mata el proceso (incidente venezuelainfo 2026-07-16). (4f4bcce)
+
+### Added — FFI / LLM (dirección GPU/tensores, sub-proyecto 1)
+- **`c_fn_ptr(fn) -> *i8`**: puntero C-callable crudo de una fn Nyx top-level (closures
+  rechazadas compile-time) + **`string_from_cstr(*i8) -> String`**. Contrato ABI =
+  responsabilidad del usuario. (29541c9, 72090c8)
+- **`std/llm` + `runtime/llama_adapter.c`**: `llm_load` (LLM afín + Drop determinista),
+  `llm_generate(&l, ...)`, `llm_generate_stream` (tokens C→Nyx vía c_fn_ptr). dlopen
+  lazy de libllama.so (tag b4689), structs opacas 512B, CI contra stub determinista.
+  ⚠️ Validación con lib+modelo REALES pendiente (`scripts/llm-real-demo.sh`, máquina
+  local). (f646d53, 52784be)
+
+### Added — frontend WASM (VDOM + router + SPA)
+- **`std/vdom`** (VNode/Patch/vdiff, data pura testeable nativo), **`std/dom`** por
+  handles, **`std/component`** (mount/update con diff quirúrgico), **`std/routematch`**
+  + **router cliente hash** (+externs hashchange), demo contador y **todo-spa** de
+  referencia. Suite wasm → 22 checks. (8579c5c..e3a7dd3)
+- **Parser: lambdas capturan locals** (y `spawn` captura scope) — las pending_lambdas se
+  insertan en el punto de uso, no en posición 0. Desbloqueaba callbacks/handlers con
+  estado. (789c881, c692a6b)
+
+### Fixed — contrato "strings = bytes" REAL (binary-safe)
+- **TODA la familia de búsqueda/comparación sobre `nyx_string*`** operaba con
+  strcmp/strstr y cortaba en el primer NUL embebido: `equals`/`compare`/`contains`/
+  `indexOf`/`startsWith`/`endsWith`/`replace`/`split` migrados a longitud
+  (helper `nyx_memmem` propio, portable a wasi). El `==`/`!=` de Strings NO pasaba por
+  el runtime (codegen emitía strcmp sobre cstr en 4 sitios) → `nyx_string_equals`.
+  Repro real: el multipart de nyx-serve parseaba 24B de más. (b04fff2)
+- **Aliases snake_case** `starts_with`/`ends_with`/`to_upper`/`to_lower` devolvían 0 EN
+  SILENCIO (semantic los tipaba, codegen no los despachaba). (612fdd7)
+- **`https_get`/`https_post` des-chunkean** `Transfer-Encoding: chunked` (runtime/tls.c
+  — el comentario que lo declaraba innecesario era falso y tiró un servicio en
+  producción). (fa69192)
+
+### Fixed — codegen / tooling
+- Carrera de builds concurrentes: `NYX_SRC` — `script.nx`/`.ll` únicos por invocación
+  en `scripts/nyx` y `nyx build` (el Makefile queda serial a propósito). (f2a2445)
+- `fmt_impl` re-emite `<T>` del header y target del impl genérico (el output volvía a
+  no compilar); primer harness de tests de fmt. (8f55bb7)
+- Literal float / negativo / bool / struct en **array GLOBAL** (rework del handler vía
+  `codegen_array_literal`); `infer_nyx_type_from_ast` maneja `unop`. (96d3c38, 61cb870)
+- Campos del SharedEnv tipados para locals capturados struct/method-call; struct
+  GENÉRICO capturado tipa `%Wrapper_int`; user-fns ganan sobre builtins homónimos;
+  diagnóstico de extern colisionante con hint accionable. (63be2cb, e54aa69, 096a7e5)
+- Gotcha "arr[i] inline en concat da puntero crudo" ACOTADO: idiom `Array<String>` en
+  params (la inferencia ya tipa el read — test-272); raíz re-ruteada a "slots sin tag".
+  (9c64b19)
+
+### Performance
+- **Internado de literales de String** (`nyx_intern_cstr`, un global de caché por
+  literal) + **LICM** de literales fuera de loops (`compiler/licm.nx`, gate
+  `NYX_LICM=off`). Con medición justa (GC warmup): strings ~1.1× C — el "~11-18×"
+  histórico era la init lazy de Boehm dentro de la región medida. (0d0509b..483a5ad,
+  f11a45e)
+- `test-integration` precompila el runtime UNA vez (libnyxrt.a). (684c9cd)
+
+### Docs / especificaciones
+- Spec de diseño: **cursor de Map estable ante resize** (SCAN Redis-equivalente,
+  dictScan adaptado a Robin Hood) — implementación en sesión dedicada. (62b7d8a)
+- Cosecha dogfooding catalogada: GC tail-latency medida vs Redis, Map sin cursor
+  estable, y follow-ups del arco kv↔Redis #1.
+
+### Tests
+- Regression 272→293 ARM64 (+test-254..272), test-errors 173→177, runtime 16→18 suites
+  / 616→729 asserts, wasm 18→22, integration +http_body_cap. Conteos canónicos:
+  `docs/TESTS.md`. Fixed point verificado en cada cambio de compilador.
+
+---
+
+## [0.20.1] — 2026-07-14 — PATCH: dedup de `extern "C"` duplicados entre módulos
+
+Bug fix de codegen destapado por el dashboard de nyx-kv-stack (no compilaba).
+
+### Fixed
+- **codegen**: dos módulos que declaran el MISMO `extern "C"` (caso real: `std/web` y
+  `std/url` declaran ambos `nyx_url_decode`) emitían dos `declare` homónimos en el IR
+  → clang rechazaba el módulo con "invalid redefinition of function". Rompía cualquier
+  programa que importara web+url juntos (latente desde ebf266f, 2026-07-01). Fix en
+  `codegen_extern_fn`: dedup por nombre vía `ctx.extern_fn_params` — la primera
+  declaración gana (criterio de C para redeclaraciones). Los `define` de funciones Nyx
+  homónimas ya se dedupeaban; el gap era solo extern. (d06ee9c)
+
+### Tests
+- Nuevo `test-251-dup-extern-imports` (ecosystem): regression 271→272 ARM64 (492 compiler).
+- make test 272/272, fixed point byte-idéntico, `make test-stacks` 6/6 verdes.
+
+---
+
+## Historia anterior a 0.20.0
+
+Archivada por corte literal el 2026-09-03 en el repo de desarrollo (`docs/archive/CHANGELOG-2026H1.md`, no se publica al mirror; el historial git del mirror la conserva).
+
+## Próximas versiones
+
+Ver [docs/ROADMAP.md](docs/ROADMAP.md).

@@ -1,0 +1,16 @@
+<!-- not-a-version: 0.38.0 -->
+<!-- title: Un CSV grande por columnas | blurb: <code>try_csv_read</code> parsea un CSV en una pasada directo a columnas tipadas; una columna <code>cat</code> llega como códigos enteros más un diccionario, así que agrupar es indexar un arreglo. -->
+<section data-part="intro">
+<p>Para millones de filas, <code>try_csv_read(texto, esquema, csv_opts())</code> de <code>std/csv</code> parsea el texto entero en una pasada a columnas tipadas — <code>int</code>, <code>float</code>, <code>str</code> y <code>cat</code> — con el núcleo escrito en C: sin <code>split()</code> y sin un <code>String</code> por campo. El esquema nombra solo las columnas que se usan; las demás se saltan sin parsearse.</p>
+</section>
+<section data-part="output">
+esquema propuesto: id:int,ciudad:str,monto:float,cantidad:int
+lima: 11.25 (13 u.)
+quito: 99.25 (1 u.)
+cusco: 5.0 (2 u.)
+csv: fila 3, columna 'monto': "diez" no es float
+</section>
+<section data-part="explanation">
+<p>Cuando no se conocen los tipos, <code>try_csv_guess_schema</code> propone un esquema para revisar. La tabla que vuelve da cada columna por nombre: <code>t.floats("monto")</code>, <code>t.ints("cantidad")</code>, y para la columna <code>cat</code>, <code>t.codes("ciudad")</code> (un entero por fila) y <code>t.dict("ciudad")</code> (los valores distintos). Agrupar es entonces un acumulador por valor distinto, indexado por el código — sin <code>Map</code> en el bucle.</p>
+<p>El lector es estricto: un dato malo no se convierte en cero sino en un <code>Err</code> que nombra la fila y la columna. Las comillas, los saltos de línea entre comillas, CRLF y el BOM siguen la RFC 4180. En las notas de la versión 0.38.0, agrupar y filtrar un CSV de 5 millones de filas con este lector tardó 0.93 s, contra 1.21 s de pandas.</p>
+</section>

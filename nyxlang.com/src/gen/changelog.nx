@@ -1,0 +1,397 @@
+// src/gen/changelog.nx — notas de versión: del CHANGELOG.md del monorepo a HTML.
+//
+// La fuente es content/changelog/CHANGELOG.md, una COPIA byte a byte que
+// scripts/sync-recipes.sh trae del monorepo (igual que los .nx del recetario):
+// el generador no lee nada fuera de este repo.
+//
+// No es un Markdown completo, y no pretende serlo: cubre EXACTAMENTE lo que el
+// CHANGELOG usa, que es poco y muy regular —
+//   · `## [X.Y.Z] — fecha`   un encabezado por versión (lo corta cl_split)
+//   · `### Agregado` …       subtítulos dentro de una versión
+//   · párrafos, con líneas partidas a ~110 columnas
+//   · listas con `- `, anidadas de a dos espacios, con continuación sangrada
+//     y con líneas en blanco entre ítems
+//   · citas `> ` (con `>` solo como corte de párrafo, y continuación perezosa
+//     sangrada), también dentro de un ítem de lista (`  > `)
+//   · en línea: `código`, **negrita**, *énfasis* y [texto](url)
+// Lo que no está en esa lista (tablas, bloques ``` , listas numeradas) sale
+// como párrafo de texto escapado: se ve feo, pero nunca se publica HTML que
+// venga del archivo — todo el texto pasa por cl_esc antes de llevar tags.
+
+// ── Escapado ────────────────────────────────────────────────────────────────
+
+fn cl_esc(s: String) -> String {
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+}
+
+fn cl_esc_attr(s: String) -> String {
+    return cl_esc(s).replace("\"", "&quot;")
+}
+
+// Una URL relativa del CHANGELOG (`docs/VERSIONING.md`) es relativa al
+// repositorio, no a este sitio: se resuelve contra el blob de GitHub.
+fn cl_url(url: String, repo_url: String) -> String {
+    if url.startsWith("http://") or url.startsWith("https://") or url.startsWith("#") {
+        return url
+    }
+    return repo_url + "/blob/main/" + url
+}
+
+// ── En línea ────────────────────────────────────────────────────────────────
+
+// Recorre el texto UNA vez. El código (`…`) se resuelve primero y su contenido
+// no se interpreta (`nyx_string*` no abre un énfasis); fuera del código,
+// `**` alterna la negrita, `*` alterna el énfasis cuando toca texto del lado
+// que corresponde, y `[t](u)` es un enlace. Una negrita o un énfasis que
+// quedan abiertos al final se cierran, para no publicar HTML desbalanceado.
+pub fn cl_inline(text: String, repo_url: String) -> String {
+    var out: Array = []
+    let n: int = text.length()
+    var i: int = 0
+    var run: int = 0          // inicio del texto común pendiente
+    var strong: bool = false
+    var em: bool = false
+    while i < n {
+        let c: char = text.charAt(i)
+        if c == '`' {
+            let close: int = text.indexOf("`", i + 1)
+            if close < 0 {
+                i = i + 1
+            } else {
+                if i > run { out.push(cl_esc(text.substring(run, i))) }
+                out.push("<code>" + cl_esc(text.substring(i + 1, close)) + "</code>")
+                i = close + 1
+                run = i
+            }
+        } else if c == '*' and i + 1 < n and text.charAt(i + 1) == '*' {
+            if i > run { out.push(cl_esc(text.substring(run, i))) }
+            if strong { out.push("</strong>") } else { out.push("<strong>") }
+            strong = not strong
+            i = i + 2
+            run = i
+        } else if c == '*' {
+            var opens: bool = false
+            var closes: bool = false
+            if em == false and i + 1 < n {
+                let nx: char = text.charAt(i + 1)
+                if nx != ' ' { opens = true }
+            }
+            if em and i > 0 {
+                let pv: char = text.charAt(i - 1)
+                if pv != ' ' { closes = true }
+            }
+            if opens or closes {
+                if i > run { out.push(cl_esc(text.substring(run, i))) }
+                if closes { out.push("</em>") } else { out.push("<em>") }
+                em = not em
+                run = i + 1
+            }
+            i = i + 1
+        } else if c == '[' {
+            let rb: int = text.indexOf("](", i + 1)
+            let nl: int = text.indexOf("]", i + 1)
+            var done: bool = false
+            if rb > 0 and rb == nl {
+                let rp: int = text.indexOf(")", rb + 2)
+                if rp > 0 {
+                    if i > run { out.push(cl_esc(text.substring(run, i))) }
+                    let label: String = text.substring(i + 1, rb)
+                    let url: String = text.substring(rb + 2, rp)
+                    out.push("<a href=\"" + cl_esc_attr(cl_url(url, repo_url)) + "\">" + cl_inline(label, repo_url) + "</a>")
+                    i = rp + 1
+                    run = i
+                    done = true
+                }
+            }
+            if done == false { i = i + 1 }
+        } else {
+            i = i + 1
+        }
+    }
+    if n > run { out.push(cl_esc(text.substring(run, n))) }
+    if em { out.push("</em>") }
+    if strong { out.push("</strong>") }
+    return out.join("")
+}
+
+// ── Bloques ─────────────────────────────────────────────────────────────────
+
+fn cl_indent(line: String) -> int {
+    var k: int = 0
+    while k < line.length() {
+        let c: char = line.charAt(k)
+        if c != ' ' { return k }
+        k = k + 1
+    }
+    return k
+}
+
+// `- texto` o `* texto` (después de la sangría).
+fn cl_is_item(t: String) -> bool {
+    return t.startsWith("- ") or t.startsWith("* ")
+}
+
+// El cuerpo de una versión (lo que hay entre su `## ` y el siguiente) a HTML.
+//
+// Estado: `depth` listas abiertas, cada una con su <li> abierto; `buf` es el
+// texto pendiente de cerrar (un párrafo, el texto de un ítem o un párrafo de
+// cita) y `buf_kind` dice cuál de los tres es; `quote` dice si hay un
+// <blockquote> abierto y `quote_depth` a qué profundidad de lista pertenece
+// (0 = cita suelta, n = dentro del ítem de nivel n).
+pub fn cl_blocks(body: String, repo_url: String) -> String {
+    var out: Array = []
+    let lines: Array = body.split("\n")
+    var depth: int = 0
+    var buf: String = ""
+    var buf_kind: String = ""       // "p" | "li" | "q"
+    var quote: bool = false
+    var quote_depth: int = 0
+    var blank: bool = false         // la línea anterior estaba en blanco
+
+    var li: int = 0
+    while li < lines.length() {
+        let raw: String = lines[li]
+        li = li + 1
+        let line: String = raw.replace("\r", "")
+        let ind: int = cl_indent(line)
+        let t: String = line.trim()
+
+        // ── vaciar el texto pendiente, cuando la línea no lo continúa ──
+        // (se repite inline en cada rama para no depender de closures)
+        if t == "" {
+            if buf != "" {
+                if buf_kind == "li" {
+                    out.push(cl_inline(buf, repo_url))
+                } else {
+                    out.push("<p>" + cl_inline(buf, repo_url) + "</p>")
+                }
+                buf = ""
+                buf_kind = ""
+            }
+            if quote {
+                out.push("</blockquote>")
+                quote = false
+            }
+            blank = true
+        } else if ind == 0 and t.startsWith("#") {
+            if buf != "" {
+                if buf_kind == "li" { out.push(cl_inline(buf, repo_url)) } else { out.push("<p>" + cl_inline(buf, repo_url) + "</p>") }
+                buf = ""
+                buf_kind = ""
+            }
+            if quote { out.push("</blockquote>") }
+            quote = false
+            while depth > 0 {
+                out.push("</li></ul>")
+                depth = depth - 1
+            }
+            var level: int = 0
+            while level < t.length() and t.charAt(level) == '#' { level = level + 1 }
+            // `##` es el corte de versión (no llega acá); lo de adentro baja
+            // un nivel para que la página tenga h1 (título) › h2 (versión) ›
+            // h3 (sección): ### → h3, #### → h4.
+            var tag: String = "h3"
+            if level >= 4 { tag = "h4" }
+            let head: String = t.substring(level, t.length()).trim()
+            out.push("<" + tag + ">" + cl_inline(head, repo_url) + "</" + tag + ">")
+            blank = false
+        } else if t.startsWith(">") {
+            // Cita: suelta (sangría 0) o dentro del ítem abierto.
+            var qd: int = 0
+            if ind > 0 and depth > 0 { qd = depth }
+            var inner: String = t.substring(1, t.length())
+            if inner.startsWith(" ") { inner = inner.substring(1, inner.length()) }
+            if quote == false or quote_depth != qd {
+                if buf != "" {
+                    if buf_kind == "li" { out.push(cl_inline(buf, repo_url)) } else { out.push("<p>" + cl_inline(buf, repo_url) + "</p>") }
+                    buf = ""
+                    buf_kind = ""
+                }
+                if quote { out.push("</blockquote>") }
+                if qd == 0 {
+                    while depth > 0 {
+                        out.push("</li></ul>")
+                        depth = depth - 1
+                    }
+                }
+                out.push("<blockquote>")
+                quote = true
+                quote_depth = qd
+            }
+            if inner.trim() == "" {
+                // `>` solo: corte de párrafo dentro de la cita.
+                if buf != "" {
+                    out.push("<p>" + cl_inline(buf, repo_url) + "</p>")
+                    buf = ""
+                    buf_kind = ""
+                }
+            } else if buf == "" {
+                buf = inner.trim()
+                buf_kind = "q"
+            } else {
+                buf = buf + " " + inner.trim()
+            }
+            blank = false
+        } else if cl_is_item(t) {
+            let level2: int = ind / 2 + 1
+            if buf != "" {
+                if buf_kind == "li" { out.push(cl_inline(buf, repo_url)) } else { out.push("<p>" + cl_inline(buf, repo_url) + "</p>") }
+                buf = ""
+                buf_kind = ""
+            }
+            if quote {
+                out.push("</blockquote>")
+                quote = false
+            }
+            if level2 > depth {
+                while depth < level2 {
+                    out.push("<ul><li>")
+                    depth = depth + 1
+                }
+            } else {
+                while depth > level2 {
+                    out.push("</li></ul>")
+                    depth = depth - 1
+                }
+                out.push("</li><li>")
+            }
+            buf = t.substring(2, t.length()).trim()
+            buf_kind = "li"
+            blank = false
+        } else if quote and blank == false and ind > 0 {
+            // Continuación perezosa de la cita (`  [arco: …]` bajo un `> `).
+            if buf == "" {
+                buf = t
+                buf_kind = "q"
+            } else {
+                buf = buf + " " + t
+            }
+        } else if depth > 0 and ind > 0 {
+            if quote {
+                out.push("</blockquote>")
+                quote = false
+            }
+            if blank or buf_kind == "q" {
+                // Párrafo nuevo dentro del mismo ítem (tras una línea en blanco).
+                if buf != "" {
+                    out.push("<p>" + cl_inline(buf, repo_url) + "</p>")
+                }
+                buf = t
+                buf_kind = "p"
+            } else if buf == "" {
+                buf = t
+                buf_kind = "li"
+            } else {
+                buf = buf + " " + t
+            }
+            blank = false
+        } else {
+            // Texto a sangría 0: continúa el párrafo abierto o abre uno.
+            if quote and blank == false and buf_kind == "q" {
+                buf = buf + " " + t
+            } else if buf_kind == "p" and blank == false and depth == 0 {
+                buf = buf + " " + t
+            } else {
+                if buf != "" {
+                    if buf_kind == "li" { out.push(cl_inline(buf, repo_url)) } else { out.push("<p>" + cl_inline(buf, repo_url) + "</p>") }
+                    buf = ""
+                    buf_kind = ""
+                }
+                if quote {
+                    out.push("</blockquote>")
+                    quote = false
+                }
+                while depth > 0 {
+                    out.push("</li></ul>")
+                    depth = depth - 1
+                }
+                buf = t
+                buf_kind = "p"
+            }
+            blank = false
+        }
+    }
+    if buf != "" {
+        if buf_kind == "li" { out.push(cl_inline(buf, repo_url)) } else { out.push("<p>" + cl_inline(buf, repo_url) + "</p>") }
+    }
+    if quote { out.push("</blockquote>") }
+    while depth > 0 {
+        out.push("</li></ul>")
+        depth = depth - 1
+    }
+    return out.join("\n")
+}
+
+// ── Versiones ───────────────────────────────────────────────────────────────
+
+// Corta el CHANGELOG en versiones. Devuelve un Array PLANO de String, de a
+// tres por versión: [encabezado, cuerpo, encabezado, cuerpo, …] no alcanza
+// porque hace falta saber si `[Unreleased]` está vacío antes de contarlo, así
+// que la forma es [versión, fecha, cuerpo, versión, fecha, cuerpo, …]. Plano a
+// propósito: un Array de Map devuelto por función es uno de los gotchas del
+// lenguaje (ver gen.nx, doc_slugs).
+//
+// `max` cuenta solo versiones publicadas; `[Unreleased]` entra de más, y solo
+// si tiene contenido.
+pub fn cl_split(text: String, max: int) -> Array {
+    var res: Array = []
+    let lines: Array = text.split("\n")
+    var cur_ver: String = ""
+    var cur_date: String = ""
+    var cur_body: Array = []
+    var have: bool = false
+    var count: int = 0
+    var stop: bool = false
+    var i: int = 0
+    while i <= lines.length() and stop == false {
+        var line: String = ""
+        var is_head: bool = false
+        if i < lines.length() {
+            let l: String = lines[i]
+            line = l
+            if line.startsWith("## [") { is_head = true }
+        } else {
+            is_head = true      // fin del archivo: cierra la última versión
+        }
+        if is_head {
+            if have {
+                let body: String = cur_body.join("\n")
+                if cur_ver == "Unreleased" {
+                    if body.trim() != "" {
+                        res.push(cur_ver)
+                        res.push(cur_date)
+                        res.push(body)
+                    }
+                } else {
+                    res.push(cur_ver)
+                    res.push(cur_date)
+                    res.push(body)
+                    count = count + 1
+                    if count >= max { stop = true }
+                }
+            }
+            if i < lines.length() and stop == false {
+                let close: int = line.indexOf("]")
+                cur_ver = line.substring(4, close)
+                var rest: String = line.substring(close + 1, line.length()).trim()
+                // «— 2026-10-26» (y a veces «— fecha — título»): se saca la raya.
+                if rest.startsWith("—") { rest = rest.substring(3, rest.length()).trim() }
+                cur_date = rest
+                cur_body = []
+                have = true
+            }
+        } else if have {
+            // `---` separa bloques en el archivo, no es contenido de la versión.
+            if line.trim() != "---" { cur_body.push(line) }
+        }
+        i = i + 1
+    }
+    return res
+}
+
+// Ancla de una versión: «0.38.0» → «v0-38-0» (sin puntos, que en un selector
+// CSS o en un fragmento pegado a mano estorban).
+pub fn cl_anchor(version: String) -> String {
+    if version == "Unreleased" { return "unreleased" }
+    return "v" + version.replace(".", "-")
+}
