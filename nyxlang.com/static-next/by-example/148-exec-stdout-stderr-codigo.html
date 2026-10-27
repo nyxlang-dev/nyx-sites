@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run an external tool and show why it failed — Nyx by example</title>
+<meta name="description" content="try_exec_full from std/exec returns stdout, stderr and the exit code together, unmixed, so you can tell the user what went wrong.">
+<link rel="canonical" href="https://nyxlang.com/by-example/148-exec-stdout-stderr-codigo.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/148-exec-stdout-stderr-codigo.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/148-exec-stdout-stderr-codigo.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/148-exec-stdout-stderr-codigo.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/148-exec-stdout-stderr-codigo.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">148</span> / Systems</span></p>
+<h1 class="doc-title">Run an external tool and show why it failed</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>exec(cmd)</code> gives only stdout and <code>exec_code(cmd)</code> only the code; with those a program that calls <code>tar</code>, <code>git</code> or <code>pg_dump</code> cannot explain a failure, because the reason travels on stderr. <code>try_exec_full(cmd)</code> returns an <code>ExecResult</code> with <code>stdout</code>, <code>stderr</code> and <code>code</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">148-exec-stdout-stderr-codigo.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/148-exec-stdout-stderr-codigo.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: correr una herramienta externa y mostrar POR QUÉ falló.</span>
+<span class="cm">//</span>
+<span class="cm">// `exec(cmd)` da solo stdout y `exec_code(cmd)` solo el código; con eso un</span>
+<span class="cm">// programa que llama a `tar`, `git` o `pg_dump` no puede decirle al usuario</span>
+<span class="cm">// qué salió mal (el motivo viaja por stderr). std/exec lo da todo junto:</span>
+<span class="cm">//</span>
+<span class="cm">//     try_exec_full(cmd) -&gt; Result&lt;ExecResult, Error&gt;</span>
+<span class="cm">//     ExecResult { stdout: String, stderr: String, code: int }</span>
+<span class="cm">//</span>
+<span class="cm">//   - stdout y stderr se leen A LA VEZ: una herramienta que escribe mucho a</span>
+<span class="cm">//     cualquiera de los dos no cuelga al programa (una lectura &quot;stdout hasta</span>
+<span class="cm">//     EOF, luego stderr&quot; sí se cuelga cuando el pipe de stderr se llena).</span>
+<span class="cm">//   - Binary-safe; los bytes llegan tal cual (sin quitar &#x27;\n&#x27; finales).</span>
+<span class="cm">//   - `code`: código de salida; si lo mató una señal, 128 + señal (137 = KILL).</span>
+<span class="cm">//     Comando inexistente: code 127 y el aviso del shell en stderr.</span>
+<span class="cm">//   - Err solo si no se pudo lanzar nada (o en wasm32-wasi, sin procesos).</span>
+<span class="cm">//</span>
+<span class="cm">// `cmd` pasa por el shell: no le concatenes entrada del usuario sin sanear.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/exec&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Corre `cmd`; si sale con código distinto de 0 devuelve Err con el stderr.</span>
+<span class="kw">fn</span> <span class="fn">correr</span><span class="op">(</span>cmd<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">String</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">try_exec_full</span><span class="op">(</span>cmd<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> r<span class="op">.</span>code <span class="op">!=</span> <span class="num">0</span> <span class="op">{</span>
+                <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;falló con código &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>code<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> r<span class="op">.</span>stderr<span class="op">.</span><span class="fn">trim</span><span class="op">())</span>
+            <span class="op">}</span>
+            <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">.</span>stdout<span class="op">)</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;no se pudo lanzar: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Éxito: stdout, y el stderr (aquí vacío) queda aparte.</span>
+    <span class="kw">match</span> <span class="fn">correr</span><span class="op">(</span><span class="str">&quot;echo hola desde el shell&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> s<span class="op">.</span><span class="fn">trim</span><span class="op">())</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> m<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Fallo: el motivo está en stderr, no en stdout.</span>
+    <span class="kw">match</span> <span class="fn">correr</span><span class="op">(</span><span class="str">&quot;ls /esta_ruta_no_existe_148&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> s<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: se muestra el motivo real -&gt; &quot;</span> <span class="op">+</span> m<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">30</span><span class="op">)</span> <span class="op">+</span> <span class="str">&quot;...&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+
+    <span class="cm">// Los tres a la vez, sin mezclar.</span>
+    <span class="kw">match</span> <span class="fn">try_exec_full</span><span class="op">(</span><span class="str">&quot;echo datos; echo aviso &gt;&amp;2; exit 2&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">print</span><span class="op">(</span><span class="str">&quot;stdout=&quot;</span> <span class="op">+</span> r<span class="op">.</span>stdout<span class="op">.</span><span class="fn">trim</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot; stderr=&quot;</span> <span class="op">+</span> r<span class="op">.</span>stderr<span class="op">.</span><span class="fn">trim</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot; code=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>code<span class="op">))</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;no se pudo lanzar: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok: hola desde el shell
+error: se muestra el motivo real -> falló con código 2: ls: cann...
+stdout=datos stderr=aviso code=2</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>stdout and stderr are read at the same time, so a tool that writes a lot to either one does not hang the program. The bytes arrive as they are. If a signal kills the process, <code>code</code> is 128 plus the signal number; a missing command gives 127. You get an <code>Err</code> only if nothing could be launched. The command goes through the shell: do not concatenate unsanitized user input into it.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/147-cifrar-secreto-aes-gcm.html"><span class="label">← Previous</span><span class="doc-nav-name">Store an encrypted secret you need to use again</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/149-ping-icmp.html"><span class="label">Next →</span><span class="doc-nav-name">ICMP ping without exec(&quot;ping&quot;)</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.39.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

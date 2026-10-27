@@ -1,0 +1,11 @@
+<!-- title: ICMP ping without exec("ping") | blurb: <code>try_ping</code> from <code>std/net</code> sends an ICMP echo and returns the round-trip time in microseconds, without running <code>ping</code> or parsing its output. -->
+<section data-part="intro">
+<p>A network monitor asks whether a machine answers, and how fast. Before, you had to run <code>ping -c 1</code> with <code>exec()</code> and parse output that changes from one system to another. <code>try_ping(host, timeout_ms)</code> returns the result with the resolved IP (<code>r.ip</code>) and the time in microseconds (<code>r.rtt_us</code>).</p>
+</section>
+<section data-part="output">
+127.0.0.1 (127.0.0.1): responde en 41 µs
+localhost (127.0.0.1): responde en 9 µs
+</section>
+<section data-part="explanation">
+<p>It works without privileges where the system allows it: Linux with <code>net.ipv4.ping_group_range</code> open (as on Debian and Ubuntu). Otherwise the error has <code>kind</code> equal to <code>"permission"</code>. A machine not answering does not mean it is down: many firewalls drop ICMP. The times in the example depend on the machine.</p>
+</section>

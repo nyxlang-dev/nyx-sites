@@ -1,0 +1,12 @@
+<!-- title: Run an external tool and show why it failed | blurb: <code>try_exec_full</code> from <code>std/exec</code> returns stdout, stderr and the exit code together, unmixed, so you can tell the user what went wrong. -->
+<section data-part="intro">
+<p><code>exec(cmd)</code> gives only stdout and <code>exec_code(cmd)</code> only the code; with those a program that calls <code>tar</code>, <code>git</code> or <code>pg_dump</code> cannot explain a failure, because the reason travels on stderr. <code>try_exec_full(cmd)</code> returns an <code>ExecResult</code> with <code>stdout</code>, <code>stderr</code> and <code>code</code>.</p>
+</section>
+<section data-part="output">
+ok: hola desde el shell
+error: se muestra el motivo real -> falló con código 2: ls: cann...
+stdout=datos stderr=aviso code=2
+</section>
+<section data-part="explanation">
+<p>stdout and stderr are read at the same time, so a tool that writes a lot to either one does not hang the program. The bytes arrive as they are. If a signal kills the process, <code>code</code> is 128 plus the signal number; a missing command gives 127. You get an <code>Err</code> only if nothing could be launched. The command goes through the shell: do not concatenate unsanitized user input into it.</p>
+</section>

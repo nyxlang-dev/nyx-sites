@@ -1,0 +1,12 @@
+<!-- title: Correr una herramienta externa y mostrar por qué falló | blurb: <code>try_exec_full</code> de <code>std/exec</code> devuelve stdout, stderr y código de salida juntos, sin mezclarlos, para poder decirle al usuario qué salió mal. -->
+<section data-part="intro">
+<p><code>exec(cmd)</code> da solo stdout y <code>exec_code(cmd)</code> solo el código; con eso un programa que llama a <code>tar</code>, <code>git</code> o <code>pg_dump</code> no puede explicar el fallo, porque el motivo viaja por stderr. <code>try_exec_full(cmd)</code> devuelve un <code>ExecResult</code> con <code>stdout</code>, <code>stderr</code> y <code>code</code>.</p>
+</section>
+<section data-part="output">
+ok: hola desde el shell
+error: se muestra el motivo real -> falló con código 2: ls: cann...
+stdout=datos stderr=aviso code=2
+</section>
+<section data-part="explanation">
+<p>stdout y stderr se leen a la vez, así que una herramienta que escribe mucho a cualquiera de los dos no cuelga al programa. Los bytes llegan tal cual. Si una señal mata el proceso, <code>code</code> es 128 más el número de la señal; un comando inexistente da 127. Hay <code>Err</code> solo si no se pudo lanzar nada. El comando pasa por el shell: no le concatenes entrada del usuario sin sanear.</p>
+</section>

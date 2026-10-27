@@ -9,10 +9,90 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+## [0.39.0] — 2026-10-27
+
+> **MINOR**: API nueva — `std/crypto` (AES-GCM), `std/exec` (`try_exec_full`), `try_ping`, las primitivas UDP
+  de red local y `std/mdns` (codec) [arco: red-local] — y dos cambios de conducta: `task_cancel` pasa a ser
+  cooperativo y NYX1047 rechaza código que antes compilaba.
+>
+> **Migración**: (1) `task_cancel(t)` ya NO detiene la tarea: una tarea que corre en un bucle tiene que
+> consultar `task_cancelled()` y retornar (un `sleep` dentro de ella vuelve solo al cancelarla). Una tarea que
+> ni consulta ni duerme sigue corriendo. (2) NYX1047 sale directo como error, sin el aviso previo que pide la
+> regla 7 de `docs/VERSIONING.md` (excepción aprobada por Ottavio): lo que rechaza —`for x: dyn T in arr` o
+> `let y: dyn T = arr[0]` sobre un Array de structs concretos— moría con SIGSEGV en cuanto se ejecutaba, y la
+> búsqueda en los consumidores dio cero casos. La salida es declarar el Array como `Array<dyn T>`.
+
 ### Agregado
+- **`std/crypto`: cifrado autenticado AES-GCM en las dos direcciones** [dogfooding:nyxerp]: para guardar
+  secretos que hay que volver a usar en claro (la contraseña SMTP de cada cliente) sin dejarlos legibles en
+  la base. `try_aes256gcm_seal`/`try_aes256gcm_open` eligen el nonce al azar (nonce ‖ cifrado ‖ etiqueta);
+  `try_aes256gcm_encrypt`/`decrypt` y `try_aes128gcm_*` con nonce explícito (`try_aes128gcm_decrypt` abre lo
+  que da `aes128gcm_encrypt` de Web Push, que no tenía inversa). Etiqueta mala = `Err(invalid 74)` sin soltar
+  el texto. Vectores de la especificación de GCM en `test-stdlib-14-aes-gcm`; receta 147.
+- **`csprng_bytes` en wasm32-wasi** (por `getentropy`/`random_get`): antes no existía y todo programa que
+  importara `std/webpushcrypto` o `std/oauth2` no enlazaba en wasm. El shim del navegador ya no cae a
+  `Math.random` sin `crypto.getRandomValues`: devuelve NOSYS y `csprng_bytes` da `""`.
+- **`std/exec`: `try_exec_full(cmd) -> Result<ExecResult, Error>`** — stdout, stderr y código de salida por
+  separado (`ExecResult { stdout, stderr, code }`); antes `exec` daba solo stdout y `exec_code` solo el código
+  (pedido anónimo del 2026-07-23, archivado sin ficha). Lee los dos flujos a la vez (poll en posix, un hilo por
+  flujo en Windows), así que no se cuelga cuando uno llena su pipe; binary-safe y sin recortar `\n`; `code` =
+  128+señal si lo mató una señal, 127 si el comando no existe; Err solo si no se pudo lanzar (y en wasm, 95). Capa
+  nueva `os_proc_run_full` (win32 escrita sin compilar). `test-512`, 3 casos en `test_os_proc.c`, receta 148.
+- **Red local, primera tanda** `[arco: red-local]`: `std/net` gana `try_udp_recvfrom_from` /
+  `try_udp_recvfrom_from_timed` (el datagrama con la IP y el puerto de quien lo mandó; plazo en ms con `poll`),
+  `try_udp_bind_shared` (puerto compartido; `try_udp_bind` no cambia), `try_udp_join`/`leave`,
+  `try_udp_set_multicast_ttl`/`loop`/`iface` y `try_udp_set_broadcast`, sobre primitivas nuevas de la capa os
+  (win32 escrita sin compilar). Y `std/mdns`, la base del módulo: codec puro de mensajes mDNS (RFC 6762/6763) con
+  registros A/PTR/SRV/TXT y descompresión de nombres defensiva (solo punteros hacia atrás, topes de saltos,
+  etiqueta, nombre y registros) que devuelve `Err("parse")` en vez de abortar; verificado contra paquetes de
+  dnslib y python-zeroconf y más de 1000 mutaciones. La sonda midió que una lectura de red con plazo dentro de
+  `spawn {}` ocupa un trabajador del scheduler: el lector va en `thread_spawn` (ficha ALTA de la primitiva de
+  E/S). Tests `test-stdlib-15-net-multicast` (SKIP si el entorno no entrega multicast) y `-16-mdns-codec`.
+- **`std/net`: `try_ping(host, timeout_ms) -> Result<PingReply, Error>`** (ICMP echo IPv4, `{ ip, rtt_us }`):
+  socket ICMP de datagrama sin privilegios donde el sistema lo permite (Linux con `ping_group_range`
+  abierto, macOS), raw como respaldo; `IcmpSendEcho` en Windows (escrita sin compilar). Pedido anónimo del
+  2026-08-05, archivado sin ficha. `test-stdlib-17-ping` (SKIP si el sistema no permite ICMP), receta 149.
+- **TLS y cliente HTTP en Windows, primera parte** `[arco: w5-windows]` (decisión de Ottavio: OpenSSL
+  estático + CAs del almacén de Windows): `os_sys_root_certs` lee el almacén «ROOT» y `tls.c` suma esas CAs a
+  OpenSSL; `tls_*`, `https_*` y `http_get/post/request` salen del gate de win32. Escrito sin compilar: el
+  enlace con OpenSSL de vcpkg y la verificación son la Task 4 de W5, en la laptop. En Linux no cambia nada.
 - **`CHANGELOG.en.md`, el CHANGELOG en inglés** desde 0.33.0 (decisión de Ottavio): lo publica
   nyxlang.com/changelog/. Cada release traduce su entrada: `release-check.sh` no deja cortar sin ella y el
   nuevo check 13 de `make docs-health` exige los mismos encabezados, subtítulos e ítems por versión.
+
+### Cambiado
+- **`task_cancel` es cooperativo** (decisión de Ottavio; spike de W5 §5): pide la cancelación y la tarea la
+  consulta con el builtin nuevo **`task_cancelled() -> bool`** (el `ctx.Done()` de Go); `sleep()` dentro de una
+  tarea cancelada vuelve de inmediato. Antes era `pthread_cancel` en Linux (una tarea que solo aloca seguía
+  corriendo para siempre; 200 de ellas tumbaron WSL) y `TerminateThread` en Windows (podía dejar tomado el lock
+  del GC y colgar el proceso, 4 de 5); las dos se saltaban los `defer`. **Cambio de conducta**: una tarea que
+  ni consulta ni duerme ya no se detiene. `test-513` con los escenarios del spike.
+
+### Arreglado
+- **NYX1047: `for x: dyn Trait in arr` y `let y: dyn Trait = arr[0]` sobre un Array de structs concretos**
+  pasaban `nyx check` y morían con SIGSEGV (reporte anónimo del 2026-09-08, archivado sin ficha): pasar a
+  `dyn` cambia la representación al ESCRIBIR el elemento, y leer un struct como fat pointer revienta. Ahora
+  es error y pide `Array<dyn Trait>`; un `Array` sin tipo lleno de valores ya `dyn` sigue andando (test-391).
+  Residuo: un Array que llega lleno desde otra función no se detecta. 3 casos en `test-errors`.
+- **win32: `runtime/csv.c` entra al subset** `[arco: w5-windows]` (test-141 no enlazaba desde `e0a02263`;
+  parche de la laptop). `TerminateThread` salió de `os_thread_cancel` (podía colgar el GC, 4 de 5) y quedó
+  superado el mismo día por la cancelación cooperativa (ver «Cambiado»).
+- **x86_64 en WSL2** (spike de W5): `nyx_ev_pipe_write_fd` (test-161 suponía fds consecutivos de `pipe()` y
+  WSL hereda un fd 5), los tests de «conexión rechazada» se saltan con aviso cuando el loopback no rechaza
+  (modo mirrored), y `run_stack_frame_audit.sh` tiene techos por arquitectura.
+- **`std/smtp` con remitente o destinatarios «Nombre <dirección>»** [dogfooding:nyxerp]: el sobre salía como
+  `MAIL FROM:<Tienda <ventas@x.com>>` (un servidor real lo rechaza), el Message-ID tomaba `x.com>` como
+  dominio y un nombre con acentos viajaba en UTF-8 crudo en `From`. Ahora `MAIL FROM` y `RCPT TO` llevan
+  solo la dirección, el Message-ID usa su dominio y el nombre visible de `From`/`To` sale en RFC 2047
+  cuando no es ASCII (sin las comillas que lo rodeen). Test nuevo `test-stdlib-13-smtp-remitente-nombre`.
+- **El pool de `std/postgres` limpia la sesión y repone las conexiones muertas** [dogfooding:nyxerp]:
+  `pg_pool_put` solo hacía ROLLBACK, así que un `SET`, una tabla temporal o un LISTEN pasaban al pedido
+  siguiente, y una conexión cortada por el servidor volvía al pool y se entregaba rota una y otra vez. Ahora
+  hace ROLLBACK + `DISCARD ALL` y, si falla, cierra la conexión y vacía el slot (el próximo get reconecta).
+  `pg_pool_discard` nuevo. Puntos 3 y 4 del pedido del 2026-09-27. `tests/postgres/10-pool-sanea.nx`.
+- **`wcwidth` da 2 a los emoji anchos** (U+270A, U+231A...): `__ucs_wide` es ahora exactamente East Asian Width
+  W/F de Unicode 15. **`html_unescape` conoce las 253 entidades de HTML 4.01** (antes ~50) y `&#0;` da U+FFFD en
+  vez de un byte 0. Pedidos anónimos del 2026-07-31, archivados sin ficha. Casos nuevos en `test-302`/`test-303`.
 
 ## [0.38.0] — 2026-10-26
 

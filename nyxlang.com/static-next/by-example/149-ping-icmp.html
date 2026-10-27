@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICMP ping without exec(&quot;ping&quot;) — Nyx by example</title>
+<meta name="description" content="try_ping from std/net sends an ICMP echo and returns the round-trip time in microseconds, without running ping or parsing its output.">
+<link rel="canonical" href="https://nyxlang.com/by-example/149-ping-icmp.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/149-ping-icmp.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/149-ping-icmp.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/149-ping-icmp.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/149-ping-icmp.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">149</span> / Networking</span></p>
+<h1 class="doc-title">ICMP ping without exec(&quot;ping&quot;)</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A network monitor asks whether a machine answers, and how fast. Before, you had to run <code>ping -c 1</code> with <code>exec()</code> and parse output that changes from one system to another. <code>try_ping(host, timeout_ms)</code> returns the result with the resolved IP (<code>r.ip</code>) and the time in microseconds (<code>r.rtt_us</code>).</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">149-ping-icmp.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/149-ping-icmp.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: ping (ICMP echo) sin exec(&quot;ping&quot;).</span>
+<span class="cm">//</span>
+<span class="cm">// Un monitor de red pregunta «¿responde este equipo, y en cuánto?». Antes había</span>
+<span class="cm">// que correr `ping -c 1` con exec() y parsear su salida, que cambia de un</span>
+<span class="cm">// sistema a otro. try_ping de std/net manda el eco y devuelve el tiempo de ida</span>
+<span class="cm">// y vuelta en MICROSEGUNDOS (en la red local un ping tarda menos de 1 ms).</span>
+<span class="cm">//</span>
+<span class="cm">// Sin privilegios donde el sistema lo permite (Linux con</span>
+<span class="cm">// net.ipv4.ping_group_range abierto, como Debian y Ubuntu; macOS; Windows). Si</span>
+<span class="cm">// no, Err &quot;permission&quot;. Ojo: que un host no conteste ping no significa que esté</span>
+<span class="cm">// caído — muchos firewalls descartan ICMP.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> equipos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="str">&quot;localhost&quot;</span><span class="op">]</span>
+    <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> equipos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">let</span> h<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> equipos<span class="op">[</span>i<span class="op">]</span>
+        <span class="kw">match</span> <span class="fn">try_ping</span><span class="op">(</span>h<span class="op">,</span> <span class="num">1000</span><span class="op">)</span> <span class="op">{</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="fn">println</span><span class="op">(</span>h <span class="op">+</span> <span class="str">&quot; (&quot;</span> <span class="op">+</span> r<span class="op">.</span>ip <span class="op">+</span> <span class="str">&quot;): responde en &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>rtt_us<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; µs&quot;</span><span class="op">)</span>
+            <span class="op">}</span>
+            <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;permission&quot;</span> <span class="op">{</span>
+                    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;este sistema no permite ping sin privilegios: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span>
+                    <span class="kw">return</span> <span class="num">0</span>
+                <span class="op">}</span>
+                <span class="fn">println</span><span class="op">(</span>h <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">))</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">127.0.0.1 (127.0.0.1): responde en 41 µs
+localhost (127.0.0.1): responde en 9 µs</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>It works without privileges where the system allows it: Linux with <code>net.ipv4.ping_group_range</code> open (as on Debian and Ubuntu). Otherwise the error has <code>kind</code> equal to <code>"permission"</code>. A machine not answering does not mean it is down: many firewalls drop ICMP. The times in the example depend on the machine.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/148-exec-stdout-stderr-codigo.html"><span class="label">← Previous</span><span class="doc-nav-name">Run an external tool and show why it failed</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.39.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
