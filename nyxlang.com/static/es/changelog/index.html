@@ -40,6 +40,7 @@
 <div class="doc-toc-inner">
 <p class="label doc-toc-label">Versiones</p>
 <ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-39-0"><span class="doc-toc-name">0.39.0</span><span class="doc-toc-num">2026-10-27</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-38-0"><span class="doc-toc-name">0.38.0</span><span class="doc-toc-num">2026-10-26</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-1"><span class="doc-toc-name">0.37.1</span><span class="doc-toc-num">2026-10-24</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-0"><span class="doc-toc-name">0.37.0</span><span class="doc-toc-num">2026-10-22</span></a></li>
@@ -47,11 +48,51 @@
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-36-0"><span class="doc-toc-name">0.36.0</span><span class="doc-toc-num">2026-10-10</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-35-0"><span class="doc-toc-name">0.35.0</span><span class="doc-toc-num">2026-09-29</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-34-0"><span class="doc-toc-name">0.34.0</span><span class="doc-toc-num">2026-09-25</span></a></li>
-<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-33-0"><span class="doc-toc-name">0.33.0</span><span class="doc-toc-num">2026-09-20</span></a></li>
 </ol>
 </div>
 </nav>
 <article class="doc-body cl-body" lang="es">
+<section class="cl-release" id="v0-39-0">
+<h2>0.39.0 <span class="cl-date">2026-10-27</span></h2>
+<blockquote>
+<p><strong>MINOR</strong>: API nueva — <code>std/crypto</code> (AES-GCM), <code>std/exec</code> (<code>try_exec_full</code>), <code>try_ping</code>, las primitivas UDP de red local y <code>std/mdns</code> (codec) — y dos cambios de conducta: <code>task_cancel</code> pasa a ser cooperativo y NYX1047 rechaza código que antes compilaba.</p>
+<p><strong>Migración</strong>: (1) <code>task_cancel(t)</code> ya NO detiene la tarea: una tarea que corre en un bucle tiene que consultar <code>task_cancelled()</code> y retornar (un <code>sleep</code> dentro de ella vuelve solo al cancelarla). Una tarea que ni consulta ni duerme sigue corriendo. (2) NYX1047 sale directo como error, sin el aviso previo que pide la regla 7 de <code>docs/VERSIONING.md</code> (excepción aprobada por Ottavio): lo que rechaza —<code>for x: dyn T in arr</code> o <code>let y: dyn T = arr[0]</code> sobre un Array de structs concretos— moría con SIGSEGV en cuanto se ejecutaba, y la búsqueda en los consumidores dio cero casos. La salida es declarar el Array como <code>Array&lt;dyn T&gt;</code>.</p>
+</blockquote>
+<h3>Agregado</h3>
+<ul><li>
+<strong><code>std/crypto</code>: cifrado autenticado AES-GCM en las dos direcciones</strong>: para guardar secretos que hay que volver a usar en claro (la contraseña SMTP de cada cliente) sin dejarlos legibles en la base. <code>try_aes256gcm_seal</code>/<code>try_aes256gcm_open</code> eligen el nonce al azar (nonce ‖ cifrado ‖ etiqueta); <code>try_aes256gcm_encrypt</code>/<code>decrypt</code> y <code>try_aes128gcm_*</code> con nonce explícito (<code>try_aes128gcm_decrypt</code> abre lo que da <code>aes128gcm_encrypt</code> de Web Push, que no tenía inversa). Etiqueta mala = <code>Err(invalid 74)</code> sin soltar el texto. Vectores de la especificación de GCM en <code>test-stdlib-14-aes-gcm</code>; receta 147.
+</li><li>
+<strong><code>csprng_bytes</code> en wasm32-wasi</strong> (por <code>getentropy</code>/<code>random_get</code>): antes no existía y todo programa que importara <code>std/webpushcrypto</code> o <code>std/oauth2</code> no enlazaba en wasm. El shim del navegador ya no cae a <code>Math.random</code> sin <code>crypto.getRandomValues</code>: devuelve NOSYS y <code>csprng_bytes</code> da <code>""</code>.
+</li><li>
+<strong><code>std/exec</code>: <code>try_exec_full(cmd) -&gt; Result&lt;ExecResult, Error&gt;</code></strong> — stdout, stderr y código de salida por separado (<code>ExecResult { stdout, stderr, code }</code>); antes <code>exec</code> daba solo stdout y <code>exec_code</code> solo el código (pedido anónimo del 2026-07-23, archivado sin ficha). Lee los dos flujos a la vez (poll en posix, un hilo por flujo en Windows), así que no se cuelga cuando uno llena su pipe; binary-safe y sin recortar <code>\n</code>; <code>code</code> = 128+señal si lo mató una señal, 127 si el comando no existe; Err solo si no se pudo lanzar (y en wasm, 95). Capa nueva <code>os_proc_run_full</code> (win32 escrita sin compilar). <code>test-512</code>, 3 casos en <code>test_os_proc.c</code>, receta 148.
+</li><li>
+<strong>Red local, primera tanda</strong>: <code>std/net</code> gana <code>try_udp_recvfrom_from</code> / <code>try_udp_recvfrom_from_timed</code> (el datagrama con la IP y el puerto de quien lo mandó; plazo en ms con <code>poll</code>), <code>try_udp_bind_shared</code> (puerto compartido; <code>try_udp_bind</code> no cambia), <code>try_udp_join</code>/<code>leave</code>, <code>try_udp_set_multicast_ttl</code>/<code>loop</code>/<code>iface</code> y <code>try_udp_set_broadcast</code>, sobre primitivas nuevas de la capa os (win32 escrita sin compilar). Y <code>std/mdns</code>, la base del módulo: codec puro de mensajes mDNS (RFC 6762/6763) con registros A/PTR/SRV/TXT y descompresión de nombres defensiva (solo punteros hacia atrás, topes de saltos, etiqueta, nombre y registros) que devuelve <code>Err("parse")</code> en vez de abortar; verificado contra paquetes de dnslib y python-zeroconf y más de 1000 mutaciones. La sonda midió que una lectura de red con plazo dentro de <code>spawn {}</code> ocupa un trabajador del scheduler: el lector va en <code>thread_spawn</code> (ficha ALTA de la primitiva de E/S). Tests <code>test-stdlib-15-net-multicast</code> (SKIP si el entorno no entrega multicast) y <code>-16-mdns-codec</code>.
+</li><li>
+<strong><code>std/net</code>: <code>try_ping(host, timeout_ms) -&gt; Result&lt;PingReply, Error&gt;</code></strong> (ICMP echo IPv4, <code>{ ip, rtt_us }</code>): socket ICMP de datagrama sin privilegios donde el sistema lo permite (Linux con <code>ping_group_range</code> abierto, macOS), raw como respaldo; <code>IcmpSendEcho</code> en Windows (escrita sin compilar). Pedido anónimo del 2026-08-05, archivado sin ficha. <code>test-stdlib-17-ping</code> (SKIP si el sistema no permite ICMP), receta 149.
+</li><li>
+<strong>TLS y cliente HTTP en Windows, primera parte</strong> (decisión de Ottavio: OpenSSL estático + CAs del almacén de Windows): <code>os_sys_root_certs</code> lee el almacén «ROOT» y <code>tls.c</code> suma esas CAs a OpenSSL; <code>tls_*</code>, <code>https_*</code> y <code>http_get/post/request</code> salen del gate de win32. Escrito sin compilar: el enlace con OpenSSL de vcpkg y la verificación son la Task 4 de W5, en la laptop. En Linux no cambia nada.
+</li><li>
+<strong><code>CHANGELOG.en.md</code>, el CHANGELOG en inglés</strong> desde 0.33.0 (decisión de Ottavio): lo publica nyxlang.com/changelog/. Cada release traduce su entrada: <code>release-check.sh</code> no deja cortar sin ella y el nuevo check 13 de <code>make docs-health</code> exige los mismos encabezados, subtítulos e ítems por versión.
+</li></ul>
+<h3>Cambiado</h3>
+<ul><li>
+<strong><code>task_cancel</code> es cooperativo</strong> (decisión de Ottavio; spike de W5 §5): pide la cancelación y la tarea la consulta con el builtin nuevo <strong><code>task_cancelled() -&gt; bool</code></strong> (el <code>ctx.Done()</code> de Go); <code>sleep()</code> dentro de una tarea cancelada vuelve de inmediato. Antes era <code>pthread_cancel</code> en Linux (una tarea que solo aloca seguía corriendo para siempre; 200 de ellas tumbaron WSL) y <code>TerminateThread</code> en Windows (podía dejar tomado el lock del GC y colgar el proceso, 4 de 5); las dos se saltaban los <code>defer</code>. <strong>Cambio de conducta</strong>: una tarea que ni consulta ni duerme ya no se detiene. <code>test-513</code> con los escenarios del spike.
+</li></ul>
+<h3>Arreglado</h3>
+<ul><li>
+<strong>NYX1047: <code>for x: dyn Trait in arr</code> y <code>let y: dyn Trait = arr[0]</code> sobre un Array de structs concretos</strong> pasaban <code>nyx check</code> y morían con SIGSEGV (reporte anónimo del 2026-09-08, archivado sin ficha): pasar a <code>dyn</code> cambia la representación al ESCRIBIR el elemento, y leer un struct como fat pointer revienta. Ahora es error y pide <code>Array&lt;dyn Trait&gt;</code>; un <code>Array</code> sin tipo lleno de valores ya <code>dyn</code> sigue andando (test-391). Residuo: un Array que llega lleno desde otra función no se detecta. 3 casos en <code>test-errors</code>.
+</li><li>
+<strong>win32: <code>runtime/csv.c</code> entra al subset</strong> (test-141 no enlazaba desde <code>e0a02263</code>; parche de la laptop). <code>TerminateThread</code> salió de <code>os_thread_cancel</code> (podía colgar el GC, 4 de 5) y quedó superado el mismo día por la cancelación cooperativa (ver «Cambiado»).
+</li><li>
+<strong>x86_64 en WSL2</strong> (spike de W5): <code>nyx_ev_pipe_write_fd</code> (test-161 suponía fds consecutivos de <code>pipe()</code> y WSL hereda un fd 5), los tests de «conexión rechazada» se saltan con aviso cuando el loopback no rechaza (modo mirrored), y <code>run_stack_frame_audit.sh</code> tiene techos por arquitectura.
+</li><li>
+<strong><code>std/smtp</code> con remitente o destinatarios «Nombre &lt;dirección&gt;»</strong>: el sobre salía como <code>MAIL FROM:&lt;Tienda &lt;ventas@x.com&gt;&gt;</code> (un servidor real lo rechaza), el Message-ID tomaba <code>x.com&gt;</code> como dominio y un nombre con acentos viajaba en UTF-8 crudo en <code>From</code>. Ahora <code>MAIL FROM</code> y <code>RCPT TO</code> llevan solo la dirección, el Message-ID usa su dominio y el nombre visible de <code>From</code>/<code>To</code> sale en RFC 2047 cuando no es ASCII (sin las comillas que lo rodeen). Test nuevo <code>test-stdlib-13-smtp-remitente-nombre</code>.
+</li><li>
+<strong>El pool de <code>std/postgres</code> limpia la sesión y repone las conexiones muertas</strong>: <code>pg_pool_put</code> solo hacía ROLLBACK, así que un <code>SET</code>, una tabla temporal o un LISTEN pasaban al pedido siguiente, y una conexión cortada por el servidor volvía al pool y se entregaba rota una y otra vez. Ahora hace ROLLBACK + <code>DISCARD ALL</code> y, si falla, cierra la conexión y vacía el slot (el próximo get reconecta). <code>pg_pool_discard</code> nuevo. Puntos 3 y 4 del pedido del 2026-09-27. <code>tests/postgres/10-pool-sanea.nx</code>.
+</li><li>
+<strong><code>wcwidth</code> da 2 a los emoji anchos</strong> (U+270A, U+231A...): <code>__ucs_wide</code> es ahora exactamente East Asian Width W/F de Unicode 15. <strong><code>html_unescape</code> conoce las 253 entidades de HTML 4.01</strong> (antes ~50) y <code>&amp;#0;</code> da U+FFFD en vez de un byte 0. Pedidos anónimos del 2026-07-31, archivados sin ficha. Casos nuevos en <code>test-302</code>/<code>test-303</code>.
+</li></ul>
+</section>
 <section class="cl-release" id="v0-38-0">
 <h2>0.38.0 <span class="cl-date">2026-10-26</span></h2>
 <blockquote>
@@ -556,19 +597,6 @@ Documentación: SPEC (NYX1039), LLM.md §wasm, gotcha <code>wasm-arena-closure-e
 <strong>SSE ya funciona detrás del gateway</strong>: <code>nyx-proxy</code> 0.4.4 tuneliza el stream (detecta <code>Content-Type: text/event-stream</code> y deja de acumular), desplegado en <code>:443</code> el 2026-09-20 con los 8 dominios verificados por SNI. Se retira el aviso «detrás del gateway SSE todavía no funciona» de <code>LLM.md</code> §std/serve, <code>docs/SPEC.md</code> §SSE y <code>examples/by-example/110-serve-sse.nx</code>. Del lado del proxy: 8 casos de túnel + 1 sobre TLS, con las 11 de <code>pool_framing</code> intactas.
 </li></ul>
 </section>
-<section class="cl-release" id="v0-33-0">
-<h2>0.33.0 <span class="cl-date">2026-09-20</span></h2>
-<blockquote>
-<p><strong>Sube MINOR porque rechaza código que antes compilaba</strong> — código que compilaba y reventaba al correr, pero la regla del repo no distingue: lo que el compilador deja de aceptar cambia de minor.</p>
-</blockquote>
-<h3>Changed</h3>
-<ul><li>
-<strong>Llamar a un valor <code>Fn</code> SIN FIRMA ahora se rechaza al compilar cuando el contexto espera un struct por valor o un <code>float</code></strong> (<code>NYX1037</code>). Es la tercera aparición de la misma causa —un <code>Fn</code> sin firma no lleva su convenio de retorno y la llamada indirecta asume <code>i64</code>—, y esta vez se cierra en vez de parchearse: con un struct eso era un <strong>SIGSEGV</strong> (el <code>i64</code> que llega es el primer campo, y se desreferencia) y con <code>float</code>, <strong>basura en silencio</strong> (<code>0.16</code> → <code>281472821301216.0</code>). Lo reportó <strong>nyxerp</strong> desde un middleware que compilaba limpio, pasaba <code>nyx check</code> y <code>nyx vet</code>, y moría en el primer pedido.
-<blockquote>
-<p><strong>Lo que NO cambia</strong>: <code>int</code>, <code>String</code>, <code>bool</code>, <code>char</code>, <code>Result</code>, <code>Option</code>, cualquier puntero y el resultado descartado siguen funcionando a través de un <code>Fn</code> sin firma — para esos el convenio asumido coincide, medido con valores. Tampoco cambia <code>let f: Fn = una_fn</code> seguido de <code>f()</code>: codegen refina ese slot con la firma real desde el 2026-08-06. <strong>Por qué no el convenio uniforme con thunks</strong>, que era la recomendación de la spec: es cirugía en el codegen de cierres —lo que sostiene <code>dom_on_fn</code>, los <code>browser_*_fn</code> y <code>Result.map</code>—, cuesta una asignación por llamada, y ni siquiera cierra el caso residual, porque el problema de <code>let r = f()</code> sin anotar no es el ABI sino la ausencia de tipo. Lo que lo hizo innecesario es una medición: en los casos que fallan el compilador YA conoce el tipo esperado. <strong>El reparto entre capas es lo que cada una puede ver</strong>: <code>semantic</code> mira parámetros (<code>nyx check</code> los ve); <code>codegen</code> es el backstop y lee el tipo DESPUÉS del refinamiento, así que agarra el <code>Fn</code> que viene de un campo de struct —que reventaba y ni W004 cubría— y el camino <code>NYX_SKIP_SEMANTIC=1</code>. <strong>Migración</strong>: <code>nyx vet</code> avisa con W004 desde 0.32.4, así que la forma peligrosa se puede encontrar antes de que el compilador la rechace. El arreglo es declarar la firma: <code>f: Fn(T) -&gt; R</code>.</p>
-</blockquote>
-</li></ul>
-</section>
 </article>
 </div>
 <a class="callout" href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md"><span><span class="callout-name">El CHANGELOG.md completo</span><span class="step-note note">Todas las versiones desde el principio, en el repositorio.</span></span><span class="callout-go">GitHub →</span></a>
@@ -577,7 +605,7 @@ Documentación: SPEC (NYX1039), LLM.md §wasm, gotcha <code>wasm-arena-closure-e
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono"><span class="footer-version">v0.39.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

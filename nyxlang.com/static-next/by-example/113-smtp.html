@@ -64,9 +64,7 @@
     <span class="kw">let</span> cuerpo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;Estimado cliente,\n\nAdjuntamos la factura del mes.\n\nSaludos&quot;</span>
 
     <span class="kw">var</span> msg<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">smtp_message</span><span class="op">(</span>
-        <span class="cm">// de: la dirección sola o «Nombre &lt;dirección&gt;». El sobre SMTP lleva solo</span>
-        <span class="cm">// la dirección; un nombre con acentos sale codificado (RFC 2047).</span>
-        <span class="str">&quot;Facturación Mi Empresa &lt;facturacion@miempresa.com&gt;&quot;</span><span class="op">,</span>
+        <span class="str">&quot;facturacion@miempresa.com&quot;</span><span class="op">,</span>          <span class="cm">// de</span>
         <span class="op">[</span><span class="str">&quot;cliente@ejemplo.com&quot;</span><span class="op">],</span>              <span class="cm">// para (varios: agregar a la lista)</span>
         <span class="str">&quot;Factura de septiembre&quot;</span><span class="op">,</span>              <span class="cm">// asunto</span>
         cuerpo<span class="op">)</span>
@@ -199,7 +197,7 @@ protocol   → el servidor cortó o contestó algo inesperado</pre></div>
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.39.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

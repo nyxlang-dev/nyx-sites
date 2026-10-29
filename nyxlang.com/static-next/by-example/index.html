@@ -79,7 +79,6 @@
 <li class="step"><a class="step-link" href="/by-example/143-pdf-a-imagen.html"><span class="step-num">143</span><span><span class="step-name">Render a PDF page as an image</span><span class="step-note note">std/pdf_render draws a page of a PDF into an <code>Image</code> on the server, with no external programs; what it cannot draw is either an error or a list you inspect.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/145-csv-sin-split.html"><span class="step-num">145</span><span><span class="step-name">A large CSV without split() per row</span><span class="step-note note"><code>indexOf</code> finds the commas and <code>string_to_float_range</code> parses the number straight from the bytes, without creating a substring per field.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/146-csv-columnar.html"><span class="step-num">146</span><span><span class="step-name">A large CSV by columns</span><span class="step-note note"><code>try_csv_read</code> parses a CSV in one pass straight into typed columns; a <code>cat</code> column arrives as integer codes plus a dictionary, so grouping is indexing an array.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/147-cifrar-secreto-aes-gcm.html"><span class="step-num">147</span><span><span class="step-name">Store an encrypted secret you need to use again</span><span class="step-note note"><code>try_aes256gcm_seal</code> and <code>try_aes256gcm_open</code> from <code>std/crypto</code> encrypt with AES-256-GCM: if someone tampers with the stored value or copies it into another customer's record, opening it gives an <code>Err</code> instead of garbage.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -159,7 +158,6 @@
 <li class="step"><a class="step-link" href="/by-example/141-smtp-texto-y-html.html"><span class="step-num">141</span><span><span class="step-name">An email with a text AND an HTML version</span><span class="step-note note">smtp_message_alternative builds multipart/alternative, combines with attachments and does not invent the text for you.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/142-dns-spf-dkim-dmarc.html"><span class="step-num">142</span><span><span class="step-name">Check SPF, DKIM and DMARC before sending mail</span><span class="step-note note">std/dns reads TXT and CNAME records and tells NXDOMAIN from NODATA; the checking logic is pure and testable without a network.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/144-reenviar-eventos.html"><span class="step-num">144</span><span><span class="step-name">Forward a streamed response as it arrives</span><span class="step-note note"><code>try_http_stream</code> reads another API's response piece by piece and <code>sse_broadcast</code> forwards each event to the browser the moment it lands.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/149-ping-icmp.html"><span class="step-num">149</span><span><span class="step-name">ICMP ping without exec(&quot;ping&quot;)</span><span class="step-note note"><code>try_ping</code> from <code>std/net</code> sends an ICMP echo and returns the round-trip time in microseconds, without running <code>ping</code> or parsing its output.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -185,8 +183,6 @@
 <li class="step"><a class="step-link" href="/by-example/70-shebang-script.html"><span class="step-num">70</span><span><span class="step-name">Shebang Script</span><span class="step-note note">Running Nyx files as executable scripts with <code>#!/usr/bin/env nyx</code>.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/111-nyx-test-coverage.html"><span class="step-num">111</span><span><span class="step-name">nyx test --coverage</span><span class="step-note note">Which function in src/ no test called — homonyms from different modules never mix when measuring.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/112-include-bytes.html"><span class="step-num">112</span><span><span class="step-name">include_bytes</span><span class="step-note note">A binary resource that travels inside the executable, read at compile time — no dependence on the file reaching disk.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/148-exec-stdout-stderr-codigo.html"><span class="step-num">148</span><span><span class="step-name">Run an external tool and show why it failed</span><span class="step-note note"><code>try_exec_full</code> from <code>std/exec</code> returns stdout, stderr and the exit code together, unmixed, so you can tell the user what went wrong.</span></span></a></li>
-<li class="step"><a class="step-link" href="/by-example/150-serial-trama-fiscal.html"><span class="step-num">150</span><span><span class="step-name">Fiscal printer frame over a serial port</span><span class="step-note note"><code>std/serial</code> opens an RS232 or USB-serial port, sends an ENQ and reads an STX...ETX+LRC frame; <code>try_serial_read_until</code> does not eat the byte that follows the end byte.</span></span></a></li>
 </ol>
 </section>
 <a class="callout" href="/docs/"><span><span class="callout-name">Nyx, step by step</span><span class="step-note note">Install it, write a first program, set up a project and hand it to an assistant.</span></span><span class="callout-go">Open →</span></a>
@@ -195,7 +191,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.39.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.38.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
