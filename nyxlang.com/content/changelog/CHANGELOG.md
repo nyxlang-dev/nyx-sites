@@ -9,6 +9,52 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+### Cambiado
+- **El runtime C va siempre con `-O2`**, también sin `--release`, en `nyx run`, `nyx build` y `nyx test`: a `-O0`
+  todo lo que vive en C corría unas 7 veces más lento (`sha256` de 120 MB: 4.858 → 741 ms con `nyx run`), y
+  nyxerp lo reportó como lentitud de PBKDF2. Se compila una sola vez a la caché `~/.cache/nyx/rt/` (la que ya
+  usaban build y test; `nyx run` la estrena: antes recompilaba el runtime en cada corrida), con a lo sumo tantos
+  `clang` a la vez como núcleos. El código Nyx del usuario sigue sin optimizar fuera de `--release`. Guarda en
+  `run_toolchain_recipe_audit.sh`.
+- **`pbkdf2_hmac_sha256` unas 5 veces más rápido** [dogfooding:nyxerp]: en nativo usa `PKCS5_PBKDF2_HMAC` de
+  OpenSSL (600.000 iteraciones: 872 → 166 ms en aarch64 con `--release`); la implementación propia, que queda
+  para wasm32-wasi, precalcula una vez por llamada los estados SHA-256 de `k^ipad` y `k^opad` (2 compresiones
+  por iteración en vez de 4; wasm 1.276 → 620 ms). Mismo resultado byte a byte (vectores de RFC 7914 en
+  `test_crypto.c`, por las dos rutas). Lo que nyxerp midió (6,2 s) era además el runtime sin optimizar fuera de
+  `--release` (ver el ítem anterior).
+
+### Agregado
+- **`std/serial`: puerto serie nativo para programas de servidor** [arco: serial-nativo] [dogfooding:nyxerp]:
+  `try_serial_open(path, baud, data_bits, paridad, stop_bits)`, `try_serial_write`, `try_serial_read(p, max, plazo_ms)`
+  (`Ok("")` = venció el plazo sin datos), `try_serial_read_until(p, fin, max, plazo_ms)` para tramas STX…ETX (no se
+  come el byte que sigue al fin, p. ej. el LRC), `try_serial_close` y `serial_ports()` con VID:PID USB. Linux
+  (termios, `/sys/class/tty`) y Windows (`\\.\COMn`, DCB, SetupAPI; sin verificar todavía en Windows real); macOS
+  abre y lista sin VID/PID. Apertura exclusiva (`in_use`), DTR activo, modo crudo sin control de flujo, solo
+  velocidades estándar. Bytes como `String`, con adaptadores para el `Array` de `std/browser_serial`. Por `extern "C"`,
+  sin tocar el compilador. Pedido para el puente de tienda de nyxerp (impresora fiscal y balanzas).
+- **W5: procesos, señales y adapters `dl` compilan para Windows** [arco: w5-windows]: salen del gate de win32
+  `exec`, `exec_code`, `getpid`, `getcwd`, `chdir`, `stat`, `isatty`, `open_fd`, `close_fd`, `dup2`, `fsync`,
+  `fdatasync`, `signal_*` y `setup_shutdown_handler`. En Windows, `exec()` normaliza `\r\n` a `\n` y `exec_code()`
+  da 127 para un comando inexistente cuando la línea es simple. SIGINT y SIGTERM llegan por
+  `SetConsoleCtrlHandler`: Ctrl+C da SIGINT, y Ctrl+Break, cierre de consola, logoff y apagado dan SIGTERM, con
+  hasta 4,5 s para que el closure (el flush de `persist`) termine. `taskkill /F` y `TerminateProcess` no avisan.
+  Los adapters de sqlite, zlib y llama prueban también los nombres `.dll`, y `compress.c` carga zlib entero por
+  `dl` (sin `<zlib.h>` ni enlace obligatorio). Siguen solo-posix `fork`, `execvp`, `waitpid`, `kill_process` y
+  `pipe_new`, hasta el arco `procesos-spawn`. Sin cambios en Linux. **Nada verificado todavía en Windows real.**
+
+### Arreglado
+- **sqlite: un símbolo faltante es «biblioteca ausente», no un crash**: antes la biblioteca cargaba con un puntero
+  nulo que reventaba en la primera llamada. Ahora `try_sqlite_open` devuelve la causa con el nombre del símbolo y de
+  la biblioteca, y `sqlite_open` la avisa una vez por stderr. Variable nueva `NYX_SQLITE_SO`, que fija la biblioteca.
+- **El parser ya no corta en silencio los programas de más de 100000 sentencias** [dogfooding:nyxerp]: el
+  bucle principal tenía un tope fijo; al pasarlo imprimía «demasiadas iteraciones» y seguía con el programa a
+  medias. Un proyecto con muchos imports perdía su `main.nx` entero: `nyx check` salía con 0 y el build fallaba
+  con «undefined reference to main». Ahora la cota es el número de tokens, y pasarla es un error interno duro.
+  Guarda `parser-sin-tope` en `make test-ai-first`.
+- **Una cadena de más de 50 operaciones postfijas ya compila**: `a.b().c()…` tenía un tope de 50 vueltas en el
+  parser, y la operación número 51 daba NYX0107 sobre código válido. Ahora el bucle termina cuando una vuelta no
+  consume ningún token. Regression +1 (`test-515`, 532 archivos).
+
 ## [0.39.0] — 2026-10-27
 
 > **MINOR**: API nueva — `std/crypto` (AES-GCM), `std/exec` (`try_exec_full`), `try_ping`, las primitivas UDP
