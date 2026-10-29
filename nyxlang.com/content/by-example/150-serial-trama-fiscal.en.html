@@ -1,0 +1,12 @@
+<!-- title: Fiscal printer frame over a serial port | blurb: <code>std/serial</code> opens an RS232 or USB-serial port, sends an ENQ and reads an STX...ETX+LRC frame; <code>try_serial_read_until</code> does not eat the byte that follows the end byte. -->
+<section data-part="intro">
+<p>A store bridge talks over a serial port to a fiscal printer (9600 baud, 8 bits, even parity, 1 stop) and to scales (9600 8N1). The printer answers an ENQ with a <code>STX data ETX LRC</code> frame. <code>try_serial_read_until(p, 3, 256, 1000)</code> reads up to the ETX with a one-second total deadline, and <code>try_serial_read(p, 1, 500)</code> fetches the LRC, which is the XOR of the bytes after the STX up to and including the ETX.</p>
+</section>
+<section data-part="output">
+NYX_SERIAL_PORT vacío: solo se listan los puertos
+puertos serie: 1
+  /dev/ttyS0 (sin VID:PID)
+</section>
+<section data-part="explanation">
+<p>Bytes travel as a <code>String</code>, and <code>s.charAt(i)</code> gives the byte value. An <code>Ok("")</code> from <code>try_serial_read</code> means the deadline expired with no data: it is not an error. Opening is exclusive (another program holding the port gives <code>kind</code> <code>"in_use"</code>) and on Linux the user must be in the <code>dialout</code> group. Calls are synchronous: with several ports, use one <code>spawn</code> per port. Without hardware, the recipe takes the port from <code>NYX_SERIAL_PORT</code> and, if it is empty, only lists the ports present (the list in the example depends on the machine).</p>
+</section>

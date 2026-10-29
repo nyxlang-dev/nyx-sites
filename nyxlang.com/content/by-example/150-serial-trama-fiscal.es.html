@@ -1,0 +1,12 @@
+<!-- title: Trama de una impresora fiscal por puerto serie | blurb: <code>std/serial</code> abre un puerto RS232 o USB-serie, manda un ENQ y lee una trama STX...ETX+LRC; <code>try_serial_read_until</code> no se come el byte que sigue al fin. -->
+<section data-part="intro">
+<p>Un puente de tienda habla por puerto serie con una impresora fiscal (9600 baudios, 8 bits, paridad par, 1 stop) y con balanzas (9600 8N1). La impresora contesta a un ENQ con una trama <code>STX datos ETX LRC</code>. <code>try_serial_read_until(p, 3, 256, 1000)</code> lee hasta el ETX con un plazo total de un segundo, y <code>try_serial_read(p, 1, 500)</code> trae el LRC, que es el XOR de los bytes después del STX hasta el ETX inclusive.</p>
+</section>
+<section data-part="output">
+NYX_SERIAL_PORT vacío: solo se listan los puertos
+puertos serie: 1
+  /dev/ttyS0 (sin VID:PID)
+</section>
+<section data-part="explanation">
+<p>Los bytes viajan como <code>String</code>, y <code>s.charAt(i)</code> da el valor del byte. Un <code>Ok("")</code> en <code>try_serial_read</code> significa que venció el plazo sin datos: no es un error. La apertura es exclusiva (otro programa con el puerto da <code>kind</code> <code>"in_use"</code>) y en Linux el usuario tiene que estar en el grupo <code>dialout</code>. Las llamadas son síncronas: con varios puertos, un <code>spawn</code> por puerto. Sin hardware, la receta toma el puerto de <code>NYX_SERIAL_PORT</code> y, si está vacío, solo lista los puertos presentes (la lista del ejemplo depende de la máquina).</p>
+</section>
