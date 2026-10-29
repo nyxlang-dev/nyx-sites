@@ -60,13 +60,13 @@ fn highlight_sample(path: String) -> String {
 // receta que lo usa. Tres Arrays paralelos (receta, módulo, clave i18n de la
 // nota) en vez de un Array de Map, por el mismo gotcha que doc_slugs.
 fn stdlib_slugs() -> Array {
-    return ["146-csv-columnar", "15-json-parse", "51-http-server", "110-serve-sse", "49-http-get", "104-postgres", "55-sqlite", "118-pdf-invoice", "143-pdf-a-imagen", "124-xlsx-escribir-libro", "113-smtp", "133-imagen-miniaturas", "150-serial-trama-fiscal"]
+    return ["146-csv-columnar", "15-json-parse", "51-http-server", "110-serve-sse", "49-http-get", "104-postgres", "55-sqlite", "118-pdf-invoice", "143-pdf-a-imagen", "124-xlsx-escribir-libro", "113-smtp", "133-imagen-miniaturas", "150-serial-trama-fiscal", "151-capturar-stdout-stderr-process"]
 }
 fn stdlib_modules() -> Array {
-    return ["std/csv", "std/json", "std/http", "std/serve", "std/http", "std/postgres", "std/sqlite", "std/pdf", "std/pdf_render", "std/xlsx", "std/smtp", "std/image", "std/serial"]
+    return ["std/csv", "std/json", "std/http", "std/serve", "std/http", "std/postgres", "std/sqlite", "std/pdf", "std/pdf_render", "std/xlsx", "std/smtp", "std/image", "std/serial", "std/process"]
 }
 fn stdlib_note_keys() -> Array {
-    return ["std_csv_note", "std_json_note", "std_server_note", "std_serve_note", "std_http_note", "std_postgres_note", "std_sqlite_note", "std_pdf_note", "std_pdfrender_note", "std_xlsx_note", "std_smtp_note", "std_image_note", "std_serial_note"]
+    return ["std_csv_note", "std_json_note", "std_server_note", "std_serve_note", "std_http_note", "std_postgres_note", "std_sqlite_note", "std_pdf_note", "std_pdfrender_note", "std_xlsx_note", "std_smtp_note", "std_image_note", "std_serial_note", "std_process_note"]
 }
 
 // Arma las tarjetas de un idioma. Cada receta tiene que estar en `order` de

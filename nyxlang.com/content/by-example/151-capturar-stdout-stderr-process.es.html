@@ -1,0 +1,12 @@
+<!-- title: Capturar stdout y stderr de un hijo | blurb: <code>std/process</code> lanza un programa sin shell ni <code>fork</code>, igual en Linux, macOS y Windows; <code>try_child_collect</code> lee stdout y stderr a la vez y devuelve el código de salida. -->
+<section data-part="intro">
+<p><code>try_spawn(argv, opts)</code> arranca el hijo con cada flujo como un <code>Stdio</code> (heredado, nulo, pipe, archivo o fd). <code>argv</code> es un <code>Array</code>, así que no hay shell: ni comillas, ni <code>*</code>, ni <code>$VAR</code> que inyectar. Con <code>stdout</code> y <code>stderr</code> en <code>Stdio.Pipe</code>, <code>try_child_collect</code> drena los dos a la vez y espera al hijo, y devuelve <code>ChildOutput { stdout, stderr, code }</code>.</p>
+</section>
+<section data-part="output">
+ok: hola desde std/process
+error: falló con código 3: motivo
+error: no se pudo lanzar (not_found)
+</section>
+<section data-part="explanation">
+<p>Un programa que no existe falla al lanzar con <code>Err</code> de kind <code>not_found</code>: no hay un hijo que salga con 127. Leer "todo stdout y luego stderr" puede colgarse si el hijo llena el pipe de stderr mientras tanto; <code>try_child_collect</code> lo evita. Las llamadas bloquean el hilo: con muchos hijos, un <code>spawn</code> por hijo. En Windows un <code>.bat</code> o <code>.cmd</code> se rechaza con <code>invalid</code>, y <code>try_child_signal</code> existe solo en posix. Los builtins crudos <code>fork</code>/<code>execvp</code> siguen disponibles en posix.</p>
+</section>
