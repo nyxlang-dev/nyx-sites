@@ -97,6 +97,12 @@ modules = ["src/util", "src/geo"]</pre>
 <p class="doc-note"><strong>Known limit.</strong> Type-checking of arguments across the boundary does not exist yet: calling a separately compiled function with the wrong argument type is not caught at compile time today.</p>
 <p><code>nyx test</code> uses <code>[lib]</code> too: it builds (or reuses) the libraries once per suite and links every test file against them, instead of recompiling everything it imports in each one. A test file that is itself a <code>[lib]</code> module is compiled whole, with its <code>test</code> blocks. <code>--coverage</code> still inlines everything.</p>
 
+<h2>Building for the other Linux architecture</h2>
+<p>With <code>--target</code> (or <code>target</code> under <code>[build]</code> in <code>nyx.toml</code>) you build the other architecture's binary without leaving your machine. The result lands in <code>target/&lt;triple&gt;/&lt;name&gt;</code> and does not overwrite the native binary.</p>
+<pre data-lang="sh">nyx build --target x86_64-unknown-linux-gnu     # or aarch64-unknown-linux-gnu</pre>
+<p>You need the target's development libraries installed (on Debian/Ubuntu, via multiarch: <code>libc6-dev</code>, <code>libgc-dev</code>, <code>libssl-dev</code>, <code>zlib1g-dev</code>, <code>libgcc-N-dev</code> with the architecture suffix, and <code>lld</code>); if something is missing, <code>nyx build</code> says so before compiling, with the exact command.</p>
+<p class="doc-note"><strong>Limits.</strong> There is no emulation: the cross-built binary does not run on the machine that builds it, so copy it to a machine of that architecture. It is a dynamic binary: the target needs libgc, libssl3, libcrypto, libz and glibc. An unknown triple is rejected with the list of valid ones (<code>x86_64-unknown-linux-gnu</code>, <code>aarch64-unknown-linux-gnu</code>, <code>wasm32-wasi</code>).</p>
+
 <h2>Two commands you will want later</h2>
 <pre data-lang="sh">$ nyx info
 nyx v0.40.0 — info

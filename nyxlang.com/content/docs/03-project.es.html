@@ -97,6 +97,12 @@ modules = ["src/util", "src/geo"]</pre>
 <p class="doc-note"><strong>Límite conocido.</strong> El chequeo de tipos de los argumentos en la frontera todavía no existe: llamar a una función compilada aparte con un tipo de argumento equivocado no se detecta hoy en tiempo de compilación.</p>
 <p><code>nyx test</code> también usa <code>[lib]</code>: compila (o reutiliza) las bibliotecas una sola vez por suite y enlaza cada archivo de prueba contra ellas, en vez de volver a compilar todo lo que importa en cada uno. Un archivo de prueba que es él mismo un módulo de <code>[lib]</code> se compila entero, con sus bloques <code>test</code>. Con <code>--coverage</code> se inlinea todo, como antes.</p>
 
+<h2>Compilar para otra arquitectura Linux</h2>
+<p>Con <code>--target</code> (o <code>target</code> en <code>[build]</code> de <code>nyx.toml</code>) armas el binario de la otra arquitectura sin salir de tu máquina. El resultado queda en <code>target/&lt;triple&gt;/&lt;nombre&gt;</code> y no pisa el binario nativo.</p>
+<pre data-lang="sh">nyx build --target x86_64-unknown-linux-gnu     # o aarch64-unknown-linux-gnu</pre>
+<p>Necesitas las bibliotecas de desarrollo del destino instaladas (en Debian/Ubuntu, con multiarch: <code>libc6-dev</code>, <code>libgc-dev</code>, <code>libssl-dev</code>, <code>zlib1g-dev</code>, <code>libgcc-N-dev</code> con el sufijo de la arquitectura, y <code>lld</code>); si falta algo, <code>nyx build</code> lo dice antes de compilar, con el comando exacto.</p>
+<p class="doc-note"><strong>Límites.</strong> No hay emulación: el binario cruzado no se ejecuta en la máquina que lo arma, así que cópialo a una máquina de esa arquitectura. Es un binario dinámico: el destino necesita libgc, libssl3, libcrypto, libz y glibc. Un triple desconocido se rechaza con la lista de los válidos (<code>x86_64-unknown-linux-gnu</code>, <code>aarch64-unknown-linux-gnu</code>, <code>wasm32-wasi</code>).</p>
+
 <h2>Dos comandos que vas a querer después</h2>
 <pre data-lang="sh">$ nyx info
 nyx v0.40.0 — info
