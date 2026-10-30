@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conectar por TCP con un plazo propio — Nyx por ejemplo</title>
+<meta name="description" content="try_tcp_connect_ms abre una conexión TCP con el plazo que se le pasa y distingue un equipo que no responde de uno que rechaza la conexión.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/152-tcp-conectar-con-plazo.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/152-tcp-conectar-con-plazo.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/152-tcp-conectar-con-plazo.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/152-tcp-conectar-con-plazo.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/152-tcp-conectar-con-plazo.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">152</span> / Redes</span></p>
+<h1 class="doc-title">Conectar por TCP con un plazo propio</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Para saber si un equipo de red está encendido (una tickera en el puerto 9100, por ejemplo) alcanza con intentar conectar. <code>try_tcp_connect</code> espera hasta tres segundos; <code>try_tcp_connect_ms(host, port, plazo_ms)</code> usa el plazo que se le pase y devuelve <code>Result&lt;int, Error&gt;</code> con el descriptor de la conexión.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">152-tcp-conectar-con-plazo.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/152-tcp-conectar-con-plazo.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: conectar por TCP con un plazo propio.</span>
+<span class="cm">//</span>
+<span class="cm">// Un puente de tienda pregunta cada pocos segundos «¿está encendida la</span>
+<span class="cm">// tickera?» abriendo una conexión a su puerto (9100 en las impresoras de red).</span>
+<span class="cm">// Si el equipo está apagado, try_tcp_connect espera hasta 3000 ms, y el</span>
+<span class="cm">// sistema operativo puede tardar todavía más sin plazo. try_tcp_connect_ms</span>
+<span class="cm">// usa el plazo que se le pase: si no conecta a tiempo, Err con kind &quot;timeout&quot;</span>
+<span class="cm">// (code 110). Un puerto sin nadie escuchando se rechaza enseguida</span>
+<span class="cm">// (&quot;connection&quot;, 111), sin esperar el plazo.</span>
+<span class="cm">//</span>
+<span class="cm">// Acá los &quot;equipos&quot; son locales para que corra en cualquier lado: uno que</span>
+<span class="cm">// escucha y otro que no.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">estado</span><span class="op">(</span>host<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> port<span class="op">:</span> <span class="ty">int</span><span class="op">,</span> plazo_ms<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">try_tcp_connect_ms</span><span class="op">(</span>host<span class="op">,</span> port<span class="op">,</span> plazo_ms<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>fd<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+            <span class="kw">return</span> <span class="str">&quot;encendido&quot;</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;timeout&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;no responde en &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>plazo_ms<span class="op">)</span> <span class="op">+</span> <span class="str">&quot; ms&quot;</span> <span class="op">}</span>
+            <span class="kw">if</span> e<span class="op">.</span>kind <span class="op">==</span> <span class="str">&quot;connection&quot;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;rechaza la conexión&quot;</span> <span class="op">}</span>
+            <span class="kw">return</span> <span class="fn">error_to_string</span><span class="op">(</span>e<span class="op">)</span>
+        <span class="op">}</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> srv<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> pr<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="kw">let</span> abierto<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> pr<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+
+    <span class="kw">let</span> tmp<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> cr<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">int</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_local_port</span><span class="op">(</span>tmp<span class="op">)</span>
+    <span class="kw">let</span> cerrado<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> cr<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>tmp<span class="op">)</span>
+
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;tickera 1: &quot;</span> <span class="op">+</span> <span class="fn">estado</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> abierto<span class="op">,</span> <span class="num">800</span><span class="op">))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;tickera 2: &quot;</span> <span class="op">+</span> <span class="fn">estado</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> cerrado<span class="op">,</span> <span class="num">800</span><span class="op">))</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>srv<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">tickera 1: encendido
+tickera 2: rechaza la conexión</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Si nadie contesta dentro del plazo, el <code>Err</code> trae kind <code>timeout</code> (code 110). Un puerto sin nadie escuchando se rechaza enseguida, con kind <code>connection</code> (111), sin esperar el plazo. La conexión abierta se cierra con <code>tcp_close</code>. En el ejemplo los dos equipos son locales para que corra en cualquier lado: uno escucha y el otro no.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/151-capturar-stdout-stderr-process.html"><span class="label">← Anterior</span><span class="doc-nav-name">Capturar stdout y stderr de un hijo</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.40.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capturar stdout y stderr de un hijo — Nyx por ejemplo</title>
+<meta name="description" content="std/process lanza un programa sin shell ni fork, con la misma API en todas partes; try_child_collect lee stdout y stderr a la vez y devuelve el código de salida.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/151-capturar-stdout-stderr-process.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/151-capturar-stdout-stderr-process.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/151-capturar-stdout-stderr-process.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/151-capturar-stdout-stderr-process.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/151-capturar-stdout-stderr-process.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">151</span> / Sistemas</span></p>
+<h1 class="doc-title">Capturar stdout y stderr de un hijo</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>try_spawn(argv, opts)</code> arranca el hijo con cada flujo como un <code>Stdio</code> (heredado, nulo, pipe, archivo o fd). <code>argv</code> es un <code>Array</code>, así que no hay shell: ni comillas, ni <code>*</code>, ni <code>$VAR</code> que inyectar. Con <code>stdout</code> y <code>stderr</code> en <code>Stdio.Pipe</code>, <code>try_child_collect</code> drena los dos a la vez y espera al hijo, y devuelve <code>ChildOutput { stdout, stderr, code }</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">151-capturar-stdout-stderr-process.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/151-capturar-stdout-stderr-process.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: capturar stdout y stderr de un hijo con std/process.</span>
+<span class="cm">//</span>
+<span class="cm">// std/exec pasa el comando por el shell; std/process lo lanza sin shell</span>
+<span class="cm">// (argv es un Array: nada de comillas, `*` ni `$VAR`, así que no hay nada que</span>
+<span class="cm">// inyectar) y con la misma API en todas las plataformas.</span>
+<span class="cm">//</span>
+<span class="cm">//     o.stdout = Stdio.Pipe;  o.stderr = Stdio.Pipe</span>
+<span class="cm">//     try_spawn(argv, o) -&gt; Result&lt;Child, Error&gt;</span>
+<span class="cm">//     try_child_collect(c) -&gt; Result&lt;ChildOutput, Error&gt;</span>
+<span class="cm">//     ChildOutput { stdout: String, stderr: String, code: int }</span>
+<span class="cm">//</span>
+<span class="cm">//   - collect lee stdout y stderr A LA VEZ hasta EOF y espera al hijo: leer</span>
+<span class="cm">//     &quot;stdout entero y luego stderr&quot; se cuelga si el hijo llena el pipe de</span>
+<span class="cm">//     stderr mientras tanto.</span>
+<span class="cm">//   - Un programa que no existe falla AL LANZAR con Err(not_found): no hay un</span>
+<span class="cm">//     hijo que salga con 127.</span>
+<span class="cm">//   - Bloqueante: con muchos hijos, un `spawn` por hijo.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/process&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="cm">// Corre argv; si sale con código distinto de 0 devuelve Err con su stderr.</span>
+<span class="kw">fn</span> <span class="fn">correr</span><span class="op">(</span>argv<span class="op">:</span> <span class="ty">Array</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">String</span><span class="op">&gt;</span> <span class="op">{</span>
+    <span class="kw">var</span> o <span class="op">=</span> <span class="fn">spawn_opts</span><span class="op">()</span>
+    o<span class="op">.</span>stdout <span class="op">=</span> <span class="ty">Stdio</span><span class="op">.</span><span class="ty">Pipe</span>
+    o<span class="op">.</span>stderr <span class="op">=</span> <span class="ty">Stdio</span><span class="op">.</span><span class="ty">Pipe</span>
+    <span class="kw">match</span> <span class="fn">try_spawn</span><span class="op">(</span>argv<span class="op">,</span> o<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>c<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">match</span> <span class="fn">try_child_collect</span><span class="op">(</span>c<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="kw">if</span> r<span class="op">.</span>code <span class="op">!=</span> <span class="num">0</span> <span class="op">{</span>
+                        <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;falló con código &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>code<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;: &quot;</span> <span class="op">+</span> r<span class="op">.</span>stderr<span class="op">.</span><span class="fn">trim</span><span class="op">())</span>
+                    <span class="op">}</span>
+                    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">.</span>stdout<span class="op">)</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;collect: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;no se pudo lanzar (&quot;</span> <span class="op">+</span> e<span class="op">.</span>kind <span class="op">+</span> <span class="str">&quot;)&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span><span class="str">&quot;inalcanzable&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">match</span> <span class="fn">correr</span><span class="op">([</span><span class="str">&quot;echo&quot;</span><span class="op">,</span> <span class="str">&quot;hola desde std/process&quot;</span><span class="op">])</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> s<span class="op">.</span><span class="fn">trim</span><span class="op">())</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> m<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="cm">// Falla con código y motivo en stderr.</span>
+    <span class="kw">match</span> <span class="fn">correr</span><span class="op">([</span><span class="str">&quot;sh&quot;</span><span class="op">,</span> <span class="str">&quot;-c&quot;</span><span class="op">,</span> <span class="str">&quot;echo motivo &gt;&amp;2; exit 3&quot;</span><span class="op">])</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> s<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> m<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="cm">// Programa inexistente.</span>
+    <span class="kw">match</span> <span class="fn">correr</span><span class="op">([</span><span class="str">&quot;nyx-no-such-program-xyz&quot;</span><span class="op">])</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>s<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: &quot;</span> <span class="op">+</span> s<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>m<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;error: &quot;</span> <span class="op">+</span> m<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ok: hola desde std/process
+error: falló con código 3: motivo
+error: no se pudo lanzar (not_found)</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Un programa que no existe falla al lanzar con <code>Err</code> de kind <code>not_found</code>: no hay un hijo que salga con 127. Leer "todo stdout y luego stderr" puede colgarse si el hijo llena el pipe de stderr mientras tanto; <code>try_child_collect</code> lo evita. Las llamadas bloquean el hilo: con muchos hijos, un <code>spawn</code> por hijo. <code>try_child_signal</code> existe solo en posix; <code>try_child_kill</code> anda en todas partes. Los builtins crudos <code>fork</code>/<code>execvp</code> siguen disponibles en posix.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/150-serial-trama-fiscal.html"><span class="label">← Anterior</span><span class="doc-nav-name">Trama de una impresora fiscal por puerto serie</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/152-tcp-conectar-con-plazo.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Conectar por TCP con un plazo propio</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.40.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

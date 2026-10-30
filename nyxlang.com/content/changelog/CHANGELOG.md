@@ -9,6 +9,32 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`write_file`, `write_file_safe` y `file_open` abren en binario**: en Windows cada `\n` ya no sale como `\r\n`;
+  en Linux y macOS no cambia nada (`158944eb`) [arco: procesos-spawn].
+- **win32: lanzar algo que no es un ejecutable da `EACCES`**, no `EIO`, como en posix (`11faa9d6`) [arco: procesos-spawn].
+- **win32: `argv[0]` con `/` se pasa con `\`** en la línea de comando, y `cmd.exe` ya no toma `/cmd.exe` por la
+  opción `/c` (`a941706e`) [arco: procesos-spawn].
+
+### Added
+
+- **Tests de `std/process` en Windows** (`tests/runtime-unit/win/test_os_proc_spawn_win32.c`, 92 asserts, gate win):
+  verificado en la laptop el 2026-10-29 (`9fcf1faf`) [arco: procesos-spawn].
+
+---
+
+## [0.40.0] — 2026-10-30
+
+> **MINOR**: API nueva — `std/process` (procesos hijos sin `fork`, con la misma API en todas las plataformas)
+  [arco: procesos-spawn], `std/serial` [arco: serial-nativo], `Error.stage` y `try_tcp_connect_ms` — y W5 de
+  Windows [arco: w5-windows]. Ordenar pasa a O(n log n), y llegan arreglos de corrección que nyxerp encontró en uso
+  real: HTTP con cabeceras en minúsculas, `[lib]` con ciclos, `contains` tras `sort_str` y `/proc`.
+>
+> **Migración**: (1) `Error` tiene un cuarto campo, `stage`: un literal `Error { code, kind, msg }` ya no compila
+  (NYX1032); usar `err_new(code, kind, msg)`, o agregar `stage: ""`. (2) `nyx build --target` con un triple de
+  Windows ahora falla con el motivo, en vez de armar un ejecutable nativo y salir 0.
+
 ### Cambiado
 - **`sort_int`, `sort_str` y `sort_by` ordenan en O(n log n)** [dogfooding:nyxerp]: eran burbuja e inserción,
   O(n²); con 32.000 elementos `sort_by` tardaba 15 s y ahora 11 ms. Ordenación por mezcla sin recursión,
