@@ -1,14 +1,15 @@
-<!-- title: Fork &amp; Exec | blurb: Running external commands with <code>fork</code>, <code>execvp</code>, and <code>waitpid</code>. -->
+<!-- title: Run an external program | blurb: Launch a child process with <code>std/process</code>: <code>try_spawn</code> and <code>try_child_wait</code>, without a shell and without <code>fork</code>. -->
 <section data-part="intro">
-<p><code>fork()</code> creates a child process. In the child (pid == 0), call <code>execvp</code> immediately to replace the process image — the Boehm GC requires this pattern since the child inherits an inconsistent GC state. <code>waitpid</code> in the parent blocks until the child exits.</p>
+<p><code>try_spawn(argv, opts)</code> starts a child process and returns a <code>Child</code>. <code>argv</code> is an <code>Array</code>: there is no shell in between, so there are no quotes, <code>*</code> or <code>$VAR</code> to escape. <code>spawn_opts()</code> leaves stdin, stdout and stderr inherited, so the child writes to the same terminal as the parent. <code>try_child_wait</code> blocks until the child exits and returns its exit code.</p>
 </section>
 <section data-part="output" data-illustrative="1">
-parent: spawned child 12345
 hello from child
+parent: spawned child
 parent: child exited with 0
+not found: not_found
 </section>
 <section data-part="explanation">
-<p><code>fork()</code> duplicates the current process. It returns 0 in the child and the child's PID in the parent. Because Nyx uses the Boehm garbage collector, the child process must <strong>not</strong> allocate GC-managed memory — it must call <code>execvp()</code> immediately to replace its process image with a new program.</p>
-<p><code>execvp(command, args)</code> replaces the current process with the given command. The first element of <code>args</code> is conventionally the program name. If <code>execvp</code> succeeds, it never returns.</p>
-<p><code>waitpid(pid, 0)</code> blocks the parent until the child exits and returns the exit status. This is the standard Unix pattern for spawning subprocesses.</p>
+<p>The parent and the child write at the same time, so the order of the first two lines can change from run to run; the exit code always comes after, because <code>try_child_wait</code> waits for the child.</p>
+<p>A program that does not exist fails <strong>at launch</strong>: <code>try_spawn</code> returns <code>Err</code> with kind <code>not_found</code> and <code>e.stage == "exec"</code>. With raw <code>fork</code> + <code>execvp</code> the parent saw no error and the child exited with 127; if your code relied on that, map <code>not_found</code> to 127 yourself.</p>
+<p>The raw builtins <code>fork</code>, <code>execvp</code> and <code>waitpid</code> are still available on posix, unchanged. <code>std/process</code> is the portable way, and it needs no care with the garbage collector: there is no forked copy of the parent.</p>
 </section>

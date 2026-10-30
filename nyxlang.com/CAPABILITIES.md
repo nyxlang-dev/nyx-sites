@@ -1,7 +1,7 @@
 # CAPABILITIES — índice de la stdlib de Nyx
 
 <!-- nyx-version: 0.39.0 -->
-<!-- nyx-stdlib: 2010627490-2133386 -->
+<!-- nyx-stdlib: 2429255908-2156647 -->
 > Auto-generado por `nyx capabilities` desde la stdlib instalada — siempre en sync con tu versión.
 > Es el índice de QUÉ EXISTE: antes de escribir una función, busca aquí si un módulo ya lo hace,
 > impórtalo y úsalo. NO leas el fuente de `std/`. Ver `AGENTS.md` para cómo escribir Nyx.
@@ -10,7 +10,7 @@
 
 ### `std/prelude`
 
-`import "std/prelude"` — 37 funciones:
+`import "std/prelude"` — 38 funciones:
 
 - `pub fn println(s: String)`
 - `pub fn read_stdin_all() -> String`
@@ -46,6 +46,7 @@
 - `pub fn map_get_int(m: Map, k: String) -> int`
 - `pub fn map_has(m: Map, k: String) -> bool`
 - `pub fn err_new(code: int, kind: String, msg: String) -> Error`
+- `pub fn err_stage(code: int, kind: String, msg: String, stage: String) -> Error`
 - `pub fn errno_to_kind(code: int) -> String`
 - `pub fn error_to_string(e: Error) -> String`
 - `pub fn is_eof(e: Error) -> bool`
@@ -57,9 +58,10 @@ Tipos (2) y métodos (0):
 
 ### `std/error`
 
-`import "std/error"` — 4 funciones:
+`import "std/error"` — 5 funciones:
 
 - `pub fn err_new(code: int, kind: String, msg: String) -> Error`
+- `pub fn err_stage(code: int, kind: String, msg: String, stage: String) -> Error`
 - `pub fn errno_to_kind(code: int) -> String`
 - `pub fn error_to_string(e: Error) -> String`
 - `pub fn is_eof(e: Error) -> bool`
@@ -1071,9 +1073,10 @@ Tipos (6) y métodos (0):
 
 ### `std/net`
 
-`import "std/net"` — 28 funciones:
+`import "std/net"` — 29 funciones:
 
 - `pub fn try_tcp_connect(host: String, port: int) -> Result<int, Error>`
+- `pub fn try_tcp_connect_ms(host: String, port: int, timeout_ms: int) -> Result<int, Error>`
 - `pub fn try_tcp_listen(host: String, port: int) -> Result<int, Error>`
 - `pub fn try_udp_bind(host: String, port: int) -> Result<int, Error>`
 - `pub fn try_tcp_accept(listen_fd: int) -> Result<int, Error>`
@@ -1854,6 +1857,31 @@ Tipos (1) y métodos (1):
 Tipos (1) y métodos (0):
 
 - `pub struct ExecResult`
+
+### `std/process`
+
+`import "std/process"` — 13 funciones:
+
+- `pub fn spawn_opts() -> SpawnOpts`
+- `pub fn try_spawn(argv: Array, opts: SpawnOpts) -> Result<Child, Error>`
+- `pub fn try_spawn_pipeline(cmds: Array, opts: SpawnOpts) -> Result<Array, Error>`
+- `pub fn try_child_wait(c: Child) -> Result<int, Error>`
+- `pub fn try_child_try_wait(c: Child) -> Result<Option<int>, Error>`
+- `pub fn try_child_kill(c: Child) -> Result<int, Error>`
+- `pub fn try_child_signal(c: Child, sig: int) -> Result<int, Error>`
+- `pub fn try_child_read(c: Child, max: int) -> Result<String, Error>`
+- `pub fn try_child_read_err(c: Child, max: int) -> Result<String, Error>`
+- `pub fn try_child_write(c: Child, datos: String) -> Result<int, Error>`
+- `pub fn try_child_close_stdin(c: Child) -> Result<int, Error>`
+- `pub fn try_child_collect(c: Child) -> Result<ChildOutput, Error>`
+- `pub fn child_pid(c: Child) -> int`
+
+Tipos (4) y métodos (0):
+
+- `pub enum Stdio`
+- `pub struct SpawnOpts`
+- `pub struct Child`
+- `pub struct ChildOutput`
 
 ### `std/semver`
 

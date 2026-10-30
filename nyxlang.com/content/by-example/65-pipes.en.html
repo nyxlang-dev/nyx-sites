@@ -1,13 +1,12 @@
-<!-- title: Pipes | blurb: Connecting processes with <code>pipe_new</code> and <code>dup2</code>. -->
+<!-- title: Pipes | blurb: Connect processes like <code>a | b | c</code> with <code>try_spawn_pipeline</code>, and read the last one's output. -->
 <section data-part="intro">
-<p><code>pipe_new()</code> creates a unidirectional pipe returning <code>[read_fd, write_fd]</code>. Combined with <code>fork</code>, <code>dup2</code>, and <code>execvp</code>, this lets you capture the output of an external command — the same mechanism Unix shells use for <code>|</code> (pipe).</p>
+<p><code>try_spawn_pipeline([argv1, argv2, ...], opts)</code> runs <code>printf … | sort | head -n 2</code> without a shell. It creates the intermediate pipes and closes the parent's ends in time; if the parent kept one open, the next command in the chain would never see end-of-file. <code>opts.stdin</code> feeds the first command and <code>opts.stdout</code> belongs to the last one.</p>
 </section>
-<section data-part="output" data-illustrative="1">
-ls output (first 200 chars):
-...
+<section data-part="output">
+exit code: 0
+lines: 2
 </section>
 <section data-part="explanation">
-<p><code>pipe_new()</code> creates a unidirectional byte stream and returns an array of two file descriptors: <code>[read_fd, write_fd]</code>. Data written to <code>write_fd</code> can be read from <code>read_fd</code>.</p>
-<p>After <code>fork()</code>, the child closes the read end, uses <code>dup2(write_fd, 1)</code> to redirect its stdout to the pipe's write end, then calls <code>execvp</code> to run <code>ls</code>. The child's output flows through the pipe instead of the terminal.</p>
-<p>The parent closes the write end (so reads will see EOF when the child exits), reads the pipe contents with <code>tcp_read</code>, and waits for the child with <code>waitpid</code>. This is exactly how Unix shells implement the <code>|</code> operator.</p>
+<p>It returns the children in order. With <code>opts.stdout = Stdio.Pipe</code>, <code>try_child_collect</code> on the last child reads its output to the end and waits for it; the others are waited for with <code>try_child_wait</code> so none is left as a zombie. If one command cannot be launched, the ones already started are killed and waited for, and the error says which step failed in <code>e.stage</code>.</p>
+<p>The raw builtins <code>pipe_new</code>, <code>fork</code>, <code>dup2</code> and <code>execvp</code>, which this recipe used before, are still available on posix.</p>
 </section>

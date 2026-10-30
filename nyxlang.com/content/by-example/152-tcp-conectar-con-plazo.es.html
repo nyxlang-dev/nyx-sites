@@ -1,0 +1,11 @@
+<!-- title: Conectar por TCP con un plazo propio | blurb: <code>try_tcp_connect_ms</code> abre una conexión TCP con el plazo que se le pasa y distingue un equipo que no responde de uno que rechaza la conexión. -->
+<section data-part="intro">
+<p>Para saber si un equipo de red está encendido (una tickera en el puerto 9100, por ejemplo) alcanza con intentar conectar. <code>try_tcp_connect</code> espera hasta tres segundos; <code>try_tcp_connect_ms(host, port, plazo_ms)</code> usa el plazo que se le pase y devuelve <code>Result&lt;int, Error&gt;</code> con el descriptor de la conexión.</p>
+</section>
+<section data-part="output">
+tickera 1: encendido
+tickera 2: rechaza la conexión
+</section>
+<section data-part="explanation">
+<p>Si nadie contesta dentro del plazo, el <code>Err</code> trae kind <code>timeout</code> (code 110). Un puerto sin nadie escuchando se rechaza enseguida, con kind <code>connection</code> (111), sin esperar el plazo. La conexión abierta se cierra con <code>tcp_close</code>. En el ejemplo los dos equipos son locales para que corra en cualquier lado: uno escucha y el otro no.</p>
+</section>

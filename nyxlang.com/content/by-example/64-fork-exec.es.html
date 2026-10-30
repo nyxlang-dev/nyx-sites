@@ -1,14 +1,15 @@
-<!-- title: Fork &amp; Exec | blurb: Ejecutar comandos externos con <code>fork</code>, <code>execvp</code> y <code>waitpid</code>. -->
+<!-- title: Lanzar un programa externo | blurb: Lanzar un proceso hijo con <code>std/process</code>: <code>try_spawn</code> y <code>try_child_wait</code>, sin shell y sin <code>fork</code>. -->
 <section data-part="intro">
-<p><code>fork()</code> crea un proceso hijo. En el hijo (pid == 0), hay que llamar a <code>execvp</code> de inmediato para reemplazar la imagen del proceso — el GC de Boehm requiere este patrón, ya que el hijo hereda un estado de GC inconsistente. <code>waitpid</code> en el padre bloquea hasta que el hijo termina.</p>
+<p><code>try_spawn(argv, opts)</code> arranca un proceso hijo y devuelve un <code>Child</code>. <code>argv</code> es un <code>Array</code>: no hay shell de por medio, así que no hay comillas, <code>*</code> ni <code>$VAR</code> que escapar. <code>spawn_opts()</code> deja stdin, stdout y stderr heredados, de modo que el hijo escribe en la misma terminal que el padre. <code>try_child_wait</code> bloquea hasta que el hijo termina y devuelve su código de salida.</p>
 </section>
 <section data-part="output" data-illustrative="1">
-parent: spawned child 12345
 hello from child
+parent: spawned child
 parent: child exited with 0
+not found: not_found
 </section>
 <section data-part="explanation">
-<p><code>fork()</code> duplica el proceso actual. Devuelve 0 en el hijo y el PID del hijo en el padre. Dado que Nyx usa el recolector de basura de Boehm, el proceso hijo <strong>no</strong> debe alocar memoria gestionada por el GC — debe llamar a <code>execvp()</code> de inmediato para reemplazar su imagen de proceso con un nuevo programa.</p>
-<p><code>execvp(command, args)</code> reemplaza el proceso actual con el comando dado. El primer elemento de <code>args</code> es, por convención, el nombre del programa. Si <code>execvp</code> tiene éxito, nunca retorna.</p>
-<p><code>waitpid(pid, 0)</code> bloquea al padre hasta que el hijo termina y devuelve el código de salida. Este es el patrón estándar de Unix para lanzar subprocesos.</p>
+<p>El padre y el hijo escriben a la vez, así que el orden de las dos primeras líneas puede cambiar de una corrida a otra; el código de salida siempre llega después, porque <code>try_child_wait</code> espera al hijo.</p>
+<p>Un programa que no existe falla <strong>al lanzar</strong>: <code>try_spawn</code> devuelve <code>Err</code> con kind <code>not_found</code> y <code>e.stage == "exec"</code>. Con <code>fork</code> + <code>execvp</code> crudos el padre no veía ningún error y el hijo salía con 127; si tu código dependía de eso, traduce <code>not_found</code> a 127 por tu cuenta.</p>
+<p>Los builtins crudos <code>fork</code>, <code>execvp</code> y <code>waitpid</code> siguen disponibles en posix, sin cambios. <code>std/process</code> es el camino portable, y no necesita cuidados con el recolector de basura: no hay una copia del padre hecha con fork.</p>
 </section>

@@ -2,7 +2,7 @@
 //
 // std/exec pasa el comando por el shell; std/process lo lanza sin shell
 // (argv es un Array: nada de comillas, `*` ni `$VAR`, así que no hay nada que
-// inyectar) y con la misma API en Linux, macOS y Windows.
+// inyectar) y con la misma API en todas las plataformas.
 //
 //     o.stdout = Stdio.Pipe;  o.stderr = Stdio.Pipe
 //     try_spawn(argv, o) -> Result<Child, Error>

@@ -1,4 +1,4 @@
-<!-- title: Capture a child's stdout and stderr | blurb: <code>std/process</code> launches a program without a shell or <code>fork</code>, the same on Linux, macOS and Windows; <code>try_child_collect</code> reads stdout and stderr at once and returns the exit code. -->
+<!-- title: Capture a child's stdout and stderr | blurb: <code>std/process</code> launches a program without a shell or <code>fork</code>, with the same API everywhere; <code>try_child_collect</code> reads stdout and stderr at once and returns the exit code. -->
 <section data-part="intro">
 <p><code>try_spawn(argv, opts)</code> starts the child with each stream as a <code>Stdio</code> (inherited, null, pipe, file or fd). <code>argv</code> is an <code>Array</code>, so there is no shell: no quotes, no <code>*</code>, no <code>$VAR</code> to inject. With <code>stdout</code> and <code>stderr</code> on <code>Stdio.Pipe</code>, <code>try_child_collect</code> drains both at once and waits for the child, returning <code>ChildOutput { stdout, stderr, code }</code>.</p>
 </section>
@@ -8,5 +8,5 @@ error: falló con código 3: motivo
 error: no se pudo lanzar (not_found)
 </section>
 <section data-part="explanation">
-<p>A program that does not exist fails at launch with <code>Err</code> of kind <code>not_found</code>: there is no child that exits with 127. Reading "all of stdout, then stderr" can deadlock if the child fills the stderr pipe meanwhile; <code>try_child_collect</code> avoids it. Calls block the thread: with many children, use one <code>spawn</code> per child. On Windows a <code>.bat</code> or <code>.cmd</code> is rejected with <code>invalid</code>, and <code>try_child_signal</code> exists only on posix. The raw <code>fork</code>/<code>execvp</code> builtins remain available on posix.</p>
+<p>A program that does not exist fails at launch with <code>Err</code> of kind <code>not_found</code>: there is no child that exits with 127. Reading "all of stdout, then stderr" can deadlock if the child fills the stderr pipe meanwhile; <code>try_child_collect</code> avoids it. Calls block the thread: with many children, use one <code>spawn</code> per child. <code>try_child_signal</code> exists only on posix; <code>try_child_kill</code> works everywhere. The raw <code>fork</code>/<code>execvp</code> builtins remain available on posix.</p>
 </section>

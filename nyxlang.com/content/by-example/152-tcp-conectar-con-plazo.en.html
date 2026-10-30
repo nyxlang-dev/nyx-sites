@@ -1,0 +1,11 @@
+<!-- title: TCP connect with your own timeout | blurb: <code>try_tcp_connect_ms</code> opens a TCP connection with the timeout you pass and tells a device that does not answer apart from one that refuses the connection. -->
+<section data-part="intro">
+<p>To know whether a network device is on (a receipt printer on port 9100, for example), trying to connect is enough. <code>try_tcp_connect</code> waits up to three seconds; <code>try_tcp_connect_ms(host, port, timeout_ms)</code> uses the timeout you pass and returns <code>Result&lt;int, Error&gt;</code> with the connection's descriptor.</p>
+</section>
+<section data-part="output">
+tickera 1: encendido
+tickera 2: rechaza la conexión
+</section>
+<section data-part="explanation">
+<p>If nobody answers within the timeout, the <code>Err</code> has kind <code>timeout</code> (code 110). A port with nobody listening is refused right away, with kind <code>connection</code> (111), without waiting for the timeout. Close the open connection with <code>tcp_close</code>. In the example both devices are local so it runs anywhere: one listens and the other does not.</p>
+</section>
