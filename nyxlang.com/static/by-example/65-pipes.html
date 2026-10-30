@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pipes — Nyx by example</title>
-<meta name="description" content="Connecting processes with pipe_new and dup2.">
+<meta name="description" content="Connect processes like a | b | c with try_spawn_pipeline, and read the last one&#x27;s output.">
 <link rel="canonical" href="https://nyxlang.com/by-example/65-pipes.html">
 <link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/65-pipes.html">
 <link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/65-pipes.html">
@@ -34,60 +34,61 @@
 <h1 class="doc-title">Pipes</h1>
 </header>
 <article class="recipe">
-<div class="recipe-lede prose"><p><code>pipe_new()</code> creates a unidirectional pipe returning <code>[read_fd, write_fd]</code>. Combined with <code>fork</code>, <code>dup2</code>, and <code>execvp</code>, this lets you capture the output of an external command — the same mechanism Unix shells use for <code>|</code> (pipe).</p></div>
+<div class="recipe-lede prose"><p><code>try_spawn_pipeline([argv1, argv2, ...], opts)</code> runs <code>printf … | sort | head -n 2</code> without a shell. It creates the intermediate pipes and closes the parent's ends in time; if the parent kept one open, the next command in the chain would never see end-of-file. <code>opts.stdin</code> feeds the first command and <code>opts.stdout</code> belongs to the last one.</p></div>
 <div class="panel recipe-panel">
 <div class="panel-head"><span class="panel-name">65-pipes.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/65-pipes.nx">Source →</a></div>
-<div class="panel-body"><pre><span class="cm">// Pipes — connecting two processes via pipe</span>
-<span class="cm">// Pipes — conectar dos procesos via pipe</span>
+<div class="panel-body"><pre><span class="cm">// Pipes — conectar procesos con std/process</span>
+<span class="cm">// Pipes — connect processes with std/process</span>
+<span class="cm">//</span>
+<span class="cm">// `printf &#x27;c\\nb\\na\\n&#x27; | sort | head -n 2` sin shell: try_spawn_pipeline crea los pipes</span>
+<span class="cm">// intermedios y cierra los extremos del padre a tiempo (si no, el EOF nunca</span>
+<span class="cm">// llega al siguiente de la cadena). opts.stdout es el del ÚLTIMO comando.</span>
+<span class="cm">//</span>
+<span class="cm">// Nota: pipe_new + fork + dup2 + execvp (lo que hacía esta receta) siguen</span>
+<span class="cm">// disponibles en posix; donde no hay fork se usa std/process.</span>
+<span class="cm">// EN: pipe_new/fork/dup2/execvp remain on posix; std/process is portable.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/process&quot;</span>
 
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="cm">// pipe_new() returns [read_fd, write_fd]</span>
-    <span class="kw">let</span> fds<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="fn">pipe_new</span><span class="op">()</span>
-    <span class="kw">let</span> read_fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fds<span class="op">[</span><span class="num">0</span><span class="op">]</span>
-    <span class="kw">let</span> write_fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fds<span class="op">[</span><span class="num">1</span><span class="op">]</span>
-
-    <span class="kw">let</span> pid<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">fork</span><span class="op">()</span>
-
-    <span class="kw">if</span> pid <span class="op">==</span> <span class="num">0</span> <span class="op">{</span>
-        <span class="cm">// Child: redirect stdout to write end of pipe</span>
-        <span class="fn">close_fd</span><span class="op">(</span>read_fd<span class="op">)</span>
-        <span class="fn">dup2</span><span class="op">(</span>write_fd<span class="op">,</span> <span class="num">1</span><span class="op">)</span>
-        <span class="fn">close_fd</span><span class="op">(</span>write_fd<span class="op">)</span>
-        <span class="cm">// exec ls — output goes into pipe</span>
-        <span class="kw">let</span> args<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;ls&quot;</span><span class="op">,</span> <span class="str">&quot;/tmp&quot;</span><span class="op">]</span>
-        <span class="fn">execvp</span><span class="op">(</span><span class="str">&quot;ls&quot;</span><span class="op">,</span> args<span class="op">)</span>
-        <span class="kw">return</span> <span class="num">1</span>
+    <span class="kw">var</span> opts<span class="op">:</span> <span class="ty">SpawnOpts</span> <span class="op">=</span> <span class="fn">spawn_opts</span><span class="op">()</span>
+    opts<span class="op">.</span>stdout <span class="op">=</span> <span class="ty">Stdio</span><span class="op">.</span><span class="ty">Pipe</span>
+    <span class="kw">match</span> <span class="fn">try_spawn_pipeline</span><span class="op">([[</span><span class="str">&quot;printf&quot;</span><span class="op">,</span> <span class="str">&quot;c\\nb\\na\\n&quot;</span><span class="op">],</span> <span class="op">[</span><span class="str">&quot;sort&quot;</span><span class="op">],</span> <span class="op">[</span><span class="str">&quot;head&quot;</span><span class="op">,</span> <span class="str">&quot;-n&quot;</span><span class="op">,</span> <span class="str">&quot;2&quot;</span><span class="op">]],</span> opts<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>hijos<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="cm">// collect lee el stdout del último hasta EOF y lo espera.</span>
+            <span class="kw">let</span> ultimo<span class="op">:</span> <span class="ty">Child</span> <span class="op">=</span> hijos<span class="op">[</span>hijos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">1</span><span class="op">]</span>
+            <span class="kw">match</span> <span class="fn">try_child_collect</span><span class="op">(</span>ultimo<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;exit code: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>code<span class="op">))</span>
+                    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;lines: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>r<span class="op">.</span>stdout<span class="op">.</span><span class="fn">trim</span><span class="op">().</span><span class="fn">split</span><span class="op">(</span><span class="str">&quot;\n&quot;</span><span class="op">).</span><span class="fn">length</span><span class="op">()))</span>
+                <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;collect failed: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+            <span class="op">}</span>
+            <span class="cm">// Los demás de la cadena también se esperan (no quedan zombis).</span>
+            <span class="kw">var</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+            <span class="kw">while</span> i <span class="op">&lt;</span> hijos<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">-</span> <span class="num">1</span> <span class="op">{</span>
+                <span class="kw">let</span> c<span class="op">:</span> <span class="ty">Child</span> <span class="op">=</span> hijos<span class="op">[</span>i<span class="op">]</span>
+                <span class="kw">let</span> _r <span class="op">=</span> <span class="fn">try_child_wait</span><span class="op">(</span>c<span class="op">)</span>
+                i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;pipeline failed: &quot;</span> <span class="op">+</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
     <span class="op">}</span>
-
-    <span class="cm">// Parent: read from pipe</span>
-    <span class="fn">close_fd</span><span class="op">(</span>write_fd<span class="op">)</span>
-    <span class="kw">let</span> output<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read</span><span class="op">(</span>read_fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
-    <span class="fn">close_fd</span><span class="op">(</span>read_fd<span class="op">)</span>
-
-    <span class="fn">waitpid</span><span class="op">(</span>pid<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ls output (first 200 chars):&quot;</span><span class="op">)</span>
-    <span class="kw">if</span> output<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">&gt;</span> <span class="num">200</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span>output<span class="op">.</span><span class="fn">substring</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">200</span><span class="op">))</span>
-    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span>
-        <span class="fn">print</span><span class="op">(</span>output<span class="op">)</span>
-    <span class="op">}</span>
-
     <span class="kw">return</span> <span class="num">0</span>
 <span class="op">}</span>
 </pre></div>
 </div>
 <div class="panel recipe-panel">
-<div class="panel-head"><span class="panel-name">Illustrative output</span><span>stdout</span></div>
-<div class="panel-body"><pre class="recipe-output">ls output (first 200 chars):
-...</pre></div>
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">exit code: 0
+lines: 2</pre></div>
 </div>
 <h2 class="recipe-head">How it works</h2>
-<div class="recipe-prose"><p><code>pipe_new()</code> creates a unidirectional byte stream and returns an array of two file descriptors: <code>[read_fd, write_fd]</code>. Data written to <code>write_fd</code> can be read from <code>read_fd</code>.</p>
-<p>After <code>fork()</code>, the child closes the read end, uses <code>dup2(write_fd, 1)</code> to redirect its stdout to the pipe's write end, then calls <code>execvp</code> to run <code>ls</code>. The child's output flows through the pipe instead of the terminal.</p>
-<p>The parent closes the write end (so reads will see EOF when the child exits), reads the pipe contents with <code>tcp_read</code>, and waits for the child with <code>waitpid</code>. This is exactly how Unix shells implement the <code>|</code> operator.</p></div>
+<div class="recipe-prose"><p>It returns the children in order. With <code>opts.stdout = Stdio.Pipe</code>, <code>try_child_collect</code> on the last child reads its output to the end and waits for it; the others are waited for with <code>try_child_wait</code> so none is left as a zombie. If one command cannot be launched, the ones already started are killed and waited for, and the error says which step failed in <code>e.stage</code>.</p>
+<p>The raw builtins <code>pipe_new</code>, <code>fork</code>, <code>dup2</code> and <code>execvp</code>, which this recipe used before, are still available on posix.</p></div>
 </article>
 <nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/64-fork-exec.html"><span class="label">← Previous</span><span class="doc-nav-name">Fork &amp; Exec</span></a>
+<a class="doc-nav-link doc-nav-prev" href="/by-example/64-fork-exec.html"><span class="label">← Previous</span><span class="doc-nav-name">Run an external program</span></a>
 <a class="doc-nav-link doc-nav-next" href="/by-example/66-signal-handling.html"><span class="label">Next →</span><span class="doc-nav-name">Signal Handling</span></a>
 </nav>
 <p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
