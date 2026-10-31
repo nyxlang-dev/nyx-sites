@@ -8,6 +8,7 @@
 <tr><th>Sistema operativo</th><td>Linux. Cualquier otro detiene el instalador con un error.</td></tr>
 <tr><th>Arquitecturas</th><td><code>x86_64</code>, <code>aarch64</code>, <code>armv7l</code>.</td></tr>
 <tr><th>También soportado</th><td>Termux en Android, que usa <code>pkg</code> y no necesita <code>sudo</code>.</td></tr>
+<tr><th>Windows</th><td>En curso, todavía sin soporte. El compilador genera IR para el target Windows, con <code>try</code>/<code>catch</code>, <code>std/serve</code> y TLS funcionando, y un <code>.exe</code> nativo estático ya corrió en una PC real; pero se enlaza en Windows con un script a partir de IR generado en Linux. <code>nyx build --target windows</code> y una toolchain nativa todavía no existen. macOS no está soportado.</td></tr>
 </table>
 
 <h2>Instalar</h2>
