@@ -9,6 +9,66 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **El driver despacha `nyx check`, `nyx fmt` y `nyx test`** a `<nyx_home>/bin/nyx_<cmd>[.exe]` con los argumentos
+  restantes y devuelve su rc (en Windows `install.ps1` instala `nyx_check.exe` y `nyx_fmt.exe`; en Linux el wrapper
+  ya lo resolvía antes). `nyx test` en Windows dice «todavía no está disponible» en vez de «unknown command»
+  [arco: win-cross].
+- **`nyx --version`, `nyx -v` y `nyx version` en el driver** (el que corre en Windows, sin el wrapper bash): imprimen
+  `nyx <VERSION>` leyendo `<nyx_home>/VERSION`, o `nyx (versión desconocida)` si no está [arco: win-cross].
+- **`nyx build --target x86_64-pc-windows-msvc` desde Linux** (arco win-cross): arma `target/<nombre>.exe` con clang
+  + `lld-link` contra un sysroot de `xwin` (`NYX_WIN_SYSROOT`) y bdwgc/OpenSSL estáticos armados por
+  `scripts/build_win_deps.sh` (`NYX_WIN_DEPS`); si falta algo lo nombra todo antes de compilar. El `.exe` solo
+  importa DLL de Windows, no lleva rutas del host y es reproducible (`/Brepro`). `aarch64-pc-windows-msvc` sigue
+  rechazado. El mensaje de «target desconocido» ya lista el triple de Windows. Gate: `make test-build-win-cross`
+  (SKIP sin las dos variables) [arco: win-cross].
+- **`nyx build` arma `target/<nombre>.exe` en Windows x86_64**, con bdwgc y OpenSSL estáticos. Necesita `clang`,
+  `llvm-ar`, `lld-link` y las variables `NYX_GC_INCLUDE`, `NYX_GC_LIBDIR` y `VCPKG_ROOT`; si falta algo, el error
+  nombra todo lo que falta antes de compilar. `std/regex` todavía no enlaza en Windows, y el build lo dice en claro
+  en vez de volcar solo los `undefined symbol` de `lld-link`. `std/process` suma `host_os()` (`"linux"`, `"darwin"`,
+  `"windows"`, `"wasi"`) [arco: w6-windows].
+- **Un `.exe` de Nyx corre como servicio de Windows, sin API nueva**: si lo lanzó el administrador de servicios, el
+  runtime se registra solo y entrega `sc stop` y el apagado del equipo como SIGTERM, por la misma vía que
+  `signal_handle(15, ...)` en consola; al salir reporta `STOPPED`. Verificado en Windows 11 con `sc.exe`: arranque,
+  reinicio tras `taskkill /F`, parada limpia con la marca del programa y la consola igual que antes. Instalación con
+  `New-Service` en `docs/SPEC.md` y receta 155 [arco: w6-windows].
+- **`serial_ports()` suma al final de cada fila el número de serie USB**: `[nombre, "vvvv:pppp", descripción,
+  serie]`, con `""` si el puerto no es USB o el dispositivo no lo reporta. Linux lo lee de sysfs (`serial`); Windows,
+  del instance ID del dispositivo USB padre (SetupAPI y cfgmgr32), y un serie inventado por el sistema da `""`. Los
+  tres primeros campos no cambian; dos adaptadores iguales ya se distinguen sin mirar el COM [arco: w6-windows].
+
+### Fixed
+
+- **`rename_file` en Windows reemplaza el destino si existe, como en Linux** — llamaba al `rename()` de la UCRT,
+  que no pasa `MOVEFILE_REPLACE_EXISTING` y fallaba con EEXIST, así que el patrón «escribir `.tmp` y renombrar
+  encima» de la escritura atómica no andaba (nyxerp, 2026-11-02). Nuevo `os_fs_rename` en la capa `os_*`
+  (posix/wasm: `rename(2)`; win32: `MoveFileExA` con `REPLACE_EXISTING | COPY_ALLOWED`, atómico en el mismo
+  volumen); `nyx_rename_file` mantiene el contrato 0/-1. Runtime C unit +7 asserts (`test_os_fs.c`)
+  [arco: win-cross].
+- **`nyx_bootstrap.exe` sin `NYX_TARGET` ya no emite IR de Linux en Windows** (triple `x86_64-pc-linux-gnu` y
+  `setjmp` posix, sin aviso): el triple por omisión sale del host y en Windows es `x86_64-pc-windows-msvc`. En Linux
+  no cambia nada [arco: win-cross].
+- **Doc de `std/net` corregida: la unión multicast por interfaz SÍ anda en Windows** (el comentario decía que
+  `net_interfaces` daba `-ENOSYS`; la laptop midió las 7 interfaces y la unión por IP funciona). Se documenta la
+  diferencia medida de `set_multicast_loop`: del lado receptor en Windows, del emisor en Linux [arco: win-cross].
+- **`runtime/runtime.c` ya no emite el warning «discards qualifiers»** en `nyx_exec_full` (`cmd` es `const char*`,
+  como lo declara `os_proc_run_full`): era lo que veía quien instalaba en Windows [arco: win-cross].
+- **`nyx run` en Windows ya no imprime `[nyx] signal_handle: no se pudo registrar la señal 3 (error 22)`** en cada
+  corrida: SIGQUIT no existe ahí y ya no se registra [arco: win-cross].
+- **`nyx build` en Windows con `std/regex` imprime solo el aviso de que no está disponible**, sin el volcado crudo
+  del enlazador debajo [arco: win-cross].
+- **`m.get_or(f[0], d)` con `f` variable de bucle anotada `Array` ya no produce IR inválido**: el i64 de la casilla entraba a `nyx_string_to_cstr` sin `inttoptr` (error de clang `defined with type 'i64' but expected 'ptr'`, reporte de nyxerp). `get_or` y el `remove` sobre campo Map ahora usan `codegen_map_key`, igual que `insert`/`get`/`contains`. Test `ai-first/49`.
+- **`remove_file` borra un directorio vacío también en Windows**, como en posix [arco: w6-windows].
+- **El compilador encuentra `~/.nyx` también en Windows**: `build`, `resolve`, `codegen` y el driver miraban solo
+  `HOME`, que en Windows no existe (y bajo Git Bash es una ruta `/c/Users/...` que las herramientas nativas no leen).
+  Ahora usan `USERPROFILE`, con `HOME` de respaldo; sin cambio en Linux y macOS [arco: w6-windows].
+
+### Tests
+
+- `make test-examples`: 153 → 155 recetas (la 154, que no se había contado, y la 155 del servicio de Windows) [arco: w6-windows].
+- `make test-runtime`: 2339 → 2352 asserts: tres casos de `host_os` en `test_os_build_host.c` y diez del serie USB en `test_os_serial.c` (con un sysfs falso) [arco: w6-windows].
+
 ---
 
 ## [0.41.0] — 2026-11-02
