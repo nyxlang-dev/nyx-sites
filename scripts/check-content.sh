@@ -491,10 +491,29 @@ EOF
 }
 
 # ── C. Plataformas no soportadas (excepto el LEGADO) ─────────────────────
+# Exención (decisión de Ottavio, 2026-11-02): una línea con el atributo
+# `data-platform-status` declara el ESTADO de una plataforma —la fila
+# «Windows: en curso, todavía sin soporte» de la página de instalación— y no
+# la promociona. Es un atributo y no un comentario porque llega intacto al
+# HTML generado. Cualquier otra mención de Windows/macOS sigue cayendo en C.
 check_c() {
-    local root="$1" files
+    local root="$1" files f hit n=0
     files=$(find_nolegacy_noquote "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
-    scan_denylist "C" "$PLATFORMS_RE" "$files"
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        while IFS= read -r hit; do
+            [ -z "$hit" ] && continue
+            case "$hit" in *data-platform-status*) continue ;; esac
+            print_bad "[C] $hit"
+            n=$((n + 1))
+        done < <(grep -HniE -- "$PLATFORMS_RE" "$f" 2>/dev/null)
+    done <<< "$files"
+    if [ "$n" -eq 0 ]; then
+        print_ok "[C] 0 coincidencias (fuera de filas data-platform-status)"
+    else
+        print_bad "[C] $n coincidencia(s)"
+    fi
+    CHECK_LAST_FAILS=$n
 }
 
 # ── D. Identidad vieja / recursos externos (excepto el LEGADO) ──────────
