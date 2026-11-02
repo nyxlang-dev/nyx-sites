@@ -9,18 +9,170 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.41.0] — 2026-11-02
+
+> **MINOR**: cambia una semántica observable — una closure creada en un bucle ve la variable de SU iteración, como
+  en Go 1.22 [arco: closure-por-iteracion]: un programa que daba `3 3 3 3` pasa a dar `0 1 2 3`, y `spawn` en un
+  bucle o la variable de un `for` dentro de una closure dejan de ser NYX1044. Llegan además la compilación cruzada
+  entre Linux x86_64 y aarch64, `try`/`catch` en Windows, `nyx build` sin bash, el tipado de la stdlib
+  (`Array<String>` y compañía en sqlite, multipart, kvclient, resp, http, args y otros ocho módulos) y los
+  arreglos de casillas de `Array` sin tipo que nyxerp encontró en uso real.
+>
+> **Migración**: (1) donde la stdlib ahora declara `Array<String>` (o `Array<int>`), anotar un elemento con otro
+  tipo es NYX1003 en vez de compilar y dar basura: corregir la anotación. (2) Un `let` local ya no es visible antes
+  de su línea. (3) Quien dependía de que las closures de un bucle vieran la última vuelta tiene que guardar ese
+  valor afuera del bucle.
+
+### Added
+
+- **Nuevas en la stdlib: `find_program`, `host_arch` y `cpu_count` (`std/process`); `temp_dir`, `try_lock_file`,
+  `try_lock_file_nowait` y `unlock_file` (`std/fs`)**: el `command -v`, `uname -m`, `nproc`, `mktemp` y `flock` sin
+  lanzar un shell, en Linux y en Windows (`PATHEXT`, `GetSystemInfo`, `GetTempPath`, `LockFileEx`). `find_program`
+  busca como `try_spawn`: en Windows nunca en el directorio actual, y un `.bat`/`.cmd` da `None`. test-525…528
+  (verificados también como `.exe` en Windows) [arco: w6-windows].
+
+- **Compilación cruzada entre Linux x86_64 y aarch64**: `nyx build --target x86_64-unknown-linux-gnu` (o
+  `aarch64-unknown-linux-gnu`, o `[build] target`) arma el binario de la otra arquitectura desde la misma máquina, en
+  `target/<triple>/<name>`; el triple del host compila nativo. Necesita las bibliotecas multiarch del destino y `lld`,
+  y si faltan lo dice antes de compilar con el comando `apt`. `nyx run` corre el triple del host y explica por qué no
+  el otro; un `asm` con restricciones de registros x86 da un error con su línea si el destino es aarch64 (`e513b498`,
+  `e327192a`, `0135e801`). Receta 153, gotcha `cross-compile-arch`, `docs/DEPLOYMENT.md` [arco: compilacion-cruzada-linux]
+  [dogfooding:nyxerp].
+- **`try`/`catch` en el target Windows** (`x86_64`/`aarch64-pc-windows-msvc`): el codegen llama a `_setjmp(buf, NULL)`,
+  porque la CRT de MSVC no tiene `setjmp`, y deja de rechazar `try` en ese target (en `wasm32-wasi` sigue rechazado).
+  Con NULL, `longjmp` salta directo como en glibc, sin desenrollar por SEH: medido en el spike, el `throw` cuesta
+  0,02 µs en vez de 0,8. Arregla también `defer` y los drops, que ya emitían `setjmp` en Windows y no enlazaban.
+  Parche de la laptop; entra al gate de Windows con la W6 Task 3 [arco: w6-windows].
+- **Tests de `std/process` en Windows** (`tests/runtime-unit/win/test_os_proc_spawn_win32.c`, 92 asserts, gate win):
+  verificado en la laptop el 2026-10-29 (`9fcf1faf`) [arco: procesos-spawn].
+
+### Changed
+
+- **`nyx build` ya no escribe ni corre un script de bash**: el compilador, clang y `ar` se lanzan con `std/process`, y
+  el `ulimit -s` del compilador es un límite de pila que heredan los hijos. Es el paso previo para `nyx build` en
+  Windows. La caché automática del runtime cambia de clave una vez: el primer `nyx build` después de actualizar arma
+  un `.a` nuevo [arco: w6-windows].
+
 ### Fixed
+
+- **Una closure creada en un bucle ve la variable de SU iteración (semántica de Go 1.22)**: un `let`/`var` del cuerpo
+  tenía UN campo en el entorno compartido, así que cuatro closures guardadas en un Array y llamadas después del bucle
+  leían las cuatro la última (`3 3 3 3` en vez de `0 1 2 3`), sin error. Ahora cada iteración tiene su instancia
+  (un box GC por iteración, solo en funciones con una fn anidada dentro de un bucle) y cada lambda/`spawn` recibe un
+  marco con los boxes de esa vuelta; el cuerpo y las closures de la iteración comparten la instancia (un `var`
+  mutado después de crear la closure lo ve ella) y las variables de afuera del bucle siguen compartidas. Con eso
+  `spawn` dentro de un bucle y la variable de un `for` dejan de ser NYX1044; siguen siéndolo el nombre repetido y los
+  bindings de `match`. Observable: un programa que daba `3 3 3 3` pasa a dar `0 1 2 3`.
+  `tests/ai-first/48-closure-por-iteracion` [arco: closure-por-iteracion].
+- **`a[i] == b[j]` entre dos `Array` sin tipo compara los Strings por contenido**: ningún lado aportaba tipo y se
+  comparaban las casillas crudas, así que el mismo texto en dos arrays distintos daba `false` sin error. `nyx_slot_eq`
+  (runtime) decide por los tags: dos casillas String por contenido, el resto crudo (`5` contra `"5"` sigue `false`). Con
+  `Array<T>` decide el tipo estático, como antes. `tests/ai-first/47-casilla-igual-casilla`.
+- **`m.insert(a[0], a[1])` en un `Map<String>` con `a: Array` sin tipo guarda el valor como String**: la casilla llegaba
+  como `i64` crudo, el Map se re-registraba como `Map<int>` y `print(m.get(k))` imprimía el puntero sin error (fricción
+  de nyxerp). `emit_map_insert_i64` respeta el tipo de valor ya registrado. Un `var m: Map` sin anotar sigue fichado.
+  `tests/ai-first/46-map-insert-casilla-string`.
+- **`xs.contains(ys[i])` / `xs.indexOf(ys[i])` comparan por contenido cuando la aguja es una casilla de otro `Array`
+  sin `<T>`**: la casilla llegaba como `i64` crudo y se comparaba el puntero, así que con textos armados en ejecución
+  daba `false` / `-1` sin error (fricción de nyxerp). Ahora la búsqueda pasa el tag que la casilla trae en ejecución
+  (`needle_tag_for` en codegen, los cuatro caminos de `contains`/`indexOf`). `tests/ai-first/45-contains-elemento-directo`.
+- **Una llamada calificada `alias.f(...)` a un módulo importado toma el tipo de retorno de la firma de `f`**: antes daba
+  tipo desconocido, así que `let campo: String = csv.data_rows(doc)[0]` compilaba y en ejecución daba bytes sin sentido
+  (el elemento es la fila, no el campo). Además, `std/csv` tipa sus accesores (`headers`/`get_row` → `Array<String>`,
+  `get_all_rows`/`data_rows` → `Array<Array<String>>`); primera familia de la ficha de las funciones de `std/` con
+  `Array` pelado. `test-nyx1003-csv-fila-como-string`.
+- **`std/sqlite` tipa sus consultas**: `sqlite_query`/`_named`/`_params` → `Array<Array<String>>`, `sqlite_query_int`
+  → `Array<Array<int>>`, `sqlite_tables` → `Array<String>`. Antes `let n: int = rows[0][0]` sobre una celda de texto
+  compilaba y daba un puntero leído como entero; ahora es NYX1003 (no hay conversión implícita).
+  `test-nyx1003-sqlite-celda-como-int`.
+- **`std/multipart` tipa sus partes**: `multipart_parse` → `Array<Array<String>>`; `multipart_field`/`multipart_file` →
+  `Array<String>`. Anotar una parte como `String` es NYX1003; `for parte: Array in multipart_parse(...)` sigue compilando.
+  `test-nyx1003-multipart-parte-como-string`.
+- **`std/kvclient` tipa sus listas**: `kv_cmd_array`, `kv_lrange`, `kv_smembers` y `kv_token_list` → `Array<String>` (todo
+  elemento RESP llega como texto, también los enteros). Anotar un miembro como `int` es NYX1003; `let m: Array = kv_smembers(...)`
+  sigue compilando. `test-nyx1003-kvclient-miembro-como-int`.
+- **`std/resp` tipa los comandos leídos**: `resp_read_framed` y `resp_read_command` → `Array<String>` (el comando y sus
+  argumentos son texto, también los numéricos). Anotar un argumento como `int` es NYX1003; `let cmd: Array = resp_read_command(fd)`
+  sigue compilando. `test-nyx1003-resp-argumento-como-int`.
+- **`std/btreemap` tipa sus listas**: `btree_keys_sorted`, `btree_entries` y `btree_range` → `Array<String>` (las claves y
+  las entradas `clave=valor` son texto). Anotar una clave como `int` es NYX1003; `let ks: Array = btree_keys_sorted(bt)`
+  sigue compilando. `test-nyx1003-btreemap-clave-como-int`.
+- **`std/matrix` tipa sus matrices**: `mat_new`, `mat_identity`, `mat_add`, `mat_sub`, `mat_mul`, `mat_scale` y `mat_transpose` →
+  `Array<Array<int>>` (filas de enteros). Anotar una fila como `String` es NYX1003; `let m: Array = mat_new(2, 2)`
+  sigue compilando. `test-nyx1003-matrix-celda-como-string`.
+- **`std/graph` tipa sus recorridos**: `graph_neighbors` → `Array<Array<int>>` (pares `[to, weight]`); `graph_bfs`,
+  `graph_bfs_path`, `graph_dfs` y `graph_dijkstra` → `Array<int>`. Anotar un vecino como `int` es NYX1003; `let r: Array =
+  graph_bfs(g, 0)` sigue compilando. `graph_new` queda pelado (`[n, aristas]` es heterogéneo). `test-nyx1003-graph-vecino-como-int`.
+- **`std/http` tipa sus cabeceras**: `http_headers`, `http_find_headers` y `http_cors_headers` → `Array<String>` (el plano
+  `[nombre, valor, ...]` es todo texto). Anotar un valor como `int` es NYX1003; `let hs: Array = http_headers(resp)` (el uso de
+  `examples/`, nyxerp y los productos) sigue compilando. `test-nyx1003-http-cabecera-como-int`.
+- **`std/events` tipa sus historiales**: `event_history` → `Array<String>` (entradas `evento:valor`) y `observable_history` →
+  `Array<int>`. Anotar una entrada como `int` es NYX1003; `let h: Array = event_history(bus)` sigue compilando.
+  `test-nyx1003-events-historial-como-int`.
+- **`std/linkedlist` tipa sus listas de texto**: `deque_new` y `ll_to_array` → `Array<String>` (los elementos son `String`). Anotar un
+  valor como `int` es NYX1003; `let items: Array = ll_to_array(ll)` sigue compilando. `ll_new`/`pq_new`/`dq_new` quedan pelados
+  (almacenamiento mixto). `test-nyx1003-linkedlist-valor-como-int`.
+- **`std/random` tipa los índices**: `random_sample_indices` → `Array<int>`. Anotar un índice como `String` es NYX1003;
+  `let idx: Array = random_sample_indices(n, k)` sigue compilando. `random_shuffle` queda pelado (genérico sobre su argumento).
+  `test-nyx1003-random-indice-como-string`.
+- **`std/dns` tipa los nameserver**: `__dns_parse_resolv` (interna, pero `pub` para los tests) → `Array<String>` (IPv4 en texto).
+  Anotar uno como `int` es NYX1003; `let rc: Array = __dns_parse_resolv(t)` sigue compilando. `test-nyx1003-dns-servidor-como-int`.
+- **`std/mime` tipa sus listas**: `mime_header_all` → `Array<String>` y `mime_parse_addresses` → `Array<MimeAddress>`. Anotar una
+  dirección como `String` es NYX1003; `let l: Array = mime_parse_addresses(s)` sigue compilando. Los helpers privados (`__mime_*`)
+  quedan pelados (filas mixtas). `test-nyx1003-mime-direccion-como-string`.
+- **`std/args` tipa los posicionales**: el campo público `ParsedArgs.positional` y `get_positional` → `Array<String>`
+  (decisión de Ottavio). Anotar un posicional como `int` es NYX1003; se convierte con `string_to_int`. Cierra la ficha
+  de las funciones de `std/` con `Array` pelado: lo que queda sin tipar son filas heterogéneas a propósito (`std/json`,
+  `graph_new`, `ll_new`…). `test-nyx1003-args-posicional-como-int`.
+- **`let pn: String = serial_ports()[k]` es NYX1003 en vez de compilar y dar bytes sin sentido**: cada elemento es la
+  fila `[nombre, vid:pid, descripción]`, no el nombre, y los arrays no llevan etiqueta de tipo para chequearlo en
+  ejecución. Ahora `serial_ports()` declara `Array<Array<String>>` y una anotación `Array` pelada (`let ps: Array =
+  f()`) conserva el tipo de elemento que declara la firma de `f`, en vez de borrarlo. Las otras 119 funciones de `std/`
+  que devuelven `Array` sin elemento quedan fichadas. Hallado en el kit de la W6 Task 3;
+  `test-nyx1003-array-anotado-conserva-elemento` y `-serial-ports-fila-como-string` [arco: w6-windows].
+- **Un `let` local ya no es visible antes de su línea**: el pre-pass de declaraciones registraba los `let` de todo
+  bloque, no solo las globales del top-level para las que existe, así que `print(x); let x = 1` y `let args: Array =
+  args()` (la builtin es `get_args()`) pasaban `nyx check` y el build caía en clang con «use of undefined value». Ahora
+  los dos son NYX1002 en el check. Una lambda local que se llama por su nombre, que ya no compilaba, también da
+  NYX1002 (fichado). Reporte de nyxerp; `test-nyx1002-let-local-antes-de-declarar` y `-en-su-propio-valor`.
+- **Lo que se asigna dentro de un `try` llega al `catch`**: antes del `setjmp` el codegen fijaba en memoria solo las
+  variables escalares, así que con `-O2` un `String`, `Array` o `Map` reasignado dentro del `try` volvía en el `catch`
+  con su valor de ANTES (`s = "en try"` y el `catch` veía `"inicio"`), y lo que asignaba un `catch` interno antes de
+  relanzar se perdía. Ahora ancla todas las variables vivas, con el tipo de cada `alloca` leído del IR. Hallado al
+  armar el caso de la W6 Task 3; `test-524` [arco: w6-windows].
+- **La primera conexión HTTPS ya no falla por un DNS lento**: `tls_connect` arrancaba su plazo de 10 s ANTES de
+  resolver el host, y en Windows la primera consulta en frío tarda ~11 s, así que salía `timeout` 110 sin haber
+  intentado conectar. Ahora el plazo arranca después de resolver, como en `tcp_connect_ms`. Hallazgo y parche de la
+  laptop en W6 Task 3 [arco: w6-windows].
+- **`std/serve` ya no avisa «readiness de fds no soportada» en Windows**: el estacionamiento de conexiones lo
+  descubría al fallar el primer `nyx_event_loop_add`, con una línea en stderr por proceso que rompía la salida de
+  `test-463`/`464`. Ahora pregunta antes (`nyx_event_loop_has_fd_readiness`) y en win32 arranca con los workers
+  leyendo bloqueando; en Linux no cambia nada. Parche de la laptop en W6 Task 3 [arco: w6-windows].
+- **Primer `.exe` nativo de Windows de un programa real**: el caso mínimo del puente de nyxerp (HTTP+TLS, servidor
+  TCP con hilos, mDNS, RSA, Web Push, JSON, archivos y listado de puertos serie) se armó estático —solo DLLs del
+  sistema— y pasó sus 8 pasos en la laptop y en una PC de taller, también atendiendo desde otro equipo de la red
+  local. Todavía se arma con IR generado en Linux y un script de enlace en Windows (W6 Tasks 2 y 4). README y la página
+  de instalación dicen ahora «Windows: en curso, sin soporte» [arco: w6-windows].
+- **El subset de Windows suma los tres tests de `try`/`catch`** (`test-112`, `test-335`, `test-333-try-catch-mt`; 41
+  en el manifiesto) y `url.c` y `websocket.c` entran a los TUs del gate local y de los cuatro jobs de
+  `windows.yml`, que `std/serve` necesita. El piso del CI sigue en 38 hasta medirlos en aarch64. Gate de la laptop en
+  W6 Task 3 [arco: w6-windows].
+- **`test-523-try-catch-tres-casos`**: `try` simple, anidado que relanza y dentro de una goroutine que se suspende,
+  con su IR para Windows en `tests/win-fixtures/` para que la laptop lo corra nativo [arco: w6-windows].
+- **`try`/`catch` dentro de goroutines**: la pila de `try` era del hilo del sistema y las goroutines migran de worker.
+  Una que se suspendía dentro de un `try` (`go_sleep`, `channel_recv`) perdía su `catch` al volver en otro worker
+  («uncaught»), un `throw` sin `try` podía saltar al `catch` de OTRA goroutine, y 200 goroutines dormidas en un `try`
+  daban «try-catch nesting too deep». Ahora el estado es de cada goroutine (reservado en su primer `try`, reciclado al
+  morir), con el del hilo como respaldo fuera de ellas. Hallazgo y parche de la laptop en el spike de W6; `test-522`
+  [arco: w6-windows].
 
 - **`write_file`, `write_file_safe` y `file_open` abren en binario**: en Windows cada `\n` ya no sale como `\r\n`;
   en Linux y macOS no cambia nada (`158944eb`) [arco: procesos-spawn].
 - **win32: lanzar algo que no es un ejecutable da `EACCES`**, no `EIO`, como en posix (`11faa9d6`) [arco: procesos-spawn].
 - **win32: `argv[0]` con `/` se pasa con `\`** en la línea de comando, y `cmd.exe` ya no toma `/cmd.exe` por la
   opción `/c` (`a941706e`) [arco: procesos-spawn].
-
-### Added
-
-- **Tests de `std/process` en Windows** (`tests/runtime-unit/win/test_os_proc_spawn_win32.c`, 92 asserts, gate win):
-  verificado en la laptop el 2026-10-29 (`9fcf1faf`) [arco: procesos-spawn].
 
 ---
 
