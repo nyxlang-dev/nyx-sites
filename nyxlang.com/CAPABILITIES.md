@@ -1,7 +1,7 @@
 # CAPABILITIES — índice de la stdlib de Nyx
 
-<!-- nyx-version: 0.39.0 -->
-<!-- nyx-stdlib: 2429255908-2156647 -->
+<!-- nyx-version: 0.41.0 -->
+<!-- nyx-stdlib: 1408603158-2164490 -->
 > Auto-generado por `nyx capabilities` desde la stdlib instalada — siempre en sync con tu versión.
 > Es el índice de QUÉ EXISTE: antes de escribir una función, busca aquí si un módulo ya lo hace,
 > impórtalo y úsalo. NO leas el fuente de `std/`. Ver `AGENTS.md` para cómo escribir Nyx.
@@ -124,13 +124,13 @@ Tipos (2) y métodos (0):
 
 `import "std/multipart"` — 8 funciones:
 
-- `pub fn multipart_parse(body: String, content_type: String) -> Array`
+- `pub fn multipart_parse(body: String, content_type: String) -> Array<Array<String>>`
 - `pub fn part_name(p: Array) -> String`
 - `pub fn part_filename(p: Array) -> String`
 - `pub fn part_ctype(p: Array) -> String`
 - `pub fn part_value(p: Array) -> String`
-- `pub fn multipart_field(name: String, value: String) -> Array` — Parte de texto: campo `name` con valor `value`.
-- `pub fn multipart_file(name: String, filename: String, ctype: String, data: String) -> Array` — Parte de archivo: campo `name`, nombre de archivo `filename`, content-type `ctype` ("" = application/octet-stream) y los bytes `data` (binario, con NUL).
+- `pub fn multipart_field(name: String, value: String) -> Array<String>` — Parte de texto: campo `name` con valor `value`.
+- `pub fn multipart_file(name: String, filename: String, ctype: String, data: String) -> Array<String>` — Parte de archivo: campo `name`, nombre de archivo `filename`, content-type `ctype` ("" = application/octet-stream) y los bytes `data` (binario, con NUL).
 - `pub fn multipart_build(parts: Array) -> Result<Multipart, Error>`
 
 Tipos (1) y métodos (0):
@@ -269,11 +269,11 @@ Tipos (1) y métodos (0):
 - `pub fn try_http_stream(method: String, url: String, headers: Array, body: String) -> Result<HttpStream, Error>` — try_http_stream_opts con http_stream_opts().
 - `pub fn http_status(resp: Array) -> int`
 - `pub fn http_body(resp: Array) -> String`
-- `pub fn http_headers(resp: Array) -> Array`
+- `pub fn http_headers(resp: Array) -> Array<String>`
 - `pub fn http_find_header(headers: Array, name: String) -> String`
-- `pub fn http_find_headers(headers: Array, name: String) -> Array`
+- `pub fn http_find_headers(headers: Array, name: String) -> Array<String>`
 - `pub fn http_parse_request(client_fd: int) -> Array`
-- `pub fn http_cors_headers(origin: String) -> Array`
+- `pub fn http_cors_headers(origin: String) -> Array<String>`
 - `pub fn http_cors_response(origin: String) -> String`
 - `pub fn http_serve(port: int, handler: Fn(Array) -> String) -> int`
 - `pub fn http_serve_en(host: String, port: int, handler: Fn(Array) -> String) -> int`
@@ -437,21 +437,21 @@ Tipos (1) y métodos (0):
 - `pub fn kv_close(h: int)`
 - `pub fn read_bulk(h: int, header: String) -> String`
 - `pub fn kv_cmd(h: int, parts: Array) -> String`
-- `pub fn kv_cmd_array(h: int, parts: Array) -> Array`
+- `pub fn kv_cmd_array(h: int, parts: Array) -> Array<String>`
 - `pub fn kv_set(h: int, key: String, value: String) -> bool`
 - `pub fn kv_setex(h: int, key: String, ttl: int, value: String) -> bool`
 - `pub fn kv_get(h: int, key: String) -> String`
 - `pub fn kv_del(h: int, key: String) -> int`
 - `pub fn kv_rpush(h: int, key: String, value: String) -> int`
-- `pub fn kv_lrange(h: int, key: String, start: int, stop: int) -> Array`
+- `pub fn kv_lrange(h: int, key: String, start: int, stop: int) -> Array<String>`
 - `pub fn kv_llen(h: int, key: String) -> int`
 - `pub fn kv_sadd(h: int, key: String, member: String) -> int`
-- `pub fn kv_smembers(h: int, key: String) -> Array`
+- `pub fn kv_smembers(h: int, key: String) -> Array<String>`
 - `pub fn kv_whoami(h: int) -> String`
 - `pub fn kv_token_create(h: int, user_id: String, plan: String, ttl: int) -> String`
 - `pub fn kv_exists(h: int, key: String) -> bool`
 - `pub fn kv_srem(h: int, key: String, member: String) -> int`
-- `pub fn kv_token_list(h: int) -> Array`
+- `pub fn kv_token_list(h: int) -> Array<String>`
 - `pub fn kv_token_revoke(h: int, token: String) -> bool`
 
 ### `std/postgres`
@@ -516,8 +516,8 @@ Tipos (2) y métodos (0):
 `import "std/resp"` — 11 funciones:
 
 - `pub fn resp_parse_len(s: String) -> int`
-- `pub fn resp_read_framed(handle: int, is_tls: bool) -> Array`
-- `pub fn resp_read_command(fd: int) -> Array`
+- `pub fn resp_read_framed(handle: int, is_tls: bool) -> Array<String>`
+- `pub fn resp_read_command(fd: int) -> Array<String>`
 - `pub fn resp_simple_string(s: String) -> String`
 - `pub fn resp_error(msg: String) -> String`
 - `pub fn resp_integer(n: int) -> String`
@@ -536,8 +536,8 @@ Tipos (2) y métodos (0):
 - `pub fn sqlite_open(path: String) -> *int` — Abre (o crea) el archivo. Devuelve el handle *int — capturable en closures sin drama (fn de std con retorno declarado).
 - `pub fn sqlite_close(db: *int)`
 - `pub fn sqlite_exec(db: *int, sql: String) -> bool` — DDL/DML sin resultado; true en éxito. Para SQL con valores usar sqlite_exec_params (params String).
-- `pub fn sqlite_query(db: *int, sql: String) -> Array` — Array de filas; cada fila es Array y TODA celda es String, incluidas las columnas INTEGER: convertir con string_to_int(), o pedir la columna por la vía tipada sqlite_query_int/sqlite_query_one_int (int de 64 bits reales). Anotar la celda como `int` NO la convierte: lee los bits del String. Una celda SQL NULL vuelve como sqlite_null() — preguntar con sqlite_is_null(), nunca con `== ""`.
-- `pub fn sqlite_query_named(db: *int, sql: String) -> Array` — Como sqlite_query pero ANTEPONE una fila de headers: N+1 elementos, la fila 0 son los nombres de columna. Mismas reglas de celda: String siempre, NULL vía sqlite_is_null().
+- `pub fn sqlite_query(db: *int, sql: String) -> Array<Array<String>>` — Array de filas; cada fila es Array y TODA celda es String, incluidas las columnas INTEGER: convertir con string_to_int(), o pedir la columna por la vía tipada sqlite_query_int/sqlite_query_one_int (int de 64 bits reales). Anotar la celda como `int` es NYX1003 (la firma declara `Array<Array<String>>`): no hay conversión implícita. Una celda SQL NULL vuelve como sqlite_null() — preguntar con sqlite_is_null(), nunca con `== ""`.
+- `pub fn sqlite_query_named(db: *int, sql: String) -> Array<Array<String>>` — Como sqlite_query pero ANTEPONE una fila de headers: N+1 elementos, la fila 0 son los nombres de columna. Mismas reglas de celda: String siempre, NULL vía sqlite_is_null().
 - `pub fn sqlite_exec_int(db: *int, sql: String, val: int) -> bool`
 - `pub fn sqlite_exec_str(db: *int, sql: String, val: String) -> bool`
 - `pub fn sqlite_last_id(db: *int) -> int` — last_insert_rowid del handle.
@@ -550,15 +550,15 @@ Tipos (2) y métodos (0):
 - `pub fn sqlite_begin(db: *int) -> bool`
 - `pub fn sqlite_commit(db: *int) -> bool`
 - `pub fn sqlite_rollback(db: *int) -> bool`
-- `pub fn sqlite_query_int(db: *int, sql: String) -> Array` — Filas de int REALES de 64 bits (sqlite3_column_int64) — la vía tipada para columnas numéricas, sin string_to_int. Una columna no numérica da 0, y un NULL también: si hay que distinguirlos, leer esa columna con sqlite_query y sqlite_is_null().
+- `pub fn sqlite_query_int(db: *int, sql: String) -> Array<Array<int>>` — Filas de int REALES de 64 bits (sqlite3_column_int64) — la vía tipada para columnas numéricas, sin string_to_int. Una columna no numérica da 0, y un NULL también: si hay que distinguirlos, leer esa columna con sqlite_query y sqlite_is_null().
 - `pub fn sqlite_query_one_int(db: *int, sql: String) -> int` — Primera columna de la primera fila como int real de 64 bits; 0 si no hay filas (y 0 también si la celda es NULL — para distinguirlos, sqlite_query_one_str + sqlite_is_null()).
 - `pub fn sqlite_query_one_str(db: *int, sql: String) -> String` — Primera columna de la primera fila como String; "" si no hay filas. Una celda SQL NULL vuelve como sqlite_null() — preguntar con sqlite_is_null().
 - `pub fn sqlite_exec_params(db: *int, sql: String, params: Array) -> bool` — TODOS los params como String (binding textual), también los numéricos: ["7", "ana"] y no [7, "ana"]. Para pasar un SQL NULL, sqlite_null() en esa posición.
-- `pub fn sqlite_query_params(db: *int, sql: String, params: Array) -> Array` — Query con params (todos String, binding textual; sqlite_null() para pasar un SQL NULL). Celdas del resultado: String, como sqlite_query — NULL vía sqlite_is_null().
+- `pub fn sqlite_query_params(db: *int, sql: String, params: Array) -> Array<Array<String>>` — Query con params (todos String, binding textual; sqlite_null() para pasar un SQL NULL). Celdas del resultado: String, como sqlite_query — NULL vía sqlite_is_null().
 - `pub fn sqlite_migrate_init(db: *int) -> bool`
 - `pub fn sqlite_migrate_version(db: *int) -> int`
 - `pub fn sqlite_migrate(db: *int, version: int, name: String, sql: String) -> bool`
-- `pub fn sqlite_tables(db: *int) -> Array`
+- `pub fn sqlite_tables(db: *int) -> Array<String>`
 - `pub fn sqlite_table_exists(db: *int, name: String) -> bool`
 - `pub fn sqlite_count(db: *int, table: String) -> int` — SELECT COUNT(*) de la tabla, como int real.
 
@@ -675,10 +675,10 @@ Tipos (4) y métodos (0):
 
 - `pub fn parse(text: String) -> CsvDoc` — Parse CSV text into a CsvDoc (auto-detect headers: first row is headers).
 - `pub fn parse_with_delimiter(text: String, delimiter: String, has_header: bool) -> CsvDoc` — Parse CSV text with custom delimiter and header setting.
-- `pub fn get_all_rows(doc: CsvDoc) -> Array` — Get all rows (including header if present).
-- `pub fn headers(doc: CsvDoc) -> Array` — Get header row (first row). Returns empty Array if no header.
-- `pub fn data_rows(doc: CsvDoc) -> Array` — Get data rows (skip header if present).
-- `pub fn get_row(doc: CsvDoc, idx: int) -> Array` — Get a specific row by index (0-based, counting from header if present).
+- `pub fn get_all_rows(doc: CsvDoc) -> Array<Array<String>>` — Get all rows (including header if present).
+- `pub fn headers(doc: CsvDoc) -> Array<String>` — Get header row (first row). Returns empty Array if no header.
+- `pub fn data_rows(doc: CsvDoc) -> Array<Array<String>>` — Get data rows (skip header if present).
+- `pub fn get_row(doc: CsvDoc, idx: int) -> Array<String>` — Get a specific row by index (0-based, counting from header if present).
 - `pub fn get_field(row: Array, col: int) -> String` — Get a field value from a row by column index.
 - `pub fn get_by_name(doc: CsvDoc, row: Array, col_name: String) -> String` — Get a field value from a data row by column name (using header).
 - `pub fn row_count(doc: CsvDoc) -> int` — Get number of rows (including header if present).
@@ -693,7 +693,7 @@ Tipos (4) y métodos (0):
 
 Tipos (3) y métodos (7):
 
-- `pub struct CsvDoc` — CSV document: array of rows, each row is an Array of String fields.
+- `pub struct CsvDoc`
 - `pub struct CsvOpts` — Opciones del lector columnar: delimitador de un byte, si la primera fila es cabecera, y un tope de filas (0 = todas).
 - `pub struct CsvTable` — Una tabla leída por columnas. Cada columna se pide por nombre y con su tipo del esquema: ints, floats, strs, o codes + dict para una `cat`.
   - `fn rows(self) -> int` — Cantidad de filas de datos (sin la cabecera).
@@ -881,7 +881,7 @@ Tipos (4) y métodos (1):
 - `pub fn try_serial_read(p: SerialPort, max: int, timeout_ms: int) -> Result<String, Error>`
 - `pub fn try_serial_read_until(p: SerialPort, fin: int, max: int, timeout_ms: int) -> Result<String, Error>`
 - `pub fn try_serial_close(p: SerialPort) -> Result<int, Error>`
-- `pub fn serial_ports() -> Array`
+- `pub fn serial_ports() -> Array<Array<String>>`
 - `pub fn serial_bytes_to_array(s: String) -> Array`
 - `pub fn serial_array_to_bytes(a: Array) -> String`
 
@@ -898,10 +898,18 @@ Tipos (1) y métodos (0):
 
 ### `std/fs`
 
-`import "std/fs"` — 2 funciones:
+`import "std/fs"` — 6 funciones:
 
 - `pub fn try_read_file(path: String) -> Result<String, Error>`
 - `pub fn try_write_file(path: String, content: String) -> Result<int, Error>`
+- `pub fn temp_dir() -> String`
+- `pub fn try_lock_file(path: String, exclusive: bool) -> Result<FileLock, Error>`
+- `pub fn try_lock_file_nowait(path: String, exclusive: bool) -> Result<Option<FileLock>, Error>`
+- `pub fn unlock_file(l: FileLock)`
+
+Tipos (1) y métodos (0):
+
+- `pub struct FileLock`
 
 ### `std/file`
 
@@ -1024,11 +1032,11 @@ Tipos (8) y métodos (0):
 - `pub fn mime_charset_to_utf8(charset: String, bytes: String) -> Option<String>`
 - `pub fn mime_decode_words(s: String) -> String`
 - `pub fn mime_header(m: MimeMessage, name: String) -> String`
-- `pub fn mime_header_all(m: MimeMessage, name: String) -> Array`
+- `pub fn mime_header_all(m: MimeMessage, name: String) -> Array<String>`
 - `pub fn mime_header_text(m: MimeMessage, name: String) -> String`
 - `pub fn mime_parse_value(v: String) -> MimeValue`
 - `pub fn mime_param(v: MimeValue, name: String) -> String`
-- `pub fn mime_parse_addresses(s: String) -> Array`
+- `pub fn mime_parse_addresses(s: String) -> Array<MimeAddress>`
 - `pub fn mime_parse_date(s: String) -> int`
 - `pub fn mime_html_to_text(html: String) -> String`
 - `pub fn mime_safe_filename(name: String) -> String`
@@ -1053,7 +1061,7 @@ Tipos (6) y métodos (0):
 - `pub fn __dns_build_query(name: String, qtype: int, id: int) -> Result<String, Error>` — INTERNO (tests): arma el paquete de consulta; usa dns_query/dns_txt/dns_cname/dns_mx.
 - `pub fn __dns_read_name(p: String, start: int) -> Array` — INTERNO (tests): lee un nombre con compresión; usa dns_query/dns_txt/dns_cname/dns_mx.
 - `pub fn __dns_parse_response(p: String, id: int, qname: String) -> Result<Array, Error>` — INTERNO (tests): decodifica un paquete de respuesta; usa dns_query/dns_txt/dns_cname/dns_mx.
-- `pub fn __dns_parse_resolv(text: String) -> Array` — INTERNO (tests): extrae los nameserver de un resolv.conf; usa dns_query/dns_txt/dns_cname/dns_mx.
+- `pub fn __dns_parse_resolv(text: String) -> Array<String>` — INTERNO (tests): extrae los nameserver de un resolv.conf; usa dns_query/dns_txt/dns_cname/dns_mx.
 - `pub fn dns_set_server(ip: String) -> Result<int, Error>` — Fija el servidor DNS (IPv4 numérica); "" vuelve a /etc/resolv.conf. Obligatorio en Windows.
 - `pub fn dns_set_timeout(secs: int) -> Result<int, Error>` — Plazo por intento en segundos (1..30, por omisión 2); 2 intentos por servidor.
 - `pub fn dns_query(name: String, qtype: int) -> Result<Array, Error>` — Consulta cruda: devuelve la sección de respuesta como Array de [tipo, ttl, rdata].
@@ -1100,7 +1108,7 @@ Tipos (6) y métodos (0):
 - `pub fn try_udp_join(fd: int, group: String, iface: String) -> Result<int, Error>` — Une el socket al grupo multicast IPv4 `group` ("224.0.0.251") por la interfaz de IP `iface` (de net_interfaces); "" deja elegir al kernel. El socket debe estar bindeado al puerto del grupo (try_udp_bind_shared en 0.0.0.0). Una interfaz por llamada: en un equipo con Ethernet y Wi-Fi, una unión por cada una.
 - `pub fn try_udp_leave(fd: int, group: String, iface: String) -> Result<int, Error>` — Sale del grupo multicast que try_udp_join había unido (mismos `group` e `iface`).
 - `pub fn try_udp_set_multicast_ttl(fd: int, ttl: int) -> Result<int, Error>` — TTL de los datagramas multicast que ENVÍA el socket (0..255; 1 = no sale de la red local, el valor de mDNS es 255).
-- `pub fn try_udp_set_multicast_loop(fd: int, on: bool) -> Result<int, Error>` — Si el socket recibe también lo multicast que él mismo envía (`on` = true, el valor por omisión del sistema). Hace falta true para hablar con otro proceso de la MISMA máquina.
+- `pub fn try_udp_set_multicast_loop(fd: int, on: bool) -> Result<int, Error>` — Si el socket recibe también lo multicast que él mismo envía (`on` = true, el valor por omisión del sistema). Hace falta true para hablar con otro proceso de la MISMA máquina. Portabilidad (medido): en Windows actúa del lado receptor; en Linux, del emisor.
 - `pub fn try_udp_set_multicast_iface(fd: int, iface: String) -> Result<int, Error>` — Interfaz (por su IP) por la que SALEN los datagramas multicast del socket; "" = la elige el kernel. Debe ser la misma por la que se unió el grupo.
 - `pub fn try_udp_set_broadcast(fd: int, on: bool) -> Result<int, Error>` — Permite enviar a direcciones de broadcast (255.255.255.255 o la de la subred) con try_udp_sendto; sin esto el envío da EACCES.
 - `pub fn try_ping(host: String, timeout_ms: int) -> Result<PingReply, Error>` — Un ping a `host` (nombre o IPv4) con plazo `timeout_ms`. Ok con la IP y el RTT en µs; Err "timeout" (110) si nadie contestó a tiempo, "permission" (13/1) si el sistema no deja abrir un socket ICMP (ver `net.ipv4.ping_group_range`), "not_found" si el nombre no resuelve. Un host que no responde ping no es necesariamente un host caído: muchos firewalls descartan ICMP.
@@ -1287,15 +1295,16 @@ Tipos (5) y métodos (0):
 - `pub fn random_bytes(n: int) -> String`
 - `pub fn random_pick_index(arr: Array) -> int`
 - `pub fn random_shuffle(arr: Array) -> Array`
-- `pub fn random_sample_indices(n: int, k: int) -> Array`
+- `pub fn random_sample_indices(n: int, k: int) -> Array<int>`
 
 ### `std/rsa`
 
-`import "std/rsa"` — 3 funciones:
+`import "std/rsa"` — 4 funciones:
 
 - `pub fn rsa_sha256_verify(public_key_pem: String, data: String, signature: String) -> Result<bool, Error>`
 - `pub fn rsa_sha256_verify_b64(public_key_pem: String, data: String, signature_b64: String) -> Result<bool, Error>`
 - `pub fn rsa_pss_sha256_verify(public_key_pem: String, data: String, signature: String) -> Result<bool, Error>`
+- `pub fn x509_public_key_pem(cert_pem: String) -> Result<String, Error>`
 
 ### `std/uuid`
 
@@ -1618,7 +1627,7 @@ Tipos (2) y métodos (4):
 
 `import "std/linkedlist"` — 27 funciones:
 
-- `pub fn deque_new() -> Array`
+- `pub fn deque_new() -> Array<String>`
 - `pub fn deque_push_back(d: Array, val: String)`
 - `pub fn deque_push_front(d: Array, val: String)`
 - `pub fn deque_pop_back(d: Array) -> String`
@@ -1638,7 +1647,7 @@ Tipos (2) y métodos (4):
 - `pub fn ll_peek_front(storage: Array) -> String`
 - `pub fn ll_size(storage: Array) -> int`
 - `pub fn ll_is_empty(storage: Array) -> bool`
-- `pub fn ll_to_array(storage: Array) -> Array`
+- `pub fn ll_to_array(storage: Array) -> Array<String>`
 - `pub fn pq_new() -> Array`
 - `pub fn pq_push(storage: Array, val: String, priority: int)`
 - `pub fn pq_pop(storage: Array) -> String`
@@ -1650,17 +1659,17 @@ Tipos (2) y métodos (4):
 
 `import "std/matrix"` — 14 funciones:
 
-- `pub fn mat_new(rows: int, cols: int) -> Array`
-- `pub fn mat_identity(n: int) -> Array`
+- `pub fn mat_new(rows: int, cols: int) -> Array<Array<int>>`
+- `pub fn mat_identity(n: int) -> Array<Array<int>>`
 - `pub fn mat_get(mat: Array, r: int, c: int) -> int`
 - `pub fn mat_set(mat: Array, r: int, c: int, val: int)`
 - `pub fn mat_rows(mat: Array) -> int`
 - `pub fn mat_cols(mat: Array) -> int`
-- `pub fn mat_add(a: Array, b: Array) -> Array`
-- `pub fn mat_sub(a: Array, b: Array) -> Array`
-- `pub fn mat_mul(a: Array, b: Array) -> Array`
-- `pub fn mat_scale(m: Array, scalar: int) -> Array`
-- `pub fn mat_transpose(m: Array) -> Array`
+- `pub fn mat_add(a: Array, b: Array) -> Array<Array<int>>`
+- `pub fn mat_sub(a: Array, b: Array) -> Array<Array<int>>`
+- `pub fn mat_mul(a: Array, b: Array) -> Array<Array<int>>`
+- `pub fn mat_scale(m: Array, scalar: int) -> Array<Array<int>>`
+- `pub fn mat_transpose(m: Array) -> Array<Array<int>>`
 - `pub fn mat_trace(m: Array) -> int`
 - `pub fn mat_frobenius_sq(m: Array) -> int`
 - `pub fn mat_print(m: Array)`
@@ -1673,14 +1682,14 @@ Tipos (2) y métodos (4):
 - `pub fn event_on(bus: Array, event: String, handler: Fn(String) -> bool) -> int`
 - `pub fn event_emit(bus: Array, event: String, payload: String) -> int`
 - `pub fn event_off(bus: Array, event: String)`
-- `pub fn event_history(bus: Array) -> Array`
+- `pub fn event_history(bus: Array) -> Array<String>`
 - `pub fn event_history_count(bus: Array) -> int`
 - `pub fn event_was_emitted(bus: Array, event: String) -> bool`
 - `pub fn observable_new(initial: int) -> Array`
 - `pub fn observable_get(obs: Array) -> int`
 - `pub fn observable_set(obs: Array, new_val: int)`
 - `pub fn observable_watch(obs: Array, handler: Fn(int) -> bool)`
-- `pub fn observable_history(obs: Array) -> Array`
+- `pub fn observable_history(obs: Array) -> Array<int>`
 - `pub fn observable_computed(source: Array, transform: Fn(int) -> int) -> int`
 
 ### `std/statemachine`
@@ -1754,12 +1763,12 @@ Tipos (1) y métodos (5):
 - `pub fn btree_get_int(bt: Map<String>, key: String) -> int`
 - `pub fn btree_has(bt: Map<String>, key: String) -> bool`
 - `pub fn btree_remove(bt: Map<String>, key: String)`
-- `pub fn btree_keys_sorted(bt: Map<String>) -> Array`
+- `pub fn btree_keys_sorted(bt: Map<String>) -> Array<String>`
 - `pub fn btree_min_key(bt: Map<String>) -> String`
 - `pub fn btree_max_key(bt: Map<String>) -> String`
 - `pub fn btree_size(bt: Map<String>) -> int`
-- `pub fn btree_entries(bt: Map<String>) -> Array`
-- `pub fn btree_range(bt: Map<String>, lo: String, hi: String) -> Array`
+- `pub fn btree_entries(bt: Map<String>) -> Array<String>`
+- `pub fn btree_range(bt: Map<String>, lo: String, hi: String) -> Array<String>`
 
 ### `std/graph`
 
@@ -1770,13 +1779,13 @@ Tipos (1) y métodos (5):
 - `pub fn graph_edge_count(g: Array) -> int`
 - `pub fn graph_add_edge(g: Array, src: int, dst: int, weight: int)`
 - `pub fn graph_add_undirected(g: Array, a: int, b: int, weight: int)`
-- `pub fn graph_neighbors(g: Array, v: int) -> Array`
+- `pub fn graph_neighbors(g: Array, v: int) -> Array<Array<int>>`
 - `pub fn graph_has_edge(g: Array, src: int, dst: int) -> bool`
-- `pub fn graph_bfs(g: Array, start: int) -> Array`
-- `pub fn graph_bfs_path(g: Array, start: int, end_node: int) -> Array`
-- `pub fn graph_dfs(g: Array, start: int) -> Array`
+- `pub fn graph_bfs(g: Array, start: int) -> Array<int>`
+- `pub fn graph_bfs_path(g: Array, start: int, end_node: int) -> Array<int>`
+- `pub fn graph_dfs(g: Array, start: int) -> Array<int>`
 - `pub fn graph_has_cycle(g: Array) -> bool`
-- `pub fn graph_dijkstra(g: Array, start: int) -> Array`
+- `pub fn graph_dijkstra(g: Array, start: int) -> Array<int>`
 - `pub fn graph_dist(dijkstra_result: Array, end_node: int) -> int`
 
 ## Memoria
@@ -1860,7 +1869,7 @@ Tipos (1) y métodos (0):
 
 ### `std/process`
 
-`import "std/process"` — 13 funciones:
+`import "std/process"` — 17 funciones:
 
 - `pub fn spawn_opts() -> SpawnOpts`
 - `pub fn try_spawn(argv: Array, opts: SpawnOpts) -> Result<Child, Error>`
@@ -1875,6 +1884,10 @@ Tipos (1) y métodos (0):
 - `pub fn try_child_close_stdin(c: Child) -> Result<int, Error>`
 - `pub fn try_child_collect(c: Child) -> Result<ChildOutput, Error>`
 - `pub fn child_pid(c: Child) -> int`
+- `pub fn find_program(name: String) -> Option<String>`
+- `pub fn host_arch() -> String`
+- `pub fn host_os() -> String`
+- `pub fn cpu_count() -> int`
 
 Tipos (4) y métodos (0):
 
@@ -1919,7 +1932,7 @@ Tipos (1) y métodos (0):
 - `pub fn parse(parser: ArgParser, argv: Array) -> ParsedArgs` — Parse command-line arguments from get_args() result. Returns ParsedArgs with values, positional args, and any error.
 - `pub fn get_flag(parsed: ParsedArgs, name: String) -> bool` — Get a boolean flag value. Returns false if not set.
 - `pub fn get_option(parsed: ParsedArgs, name: String) -> String` — Get a string option value. Returns "" if not set.
-- `pub fn get_positional(parsed: ParsedArgs) -> Array` — Get positional arguments (non-flag args).
+- `pub fn get_positional(parsed: ParsedArgs) -> Array<String>` — Get positional arguments (non-flag args).
 - `pub fn has_error(parsed: ParsedArgs) -> bool` — Check if parsing had an error.
 - `pub fn print_help(parser: ArgParser)` — Print usage/help text.
 
