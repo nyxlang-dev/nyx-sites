@@ -50,6 +50,12 @@
 <span class="cm">// alterados o clave ajena); Err = no se pudo ni intentar (PEM ilegible).</span>
 <span class="cm">// Se verifica el cuerpo EXACTO recibido, byte a byte, antes de parsearlo.</span>
 <span class="cm">//</span>
+<span class="cm">// Amazon SNS (y otros) publican un CERTIFICADO X.509 (BEGIN CERTIFICATE) en vez de</span>
+<span class="cm">// la clave: las tres funciones lo aceptan tal cual (se usa el primer certificado),</span>
+<span class="cm">// y x509_public_key_pem(cert) da la clave en PEM SPKI si se quiere guardar. OJO: el</span>
+<span class="cm">// certificado NO se valida (ni cadena ni vigencia); la confianza viene de dónde se</span>
+<span class="cm">// bajó (TLS verificado, y host sns.&lt;región&gt;.amazonaws.com en SNS).</span>
+<span class="cm">//</span>
 <span class="cm">// Los datos de la receta son los fixtures de prueba del repo (openssl CLI). En un</span>
 <span class="cm">// programa real: la clave con read_file(&quot;proveedor.pem&quot;) y el cuerpo y la firma</span>
 <span class="cm">// de la petición entrante.</span>
@@ -81,6 +87,15 @@
 
     <span class="cm">// Una clave que no se puede leer se dice, no se toma por «firma falsa».</span>
     <span class="kw">assert</span><span class="op">(</span><span class="fn">aviso_valido</span><span class="op">(</span><span class="str">&quot;no soy un pem&quot;</span><span class="op">,</span> cuerpo<span class="op">,</span> firma<span class="op">)</span> <span class="op">==</span> <span class="kw">false</span><span class="op">,</span> <span class="str">&quot;PEM ilegible&quot;</span><span class="op">)</span>
+
+    <span class="cm">// Con un certificado X.509 en lugar de la clave pública.</span>
+    <span class="kw">let</span> cert<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">include_bytes</span><span class="op">(</span><span class="str">&quot;tests/fixtures/rsa/cert.pem&quot;</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">aviso_valido</span><span class="op">(</span>cert<span class="op">,</span> cuerpo<span class="op">,</span> firma<span class="op">),</span> <span class="str">&quot;el aviso verifica contra el certificado&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;certificado X.509: aceptado&quot;</span><span class="op">)</span>
+    <span class="kw">match</span> <span class="fn">x509_public_key_pem</span><span class="op">(</span>cert<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>clave<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">assert</span><span class="op">(</span>clave <span class="op">==</span> pem<span class="op">,</span> <span class="str">&quot;la clave extraída es la pública&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>e<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">assert</span><span class="op">(</span><span class="kw">false</span><span class="op">,</span> e<span class="op">.</span>msg<span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
 <span class="op">}</span>
 </pre></div>
 </div>
@@ -104,7 +119,7 @@ no se pudo verificar: rsa: la clave pública PEM no se pudo leer o no es RSA</pr
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.41.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.42.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
