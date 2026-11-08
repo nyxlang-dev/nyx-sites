@@ -9,7 +9,131 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **NYX2022 cubre el campo de un struct literal y `for p: Caja in a`** (los dos huecos fichados al cortar 0.42.0):
+  `S { c: a[0] }` y la variable anotada del `for` leen la casilla chequeada en vez de hacer `inttoptr` + `load` sin
+  mirar el tag. De paso, `Envase { c: a[0] }` con un campo struct POR VALOR desde una casilla opaca ni compilaba
+  (`inttoptr i64 to %Caja`, que clang rechaza): ahora hace `inttoptr` + `load`. Se amplió
+  `slot-sin-tipo-leido-como-struct-enum-abort` (siete formas malas) y `test-541` (el lado legítimo)
+  [dogfooding:nyxerp].
+- **`f(args[0])` con un parámetro `ASTNode` desempaca la casilla** como `let n: ASTNode = args[0]`: antes pasaba el
+  `i64` crudo (`call @f(i64 …)` contra `%ASTNode`), que LLVM acepta sin comparar con la definición, y daba SIGSEGV
+  al correr. Vale para llamadas libres y de método; lo destapó el propio compilador al compilar `test-531`.
+  `test-542` lo blinda (regresión 549 ARM64).
+
+---
+
+## [0.42.0] — 2026-11-08
+
+> **MINOR**: destinos nuevos de `nyx build` armados desde Linux — Android/Termux (`aarch64-linux-android`, PIE de
+  bionic que corre sin proot) y el `.exe` de Windows x86_64 (win-cross) —, `nyx build` nativo en Windows y un `.exe`
+  que corre como servicio, `std/rsa` con certificados X.509, imports cíclicos que funcionan en build, check y `[lib]`,
+  y los silently-wrong que nyxerp encontró en uso real: una casilla de un `Array` sin tipo leída como struct/enum
+  (NYX2022 en vez de SIGSEGV o basura), `crc32_bytes` de un String y `for x in xs` sin `<T>`.
+>
+> **Migración**: un programa que pasaba una casilla de un `Array` sin tipo con otra cosa adentro (una fila, un
+  String) a un parámetro struct/enum ahora aborta con NYX2022 en vez de dar SIGSEGV o leer basura: anotar
+  `Array<T>` o convertir la casilla antes de pasarla. `NYX_SLOT_CHECK=off` apaga la guarda mientras se migra.
+
+### Fixed
+
+- **`crc32_bytes(xs[i])` con una casilla de un `Array` sin tipo emite IR válido** (el arreglo de crc32 de String del
+  11-05 numeraba el temporal del resultado antes que el `inttoptr` de la casilla; lo caza
+  `run_builtin_arg_opaco.sh`). La rama de crc32 sale de `codegen_call_expr` a `emit_crc32_bytes`: en línea había
+  subido su marco -O0 1760 B por encima del techo; ahora queda en 472064 B (techo bajado en
+  `run_stack_frame_audit.sh`) [dogfooding:nyxerp].
+
+- **Una casilla de un `Array` sin tipo que va a un `struct` o `enum` se lee por su tag: NYX2022 en vez de SIGSEGV o
+  basura** (silently-wrong, fricción nyxerp 20261108). Pasar `a[0]` (o la variable de un `for` sobre `a`) a un
+  parámetro `Caja` o `Valor` compilaba y pasaba `nyx check`; en ejecución un struct daba SIGSEGV y un enum leía el
+  discriminante de otra estructura y el `match` no entraba en ningún brazo (salida vacía, exit 0). Ahora, en los
+  destinos argumento de llamada o de método, `let x: T`, `x = …`, `return` y `for p in a`, si el tag de la casilla
+  prueba que no es un struct/enum (int, String, float, bool, Array, Map) el programa aborta con NYX2022 nombrando el
+  tipo esperado y el encontrado (rc 1). UNKNOWN y PTR pasan: el patrón legítimo `a.push(caja); leer(a[0])` no cambia
+  (los 5 stacks verdes). Se apaga con `NYX_SLOT_CHECK=off`. Sin cubrir todavía: el campo de un struct literal
+  (`S { c: a[0] }`) y `for p: Caja in a` (ficha en `TASKS.md`). Tests: `test-541`, el error test
+  `slot-sin-tipo-leido-como-struct-enum-abort` y ai-first 53 [dogfooding:nyxerp].
+
+- **Imports cíclicos: dos módulos que se importan entre sí (a ↔ b), o un módulo que importa de vuelta al principal,
+  compilan y se chequean igual** en `nyx build`, en `nyx check` sobre cualquiera de los archivos y con `[lib] modules`
+  (fricción nyxerp 20261106). Ya eran válidos por diseño (el resolver inlinea cada ruta una sola vez), pero había dos
+  bugs al costado: el escaneo de tipos de un import leía los campos de un `struct` de UNA línea en las líneas
+  siguientes, y con el ciclo daba NYX1017/NYX1032 falsos («missing fields: pub»); y el archivo principal no contaba
+  como ya importado, así que `nyx check src/m/a.nx` lo reinlineaba y daba NYX1040. De paso, `pub struct Id(int)` en
+  un módulo importado exportaba el nombre «Id(int)» y rompía el parse (NYX0101). Guardas: Check R de
+  `run_tooling_gates.sh` (+5) y 3 casos de ciclo en `run_lib_modules.sh` [dogfooding:nyxerp].
+
+- **`crc32_bytes(s)` con un String daba un número distinto por llamada** (silently-wrong, fricción nyxerp del
+  2026-11-05, editor visual del sitio). El builtin esperaba un Array de bytes, el checker no miraba el tipo y codegen
+  entregaba el `%nyx_string*` como si fuera un array: el runtime leía el struct del String como array y recorría
+  basura. Ahora un String va a `nyx_crc32_string` (el CRC-32 de sus bytes, misma tabla; `"123456789"` → 3421780262),
+  un Array sigue como antes, y un int/float/bool es NYX1031 con pista. Tests `531` y `test-nyx1031-crc32-bytes-int`;
+  línea en `LLM.md`.
+- **`nyx build` barre sus temporales huérfanos** (`compiler/build.nx`). Si mataban un build (Ctrl+C, KILL, timeout
+  externo) no se llegaba al `borrar_arbol` final y su `nyx_libs_<pid>_…`/`nyx_build_<pid>_…` quedaba en `$TMPDIR` para
+  siempre (48 MB en un caso medido el 2026-11-05; en el servidor `/tmp` es tmpfs). Ahora `tmp_dir_propio` borra antes
+  los directorios de esa forma exacta cuyo PID ya no existe (`kill_process(pid, 0)`, y `/proc` en Linux), en Nyx puro
+  para que valga en Windows; lo de un PID vivo y lo que no tiene la forma no se toca. Misma receta que `nyx test`. Tres
+  checks nuevos en `run_build_manifest.sh` (37). Cierra la ficha BAJA «`nyx build` interrumpido con Ctrl+C».
+- **`nyx test` respeta `$TMPDIR` y barre sus propios huérfanos** (`compiler/test.nx`). Los cuatro `mktemp` decían
+  `/tmp` a secas: una suite que exportaba `TMPDIR` para no llenar el tmpfs (nyxerp) seguía dejando el binario de cada
+  archivo en la RAM de la máquina, y si mataban `nyx test` (KILL, timeout externo) el `trap` del `sh` por archivo no
+  alcanzaba y el directorio quedaba para siempre (el 2026-10-26: 30 restos y ~1,3 GB de swap en páginas de `/tmp`).
+  Ahora la base es `$TMPDIR` (o `/tmp`), cada temporal lleva el PID del dueño (`nyx_test_<pid>_XXXXXX`,
+  `nyx_test_src_`, `nyx_test_libs_`, `nyx_cov_`) y la corrida siguiente borra los de PIDs muertos; lo de un PID vivo y
+  los nombres del formato viejo no se tocan. Los paths del script generado van entre comillas (un `TMPDIR` con espacio
+  fallaba). Un `TMPDIR` inexistente da un error claro en vez de un FAIL mudo. Cuatro checks nuevos en
+  `run_tooling_gates.sh` (38). Cierra la ficha BAJA del 2026-10-26.
+- **`for x in xs` sobre un `Array` sin `<T>` lee cada casilla por su tag, como ya hacía `xs[i]`** (silently-wrong,
+  reporte de nyxerp del 2026-11-04 al adoptar el fix de `get_or`). Cuando codegen no conocía el tipo del elemento
+  (`Array` pelado, `m.get_or(k, [])`, literal mixto), `x` era int y `print(x)` / `"v=" + x` mostraban la dirección
+  del String sin error. Ahora `codegen_for` reescribe el cuerpo para que cada `x` sea `__arr[__idx]` sobre dos
+  variables ocultas (walker de `licm.nx`, `for_sustituir_var`), y todos los consumidores pasan por
+  `codegen_index_access`, que consulta el tag. No aplica si el cuerpo re-liga `x`, muta el array recorrido o tiene
+  fns anidadas (queda el camino viejo); `NYX_FOR_SLOT=off` lo apaga. De paso, `let a: Array = [1, "dos"]` ya no se
+  infiere `Array<int>` por el primer elemento: usa el tipo común (`tipo_comun_de_literal`, como el `for` sobre
+  literal desde 0.36.0) y un literal mixto queda `Array` pelado (cierra la ficha BAJA del 2026-07-26). Test
+  `ai-first/52`, gotcha `for-untyped-slot-by-tag`.
+- **`m.get_or(k, [])` con un `Array` (o un `Map`, o un struct) guardado como valor ya no produce IR inválido cuando el
+  resultado se usa sin anotar** (`for x in m.get_or(k, [])`, pasarlo como argumento, encadenar `.length()`). El helper
+  de `get_or` devolvía `i64` para todo default que no fuera String ni float, y solo sobrevivía detrás de un
+  `let v: Array = …` (convierte por el tipo declarado); sin la anotación clang rechazaba el IR («defined with type 'i64'
+  but expected 'ptr'», reporte de nyxerp del 2026-11-04, variante del caso de `ai-first/49`). Ahora el resultado
+  tiene el tipo del default, igual que ya pasaba con float (y el `for` sobre él lee por tag: bullet anterior). Test
+  `ai-first/51`.
+- **`install.ps1` falla en el acto si un proceso retiene la instalación anterior** (`.nyx.old` en uso) en vez de
+  descubrirlo tras un minuto de compilar y enlazar; el mensaje nombra el paso que falló y «your current install was not
+  changed»; y **avisa de `NYX_HOME` cuando se instala con `-Prefix`** distinto de `%USERPROFILE%\.nyx`, porque el
+  driver no busca su instalación junto al ejecutable (ficha ALTA en `TASKS.md`). Parche de la laptop, W6 Task 8
+  ronda 1 [arco: w6-windows].
+
 ### Added
+
+- **`nyx build --target aarch64-linux-android`: binarios para Android/Termux armados desde Linux** (pedido de
+  nyxerp, tablets). `scripts/build_android_deps.sh <dir>` arma las deps una vez (sysroot del NDK r27c, bdwgc 8.2.12 y
+  OpenSSL 3.6.5; ~5 min, ~58 MB más la caché del zip de 664 MB) en `~/.cache/nyx-android-deps` o `NYX_ANDROID_DEPS`;
+  `nyx build --target aarch64-linux-android` deja en `target/aarch64-linux-android/<name>` un PIE de bionic
+  (`linker64`, API 24) con libgc y OpenSSL estáticos, que corre en Termux sin proot. Se arma con clang >= 19 y lld, sin
+  herramientas del NDK. `nyx run` no lo ejecuta (error claro). `NYX_ANDROID_STATIC=1` lo arma estático SOLO para probar
+  en Linux arm64 (sin `dlopen`: no andan `std/sqlite` ni el inflate de zlib). En el runtime: CAs de TLS de
+  `SSL_CERT_FILE`/`SSL_CERT_DIR`, si no `$PREFIX/etc/tls/cert.pem` (Termux), si no `/system/etc/security/cacerts/`
+  archivo por archivo; SQLite por `dlopen` desde `$PREFIX/lib/libsqlite3.so` (`pkg install libsqlite`); directorio
+  temporal `$TMPDIR` con respaldo `/data/local/tmp`; goroutines con cambio de contexto en asm aarch64 (bionic no tiene
+  `ucontext`). El binario no lleva rutas de la máquina que lo armó (`-ffile-prefix-map`, como el `.exe` de
+  win-cross; lo notó nyxerp con el primer puente armado: `__FILE__` de `crypto.c`/`tls.c`; guarda `android-sin-rutas`
+  del manifiesto de build). Verificado en el servidor con el binario estático: hello, hilos, canales, mutex, worker pool, eco TCP, 8
+  tests async/goroutine y TLS con una CA estilo Android. **No verificado en un aparato real** (paso EXTERNO). Pendiente:
+  biblioteca `.so` para JNI y `socket_from_fd`, y las CAs de usuario de Android. Receta
+  `examples/by-example/156-target-android.nx`; límites en `LLM.md`
+  [arco: target-android].
+
+- **`kill_process(pid, sig)` compila para Windows** (W6 Task 7, pedido del puente de nyxerp 0.3.8, que lo llama
+  detrás de un `if` de plataforma: una guarda de compilación no se esquiva con un `if` de ejecución). Va por la
+  capa os (`os_proc_kill_pid`; `os_proc_kill` ya era el del handle de spawn): en posix es `kill(2)` tal cual; en win32 honra solo `sig` 0 (¿existe el proceso?),
+  9 y 15 (`TerminateProcess`, sin aviso ni flush, como SIGKILL) y devuelve -1 para cualquier otra señal en vez de
+  fingir la entrega. `fork`/`execvp`/`waitpid`/`pipe_new` siguen solo-posix. Test: `test-530-kill-process-cero`
+  (Linux) y `kill_process(getpid(), 0)` dentro de `tests/build-win/red-min` (gate cruzado) [arco: w6-windows].
 
 - **`std/rsa` entiende certificados X.509**: `rsa_sha256_verify`, `rsa_sha256_verify_b64` y `rsa_pss_sha256_verify`
   aceptan ahora un PEM `BEGIN CERTIFICATE` (la clave sale del primer certificado; sin cambiar firmas), y la nueva
@@ -94,6 +218,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ### Tests
 
+- `make test-examples`: 155 → 156 recetas (la 156, `target-android`) [arco: target-android].
+- `make test-android` (nuevo): `scripts/testing/run_android_cacerts_test.sh`, 3 comprobaciones (TLS alineado a 64, sin CA
+  rechaza, con directorio de CAs estilo Android verifica); SKIP limpio sin deps de Android o fuera de aarch64. El
+  manifiesto de `nyx build` suma 4 casos Android (`android-falta` sin deps; `android-elf`, `android-run` y `android-estatico` con ellas): 37 → 40 checks con deps, 38 sin ellas
+  [arco: target-android].
 - `make test-errors`: 405 → 406 (`slot-array-leido-como-string-abort`) y `make test-ai-first`: 49 → 50 programas (`50-fila-array-luego-string`) [arco: w6-windows].
 - `make test-examples`: 153 → 155 recetas (la 154, que no se había contado, y la 155 del servicio de Windows) [arco: w6-windows].
 - `make test-runtime`: 2339 → 2352 asserts: tres casos de `host_os` en `test_os_build_host.c` y diez del serie USB en `test_os_serial.c` (con un sysfs falso) [arco: w6-windows].
