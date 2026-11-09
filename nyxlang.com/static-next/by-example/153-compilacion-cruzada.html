@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-compiling between Linux x86_64 and aarch64 — Nyx by example</title>
+<meta name="description" content="nyx build --target builds the same program for the other Linux architecture without touching the code.">
+<link rel="canonical" href="https://nyxlang.com/by-example/153-compilacion-cruzada.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/153-compilacion-cruzada.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/153-compilacion-cruzada.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/153-compilacion-cruzada.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/153-compilacion-cruzada.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">153</span> / Systems</span></p>
+<h1 class="doc-title">Cross-compiling between Linux x86_64 and aarch64</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>To ship one program to both x86_64 and aarch64 machines you do not need to build on each one. <code>nyx build --target x86_64-unknown-linux-gnu</code> (from an aarch64 host) or <code>--target aarch64-unknown-linux-gnu</code> (from x86_64) produces the binary for the other architecture. You can also set <code>[build] target = "..."</code> in <code>nyx.toml</code>. The output goes to <code>target/&lt;triple&gt;/&lt;name&gt;</code> and does not overwrite the native binary.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">153-compilacion-cruzada.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/153-compilacion-cruzada.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: compilación cruzada entre Linux x86_64 y aarch64.</span>
+<span class="cm">//</span>
+<span class="cm">// Un mismo programa se arma para la otra arquitectura sin tocar el código:</span>
+<span class="cm">//</span>
+<span class="cm">//     nyx build --target x86_64-unknown-linux-gnu      # desde aarch64</span>
+<span class="cm">//     nyx build --target aarch64-unknown-linux-gnu     # desde x86_64</span>
+<span class="cm">//</span>
+<span class="cm">// (o `[build] target = &quot;...&quot;` en nyx.toml). La salida va a target/&lt;triple&gt;/&lt;name&gt;</span>
+<span class="cm">// y no pisa el binario nativo. El triple del propio host compila nativo; el de la</span>
+<span class="cm">// otra arquitectura usa clang con --target=&lt;triple&gt; y lld, y el runtime de C se</span>
+<span class="cm">// compila para el destino (cacheado por destino).</span>
+<span class="cm">//</span>
+<span class="cm">// Requisitos (Debian/Ubuntu, multiarch; ejemplo aarch64 -&gt; x86_64):</span>
+<span class="cm">//     sudo dpkg --add-architecture amd64 &amp;&amp; sudo apt update</span>
+<span class="cm">//     sudo apt install libc6-dev:amd64 libgc-dev:amd64 libssl-dev:amd64 \</span>
+<span class="cm">//         zlib1g-dev:amd64 libgcc-14-dev:amd64 lld</span>
+<span class="cm">//   (libgcc-N-dev: N es la versión de gcc de la distro; al revés, usa :arm64.)</span>
+<span class="cm">// Si falta algo, `nyx build` lo dice antes de compilar, con el comando exacto.</span>
+<span class="cm">//</span>
+<span class="cm">// Límites:</span>
+<span class="cm">//   - No hay emulación: el binario cruzado no se ejecuta en la máquina que lo arma</span>
+<span class="cm">//     (`nyx run --target &lt;otra arquitectura&gt;` falla); cópialo a una máquina de esa</span>
+<span class="cm">//     arquitectura, o pruébalo en un contenedor `docker run --platform linux/amd64`.</span>
+<span class="cm">//   - El binario es dinámico: la máquina destino necesita libgc, libssl3, libcrypto,</span>
+<span class="cm">//     libz y glibc.</span>
+<span class="cm">//   - `asm` con restricciones de una letra x86 (a b c d S D) se rechaza con destino</span>
+<span class="cm">//     aarch64; la plantilla de ensamblador siempre es del usuario.</span>
+<span class="cm">//</span>
+<span class="cm">// Este programa imprime la arquitectura en la que corre: compílalo para cada destino</span>
+<span class="cm">// y comprueba la salida en la máquina correspondiente.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/process&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">arquitectura</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> o <span class="op">=</span> <span class="fn">spawn_opts</span><span class="op">()</span>
+    o<span class="op">.</span>stdout <span class="op">=</span> <span class="ty">Stdio</span><span class="op">.</span><span class="ty">Pipe</span>
+    <span class="kw">match</span> <span class="fn">try_spawn</span><span class="op">([</span><span class="str">&quot;uname&quot;</span><span class="op">,</span> <span class="str">&quot;-m&quot;</span><span class="op">],</span> o<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>c<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">match</span> <span class="fn">try_child_collect</span><span class="op">(</span>c<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> r<span class="op">.</span>stdout<span class="op">.</span><span class="fn">trim</span><span class="op">()</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> a <span class="op">=</span> <span class="fn">arquitectura</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;corriendo en: &quot;</span> <span class="op">+</span> a<span class="op">)</span>
+    <span class="kw">if</span> a <span class="op">==</span> <span class="str">&quot;x86_64&quot;</span> <span class="op">||</span> a <span class="op">==</span> <span class="str">&quot;aarch64&quot;</span> <span class="op">{</span>
+        <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ok: arquitectura Linux soportada como destino&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">corriendo en: aarch64
+ok: arquitectura Linux soportada como destino</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The program asks <code>uname -m</code> through <code>try_spawn</code> with stdout piped, collects the result with <code>try_child_collect</code> and prints the architecture it is running on; every failure falls back to <code>"desconocida"</code>. Build it for each target and check the output on the matching machine (the output above is from an aarch64 host). The host's own triple compiles natively; the other architecture uses clang with <code>--target=&lt;triple&gt;</code> and lld, and the C runtime is compiled for the target and cached per target. On Debian/Ubuntu you need the multiarch packages (<code>libc6-dev</code>, <code>libgc-dev</code>, <code>libssl-dev</code>, <code>zlib1g-dev</code>, <code>libgcc-N-dev</code> for the other architecture, plus <code>lld</code>); if something is missing, <code>nyx build</code> says so before compiling, with the exact command.</p>
+<p>Limits: there is no emulation, so the cross-built binary does not run on the machine that built it and <code>nyx run --target &lt;other architecture&gt;</code> fails; copy it to a machine of that architecture or try it in a container with <code>docker run --platform linux/amd64</code>. The binary is dynamic, so the target needs libgc, libssl3, libcrypto, libz and glibc. And <code>asm</code> with x86 one-letter constraints (a b c d S D) is rejected when the target is aarch64.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/152-tcp-conectar-con-plazo.html"><span class="label">← Previous</span><span class="doc-nav-name">TCP connect with your own timeout</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/156-target-android.html"><span class="label">Next →</span><span class="doc-nav-name">A binary for Android (Termux) built from Linux</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.43.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

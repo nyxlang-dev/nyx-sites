@@ -1,0 +1,14 @@
+<!-- title: A binary for Android (Termux) built from Linux | blurb: <code>nyx build --target aarch64-linux-android</code> builds the same program for an aarch64 phone or tablet, to run inside Termux. -->
+<!-- not-a-version: 8.2.12 — versión de Boehm GC que arma el script de dependencias, no la del toolchain -->
+<!-- not-a-version: 3.6.5 — versión de OpenSSL que arma el script de dependencias, no la del toolchain -->
+<section data-part="intro">
+<p>The same program can be built for an aarch64 Android device without touching the code. The result is a bionic PIE (API 24, linker64) with libgc and OpenSSL linked statically, which you copy to the device and run inside Termux, with no proot.</p>
+</section>
+<section data-part="output">
+arquitectura: aarch64
+suma 1..100 = 5050
+</section>
+<section data-part="explanation">
+<p>There are three steps. First, once: <code>bash scripts/build_android_deps.sh ~/.cache/nyx-android-deps</code> prepares the NDK r27c sysroot, Boehm GC 8.2.12 and OpenSSL 3.6.5 for bionic (about 5 minutes and 58 MB, plus 664 MB of zip cache; <code>NYX_ANDROID_DEPS</code> changes the directory). Second, from a project with <code>nyx.toml</code>, <code>nyx build --target aarch64-linux-android</code> writes <code>target/aarch64-linux-android/&lt;name&gt;</code>; it needs clang 19 or newer and lld, and does not use the NDK tools. Third, copy it with <code>scp</code>, <code>adb push</code> to <code>/data/local/tmp</code> or Termux's shared storage, and run it. The program itself prints the architecture (via <code>uname -m</code>) and the sum 1..100, and runs the same natively.</p>
+<p>Limits: <code>nyx run --target aarch64-linux-android</code> does not execute anything and gives a clear error; copy the binary to the device. TLS looks for CAs in <code>SSL_CERT_FILE</code> / <code>SSL_CERT_DIR</code>, then <code>$PREFIX/etc/tls/cert.pem</code> (Termux), then <code>/system/etc/security/cacerts/</code>; Android user CAs are not read yet. SQLite is loaded with <code>dlopen</code> from <code>$PREFIX/lib/libsqlite3.so</code> (in Termux, <code>pkg install libsqlite</code>). The temp directory is <code>$TMPDIR</code>, falling back to <code>/data/local/tmp</code>. <code>NYX_ANDROID_STATIC=1</code> builds a static binary only to test on arm64 Linux; it has no <code>dlopen</code>, so <code>std/sqlite</code> and zlib inflate do not work, and it is not a distribution artifact. To load Nyx from an app instead of Termux, see the shared library recipe (157).</p>
+</section>

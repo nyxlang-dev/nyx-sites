@@ -1,0 +1,13 @@
+<!-- title: Saber si un programa existe antes de lanzarlo | blurb: <code>find_program</code> devuelve la ruta que <code>try_spawn</code> ejecutaría para un nombre, o <code>None</code>, para avisar que falta una herramienta. -->
+<section data-part="intro">
+<p>Antes de lanzar una herramienta externa conviene saber si está instalada, para mostrar un mensaje propio de "falta git" o para fijar su ruta una sola vez. <code>find_program(name)</code>, de <code>std/process</code>, devuelve <code>Option&lt;String&gt;</code> con la ruta que <code>try_spawn</code> ejecutaría, con la misma búsqueda: <code>PATH</code> (en Windows también <code>PATHEXT</code>, y nunca el directorio actual).</p>
+</section>
+<section data-part="output">
+sh: encontrado
+inexistente: None
+directorio: None
+</section>
+<section data-part="explanation">
+<p>El ejemplo recorre tres casos. <code>sh</code> existe en cualquier Linux, así que da <code>Some</code>; la ruta absoluta varía por máquina, por eso el programa solo informa que se encontró. Un nombre inexistente da <code>None</code>: no hay error que atrapar. Un directorio como <code>/</code> no es un programa, y también da <code>None</code>. <code>None</code> cubre además un archivo que no es ejecutable y un nombre vacío.</p>
+<p>Límites: un nombre con separador (<code>./tool</code>, <code>/usr/bin/sh</code>) se mira tal cual, sin buscar en <code>PATH</code>. En Windows, un programa que solo existe como <code>.bat</code> o <code>.cmd</code> da <code>None</code>, porque <code>try_spawn</code> lo rechaza; para esos se usa <code>std/exec</code>.</p>
+</section>

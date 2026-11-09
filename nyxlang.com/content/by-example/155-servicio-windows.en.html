@@ -1,0 +1,11 @@
+<!-- title: A program that runs as a Windows service | blurb: The same .exe runs in a console or as a service; the runtime delivers the service stop as SIGTERM and the program only handles signal 15. -->
+<section data-part="intro">
+<p>There is no new API for Windows services. The same <code>.exe</code> runs in a console or under the Service Control Manager: if the manager launched it, the runtime detects that on its own and delivers the stop (<code>sc stop</code>, shutting the machine down) as <code>SIGTERM</code>, just like Ctrl+Break in a console or <code>kill</code> on Linux. The program only has to handle signal 15 and finish what it is doing.</p>
+</section>
+<section data-part="output">
+listo: 3 vueltas
+</section>
+<section data-part="explanation">
+<p><code>signal_handle(15, al_parar)</code> registers a handler that sets the global <code>parar</code> to 1. The main loop does one unit of work (<code>sleep(100)</code> here), so the signal never cuts it in half, and checks the flag on every turn. When it exits it writes <code>vueltas=N</code> to the state file and prints the count. With no arguments it is a demo that stops by itself after three turns, so the recipe can be tried without installing anything (the output above); as a service it receives the state file path as an argument and runs until it is stopped.</p>
+<p>To install it, in PowerShell as administrator, use <code>New-Service</code> with <code>-BinaryPathName</code> holding the quoted path to the <code>.exe</code> and its arguments, then <code>sc.exe failure</code> and <code>sc.exe start</code> (<code>New-Service</code> rather than <code>sc.exe create</code>, which in PowerShell 5.1 breaks paths with spaces). A service's working directory is System32, so pass paths as absolute, by argument. The manager is always told the exit was clean; <code>sc failure</code> only acts if the process dies without exiting (a crash, <code>taskkill /F</code>).</p>
+</section>

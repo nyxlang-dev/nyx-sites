@@ -1,0 +1,12 @@
+<!-- title: Compilación cruzada entre Linux x86_64 y aarch64 | blurb: <code>nyx build --target</code> arma el mismo programa para la otra arquitectura Linux sin tocar el código. -->
+<section data-part="intro">
+<p>Para entregar un programa a máquinas x86_64 y aarch64 no hace falta armarlo en cada una. <code>nyx build --target x86_64-unknown-linux-gnu</code> (desde un host aarch64) o <code>--target aarch64-unknown-linux-gnu</code> (desde x86_64) produce el binario de la otra arquitectura. También se puede fijar con <code>[build] target = "..."</code> en <code>nyx.toml</code>. La salida va a <code>target/&lt;triple&gt;/&lt;name&gt;</code> y no pisa el binario nativo.</p>
+</section>
+<section data-part="output">
+corriendo en: aarch64
+ok: arquitectura Linux soportada como destino
+</section>
+<section data-part="explanation">
+<p>El programa le pregunta <code>uname -m</code> a <code>try_spawn</code> con la salida por pipe, junta el resultado con <code>try_child_collect</code> e imprime la arquitectura en la que corre; cualquier fallo cae en <code>"desconocida"</code>. Se arma para cada destino y se comprueba la salida en la máquina correspondiente (la de arriba es de un host aarch64). El triple del propio host compila nativo; el de la otra arquitectura usa clang con <code>--target=&lt;triple&gt;</code> y lld, y el runtime de C se compila para el destino y se guarda en caché por destino. En Debian/Ubuntu hacen falta los paquetes multiarch (<code>libc6-dev</code>, <code>libgc-dev</code>, <code>libssl-dev</code>, <code>zlib1g-dev</code>, <code>libgcc-N-dev</code> de la otra arquitectura, más <code>lld</code>); si falta algo, <code>nyx build</code> lo dice antes de compilar, con el comando exacto.</p>
+<p>Límites: no hay emulación, así que el binario cruzado no se ejecuta en la máquina que lo armó y <code>nyx run --target &lt;otra arquitectura&gt;</code> falla; hay que copiarlo a una máquina de esa arquitectura o probarlo en un contenedor con <code>docker run --platform linux/amd64</code>. El binario es dinámico: el destino necesita libgc, libssl3, libcrypto, libz y glibc. Y un <code>asm</code> con restricciones de una letra de x86 (a b c d S D) se rechaza cuando el destino es aarch64.</p>
+</section>

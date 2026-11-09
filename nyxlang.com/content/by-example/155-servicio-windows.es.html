@@ -1,0 +1,11 @@
+<!-- title: Un programa que corre como servicio de Windows | blurb: El mismo .exe corre en consola o como servicio; el runtime entrega la parada del servicio como SIGTERM y el programa solo maneja la señal 15. -->
+<section data-part="intro">
+<p>No hay una API nueva para los servicios de Windows. El mismo <code>.exe</code> corre en consola o bajo el administrador de servicios: si lo lanzó el administrador, el runtime lo detecta solo y entrega la parada (<code>sc stop</code>, apagar el equipo) como <code>SIGTERM</code>, igual que Ctrl+Break en consola o <code>kill</code> en Linux. El programa solo tiene que manejar la señal 15 y terminar lo que está haciendo.</p>
+</section>
+<section data-part="output">
+listo: 3 vueltas
+</section>
+<section data-part="explanation">
+<p><code>signal_handle(15, al_parar)</code> registra un manejador que pone la global <code>parar</code> en 1. El bucle principal hace una unidad de trabajo (aquí un <code>sleep(100)</code>), de modo que la señal no la corta a la mitad, y mira la bandera en cada vuelta. Al salir escribe <code>vueltas=N</code> en el archivo de estado e imprime la cuenta. Sin argumentos es una demo que termina sola tras tres vueltas, para probar la receta sin instalar nada (la salida de arriba); como servicio recibe la ruta del estado por argumento y corre hasta que lo paren.</p>
+<p>Para instalarlo, en PowerShell como administrador, se usa <code>New-Service</code> con <code>-BinaryPathName</code> con la ruta del <code>.exe</code> entre comillas y sus argumentos, y después <code>sc.exe failure</code> y <code>sc.exe start</code> (<code>New-Service</code> y no <code>sc.exe create</code>, que en PowerShell 5.1 rompe las rutas con espacios). El directorio de trabajo de un servicio es System32, así que las rutas van absolutas, por argumento. Al administrador siempre se le informa salida limpia; <code>sc failure</code> actúa solo si el proceso muere sin salir (un crash, <code>taskkill /F</code>).</p>
+</section>
