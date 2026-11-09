@@ -40,6 +40,7 @@
 <div class="doc-toc-inner">
 <p class="label doc-toc-label">Versiones</p>
 <ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-1"><span class="doc-toc-name">0.42.1</span><span class="doc-toc-num">2026-11-09</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-0"><span class="doc-toc-name">0.42.0</span><span class="doc-toc-num">2026-11-08</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-41-0"><span class="doc-toc-name">0.41.0</span><span class="doc-toc-num">2026-11-02</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-40-0"><span class="doc-toc-name">0.40.0</span><span class="doc-toc-num">2026-10-30</span></a></li>
@@ -47,11 +48,26 @@
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-38-0"><span class="doc-toc-name">0.38.0</span><span class="doc-toc-num">2026-10-26</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-1"><span class="doc-toc-name">0.37.1</span><span class="doc-toc-num">2026-10-24</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-0"><span class="doc-toc-name">0.37.0</span><span class="doc-toc-num">2026-10-22</span></a></li>
-<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-36-1"><span class="doc-toc-name">0.36.1</span><span class="doc-toc-num">2026-10-17</span></a></li>
 </ol>
 </div>
 </nav>
 <article class="doc-body cl-body" lang="es">
+<section class="cl-release" id="v0-42-1">
+<h2>0.42.1 <span class="cl-date">2026-11-09</span></h2>
+<blockquote>
+<p><strong>PATCH</strong>: <code>std/regex</code> enlaza en Windows con un motor propio (el TRE de musl, verificado contra glibc), y dos arreglos de casillas de un <code>Array</code> sin tipo que nyxerp necesita para probar: NYX2022 llega al campo de un struct literal y al <code>for</code> anotado, y <code>f(args[0])</code> con un parámetro <code>ASTNode</code> deja de dar SIGSEGV.</p>
+</blockquote>
+<h3>Added</h3>
+<ul><li>
+<strong><code>std/regex</code> enlaza en Windows</strong> (<code>nyx build</code> nativo y <code>--target x86_64-pc-windows-msvc</code>): la CRT de MSVC no trae <code>&lt;regex.h&gt;</code>, así que esos builds usan el motor TRE de musl 1.2.5 (más sus tres arreglos posteriores del regex) vendorizado en <code>runtime/vendor/tre</code>, en modo bytes y con nombres <code>nyx_tre_*</code>; Linux y Android siguen con la libc. <code>make test-regex-diff</code> lo corre contra glibc —casos fijos y 20 000 al azar, también bajo ASan/UBSan— y exige el mismo veredicto, el mismo match y el mismo <code>replace_all</code>. El diferencial destapó tres bugs del motor, arreglados en la copia: <code>^*</code>/<code>$+</code> compilaban (glibc da <code>REG_BADRPT</code>), <code>$|x*</code> corría el match vacío a la derecha y <code>.{1,2}($)?</code> ataba el match a <code>$</code>. Quedan documentadas las formas indefinidas que pueden diferir (<code>docs/gotchas/regex-windows-motor.md</code>). Fixture <code>tests/build-win/regex-min</code> en <code>make test-build-win-cross</code>. Falta correr el <code>.exe</code> en la laptop.
+</li></ul>
+<h3>Fixed</h3>
+<ul><li>
+<strong>NYX2022 cubre el campo de un struct literal y <code>for p: Caja in a</code></strong> (los dos huecos fichados al cortar 0.42.0): <code>S { c: a[0] }</code> y la variable anotada del <code>for</code> leen la casilla chequeada en vez de hacer <code>inttoptr</code> + <code>load</code> sin mirar el tag. De paso, <code>Envase { c: a[0] }</code> con un campo struct POR VALOR desde una casilla opaca ni compilaba (<code>inttoptr i64 to %Caja</code>, que clang rechaza): ahora hace <code>inttoptr</code> + <code>load</code>. Se amplió <code>slot-sin-tipo-leido-como-struct-enum-abort</code> (siete formas malas) y <code>test-541</code> (el lado legítimo) .
+</li><li>
+<strong><code>f(args[0])</code> con un parámetro <code>ASTNode</code> desempaca la casilla</strong> como <code>let n: ASTNode = args[0]</code>: antes pasaba el <code>i64</code> crudo (<code>call @f(i64 …)</code> contra <code>%ASTNode</code>), que LLVM acepta sin comparar con la definición, y daba SIGSEGV al correr. Vale para llamadas libres y de método; lo destapó el propio compilador al compilar <code>test-531</code>. <code>test-542</code> lo blinda (regresión 549 ARM64).
+</li></ul>
+</section>
 <section class="cl-release" id="v0-42-0">
 <h2>0.42.0 <span class="cl-date">2026-11-08</span></h2>
 <blockquote>
@@ -491,22 +507,6 @@ Test <code>test-496-pdf-fase-2</code> y receta <code>139-pdf-preimpreso</code>.
 <strong>Reinstalar el mismo compilador ya no invalida <code>target/nyx-lib</code></strong> (fricción nyxerp, 2026-10-17). La huella de cada objeto de <code>[lib]</code> llevaba la ruta y el mtime del binario del compilador, y la ruta absoluta de cada <code>std/</code> del cierre. Como cada <code>make install-local</code> / <code>nyx update</code> arma una carpeta nueva en <code>~/.nyx/versions/</code>, reinstalar el mismo compilador recompilaba todo: 302 módulos y unos 50 minutos en nyxerp. Ahora el compilador cuenta por el sha256 de su contenido, guardado en <code>target/nyx-lib/.compilador</code> junto a la ruta, el tamaño y el mtime que lo produjeron, y los <code>std/</code> por su ruta relativa. Caso 9 de <code>run_lib_modules.sh</code>: reinstalación igual reutiliza, otro compilador recompila.
 </li></ul>
 </section>
-<section class="cl-release" id="v0-36-1">
-<h2>0.36.1 <span class="cl-date">2026-10-17</span></h2>
-<blockquote>
-<p><strong>PATCH</strong>: un arreglo de codegen (conversión numérica sobre una casilla de <code>Array</code> sin tipo) y dos capacidades aditivas pedidas por nyxerp para correo con OAuth2: <code>smtp_auth_xoauth2</code> en <code>std/smtp</code> y el módulo nuevo <code>std/oauth2</code>. Nada que compilaba deja de compilar.</p>
-</blockquote>
-<h3>Agregado</h3>
-<ul><li>
-<strong><code>std/oauth2</code>: cliente OAuth2 sin estado</strong> (fricción nyxerp 2026-10-11, GO 2026-10-16): PKCE S256 y <code>state</code> (CSPRNG), URL de autorización (+ extras del proveedor: <code>access_type=offline</code> de Google), canje del código, renovación que conserva el <code>refresh_token</code>, <code>client_credentials</code> y device code (RFC 8628: <code>oauth2_device_code</code> / <code>_poll</code> / <code>_wait</code>, con <code>verification_uri</code> y la <code>_url</code> de Google). Errores <code>auth</code> / <code>protocol</code> / <code>pending</code> / <code>invalid</code>, nunca con el token, el secreto ni el verifier. Sin runtime nuevo: <code>std/http</code> + <code>std/json</code> + <code>std/url</code> + <code>std/base64</code> + <code>std/webpushcrypto</code>. <code>test-stdlib-11-oauth2</code> (vector RFC 7636 B y un proveedor canned con la forma de Google y Microsoft), receta <code>137-oauth2</code>, SPEC y LLM.md con las recetas Gmail y Microsoft 365. CAPABILITIES: <code>oauth2</code> en «Cripto &amp; seguridad», y de paso <code>imap</code> y <code>mime</code> salen de «Otros» a «Red».
-</li><li>
-<strong><code>smtp_auth_xoauth2(c, usuario, token)</code> en <code>std/smtp</code></strong> (fricción nyxerp, 2026-10-11): el simétrico de <code>imap_auth_xoauth2</code> para ENVIAR por Gmail y Microsoft 365, que ya no aceptan usuario y contraseña. Exige que el EHLO haya anunciado <code>XOAUTH2</code> y maneja el rechazo propio del mecanismo (<code>334</code> con un JSON en base64 → línea vacía → <code>535</code>); el JSON decodificado va al <code>Error</code>, el token nunca. Caso (e) de <code>test-stdlib-07-smtp-tls</code> (token bueno, token vencido, servidor sin el mecanismo). Obtener y renovar el token sigue siendo de la aplicación: <code>std/oauth2</code> quedó sembrado como arco <code>oauth2-cliente</code> (BORRADOR, GO pendiente) en <code>docs/design/specs/2026-10-16-oauth2-cliente-design.md</code>.
-</li></ul>
-<h3>Arreglado</h3>
-<ul><li>
-<strong><code>int_to_float(arr[i])</code> / <code>float_to_int(arr[i])</code> sobre un <code>Array</code> sin <code>&lt;T&gt;</code> ligados a un <code>let</code> con tipo generaban IR inválido que <code>nyx check</code> no veía</strong> (fricción nyxerp, 2026-10-16). El indexado heredaba el <code>expected_type</code> del <code>let</code>: con <code>let f: float = int_to_float(cuentas[q])</code> la casilla se leía como <code>double</code> y el <code>sitofp i64</code> recibía un <code>double</code>; con <code>let n: int = float_to_int(pesos[0])</code>, al revés (<code>fptosi double</code> sobre un <code>i64</code> crudo). Recién fallaba clang con «invalid IR». Ahora los dos builtins fijan el hint del tipo que exigen (<code>int</code> / <code>float</code>) mientras se codegena su argumento, igual que <code>string_to_int</code> con <code>String</code>. Regresión: <code>tests/ai-first/39-conversion-de-casilla-sin-tipo.nx</code> (+1 en <code>make test-ai-first</code>).
-</li></ul>
-</section>
 </article>
 </div>
 <a class="callout" href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md"><span><span class="callout-name">El CHANGELOG.md completo</span><span class="step-note note">Todas las versiones desde el principio, en el repositorio.</span></span><span class="callout-go">GitHub →</span></a>
@@ -515,7 +515,7 @@ Test <code>test-496-pdf-fase-2</code> y receta <code>139-pdf-preimpreso</code>.
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.42.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono"><span class="footer-version">v0.42.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
