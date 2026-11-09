@@ -56,8 +56,8 @@
 <table class="kv kv-wide">
 <tr><th>Sistema operativo</th><td>Linux. Cualquier otro detiene el instalador con un error.</td></tr>
 <tr><th>Arquitecturas</th><td><code>x86_64</code>, <code>aarch64</code>, <code>armv7l</code>.</td></tr>
-<tr><th>Android</th><td>Como destino de compilación desde Linux (ver <em>Android y Termux</em> más abajo). Instalar Nyx dentro de Termux es experimental y no está verificado.</td></tr>
-<tr data-platform-status><th>Windows</th><td>Solo x86_64. <code>nyx build</code> en Windows arma un <code>target/&lt;nombre&gt;.exe</code> nativo (necesita clang; bdwgc y OpenSSL se enlazan estáticos), y ese <code>.exe</code> puede correr como servicio de Windows sin ninguna API nueva. El instalador para Windows es <code>install.ps1</code> (PowerShell); el <code>install.sh</code> de esta página es para Linux. Desde Linux, <code>nyx build --target x86_64-pc-windows-msvc</code> arma el <code>.exe</code> contra un sysroot de xwin (<code>NYX_WIN_SYSROOT</code>). Desde 0.42.1 <code>std/regex</code> también enlaza en Windows, con un motor propio verificado contra glibc. Límites actuales: <code>nyx test</code> todavía no corre ahí y Windows ARM64 no está soportado. macOS no está soportado.</td></tr>
+<tr><th>Android</th><td>Como destino de compilación desde Linux (ver <em>Android y Termux</em> más abajo). Instalar Nyx dentro de Termux es experimental y no está verificado. Desde 0.43.0, <code>nyx build --shared</code> arma además una biblioteca <code>lib&lt;nombre&gt;.so</code> que una app Android carga por JNI; la plantilla está en <code>templates/android/</code>.</td></tr>
+<tr data-platform-status><th>Windows</th><td>Solo x86_64. <code>nyx build</code> en Windows arma un <code>target/&lt;nombre&gt;.exe</code> nativo (necesita clang; bdwgc y OpenSSL se enlazan estáticos), y ese <code>.exe</code> puede correr como servicio de Windows sin ninguna API nueva. El instalador para Windows es <code>install.ps1</code> (PowerShell); el <code>install.sh</code> de esta página es para Linux. Desde Linux, <code>nyx build --target x86_64-pc-windows-msvc</code> arma el <code>.exe</code> contra un sysroot de xwin (<code>NYX_WIN_SYSROOT</code>). Desde 0.42.1 <code>std/regex</code> también enlaza en Windows, con un motor propio verificado contra glibc. Límites actuales: <code>nyx test</code> todavía no corre ahí y Windows ARM64 no está soportado. macOS no está soportado.</td></tr> 
 </table>
 
 <h2>Instalar</h2>
@@ -78,7 +78,7 @@
 
 <h2>Verificar</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx --version</span>
-nyx 0.42.0</pre>
+nyx 0.43.0</pre>
 <p>Si el shell responde <code>command not found</code>, el enlace existe pero este shell todavía no tomó el PATH nuevo. Mira <em>Problemas comunes</em>, más abajo.</p>
 
 <h2>Actualizar</h2>
@@ -129,7 +129,7 @@ Nyx has been uninstalled.
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.42.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono"><span class="footer-version">v0.43.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

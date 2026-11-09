@@ -11,6 +11,53 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ---
 
+## [0.43.0] — 2026-11-09
+
+> **MINOR**: `nyx build --shared` arma una biblioteca `.so` (Linux y Android) que una app carga por JNI o `dlopen`,
+  con hilos ajenos registrados en el GC y fatales que van a un handler en vez de matar en silencio; `std/net` y
+  `std/serial` adoptan un descriptor abierto por otro. Además, `#[export_name]` exporta de verdad fuera de wasm,
+  `nyx.exe` encuentra su instalación con `-Prefix` (`exe_path()` en `std/process`) y `nyx fmt` deja de sumar líneas
+  en blanco al final.
+
+### Added
+
+- **`nyx build --shared` arma una biblioteca `lib<name>.so`** (también `[build] kind = "shared"`; Linux y
+  `aarch64-linux-android`) para cargarla desde una app por JNI o desde C con `dlopen`: sin `fn main` (NYX1049),
+  exporta solo las `#[export_name]` (version script; todo lo demás, Boehm y OpenSSL incluidos, queda local) y corre
+  una `fn init()` opcional una vez desde `nyx_lib_init`. Un `String` entra como `(ptr, len)` y sale como `nyx_buf *`,
+  que se libera con `nyx_buf_free`; un tipo que no cruza a C en esa firma es NYX1048. Cada exportada registra en el GC
+  el hilo de la app que la llama (sin eso, una colección liberaba lo que su pila apuntaba); los fatales —`assert`,
+  `panic`, OOM, NYX2022 y los errores del runtime— van al handler de `nyx_lib_set_fatal_handler` y terminan con
+  `abort()`, y la `.so` queda con páginas de 16 KB. `nyx run` se niega. `make test-build-shared` la carga con
+  `dlopen` desde 8 hilos ajenos bajo GC (y prueba que con el registro apagado falla) y revisa la `.so` de Android
+  con `readelf`. Plantilla JNI/Kotlin en `templates/android/`, gotcha `shared-lib-fatal-mata-app`, receta 157
+  [arco: android-lib].
+- **`try_socket_from_fd` (`std/net`) y `try_serial_from_fd` (`std/serial`)** adoptan un descriptor que abrió otro
+  (en Android, la punta de un `socketpair` que Kotlin bombea desde Bluetooth o USB): Nyx pasa a ser su dueño y lo
+  cierra. Un fd que no es socket es `Err`; uno de serie que no es tty se usa sin termios. En Windows devuelven `Err`
+  [arco: android-lib].
+
+### Fixed
+
+- **`#[export_name("x")]` con paréntesis renombra la función** como `#[export_name = "x"]`: la forma que muestra
+  `docs/SPEC.md` quedaba como un atributo que nadie reconocía, y la función salía con su nombre interno sin aviso
+  [arco: android-lib].
+- **`#[export_name]` fuera de wasm exporta de verdad y no rompe las llamadas desde Nyx**: renombraba la función y la
+  dejaba `internal`, así que el nombre C no salía del objeto y llamarla por su nombre de Nyx no enlazaba
+  (`call @echo` sin definición). Ahora conserva su nombre y el de C es un alias externo; wasm sigue igual
+  (`wasm-export-name`) [arco: android-lib].
+- **`nyx fmt` ya no deja dos líneas en blanco al final del archivo**: el renglón que separa cada función de nivel
+  superior se sumaba al salto que pone `print`, y la salida terminaba en `}\n\n\n`, también sobre un archivo ya
+  formateado. `run_fmt_tests.sh` exige un solo salto final.
+- **`nyx.exe` encuentra su instalación aunque se haya instalado con `install.ps1 -Prefix`**: sin `NYX_HOME` y sin
+  un `%USERPROFILE%\.nyx` válido no había de dónde sacarla, así que `init` sembraba a medias con rc 0, `--version`
+  decía «versión desconocida» y build/run/check/fmt fallaban. Ahora el driver toma el padre de `bin\` de su propio
+  ejecutable (si tiene `runtime\runtime.c`) y lo exporta como `NYX_HOME` para los subcomandos y los hijos. Primitiva
+  nueva `os_self_exe_path` (posix, win32, wasm) y `exe_path()` en `std/process`. Sin ruta, el mensaje de
+  check/fmt/test ya no queda cortado en «no está instalado en ».
+
+---
+
 ## [0.42.1] — 2026-11-09
 
 > **PATCH**: `std/regex` enlaza en Windows con un motor propio (el TRE de musl, verificado contra glibc), y dos

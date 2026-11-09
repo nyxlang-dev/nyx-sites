@@ -40,6 +40,7 @@
 <div class="doc-toc-inner">
 <p class="label doc-toc-label">Versiones</p>
 <ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-43-0"><span class="doc-toc-name">0.43.0</span><span class="doc-toc-num">2026-11-09</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-1"><span class="doc-toc-name">0.42.1</span><span class="doc-toc-num">2026-11-09</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-0"><span class="doc-toc-name">0.42.0</span><span class="doc-toc-num">2026-11-08</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-41-0"><span class="doc-toc-name">0.41.0</span><span class="doc-toc-num">2026-11-02</span></a></li>
@@ -47,11 +48,32 @@
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-39-0"><span class="doc-toc-name">0.39.0</span><span class="doc-toc-num">2026-10-27</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-38-0"><span class="doc-toc-name">0.38.0</span><span class="doc-toc-num">2026-10-26</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-1"><span class="doc-toc-name">0.37.1</span><span class="doc-toc-num">2026-10-24</span></a></li>
-<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-0"><span class="doc-toc-name">0.37.0</span><span class="doc-toc-num">2026-10-22</span></a></li>
 </ol>
 </div>
 </nav>
 <article class="doc-body cl-body" lang="es">
+<section class="cl-release" id="v0-43-0">
+<h2>0.43.0 <span class="cl-date">2026-11-09</span></h2>
+<blockquote>
+<p><strong>MINOR</strong>: <code>nyx build --shared</code> arma una biblioteca <code>.so</code> (Linux y Android) que una app carga por JNI o <code>dlopen</code>, con hilos ajenos registrados en el GC y fatales que van a un handler en vez de matar en silencio; <code>std/net</code> y <code>std/serial</code> adoptan un descriptor abierto por otro. Además, <code>#[export_name]</code> exporta de verdad fuera de wasm, <code>nyx.exe</code> encuentra su instalación con <code>-Prefix</code> (<code>exe_path()</code> en <code>std/process</code>) y <code>nyx fmt</code> deja de sumar líneas en blanco al final.</p>
+</blockquote>
+<h3>Added</h3>
+<ul><li>
+<strong><code>nyx build --shared</code> arma una biblioteca <code>lib&lt;name&gt;.so</code></strong> (también <code>[build] kind = "shared"</code>; Linux y <code>aarch64-linux-android</code>) para cargarla desde una app por JNI o desde C con <code>dlopen</code>: sin <code>fn main</code> (NYX1049), exporta solo las <code>#[export_name]</code> (version script; todo lo demás, Boehm y OpenSSL incluidos, queda local) y corre una <code>fn init()</code> opcional una vez desde <code>nyx_lib_init</code>. Un <code>String</code> entra como <code>(ptr, len)</code> y sale como <code>nyx_buf *</code>, que se libera con <code>nyx_buf_free</code>; un tipo que no cruza a C en esa firma es NYX1048. Cada exportada registra en el GC el hilo de la app que la llama (sin eso, una colección liberaba lo que su pila apuntaba); los fatales —<code>assert</code>, <code>panic</code>, OOM, NYX2022 y los errores del runtime— van al handler de <code>nyx_lib_set_fatal_handler</code> y terminan con <code>abort()</code>, y la <code>.so</code> queda con páginas de 16 KB. <code>nyx run</code> se niega. <code>make test-build-shared</code> la carga con <code>dlopen</code> desde 8 hilos ajenos bajo GC (y prueba que con el registro apagado falla) y revisa la <code>.so</code> de Android con <code>readelf</code>. Plantilla JNI/Kotlin en <code>templates/android/</code>, gotcha <code>shared-lib-fatal-mata-app</code>, receta 157 .
+</li><li>
+<strong><code>try_socket_from_fd</code> (<code>std/net</code>) y <code>try_serial_from_fd</code> (<code>std/serial</code>)</strong> adoptan un descriptor que abrió otro (en Android, la punta de un <code>socketpair</code> que Kotlin bombea desde Bluetooth o USB): Nyx pasa a ser su dueño y lo cierra. Un fd que no es socket es <code>Err</code>; uno de serie que no es tty se usa sin termios. En Windows devuelven <code>Err</code> .
+</li></ul>
+<h3>Fixed</h3>
+<ul><li>
+<strong><code>#[export_name("x")]</code> con paréntesis renombra la función</strong> como <code>#[export_name = "x"]</code>: la forma que muestra <code>docs/SPEC.md</code> quedaba como un atributo que nadie reconocía, y la función salía con su nombre interno sin aviso .
+</li><li>
+<strong><code>#[export_name]</code> fuera de wasm exporta de verdad y no rompe las llamadas desde Nyx</strong>: renombraba la función y la dejaba <code>internal</code>, así que el nombre C no salía del objeto y llamarla por su nombre de Nyx no enlazaba (<code>call @echo</code> sin definición). Ahora conserva su nombre y el de C es un alias externo; wasm sigue igual (<code>wasm-export-name</code>).
+</li><li>
+<strong><code>nyx fmt</code> ya no deja dos líneas en blanco al final del archivo</strong>: el renglón que separa cada función de nivel superior se sumaba al salto que pone <code>print</code>, y la salida terminaba en <code>}\n\n\n</code>, también sobre un archivo ya formateado. <code>run_fmt_tests.sh</code> exige un solo salto final.
+</li><li>
+<strong><code>nyx.exe</code> encuentra su instalación aunque se haya instalado con <code>install.ps1 -Prefix</code></strong>: sin <code>NYX_HOME</code> y sin un <code>%USERPROFILE%\.nyx</code> válido no había de dónde sacarla, así que <code>init</code> sembraba a medias con rc 0, <code>--version</code> decía «versión desconocida» y build/run/check/fmt fallaban. Ahora el driver toma el padre de <code>bin\</code> de su propio ejecutable (si tiene <code>runtime\runtime.c</code>) y lo exporta como <code>NYX_HOME</code> para los subcomandos y los hijos. Primitiva nueva <code>os_self_exe_path</code> (posix, win32, wasm) y <code>exe_path()</code> en <code>std/process</code>. Sin ruta, el mensaje de check/fmt/test ya no queda cortado en «no está instalado en ».
+</li></ul>
+</section>
 <section class="cl-release" id="v0-42-1">
 <h2>0.42.1 <span class="cl-date">2026-11-09</span></h2>
 <blockquote>
@@ -373,140 +395,6 @@
 <strong><code>std/postgres</code> toma la clave como libpq</strong> cuando la cadena no trae <code>password=</code>: <code>PGPASSWORD</code>, después <code>passfile=</code>, <code>PGPASSFILE</code> o <code>~/.pgpass</code> (comodines <code>*</code>, escapes <code>\:</code> y <code>\\</code>; un archivo legible por otros se ignora). Expuesta <code>pg_pgpass_buscar</code> (fricción de nyxerp). +1 test (<code>506</code>).
 </li></ul>
 </section>
-<section class="cl-release" id="v0-37-0">
-<h2>0.37.0 <span class="cl-date">2026-10-22</span></h2>
-<blockquote>
-<p><strong>MINOR</strong>: dos avisos de 0.36.x pasan a error, como anunciaban (regla 7 de <code>docs/VERSIONING.md</code>): NYX1010 entre entero y String, y NYX1045 en un escape desconocido. Lo demás es aditivo: <code>std/pdf_render</code>, respuestas HTTP por partes, SNI con comodín, <code>http_serve_en</code>, registros DNS, <code>nyx build -j N</code> y varias mejoras de <code>std/pdf</code>, <code>std/xlsx</code>, <code>std/image</code> y <code>std/smtp</code>. Antes del corte se revisaron 1201 archivos (nyxerp, los productos, los sitios, y std, ejemplos y compilador de este repo) con el compilador de 0.36.x: ningún caso de los dos avisos.</p>
-</blockquote>
-<h3>Cambiado</h3>
-<ul><li>
-<strong>NYX1010 entre entero y String es error</strong> (aviso en 0.36.x). <code>5 + "a"</code>, <code>5 == "5"</code> y <code>"a" &lt; 5</code> compilaban y morían con SIGSEGV al ejecutar la línea; ahora no compilan, con la misma pista (<code>int_to_string</code>, <code>string_to_int_or</code>). Los tres casos <code>test-nyx1010-*-mixto</code> pasan a la lista de errores de <code>run_error_tests.sh</code>. Sigue siendo aviso cuando un lado lee una casilla (<code>dst[1] == "dos"</code>): el tipo de elemento inferido de un Array puede mentir (<code>var dst = [9]</code> y después <code>dst.push(src[1])</code> con un String) y la casilla lleva su tag, así que ese programa anda (<code>test-323</code>, caso 6; aviso en <code>test-nyx1010-casilla-aviso</code>).
-</li><li>
-<strong>NYX1045 en un escape desconocido es error</strong> (aviso en 0.36.x). <code>"\q"</code> o <code>"\e"</code> valían la letra sin la barra; ahora el análisis los rechaza con línea y la lista de escapes válidos (<code>\x1b</code> en lugar de <code>\e</code>). Sale con el formato y el NDJSON de los demás errores del análisis (<code>"severity":"error"</code>).
-</li></ul>
-<h3>Agregado</h3>
-<ul><li>
-<strong><code>std/http</code>: <code>http_serve_en(host, port, handler)</code> y <code>http_serve_mt_en(host, port, workers, handler)</code></strong> eligen la dirección de bind; <code>http_serve</code>/<code>http_serve_mt</code> siguen en <code>0.0.0.0</code> por compatibilidad (gotcha <code>http-serve-all-interfaces</code>). El playground pasa a <code>127.0.0.1:8081</code>: en producción quedaba abierto directo aunque lo sirve el gateway (orden del servidor, 2026-10-21). Test <code>test-505-http-serve-en</code> (liga <code>127.0.0.2</code> y mide que <code>127.0.0.1</code> no conecte).
-</li><li>
-<strong>SNI con comodín en el servidor TLS</strong>: <code>tls_server_add_cert("*.dominio", cert, key)</code> cubre una etiqueta (<code>a.dominio</code>, no <code>dominio</code> ni <code>a.b.dominio</code>, RFC 6125), los nombres exactos ganan sobre el comodín sin importar el orden, la comparación ya no distingue mayúsculas y el tope sube de 16 a 64 dominios. Pedido de nyxerp (fase C0 de su alta automática de clientes <code>&lt;cliente&gt;.nyxerp.com</code>). Test <code>test_sni_name_matches</code> (runtime) y handshake real verificado con <code>openssl s_client</code>.
-</li><li>
-<strong><code>std/http</code>: leer una respuesta por partes</strong> (fricción nyxerp 20261019-200016-team-1: reenviar al navegador cada trozo de una API de modelos de lenguaje apenas llega). <code>try_http_stream_opts(method, url, headers, body, http_stream_opts())</code> → <code>HttpStream</code>, que vuelve con el estado y las cabeceras:
-<ul><li>
-<code>read()</code> da trozos del cuerpo sin el marco chunked; <code>read_event()</code> da eventos <code>text/event-stream</code> ya armados (<code>SseEvent { evento, datos, id }</code>, WHATWG).
-</li><li>
-Plazos <code>connect_ms</code>, <code>primer_byte_ms</code>, <code>lectura_ms</code> (entre dos trozos) y <code>total_ms</code> (sin tope por defecto). HTTP y HTTPS.
-</li><li>
-<code>sse_wait_room(room, ms)</code> en <code>std/serve</code> cierra la carrera del reenvío: el canal entra al room después de que el handler devuelve, y sin esperar los primeros eventos se perdían.
-</li><li>
-Test <code>test-504-http-stream</code> (chunked partido, Content-Length, hasta el cierre, SSE partido, plazos, gzip, cortes, TLS), <code>tests/ai-first/42</code>, receta <code>144-reenviar-eventos</code>.
-</li></ul>
-</li><li>
-<strong><code>std/pdf_render</code>: dibujar una página de un PDF como imagen</strong> (fricción nyxerp 20261019-080021-team-1: calcar en el editor de formatos la hoja preimpresa que la imprenta manda en PDF). Módulo nuevo en Nyx puro: el mismo código en nativo y en <code>wasm32-wasi</code>, con la imagen byte a byte igual en los dos.
-<ul><li>
-<code>pdf_open(bytes, pdf_open_limits()) -&gt; Result&lt;PdfDoc, Error&gt;</code>, <code>doc.page_count()</code>, <code>doc.page_size(p)</code>, <code>doc.render(p, ppp, pdf_render_strict())</code> y <code>doc.render_report(...)</code> con <code>pdf_render_best_effort()</code>, que devuelve la imagen y la lista de lo omitido. Atajo <code>pdf_page_to_image(bytes, página, ppp)</code>. La salida es la <code>Image</code> de <code>std/image</code>.
-</li><li>
-Parser con xref clásica, xref streams, object streams, actualizaciones incrementales y reconstrucción por barrido; filtros Flate (con predictores), LZW, ASCIIHex, ASCII85 y RunLength.
-</li><li>
-Rasterizador con antialias (cobertura exacta horizontal × 4 submuestras), nonzero y even-odd, trazos con uniones, puntas, punteado y stroke adjustment, y recortes.
-</li><li>
-Color gris, RGB, CMYK (la interpolación de poppler), ICCBased, Indexed, Lab, Separation y DeviceN con funciones de tipo 0, 2, 3 y 4; alfa constante.
-</li><li>
-Imágenes JPEG y crudas, con SMask, Mask y stencil. Las grandes se reducen en una pasada al tamaño que ocupan en la página, sin materializarlas enteras.
-</li><li>
-Texto con TrueType y CFF incrustadas (simples y Type0/CID). Las 14 estándar sin incrustar usan un subconjunto de Liberation (OFL 1.1, 227 KB, licencia incluida en el bloque generado). Caché de glifos rasterizados.
-</li><li>
-Estricto por defecto: lo no soportado (sombreados, Type 1/3, JBIG2/JPX/CCITT, cifrado...) es <code>Err(unsupported)</code> con el nombre. <code>PdfOpenLimits</code> acota tamaño, descompresión, anidamiento, formularios, operadores, ppp y píxeles: un PDF hostil da <code>Err(invalid)</code> nombrando el límite.
-</li><li>
-Verificado contra poppler 25.03: corpus sintético de 12 PDFs (<code>tests/pdf-corpus/</code>, <code>scripts/testing/pdf_render_oracle.sh</code>) y 44 PDFs reales locales (93 páginas, ninguna falla).
-</li><li>
-Tests <code>test-503-pdf-render</code>, <code>test-wasm-59-pdf-render</code> y <code>tests/ai-first/41-pdf-pagina-a-imagen</code>; receta <code>143-pdf-a-imagen</code>.
-</li></ul>
-</li><li>
-<strong><code>std/dns</code>: consultas TXT, CNAME y MX</strong> (pedido de nyxerp, 2026-10-18, para revisar SPF, DKIM y DMARC antes de encender el correo). Módulo nuevo con cliente DNS propio en Nyx (RFC 1035) sobre UDP, con reintento por TCP si la respuesta viene truncada y sin dependencias de enlace.
-<ul><li>
-<code>dns_txt</code> (un String por registro), <code>dns_cname</code>, <code>dns_mx</code> (ordenado por preferencia), <code>dns_query</code> crudo, <code>dns_set_server</code>, <code>dns_set_timeout</code>, <code>dns_is_nxdomain</code> y <code>dns_is_nodata</code>.
-</li><li>
-Errores <code>Result&lt;_, Error&gt;</code>: NXDOMAIN <code>not_found</code> 3, NODATA <code>not_found</code> 61, <code>timeout</code> 110, SERVFAIL/REFUSED <code>io</code>, <code>parse</code>.
-</li><li>
-Parser de entrada hostil: tope de 16 saltos de compresión, nombres de 255 bytes, ID aleatorio y pregunta verificados. Servidores desde <code>/etc/resolv.conf</code> (hasta 3 IPv4); en Windows exige <code>dns_set_server</code>. Sin caché, IPv6, EDNS(0) ni DNSSEC.
-</li><li>
-Verificado contra la red real (SPF y DMARC de gmail.com, 17 TXT de google.com por TCP).
-</li><li>
-Tests <code>test-499-dns</code> (paquetes fijos), <code>test-500-dns-servidor</code> (servidor falso UDP/TCP) y <code>test-501-dns-red-real</code> (SKIP sin red); receta <code>142-dns-spf-dkim-dmarc</code>.
-</li></ul>
-</li><li>
-<strong><code>std/smtp</code>: correo con texto y HTML (<code>multipart/alternative</code>)</strong> (pedido de nyxerp, 2026-10-18). <code>smtp_message_alternative(de, para, asunto, texto, html)</code>: texto primero y HTML después (RFC 2046), cada parte en quoted-printable (RFC 2045 §6.7). Con <code>smtp_attach</code> sale <code>multipart/mixed</code> › <code>alternative</code> + adjuntos, con boundaries distintos y dot-stuffing por parte. <code>smtp_message</code> y <code>smtp_message_html</code> no cambian un byte. Test <code>test-stdlib-12-smtp-alternative</code> (incluye vuelta completa por <code>mime_parse</code>) y receta <code>141-smtp-texto-y-html</code>.
-</li><li>
-<strong><code>std/image</code>: miniaturas de hojas escaneadas en décimas de segundo</strong> (fricción nyxerp, 2026-10-18), con la salida idéntica byte a byte (sigue igual a Pillow).
-<ul><li>
-Resize, decodificador y codificador JPEG leen y escriben por punteros en nativo de 64 bits; wasm32 conserva las versiones anteriores, y las dos rutas dan los mismos bytes.
-</li><li>
-Hoja de 1275×1650, tiempo de CPU de <code>image_thumbnail</code>: 3,6 s → 1,0 s con <code>nyx build</code> (clang <code>-O0</code>) y 0,92 s → 0,25 s con <code>--release</code> (<code>-O2</code>). En 2550×3300: 8,6 s → 2,4 s y 2,3 s → 0,65 s.
-</li><li>
-Buena parte de los 3,5 s reportados era compilar sin <code>--release</code>.
-</li><li>
-Test <code>test-497-image-rapido</code> (huellas CRC32 fijadas antes de optimizar), receta <code>140-imagen-hojas-escaneadas</code> y <code>scripts/bench_image_thumb.nx</code>.
-</li></ul>
-</li><li>
-<strong><code>std/xlsx</code>: listas desplegables y color de relleno</strong> (pedido de nyxerp, 2026-10-17, para plantillas de carga masiva).
-<ul><li>
-<code>XlsxSheetOut.validate_list(rango, valores)</code> y <code>validate_list_range(rango, origen)</code> emiten <code>&lt;dataValidations&gt;</code> en el orden que exige el esquema ECMA-376. <code>xlsx_write</code> devuelve <code>Err</code> si la lista fija pasa de 255 caracteres, si un valor lleva coma o comillas, o si el rango es inválido.
-</li><li>
-<code>xlsx_fill(celda, "RRGGBB")</code> da relleno sólido y se encadena con <code>xlsx_bold</code>.
-</li><li>
-<code>xlsx_read</code> no cambia.
-</li><li>
-Test <code>test-495-xlsx-validacion</code> y receta <code>138-xlsx-plantilla</code>.
-</li></ul>
-</li><li>
-<strong><code>std/pdf</code> fase 2: grosor, gris y color, 12 fuentes Core14 y texto girado</strong> (pedido de nyxerp, 2026-10-17, para hojas preimpresas y etiquetas).
-<ul><li>
-<code>line_width</code>, <code>gray</code> y <code>color</code> cambian a la vez el trazo y el relleno de lo que se dibuja después. Cada página arranca en el estado por omisión del PDF: negro y 1 pt.
-</li><li>
-Fuentes nuevas: <code>HelveticaOblique</code>, <code>HelveticaBoldOblique</code>, <code>TimesBold</code>, <code>TimesItalic</code>, <code>TimesBoldItalic</code> y las cuatro <code>Courier</code>. Las tres tablas AFM nuevas de Times se cruzaron entre pypdf y pdfminer.six; la única diferencia es el €, que pdfminer no trae.
-</li><li>
-<code>text_rotated</code> gira el texto con la matriz <code>Tm</code>, a cualquier ángulo, con seno y coseno calculados sin libm; los múltiplos de 90° salen exactos.
-</li><li>
-Ningún PDF de la fase 1 cambia de bytes.
-</li><li>
-Test <code>test-496-pdf-fase-2</code> y receta <code>139-pdf-preimpreso</code>.
-</li></ul>
-</li><li>
-<strong><code>nyx build -j N</code>: las unidades de <code>[lib]</code> se compilan en paralelo</strong> (fricción nyxerp, 2026-10-17). Antes iban en serie: 302 módulos y unos 50 minutos en frío en 4 núcleos. Las unidades no dependen unas de otras para compilar, así que ahora se lanzan hasta N a la vez (<code>-j N</code>, <code>--jobs N</code> o <code>NYX_JOBS</code>; por omisión, los núcleos). <code>nyx test</code> pasa por el mismo camino. Salida y enlace en el orden del manifiesto; con un error se reportan todas las unidades que fallaron y no queda ningún objeto a medio escribir. Dos builds del mismo proyecto a la vez (varios <code>nyx test</code> en paralelo, como corre nyxerp) toman un candado sobre <code>target/nyx-lib</code>: el segundo espera y reutiliza; antes se borraban los temporales uno al otro. Un build sin nada que compilar no lanza procesos auxiliares (el que pasa <code>nyx test</code> en cada archivo). Medido en una copia de nyxerp: 300 bibliotecas en frío, 2.894 s en serie y 1.057 s con <code>-j 4</code>. Medición en <code>docs/design/spikes/2026-10-17-build-lib-paralelo-medicion.md</code>: menos de 600 MB por unidad. Caso 10 de <code>run_lib_modules.sh</code>.
-</li></ul>
-<h3>Arreglado</h3>
-<ul><li>
-<strong>Una cabecera escrita como <code>"Nombre: valor"</code> en un solo elemento llega al pedido</strong> (silently-wrong, fricción nyxerp). El cliente de <code>std/http</code> solo leía pares <code>[nombre, valor]</code> y la descartaba sin aviso; ahora acepta las dos formas, también mezcladas (un nombre de cabecera no puede tener <code>:</code>, así que no hay ambigüedad con valores como <code>Bearer a:b</code>). Test <code>tests/ai-first/43</code>.
-</li><li>
-<strong><code>CAPABILITIES.md</code> lista los tipos públicos y sus métodos</strong>: hasta acá solo funciones libres, así que APIs hechas de métodos (<code>doc.render()</code>, <code>s.read()</code>, <code>d.text()</code>) y sus structs no aparecían (fricción nyxerp, 2026-10-20).
-</li><li>
-<strong>NYX1017 sugiere la llamada cuando el nombre es un método</strong>: <code>s.status</code> sobre un <code>HttpStream</code> ahora dice «'status' is a method: call it with parentheses, .status()» (fricción nyxerp, 2026-10-20). Test <code>test-nyx1017-metodo-sin-parentesis</code>.
-</li><li>
-<strong>Los literales de string compilan en tiempo lineal</strong>. El lexer y <code>escape_string</code> concatenaban un byte por vez: un literal de 64 KB tardaba ~4 s en el frontend y uno de 400 KB, 32 s. Ahora 64 KB tardan 35 ms. <code>test-lexer</code> y <code>test-emit-bytes-global</code> lo fijan.
-</li><li>
-<strong>Un float de una casilla sin <code>&lt;T&gt;</code> conserva su valor al asignarlo y al empujarlo</strong> . <code>x = d[i]</code> con <code>x: float</code> ya declarada, y <code>b.push(a[2 * i])</code>, daban los bits del double como número (1.5 → 4,6e18) en silencio. Test <code>test-502</code>.
-</li><li>
-<strong>wasm32: una casilla pasada directo a un método de <code>impl</code></strong>. Con un parámetro <code>Array</code> o <code>String</code>, la llamada emitía el i64 crudo: en nativo pasaba de casualidad, en wasm32 era un trap <code>unreachable</code>. Ahora se convierte, igual que en las funciones libres. Test <code>test-wasm-58</code>.
-</li><li>
-<strong>Las variantes de un enum de una sola línea ya no dependen del camino del import</strong> (fricción nyxerp, 2026-10-18). <code>std/pdf</code> declara <code>pub enum PdfFont { Helvetica, … }</code> en una línea; cuando llegaba primero por un import transitivo, el escaneo por líneas de <code>semantic</code> buscaba las variantes en las líneas siguientes y registraba basura. Como el primer registro gana, <code>PdfFont.Helvetica</code> daba NYX2012 «has no variant» (el chequeo de NYX2012 en expresiones, nuevo en esta versión, lo hizo visible; antes fallaba en codegen con «unknown enum variant»). Con los imports al revés compilaba. Regresión: <code>test-498</code>.
-</li><li>
-<strong><code>std/smtp</code> verifica contra las CAs del sistema</strong> (fricción nyxerp, 2026-10-18). <code>smtp_starttls</code> (587) y <code>smtp_connect_tls</code> (465) verificaban contra el almacén de <code>tls_set_ca_file</code>, que arranca vacío: todo relé público con certificado válido daba «unknown ca». El rodeo, <code>tls_set_ca_file("")</code>, sumaba todas las CAs públicas a un almacén global que también usa el <code>verify-ca</code> de <code>std/postgres</code>. Ahora usan <code>tls_upgrade_fd_verified_system</code> / <code>tls_connect_verified_system</code>, como ya hacía <code>std/imap</code>. Verificado contra <code>smtp.gmail.com</code> en 587 y 465: antes fallaban los dos, ahora verifican. El autofirmado sigue rechazado (<code>test-stdlib-07</code>, caso d). El rodeo ya no hace falta; una CA privada por conexión queda fichada.
-</li><li>
-<strong>Una casilla de un <code>Array</code> sin <code>&lt;T&gt;</code> pasada directo a un parámetro struct, o usada como clave de <code>Map</code>, ya funciona</strong> (fricción nyxerp, 2026-10-17). <code>texto(hs[0])</code>, con <code>fn texto(h: Hoja)</code>, pasaba el <code>i64</code> crudo de la casilla donde la función esperaba el struct por valor. El resultado era «GC heap exhausted» o, en otro programa de nyxerp, la función recibía otro elemento. <code>m.insert(pares[0], pares[1])</code> usaba el <code>i64</code> como puntero de la clave y clang rechazaba el IR. En los dos casos <code>nyx check</code> daba verde. Ahora la casilla se convierte al struct del parámetro (<code>inttoptr</code> + <code>load</code>, como en <code>let h: Hoja = hs[0]</code>), y la clave de un método de Map que sale de una casilla se lee como String. El propio compilador tenía el mismo patrón en <code>cg_tipo_duplicado(decls[i], …)</code>, que andaba de casualidad por la convención de llamadas de aarch64. <code>ASTNode</code> queda afuera: en una casilla es un Array y no un puntero. Regresión: <code>tests/ai-first/40-casilla-sin-tipo-como-argumento.nx</code> y gotcha <code>untyped-slot-as-argument</code>.
-</li><li>
-<strong><code>nyx check</code> rechaza una variante de enum que no existe (NYX2012)</strong> (fricción nyxerp, 2026-10-17). <code>PdfFont.Zzzz</code> pasaba el chequeo en verde y recién el codegen lo rechazaba, con un mensaje que pedía una anotación de tipo. Ahora es NYX2012, con «did you mean» si hay una variante cercana, tanto para enums locales como importados. No se valida cuando el nombre corresponde a una variable o a un parámetro. Casos <code>test-nyx2012-variante-{inexistente,importada}</code>.
-</li><li>
-<strong>Escapes de String: <code>\xNN</code> y <code>\u{…}</code> valen lo que dicen, y un escape desconocido avisa (NYX1045)</strong> . Antes el lexer conocía solo <code>\n \t \\ \" \r \0</code> y cualquier otro escape perdía la barra en silencio: <code>"\x41"</code> valía <code>x41</code>, <code>"\u{0}"</code> valía <code>u{0}</code> y <code>'\x41'</code> imprimía <code>41</code>. Había tres casos reales, todos equivocados sin que nadie lo notara: el centinela <code>"\u{0}"</code> de la configuración de nyxerp, el separador <code>"\x1F"</code> de la clave de <code>DISTINCT</code> de nyx-db (y su copia en venezuelainfo), y las secuencias ANSI <code>"\x1b[…"</code> del ejemplo de nyx-edit. Con este arreglo los tres valen lo que quisieron decir sin tocar su código. <code>\'</code> y <code>\$</code> (<code>"\${x}"</code> es <code>${x}</code> literal) quedan documentados. Un <code>\x</code> o <code>\u{…}</code> malformado es error de lexer con línea y columna. Cualquier otro escape es <code>warning [NYX1045]</code> y pasa a error en 0.37.0. Los cuatro caminos del lexer que leían escapes, que eran cuatro copias del mismo <code>if</code>, ahora pasan por una sola función. <code>test-494-escapes-hex-unicode</code>, siete casos <code>test-nyx1045-*</code> y gotcha <code>string-escapes</code>.
-</li><li>
-<strong><code>CAPABILITIES.md</code> ya no esconde 34 módulos de la stdlib en «Otros»</strong>. La tabla curada <code>module_category</code> de <code>compiler/build.nx</code> no tenía 34 de los 78 módulos, entre ellos <code>serve</code>, <code>postgres</code>, <code>error</code>, <code>math</code>, <code>map</code>, <code>router</code>, <code>template</code>, <code>xlsx</code>, <code>pdf</code> e <code>image</code>. Todos tienen ahora categoría, y se suman dos categorías nuevas: «Núcleo» (<code>error</code>, <code>prelude</code>) e «IA &amp; LLM». «Otros» queda solo para builtins sin tema. Guarda nueva (d) en <code>run_capabilities_test.sh</code>: falla si un módulo de <code>std/</code> cae en «Otros», así que un módulo nuevo entra a la tabla en el mismo commit que lo crea.
-</li><li>
-<strong>El compilador ya no copia de forma cuadrática: un archivo de prueba grande de nyxerp compila 9 veces más rápido</strong> (fricción nyxerp, 2026-10-17: ~42 s por archivo de <code>nyx test</code>). La medición por fase mostró que el tiempo crecía más rápido que el IR, y un perfilador de muestreo que el 81% era el GC, provocado por concatenaciones que recopiaban todo lo acumulado: las constantes de texto en <code>generate_llvm</code>, las declaraciones de módulo en <code>resolve_source</code>, y el prefijo de símbolo de cada módulo recalculado carácter por carácter en cada llamada sin calificar. Ahora van con <code>StringBuilder</code>, los prefijos se calculan una vez (<code>ctx.alcances[3]</code>), la búsqueda de una función entre los módulos se memoriza (<code>ctx.alcances[4]</code>, con la versión del conjunto en la clave), <code>extract_exports</code> no recorta las líneas que no pueden exportar nada y <code>scan_module_types</code> no relee un módulo ya escaneado. La huella de <code>[lib]</code> en <code>nyx_build</code> tenía el mismo patrón (<code>todo = todo + …</code> sobre el cierre de imports): un <code>nyx_build libs</code> sin cambios, que <code>nyx test</code> corre en cada archivo, bajó de 5,7 s a 2,0 s en nyxerp. El IR sale idéntico byte a byte. Medido: 105,6 s → 11,2 s y 822 → 642 MB en el archivo más grande; 3,5 s → 1,6 s en uno mediano. Spike: <code>docs/design/spikes/2026-10-17-test-sin-repetir-medicion.md</code>.
-</li><li>
-<strong>Operadores entre primitivos de clases distintas: NYX1010 en vez de SIGSEGV o IR inválido.</strong> El chequeo dejaba pasar aritmética y comparación entre cualquier par de tipos. La matriz medida el 2026-10-17 (cuatro tipos por lado, nueve operadores) mostró que solo existen números con números, <code>String + x</code>, <code>==</code>/<code>!=</code> entre dos String o dos bool y el orden entre dos String; el resto moría con SIGSEGV al ejecutar la línea (<code>5 + "a"</code>, <code>5 == "5"</code>, <code>"a" &lt; 5</code>) o daba IR inválido que recién rechazaba clang (<code>x * "dos"</code>, <code>2.5 + "a"</code>, <code>true + 1</code>). Lo segundo nunca produjo un binario y es error ya; lo primero compilaba, así que por la regla 7 de <code>docs/VERSIONING.md</code> es <code>warning [NYX1010]</code> en 0.36.x y <strong>error en 0.37.0</strong>. Nyxerp (539 archivos) no tiene ningún caso. Tests: <code>test-493-operadores-primitivos-mixtos</code> (los valores de lo que sí existe) y cinco de <code>make test-errors</code>; gotcha <code>mixed-primitive-operators</code>.
-</li><li>
-<strong>Reinstalar el mismo compilador ya no invalida <code>target/nyx-lib</code></strong> (fricción nyxerp, 2026-10-17). La huella de cada objeto de <code>[lib]</code> llevaba la ruta y el mtime del binario del compilador, y la ruta absoluta de cada <code>std/</code> del cierre. Como cada <code>make install-local</code> / <code>nyx update</code> arma una carpeta nueva en <code>~/.nyx/versions/</code>, reinstalar el mismo compilador recompilaba todo: 302 módulos y unos 50 minutos en nyxerp. Ahora el compilador cuenta por el sha256 de su contenido, guardado en <code>target/nyx-lib/.compilador</code> junto a la ruta, el tamaño y el mtime que lo produjeron, y los <code>std/</code> por su ruta relativa. Caso 9 de <code>run_lib_modules.sh</code>: reinstalación igual reutiliza, otro compilador recompila.
-</li></ul>
-</section>
 </article>
 </div>
 <a class="callout" href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md"><span><span class="callout-name">El CHANGELOG.md completo</span><span class="step-note note">Todas las versiones desde el principio, en el repositorio.</span></span><span class="callout-go">GitHub →</span></a>
@@ -515,7 +403,7 @@ Test <code>test-496-pdf-fase-2</code> y receta <code>139-pdf-preimpreso</code>.
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.42.1</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono"><span class="footer-version">v0.43.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
