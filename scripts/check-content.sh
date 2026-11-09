@@ -213,6 +213,11 @@ AI_TOOLS_RE='\bclaude\b|cursor|copilot'
 # medición aunque no traiga comparativo detrás.
 METRICS_RE='req/s|ops/s|[0-9][0-9.,]*\s*(ms|µs|x faster|× faster|veces más rápido)|benchmark|faster than|más rápido que|[0-9]+ (recipes|recetas|tests|seconds|segundos)|[0-9]+ ?% ?(smaller|larger|faster|slower|less|more|más|menos|mayor|menor)|~[0-9]+ ?%'
 PLATFORMS_RE='macOS|mac os|Windows|brew install|WSL'
+# Las páginas del recetario (by-example/ y es/by-example/) sí pueden nombrar
+# Windows (decisión de Ottavio, 2026-11-09): desde 0.39 Windows es destino
+# soportado y las recetas 154/155 copian byte a byte un .nx que lo nombra.
+# macOS, brew y WSL siguen prohibidos también ahí.
+PLATFORMS_RECIPE_RE='macOS|mac os|brew install|WSL'
 IDENTITY_RE='Ephemeris|Fraunces|fonts\.googleapis|fonts\.gstatic|logo\.png'
 
 # ── Impresión y contadores ───────────────────────────────────────────────
@@ -496,17 +501,23 @@ EOF
 # «Windows: en curso, todavía sin soporte» de la página de instalación— y no
 # la promociona. Es un atributo y no un comentario porque llega intacto al
 # HTML generado. Cualquier otra mención de Windows/macOS sigue cayendo en C.
+# Segunda exención (2026-11-09): en el recetario, Windows se permite (ver
+# PLATFORMS_RECIPE_RE); macOS/brew/WSL no.
 check_c() {
-    local root="$1" files f hit n=0
+    local root="$1" files f hit re n=0
     files=$(find_nolegacy_noquote "$root" \( -name '*.html' -o -name '*.css' -o -name '*.js' \))
     while IFS= read -r f; do
         [ -z "$f" ] && continue
+        case "$f" in
+            "$root"/by-example/*|"$root"/es/by-example/*) re="$PLATFORMS_RECIPE_RE" ;;
+            *) re="$PLATFORMS_RE" ;;
+        esac
         while IFS= read -r hit; do
             [ -z "$hit" ] && continue
             case "$hit" in *data-platform-status*) continue ;; esac
             print_bad "[C] $hit"
             n=$((n + 1))
-        done < <(grep -HniE -- "$PLATFORMS_RE" "$f" 2>/dev/null)
+        done < <(grep -HniE -- "$re" "$f" 2>/dev/null)
     done <<< "$files"
     if [ "$n" -eq 0 ]; then
         print_ok "[C] 0 coincidencias (fuera de filas data-platform-status)"
@@ -1144,7 +1155,13 @@ HTML
     # «≥1» la línea de req/s sola alcanzaba para dar el autotest por bueno y
     # el patrón del porcentaje podía quedarse ciego sin que nadie lo viera.
     check_b "$aroot"; [ "$CHECK_LAST_FAILS" -eq 4 ] || { print_bad "AUTOTEST ROTO: B vio $CHECK_LAST_FAILS hallazgo(s), esperaba 4 (req/s + porcentaje comparativo, en index.html y en es/index.html)"; broken=1; }
-    check_c "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: C no detectó el control positivo"; broken=1; }
+    # Exactamente 3: macOS en index.html y es/index.html, y WSL en la receta.
+    # El «Windows» de la receta es control NEGATIVO (exención del recetario):
+    # 4 = la exención se rompió; 2 = el recetario quedó sin chequear.
+    mkdir -p "$aroot/by-example"
+    printf '<p>// En Windows usa sc.exe</p>\n<p>Corre bajo WSL</p>\n' > "$aroot/by-example/fixture.html"
+    check_c "$aroot"; [ "$CHECK_LAST_FAILS" -eq 3 ] || { print_bad "AUTOTEST ROTO: C vio $CHECK_LAST_FAILS hallazgo(s), esperaba 3 (macOS ×2 + WSL en la receta; Windows en la receta exento)"; broken=1; }
+    rm -rf "$aroot/by-example"
     check_e "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: E no detectó el control positivo"; broken=1; }
     check_f "$aroot"; [ "$CHECK_LAST_FAILS" -ge 1 ] || { print_bad "AUTOTEST ROTO: F no detectó el control positivo"; broken=1; }
     check_g "$aroot"; [ "$CHECK_LAST_WARNS" -ge 1 ] || { print_bad "AUTOTEST ROTO: G no vio la página EN sin gemela ES"; broken=1; }

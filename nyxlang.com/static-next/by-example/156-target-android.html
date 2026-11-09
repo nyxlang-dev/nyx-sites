@@ -107,7 +107,7 @@ suma 1..100 = 5050</pre></div>
 <p>Limits: <code>nyx run --target aarch64-linux-android</code> does not execute anything and gives a clear error; copy the binary to the device. TLS looks for CAs in <code>SSL_CERT_FILE</code> / <code>SSL_CERT_DIR</code>, then <code>$PREFIX/etc/tls/cert.pem</code> (Termux), then <code>/system/etc/security/cacerts/</code>; Android user CAs are not read yet. SQLite is loaded with <code>dlopen</code> from <code>$PREFIX/lib/libsqlite3.so</code> (in Termux, <code>pkg install libsqlite</code>). The temp directory is <code>$TMPDIR</code>, falling back to <code>/data/local/tmp</code>. <code>NYX_ANDROID_STATIC=1</code> builds a static binary only to test on arm64 Linux; it has no <code>dlopen</code>, so <code>std/sqlite</code> and zlib inflate do not work, and it is not a distribution artifact. To load Nyx from an app instead of Termux, see the shared library recipe (157).</p></div>
 </article>
 <nav class="doc-nav" aria-label="Previous and next recipe">
-<a class="doc-nav-link doc-nav-prev" href="/by-example/153-compilacion-cruzada.html"><span class="label">← Previous</span><span class="doc-nav-name">Cross-compiling between Linux x86_64 and aarch64</span></a>
+<a class="doc-nav-link doc-nav-prev" href="/by-example/155-servicio-windows.html"><span class="label">← Previous</span><span class="doc-nav-name">A program that runs as a Windows service</span></a>
 <a class="doc-nav-link doc-nav-next" href="/by-example/157-biblioteca-compartida-para-una-app.html"><span class="label">Next →</span><span class="doc-nav-name">A shared library (.so) for an app</span></a>
 </nav>
 <p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>

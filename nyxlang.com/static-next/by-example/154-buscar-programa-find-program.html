@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check a program exists before launching it — Nyx by example</title>
+<meta name="description" content="find_program returns the path try_spawn would run for a name, or None, so you can warn that a tool is missing.">
+<link rel="canonical" href="https://nyxlang.com/by-example/154-buscar-programa-find-program.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/154-buscar-programa-find-program.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/154-buscar-programa-find-program.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/154-buscar-programa-find-program.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/154-buscar-programa-find-program.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">154</span> / Systems</span></p>
+<h1 class="doc-title">Check a program exists before launching it</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Before launching an external tool it is useful to know whether it is installed, to print your own "git is missing" message or to pin its path once. <code>find_program(name)</code> from <code>std/process</code> returns <code>Option&lt;String&gt;</code> with the path <code>try_spawn</code> would execute, using the same search: <code>PATH</code> (on Windows also <code>PATHEXT</code>, and never the current directory).</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">154-buscar-programa-find-program.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/154-buscar-programa-find-program.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: saber si un programa existe ANTES de lanzarlo, con std/process.</span>
+<span class="cm">//</span>
+<span class="cm">//     find_program(name) -&gt; Option&lt;String&gt;</span>
+<span class="cm">//</span>
+<span class="cm">// Devuelve la ruta que try_spawn ejecutaría para `name`, con la MISMA búsqueda:</span>
+<span class="cm">// PATH (en Windows también PATHEXT, y nunca el directorio actual). Sirve para</span>
+<span class="cm">// avisar &quot;falta git&quot; con un mensaje propio, o para fijar la ruta una vez.</span>
+<span class="cm">//</span>
+<span class="cm">//   - None si no está, no es ejecutable, es un directorio o el nombre es vacío.</span>
+<span class="cm">//   - En Windows, un programa que solo existe como .bat/.cmd da None: try_spawn</span>
+<span class="cm">//     lo rechaza (usa std/exec para esos).</span>
+<span class="cm">//   - Un nombre con separador (&quot;./tool&quot;, &quot;/usr/bin/sh&quot;) se mira tal cual, sin PATH.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/process&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// `sh` existe en cualquier Linux. La ruta absoluta varía por máquina, así</span>
+    <span class="cm">// que solo se muestra si se encontró.</span>
+    <span class="kw">match</span> <span class="fn">find_program</span><span class="op">(</span><span class="str">&quot;sh&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>p<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sh: encontrado&quot;</span><span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sh: no está&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="cm">// Un programa inexistente da None: no hay error que atrapar.</span>
+    <span class="kw">match</span> <span class="fn">find_program</span><span class="op">(</span><span class="str">&quot;nyx-no-such-program-xyz&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>p<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inexistente: &quot;</span> <span class="op">+</span> p<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;inexistente: None&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="cm">// Un directorio no es un programa.</span>
+    <span class="kw">match</span> <span class="fn">find_program</span><span class="op">(</span><span class="str">&quot;/&quot;</span><span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">Some</span><span class="op">(</span>p<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;directorio: &quot;</span> <span class="op">+</span> p<span class="op">)</span> <span class="op">}</span>
+        <span class="ty">Option</span><span class="op">.</span><span class="ty">None</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="fn">print</span><span class="op">(</span><span class="str">&quot;directorio: None&quot;</span><span class="op">)</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">sh: encontrado
+inexistente: None
+directorio: None</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The example matches three cases. <code>sh</code> exists on any Linux, so it gives <code>Some</code>; the absolute path varies per machine, which is why the program only says it was found. A name that does not exist gives <code>None</code>: there is no error to catch. A directory such as <code>/</code> is not a program, so it also gives <code>None</code>. <code>None</code> also covers a file that is not executable and an empty name.</p>
+<p>Limits: a name with a separator (<code>./tool</code>, <code>/usr/bin/sh</code>) is checked as given, without searching <code>PATH</code>. On Windows, a program that exists only as <code>.bat</code> or <code>.cmd</code> gives <code>None</code>, because <code>try_spawn</code> rejects those; use <code>std/exec</code> for them.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/153-compilacion-cruzada.html"><span class="label">← Previous</span><span class="doc-nav-name">Cross-compiling between Linux x86_64 and aarch64</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/155-servicio-windows.html"><span class="label">Next →</span><span class="doc-nav-name">A program that runs as a Windows service</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.43.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
