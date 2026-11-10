@@ -19,6 +19,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 - **`make test` compila el runtime una sola vez**: `run_bootstrap_tests.sh` recompilaba los 25 `.c` del runtime en
   cada test al enlazar; ahora los compila a `.o` al empezar y enlaza esos objetos (el mismo enlace, sin `-O`). En el servidor `make test`
   bajó de más de 10 minutos a 3 min 39 s.
+- **El event loop reusa slots en O(1)**: registrar un fd o un timer barría la tabla entera buscando un slot libre, así
+  que registrar N timers era O(N²) — con la tabla que crece hasta 65536, llenarla eran ~2e9 comparaciones. Ahora los
+  slots libres forman una free-list y un solo sitio (`ev_release_slot`) los libera. Test nuevo en `test_event_loop.c`:
+  llena la tabla hasta el techo dos veces y comprueba que ningún slot se pierda ni se comparta.
+- **`make test` le da al compilador la misma pila que los lanzadores**: `run_bootstrap_tests.sh` era el único camino que
+  llamaba a `nyx_bootstrap` con los 8 MB por omisión, y en x86_64 `test-515` (56 métodos encadenados) desbordaba ahí
+  y en ningún uso real. Ahora sube la pila solo para el compilador (los binarios de test siguen con el límite
+  normal); la guarda de 8 MB a propósito sigue en `run_stack_frame_audit.sh`. Verificado con un compilador armado sin
+  SROA, que con 8 MB fallaba: 551/551.
+- **Punteros crudos a escalar: indexar, desreferenciar y ensanchar** [dogfooding:std-image, std-pdf_render]:
+  - `p[i]` sobre un `*int`/`*u8`/`*float` caía al camino de Array y abortaba con «Índice 1 fuera de rango [0..0)»;
+    ahora lee y escribe el elemento `i` (GEP sobre el pointee, sin chequeo de límites, como en C).
+  - `*p as int` se parseaba `*(p as int)` (IR inválido con un `*u8`); ahora es `(*p) as int`, como en Rust y C.
+    Nadie usaba la forma vieja: barrido de compiler/, std/, productos y nyxerp.
+  - Un `as` que ensancha un entero sin signo (`u8`, `u16`, `u32`, `char`, `bool`) extendía el signo: `(*q) as int`
+    con `q: *u8` leía 250 como -6, en silencio. Ahora usa `zext`.
+  - `*q = -6` con `q: *i8` y `-x` con `x: i8` emitían IR inválido (un i64 donde iba un i8).
+  - `systems/test-543` y la receta 158 (buffer de bytes con un puntero crudo).
 
 ---
 

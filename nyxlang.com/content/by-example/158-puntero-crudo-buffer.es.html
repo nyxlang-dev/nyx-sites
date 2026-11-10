@@ -1,0 +1,14 @@
+<!-- title: Un buffer de bytes con un puntero crudo | blurb: Indexa un puntero crudo a escalar (<code>p[i]</code> sobre <code>*u8</code> o <code>*int</code>) para recorrer un buffer en memoria, dentro de <code>unsafe</code> y sin chequeo de límites. -->
+<section data-part="intro">
+<p>Para recorrer muchos píxeles o bytes en un bucle caliente, un <code>Array</code> paga una llamada al runtime por acceso. Un puntero crudo a escalar (<code>*u8</code>, <code>*int</code>) indexa directo en memoria: <code>p[i]</code> lee o escribe el elemento <code>i</code>, a <code>i * sizeof(T)</code> bytes del inicio, como en C. No hay chequeo de límites, por eso vive dentro de <code>unsafe</code>.</p>
+</section>
+<section data-part="output">
+brillo original: 1350
+primer píxel invertido: 55
+acum[2] = 3
+</section>
+<section data-part="explanation">
+<p>El programa reserva una fila de 6 píxeles en escala de grises con <code>alloc&lt;u8&gt;(6)</code> y la llena con <code>fila[i] = 200 + i * 10</code> (200, 210, hasta 250). Un segundo bucle lee cada píxel como <code>int</code>, escribe <code>255 - v</code> para invertirlo y suma el brillo original, que da 1350. Luego hace lo mismo con enteros de 64 bits: un <code>*int</code> de <code>alloc&lt;int&gt;(3)</code>, donde <code>acum[2]</code> es la suma de las dos primeras celdas. Los dos buffers se liberan con <code>free</code>.</p>
+<p>Dos detalles que conviene conocer. Un <code>u8</code> leído se ensancha sin signo: 250 sigue siendo 250 al convertirlo con <code>as int</code>, nunca un número negativo. Y <code>*fila as int</code> significa <code>(*fila) as int</code>: el <code>as</code> se aplica al valor leído, por eso el primer píxel invertido imprime 55 (255 - 200).</p>
+<p>Límites: el puntero no lleva longitud, así que leer o escribir más allá del tamaño reservado es comportamiento indefinido, no un error, y el buffer que da <code>alloc</code> se libera a mano con <code>free</code>. Se usa un <code>Array</code> cuando se quiere acceso verificado y memoria automática, y un puntero crudo cuando lo que importa es el bucle.</p>
+</section>
