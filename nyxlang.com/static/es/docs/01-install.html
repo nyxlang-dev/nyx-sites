@@ -56,8 +56,8 @@
 <table class="kv kv-wide">
 <tr><th>Sistema operativo</th><td>Linux. Cualquier otro detiene el instalador con un error.</td></tr>
 <tr><th>Arquitecturas</th><td><code>x86_64</code>, <code>aarch64</code>, <code>armv7l</code>.</td></tr>
-<tr><th>También soportado</th><td>Termux en Android, que usa <code>pkg</code> y no necesita <code>sudo</code>.</td></tr>
-<tr data-platform-status><th>Windows</th><td>En curso, todavía sin soporte. El compilador genera IR para el target Windows, con <code>try</code>/<code>catch</code>, <code>std/serve</code> y TLS funcionando, y un <code>.exe</code> nativo estático ya corrió en una PC real; pero se enlaza en Windows con un script a partir de IR generado en Linux. <code>nyx build --target windows</code> y una toolchain nativa todavía no existen. macOS no está soportado.</td></tr>
+<tr><th>Android</th><td>Como destino de compilación desde Linux (ver <em>Android y Termux</em> más abajo). Instalar Nyx dentro de Termux es experimental y no está verificado. Desde 0.43.0, <code>nyx build --shared</code> arma además una biblioteca <code>lib&lt;nombre&gt;.so</code> que una app Android carga por JNI; la plantilla está en <code>templates/android/</code>.</td></tr>
+<tr data-platform-status><th>Windows</th><td>Solo x86_64. <code>nyx build</code> en Windows arma un <code>target/&lt;nombre&gt;.exe</code> nativo (necesita clang; bdwgc y OpenSSL se enlazan estáticos), y ese <code>.exe</code> puede correr como servicio de Windows sin ninguna API nueva. El instalador para Windows es <code>install.ps1</code> (PowerShell); el <code>install.sh</code> de esta página es para Linux. Desde Linux, <code>nyx build --target x86_64-pc-windows-msvc</code> arma el <code>.exe</code> contra un sysroot de xwin (<code>NYX_WIN_SYSROOT</code>). Desde 0.42.1 <code>std/regex</code> también enlaza en Windows, con un motor propio verificado contra glibc. Límites actuales: <code>nyx test</code> todavía no corre ahí y Windows ARM64 no está soportado. macOS no está soportado.</td></tr> 
 </table>
 
 <h2>Instalar</h2>
@@ -72,13 +72,13 @@
 <li><strong>Compila el compilador</strong> a partir de los archivos semilla de LLVM IR que vienen commiteados en el repositorio.</li>
 <li><strong>Compila las herramientas</strong>: el gestor de paquetes, el corredor de tests, el chequeador, vet y el formateador. Cada uno es un binario aparte, y todos se construyen acá — por eso la instalación no es instantánea.</li>
 <li><strong>Ordena el árbol</strong>: los binarios pasan a <code>~/.nyx/bin/</code> y se borra todo lo que no hace falta para ejecutar Nyx, conservando el runtime en C, la biblioteca estándar, las plantillas de proyecto y el changelog.</li>
-<li><strong>Enlaza el comando</strong>: <code>~/.local/bin/nyx</code> apunta al wrapper que vive dentro de <code>~/.nyx</code>. En Termux el enlace va a <code>$PREFIX/bin/nyx</code>.</li>
+<li><strong>Enlaza el comando</strong>: <code>~/.local/bin/nyx</code> apunta al wrapper que vive dentro de <code>~/.nyx</code>. En Termux el enlace iría a <code>$PREFIX/bin/nyx</code>.</li>
 <li><strong>Arregla tu PATH</strong> si <code>~/.local/bin</code> no estaba, agregando una línea <code>export</code> a <code>~/.bashrc</code>, <code>~/.zshrc</code> o <code>~/.profile</code> — el primero que exista.</li>
 </ol>
 
 <h2>Verificar</h2>
 <pre data-lang="sh"><span class="prompt">$</span> <span class="cmd">nyx --version</span>
-nyx 0.41.0</pre>
+nyx 0.44.0</pre>
 <p>Si el shell responde <code>command not found</code>, el enlace existe pero este shell todavía no tomó el PATH nuevo. Mira <em>Problemas comunes</em>, más abajo.</p>
 
 <h2>Actualizar</h2>
@@ -94,8 +94,9 @@ Nyx has been uninstalled.
   Removed: ~/.local/bin/nyx</pre>
 <p>Borra <code>~/.nyx</code> y <code>~/.local/bin/nyx</code>. Tus proyectos quedan intactos — son directorios comunes con archivos de código.</p>
 
-<h2>Termux</h2>
-<p>Termux se detecta solo y se trata como un destino de primera: los paquetes vienen de <code>pkg</code>, nada corre con <code>sudo</code>, y el comando se enlaza en <code>$PREFIX/bin</code>, que ya está en tu PATH — así que no hay perfil que editar ni terminal nueva que abrir.</p>
+<h2>Android y Termux</h2>
+<p><strong>Lo que funciona hoy: compilar para Android desde Linux.</strong> Corre una vez <code>scripts/build_android_deps.sh &lt;dir&gt;</code> para armar las dependencias y después <code>nyx build --target aarch64-linux-android</code>. Deja un PIE de bionic en <code>target/aarch64-linux-android/&lt;nombre&gt;</code>, con libgc y OpenSSL enlazados estáticos, que corre en Termux sin proot. <code>nyx run</code> no lo ejecuta: cópialo al aparato. Todavía no se verificó en un aparato real.</p>
+<p><strong>Instalar Nyx dentro de Termux es experimental y no está verificado.</strong> El instalador sí detecta Termux — los paquetes vienen de <code>pkg</code>, nada corre con <code>sudo</code> y el comando se enlaza en <code>$PREFIX/bin</code> —, pero compilar el compilador en el aparato puede fallar en <code>make bootstrap</code>. No cuentes con ello; compila desde Linux.</p>
 
 <h2>Compilar desde el código fuente</h2>
 <p>Si prefieres no correr un instalador, el repositorio se construye solo. Este también es el camino si quieres trabajar sobre el compilador.</p>
@@ -128,7 +129,7 @@ Nyx has been uninstalled.
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.41.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
