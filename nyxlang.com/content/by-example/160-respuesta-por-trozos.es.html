@@ -1,0 +1,81 @@
+<!-- title: Responder un cuerpo grande por trozos | blurb: <code>response_chunks</code>, <code>response_from_stream</code> y <code>response_file</code> escriben el cuerpo trozo a trozo en vez de armarlo entero en memoria. -->
+<section data-part="intro">
+<p>Un handler que devuelve un <code>String</code> grande lo retiene entero en memoria, y el recolector no devuelve esa memoria al sistema: un servidor de larga vida se queda en su pico. <code>std/serve</code> tiene cuatro funciones que escriben el cuerpo trozo a trozo y nunca lo arman. La receta corre sola: el servidor va en un hilo y el cliente es un socket que lee la respuesta hasta el cierre.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18461 with 4 workers
+== response_chunks (chunked)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_file (Content-Length + Content-Disposition)
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: attachment; filename="datos.txt"
+Content-Length: 20
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+linea uno
+linea dos
+
+== response_from_stream (proxy)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_from_stream, origen caido -> 502
+HTTP/1.1 502 Bad Gateway
+Content-Length: 25
+Content-Type: text/plain; charset=utf-8
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+502 el origen no contesta
+</section>
+<section data-part="explanation">
+<p>Cuándo usar cada una. <code>response_chunks(status, tipo, siguiente)</code> es para un cuerpo que se genera sobre la marcha y cuyo largo no se conoce: el worker llama a <code>siguiente()</code> una y otra vez, escribe cada trozo al recibirlo y un <code>String</code> vacío termina la respuesta. Sale con <code>Transfer-Encoding: chunked</code>, como se ve en la primera respuesta (cinco trozos de <code>trozo N</code>). <code>response_chunks_len(status, tipo, largo, siguiente)</code> es lo mismo con el largo conocido: sale <code>Content-Length</code> y los trozos van crudos, sin marco, y la fuente debe entregar EXACTAMENTE <code>largo</code> bytes. <code>response_file(ruta, tipo, nombre)</code> sirve un archivo del disco en bloques de 16 KiB, con <code>Content-Length</code> igual a su tamaño; un <code>nombre</code> no vacío agrega <code>Content-Disposition: attachment</code>, y un <code>tipo</code> vacío se detecta por la extensión. <code>response_from_stream(s)</code> es para un proxy: reenvía la respuesta de otro servidor (un <code>HttpStream</code> de <code>std/http</code>) sin juntarla.</p>
+<p>En el proxy, <code>try_http_stream_opts</code> devuelve un <code>Result</code>: si el origen no contesta, el proxy decide su propia respuesta, aquí un 502 (última respuesta). Un origen que comprime tampoco llega a <code>response_from_stream</code>: <code>try_http_stream_opts</code> lo rechaza con <code>Err(unsupported)</code>. El contador de <code>fuente_cuenta</code> va en un <code>Array</code> porque las closures comparten por referencia.</p>
+<p>Límites. Un worker queda ocupado mientras dura la respuesta: es una descarga lenta, no un canal como <code>sse_open</code>, y <code>NYX_HTTP_SEND_SECS</code> corta al cliente que dejó de leer. gzip no actúa sobre una respuesta por trozos. Si la fuente falla a mitad del cuerpo, el servidor corta la conexión sin el terminador y el cliente ve un cuerpo incompleto, porque la cabecera ya salió. A un cliente HTTP/1.0, una respuesta sin largo le sale chunked igual. <code>response_file</code> no valida la ruta: quien la arma desde un pedido debe rechazar <code>..</code>.</p>
+</section>

@@ -1,0 +1,81 @@
+<!-- title: Answering a large body in chunks | blurb: <code>response_chunks</code>, <code>response_from_stream</code> and <code>response_file</code> write the body piece by piece instead of building it whole in memory. -->
+<section data-part="intro">
+<p>A handler that returns a large <code>String</code> keeps all of it in memory, and the collector does not give that memory back to the system: a long-lived server stays at its peak. <code>std/serve</code> has four functions that write the body piece by piece and never build it. The recipe runs on its own: the server runs in a thread and the client is a socket that reads the response until the connection closes.</p>
+</section>
+<section data-part="output">
+nyx-serve starting on 127.0.0.1:18461 with 4 workers
+== response_chunks (chunked)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_file (Content-Length + Content-Disposition)
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: attachment; filename="datos.txt"
+Content-Length: 20
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+linea uno
+linea dos
+
+== response_from_stream (proxy)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_from_stream, origen caido -> 502
+HTTP/1.1 502 Bad Gateway
+Content-Length: 25
+Content-Type: text/plain; charset=utf-8
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+502 el origen no contesta
+</section>
+<section data-part="explanation">
+<p>When to use each one. <code>response_chunks(status, tipo, siguiente)</code> is for a body generated on the fly whose length is unknown: the worker calls <code>siguiente()</code> over and over, writes each chunk as it arrives, and an empty <code>String</code> ends the response. It goes out with <code>Transfer-Encoding: chunked</code>, as the first response shows (five chunks of <code>trozo N</code>). <code>response_chunks_len(status, tipo, largo, siguiente)</code> is the same with a known length: <code>Content-Length</code> goes out and the chunks are raw, without framing, and the source must deliver EXACTLY <code>largo</code> bytes. <code>response_file(ruta, tipo, nombre)</code> serves a file from disk in 16 KiB blocks, with <code>Content-Length</code> equal to its size; a non-empty <code>nombre</code> adds <code>Content-Disposition: attachment</code>, and an empty <code>tipo</code> is detected from the extension. <code>response_from_stream(s)</code> is for a proxy: it forwards another server's response (an <code>HttpStream</code> from <code>std/http</code>) without joining it.</p>
+<p>In the proxy, <code>try_http_stream_opts</code> returns a <code>Result</code>: if the origin does not answer, the proxy chooses its own response, here a 502 (the last response). An origin that compresses does not reach <code>response_from_stream</code> either: <code>try_http_stream_opts</code> rejects it with <code>Err(unsupported)</code>. The counter in <code>fuente_cuenta</code> lives in an <code>Array</code> because closures share by reference.</p>
+<p>Limits. A worker stays busy for as long as the response lasts: it is a slow download, not a channel like <code>sse_open</code>, and <code>NYX_HTTP_SEND_SECS</code> cuts off a client that stopped reading. gzip does not apply to a chunked response. If the source fails mid-body, the server cuts the connection without the terminator and the client sees an incomplete body, because the header has already gone out. An HTTP/1.0 client still gets chunked when there is no length. <code>response_file</code> does not validate the path: whoever builds it from a request must reject <code>..</code>.</p>
+</section>

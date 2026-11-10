@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Responder un cuerpo grande por trozos — Nyx por ejemplo</title>
+<meta name="description" content="response_chunks, response_from_stream y response_file escriben el cuerpo trozo a trozo en vez de armarlo entero en memoria.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/160-respuesta-por-trozos.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/160-respuesta-por-trozos.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/160-respuesta-por-trozos.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/160-respuesta-por-trozos.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/160-respuesta-por-trozos.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">160</span> / Redes</span></p>
+<h1 class="doc-title">Responder un cuerpo grande por trozos</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un handler que devuelve un <code>String</code> grande lo retiene entero en memoria, y el recolector no devuelve esa memoria al sistema: un servidor de larga vida se queda en su pico. <code>std/serve</code> tiene cuatro funciones que escriben el cuerpo trozo a trozo y nunca lo arman. La receta corre sola: el servidor va en un hilo y el cliente es un socket que lee la respuesta hasta el cierre.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">160-respuesta-por-trozos.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/160-respuesta-por-trozos.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: responder un cuerpo grande por trozos, sin armarlo entero en memoria.</span>
+<span class="cm">//</span>
+<span class="cm">// Un handler que devuelve un String grande lo retiene en memoria, y el recolector no devuelve</span>
+<span class="cm">// esa memoria al sistema: el servidor se queda en su pico (ver el gotcha serve-large-body-memory).</span>
+<span class="cm">// std/serve tiene tres formas de responder sin armar el cuerpo:</span>
+<span class="cm">//   - response_chunks(status, tipo, siguiente): `siguiente()` da un trozo por llamada y un String</span>
+<span class="cm">//     vacío termina la respuesta. Largo desconocido: sale Transfer-Encoding: chunked.</span>
+<span class="cm">//     response_chunks_len(status, tipo, largo, siguiente) es lo mismo con el largo conocido.</span>
+<span class="cm">//   - response_file(ruta, tipo, nombre): sirve un archivo en bloques; el RSS no depende de su</span>
+<span class="cm">//     tamaño. Con `nombre` agrega Content-Disposition: attachment.</span>
+<span class="cm">//   - response_from_stream(s): reenvía la respuesta de otro servidor (un HttpStream) trozo a</span>
+<span class="cm">//     trozo. Si el origen no contesta, el proxy decide su propia respuesta (aquí un 502).</span>
+<span class="cm">// El worker queda ocupado mientras dura la respuesta, y si la fuente falla a mitad del cuerpo la</span>
+<span class="cm">// conexión se corta sin el terminador.</span>
+<span class="cm">//</span>
+<span class="cm">// La receta corre sola: el servidor va en un hilo y el cliente es un socket que lee hasta el cierre.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/web&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/serve&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18461</span>
+<span class="kw">var</span> g_ruta<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;/tmp/nyx-receta-160.txt&quot;</span>
+
+<span class="cm">// La fuente: cuenta de 1 a 5, un trozo por llamada. El contador va en un Array porque las</span>
+<span class="cm">// closures comparten por referencia.</span>
+<span class="kw">fn</span> <span class="fn">fuente_cuenta</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">Fn</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="num">0</span><span class="op">]</span>
+    <span class="kw">return</span> <span class="kw">fn</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+        <span class="kw">let</span> i<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> n<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">+</span> <span class="num">1</span>
+        <span class="kw">if</span> i <span class="op">&gt;</span> <span class="num">5</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;&quot;</span> <span class="op">}</span>
+        n<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">=</span> i
+        <span class="kw">return</span> <span class="str">&quot;trozo &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>i<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;\n&quot;</span>
+    <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">contar</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_chunks</span><span class="op">(</span><span class="num">200</span><span class="op">,</span> <span class="str">&quot;text/plain&quot;</span><span class="op">,</span> <span class="fn">fuente_cuenta</span><span class="op">())</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">bajar</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">response_file</span><span class="op">(</span>g_ruta<span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="str">&quot;datos.txt&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// El proxy: pide el origen (esta misma app, /contar) y reenvía lo que llega.</span>
+<span class="kw">fn</span> <span class="fn">proxear</span><span class="op">(</span>url<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">HttpStream</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_http_stream_opts</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> url<span class="op">,</span> <span class="op">[],</span> <span class="str">&quot;&quot;</span><span class="op">,</span> <span class="fn">http_stream_opts</span><span class="op">())</span>
+    <span class="kw">if</span> r<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span>
+        <span class="kw">return</span> <span class="fn">response_text</span><span class="op">(</span><span class="num">502</span><span class="op">,</span> <span class="str">&quot;502 el origen no contesta&quot;</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">response_from_stream</span><span class="op">(</span>r<span class="op">.</span><span class="fn">unwrap</span><span class="op">())</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">proxy_ok</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">proxear</span><span class="op">(</span><span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>g_port<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/contar&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">proxy_caido</span><span class="op">(</span>req<span class="op">:</span> <span class="ty">Request</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">Response</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="fn">proxear</span><span class="op">(</span><span class="str">&quot;http://127.0.0.1:18469/contar&quot;</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">conectar</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span> <span class="op">-</span> <span class="num">1</span>
+    <span class="kw">var</span> intentos<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="kw">and</span> intentos <span class="op">&lt;</span> <span class="num">50</span> <span class="op">{</span>
+        fd <span class="op">=</span> <span class="fn">tcp_connect</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> g_port<span class="op">)</span>
+        <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">sleep</span><span class="op">(</span><span class="num">100</span><span class="op">)</span> <span class="op">}</span>
+        intentos <span class="op">=</span> intentos <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">if</span> fd <span class="op">&gt;=</span> <span class="num">0</span> <span class="op">{</span> <span class="fn">tcp_set_timeout</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">5</span><span class="op">)</span> <span class="op">}</span>
+    <span class="kw">return</span> fd
+<span class="op">}</span>
+
+<span class="cm">// Un GET que lee la respuesta entera hasta el cierre (Connection: close).</span>
+<span class="kw">fn</span> <span class="fn">pedir</span><span class="op">(</span>ruta<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">let</span> fd<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">conectar</span><span class="op">()</span>
+    <span class="kw">if</span> fd <span class="op">&lt;</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;&quot;</span> <span class="op">}</span>
+    <span class="fn">tcp_write</span><span class="op">(</span>fd<span class="op">,</span> <span class="str">&quot;GET &quot;</span> <span class="op">+</span> ruta <span class="op">+</span> <span class="str">&quot; HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n&quot;</span><span class="op">)</span>
+    <span class="kw">var</span> todo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;&quot;</span>
+    <span class="kw">var</span> parte<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="kw">while</span> <span class="fn">str_byte_length</span><span class="op">(</span>parte<span class="op">)</span> <span class="op">&gt;</span> <span class="num">0</span> <span class="op">{</span>
+        todo <span class="op">=</span> todo <span class="op">+</span> parte
+        parte <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>fd<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="op">}</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>fd<span class="op">)</span>
+    <span class="kw">return</span> todo
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">mostrar</span><span class="op">(</span>titulo<span class="op">:</span> <span class="ty">String</span><span class="op">,</span> resp<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">{</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;== &quot;</span> <span class="op">+</span> titulo<span class="op">)</span>
+    <span class="fn">println</span><span class="op">(</span>resp<span class="op">)</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">write_file</span><span class="op">(</span>g_ruta<span class="op">,</span> <span class="str">&quot;linea uno\nlinea dos\n&quot;</span><span class="op">)</span>
+
+    <span class="kw">let</span> app<span class="op">:</span> <span class="ty">App</span> <span class="op">=</span> <span class="fn">app_new</span><span class="op">()</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/contar&quot;</span><span class="op">,</span> contar<span class="op">)</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/bajar&quot;</span><span class="op">,</span> bajar<span class="op">)</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/proxy&quot;</span><span class="op">,</span> proxy_ok<span class="op">)</span>
+    <span class="fn">app_get</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;/proxy-caido&quot;</span><span class="op">,</span> proxy_caido<span class="op">)</span>
+
+    <span class="cm">// El servidor corre en un hilo suelto que muere con el proceso.</span>
+    <span class="kw">spawn</span> <span class="op">{</span>
+        <span class="fn">serve_app_en</span><span class="op">(</span>app<span class="op">,</span> <span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> g_port<span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+    <span class="op">}</span>
+
+    <span class="fn">mostrar</span><span class="op">(</span><span class="str">&quot;response_chunks (chunked)&quot;</span><span class="op">,</span> <span class="fn">pedir</span><span class="op">(</span><span class="str">&quot;/contar&quot;</span><span class="op">))</span>
+    <span class="fn">mostrar</span><span class="op">(</span><span class="str">&quot;response_file (Content-Length + Content-Disposition)&quot;</span><span class="op">,</span> <span class="fn">pedir</span><span class="op">(</span><span class="str">&quot;/bajar&quot;</span><span class="op">))</span>
+    <span class="fn">mostrar</span><span class="op">(</span><span class="str">&quot;response_from_stream (proxy)&quot;</span><span class="op">,</span> <span class="fn">pedir</span><span class="op">(</span><span class="str">&quot;/proxy&quot;</span><span class="op">))</span>
+    <span class="fn">mostrar</span><span class="op">(</span><span class="str">&quot;response_from_stream, origen caido -&gt; 502&quot;</span><span class="op">,</span> <span class="fn">pedir</span><span class="op">(</span><span class="str">&quot;/proxy-caido&quot;</span><span class="op">))</span>
+
+    <span class="fn">remove_file</span><span class="op">(</span>g_ruta<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">nyx-serve starting on 127.0.0.1:18461 with 4 workers
+== response_chunks (chunked)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_file (Content-Length + Content-Disposition)
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: attachment; filename="datos.txt"
+Content-Length: 20
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+linea uno
+linea dos
+
+== response_from_stream (proxy)
+HTTP/1.1 200 OK
+Content-Type: text/plain
+Transfer-Encoding: chunked
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+8
+trozo 1
+
+8
+trozo 2
+
+8
+trozo 3
+
+8
+trozo 4
+
+8
+trozo 5
+
+0
+
+
+== response_from_stream, origen caido -> 502
+HTTP/1.1 502 Bad Gateway
+Content-Length: 25
+Content-Type: text/plain; charset=utf-8
+Connection: keep-alive
+Keep-Alive: timeout=15
+
+502 el origen no contesta</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Cuándo usar cada una. <code>response_chunks(status, tipo, siguiente)</code> es para un cuerpo que se genera sobre la marcha y cuyo largo no se conoce: el worker llama a <code>siguiente()</code> una y otra vez, escribe cada trozo al recibirlo y un <code>String</code> vacío termina la respuesta. Sale con <code>Transfer-Encoding: chunked</code>, como se ve en la primera respuesta (cinco trozos de <code>trozo N</code>). <code>response_chunks_len(status, tipo, largo, siguiente)</code> es lo mismo con el largo conocido: sale <code>Content-Length</code> y los trozos van crudos, sin marco, y la fuente debe entregar EXACTAMENTE <code>largo</code> bytes. <code>response_file(ruta, tipo, nombre)</code> sirve un archivo del disco en bloques de 16 KiB, con <code>Content-Length</code> igual a su tamaño; un <code>nombre</code> no vacío agrega <code>Content-Disposition: attachment</code>, y un <code>tipo</code> vacío se detecta por la extensión. <code>response_from_stream(s)</code> es para un proxy: reenvía la respuesta de otro servidor (un <code>HttpStream</code> de <code>std/http</code>) sin juntarla.</p>
+<p>En el proxy, <code>try_http_stream_opts</code> devuelve un <code>Result</code>: si el origen no contesta, el proxy decide su propia respuesta, aquí un 502 (última respuesta). Un origen que comprime tampoco llega a <code>response_from_stream</code>: <code>try_http_stream_opts</code> lo rechaza con <code>Err(unsupported)</code>. El contador de <code>fuente_cuenta</code> va en un <code>Array</code> porque las closures comparten por referencia.</p>
+<p>Límites. Un worker queda ocupado mientras dura la respuesta: es una descarga lenta, no un canal como <code>sse_open</code>, y <code>NYX_HTTP_SEND_SECS</code> corta al cliente que dejó de leer. gzip no actúa sobre una respuesta por trozos. Si la fuente falla a mitad del cuerpo, el servidor corta la conexión sin el terminador y el cliente ve un cuerpo incompleto, porque la cabecera ya salió. A un cliente HTTP/1.0, una respuesta sin largo le sale chunked igual. <code>response_file</code> no valida la ruta: quien la arma desde un pedido debe rechazar <code>..</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/159-gc-release.html"><span class="label">← Anterior</span><span class="doc-nav-name">Devolver memoria al sistema con std/gc</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

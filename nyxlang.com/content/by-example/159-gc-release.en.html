@@ -1,0 +1,16 @@
+<!-- title: Returning memory to the system with std/gc | blurb: After a memory peak, <code>gc_release()</code> collects and returns to the system the free pages the collector keeps; in a <code>std/serve</code> server it can do so by itself when idle. -->
+<section data-part="intro">
+<p>The collector frees what is unreachable, but it keeps those pages for reuse and does not hand them back to the system: after a peak (a huge response, a large batch) a long-lived process keeps occupying whatever it managed to map. <code>std/gc</code> provides <code>gc_release()</code>, which collects and returns the heap's free pages to the system, and two gauges: <code>gc_heap_bytes()</code> (mapped heap) and <code>gc_free_bytes()</code> (free inside it).</p>
+</section>
+<section data-part="output">
+trozos alocados: 32
+el heap creció: true
+tras gc_release el heap bajó: true
+libre >= 0: true
+</section>
+<section data-part="explanation">
+<p>The program calls <code>gc_release()</code> to start from a clean heap and takes <code>gc_heap_bytes()</code> as a baseline. Then it allocates 32 strings of 1 MiB and measures again: the heap grew. After that it calls <code>gc_release()</code> twice and checks that the heap went down from the peak. <code>gc_free_bytes()</code> is an approximate figure that depends on the last collection, so the recipe only checks that it is not negative.</p>
+<p>The second call is deliberate. The collector is conservative: if an old pointer is still in a register or on the caller's stack, the first call may not release the peak, and the second one does.</p>
+<p>Limits: <code>gc_release()</code> stops ALL threads while it runs, so call it after the peak and not on every request; whatever a live variable or another thread's stack holds is not released; and <code>std/gc</code> does not exist on <code>wasm32-wasi</code>.</p>
+<p>In a <code>std/serve</code> server you do not have to call it by hand. With the environment variable <code>NYX_SERVE_IDLE_RELEASE_SECS=30</code> (off by default; a <code>0</code> or invalid value leaves it off) a server thread calls <code>gc_release()</code> after 30 s without requests. It has a cost: each release stops all threads while it runs, and the first large request afterwards takes longer. Also, with no traffic a floor of one body per worker stays until each worker serves another request. What avoids the peak at its root is not building the whole body: see the chunked response recipe.</p>
+</section>

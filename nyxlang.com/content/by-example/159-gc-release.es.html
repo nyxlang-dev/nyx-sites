@@ -1,0 +1,16 @@
+<!-- title: Devolver memoria al sistema con std/gc | blurb: Tras un pico de memoria, <code>gc_release()</code> colecta y devuelve al sistema las páginas libres que el recolector conserva; en un servidor de <code>std/serve</code> puede hacerlo solo en ocio. -->
+<section data-part="intro">
+<p>El recolector libera lo inalcanzable, pero conserva esas páginas para reusarlas y no las devuelve al sistema: tras un pico (una respuesta enorme, un lote grande) un proceso de larga vida sigue ocupando lo que llegó a mapear. <code>std/gc</code> trae <code>gc_release()</code>, que colecta y devuelve al sistema las páginas libres del heap, y dos medidores: <code>gc_heap_bytes()</code> (heap mapeado) y <code>gc_free_bytes()</code> (libre dentro de él).</p>
+</section>
+<section data-part="output">
+trozos alocados: 32
+el heap creció: true
+tras gc_release el heap bajó: true
+libre >= 0: true
+</section>
+<section data-part="explanation">
+<p>El programa llama a <code>gc_release()</code> para partir de un heap limpio y toma <code>gc_heap_bytes()</code> como referencia. Luego reserva 32 cadenas de 1 MiB y vuelve a medir: el heap creció. Después llama a <code>gc_release()</code> dos veces y comprueba que el heap bajó respecto del pico. <code>gc_free_bytes()</code> es una cifra aproximada que depende de la última colección, por eso la receta solo comprueba que no sea negativa.</p>
+<p>La segunda llamada es deliberada. El recolector es conservador: si un puntero viejo sigue en un registro o en la pila de quien llama, la primera llamada puede no soltar el pico, y la segunda sí.</p>
+<p>Límites: <code>gc_release()</code> detiene TODOS los hilos mientras corre, así que se llama tras el pico y no en cada pedido; lo que retiene una variable viva o la pila de otro hilo no se libera; y <code>std/gc</code> no existe en <code>wasm32-wasi</code>.</p>
+<p>En un servidor de <code>std/serve</code> no hace falta llamarla a mano. Con la variable de entorno <code>NYX_SERVE_IDLE_RELEASE_SECS=30</code> (apagada por omisión; un valor <code>0</code> o inválido la deja apagada) un hilo del servidor llama a <code>gc_release()</code> tras 30 s sin pedidos. Tiene costo: cada liberación detiene todos los hilos mientras corre, y el primer pedido grande posterior tarda más. Además, sin tráfico queda un piso de memoria de un cuerpo por worker hasta que cada worker atiende otro pedido. Lo que evita el pico de raíz es no armar el cuerpo entero: ver la receta de respuesta por trozos.</p>
+</section>

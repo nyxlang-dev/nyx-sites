@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Returning memory to the system with std/gc — Nyx by example</title>
+<meta name="description" content="After a memory peak, gc_release() collects and returns to the system the free pages the collector keeps; in a std/serve server it can do so by itself when idle.">
+<link rel="canonical" href="https://nyxlang.com/by-example/159-gc-release.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/159-gc-release.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/159-gc-release.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/159-gc-release.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/159-gc-release.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">159</span> / Systems</span></p>
+<h1 class="doc-title">Returning memory to the system with std/gc</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>The collector frees what is unreachable, but it keeps those pages for reuse and does not hand them back to the system: after a peak (a huge response, a large batch) a long-lived process keeps occupying whatever it managed to map. <code>std/gc</code> provides <code>gc_release()</code>, which collects and returns the heap's free pages to the system, and two gauges: <code>gc_heap_bytes()</code> (mapped heap) and <code>gc_free_bytes()</code> (free inside it).</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">159-gc-release.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/159-gc-release.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: devolver memoria al sistema tras un pico con std/gc.</span>
+<span class="cm">//</span>
+<span class="cm">// El GC reutiliza la memoria que libera, pero no la devuelve al sistema por su</span>
+<span class="cm">// cuenta: tras un pico (una respuesta enorme, un lote grande) el proceso sigue</span>
+<span class="cm">// ocupando lo mapeado. En un servidor de larga vida, `gc_release()` colecta y</span>
+<span class="cm">// devuelve al sistema las páginas libres. Detiene todos los hilos mientras</span>
+<span class="cm">// corre: llámala tras el pico, no en cada pedido. No existe en wasm.</span>
+<span class="cm">// El GC es conservador: si justo después del pico un puntero viejo sigue en la</span>
+<span class="cm">// pila, la primera llamada puede no soltarlo; la segunda sí (ver std/gc).</span>
+<span class="cm">//</span>
+<span class="cm">// En un servidor std/serve no hace falta llamarla a mano: NYX_SERVE_IDLE_RELEASE_SECS=30 la invoca solo</span>
+<span class="cm">// tras 30 s sin pedidos (apagado por omisión; ver docs/SPEC.md, «Respuesta por trozos»).</span>
+<span class="cm">//</span>
+<span class="cm">// gc_heap_bytes() = heap mapeado; gc_free_bytes() = libre dentro de él.</span>
+<span class="kw">import</span> <span class="str">&quot;std/gc&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">pico</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">var</span> trozos<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">var</span> i <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">32</span> <span class="op">{</span>
+        trozos<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="str">&quot;y&quot;</span><span class="op">.</span><span class="fn">repeat</span><span class="op">(</span><span class="num">1048576</span><span class="op">))</span>
+        i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> trozos<span class="op">.</span><span class="fn">length</span><span class="op">()</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">gc_release</span><span class="op">()</span>
+    <span class="kw">let</span> antes<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">gc_heap_bytes</span><span class="op">()</span>
+    <span class="kw">let</span> n<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">pico</span><span class="op">()</span>
+    <span class="kw">let</span> en_pico<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">gc_heap_bytes</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;trozos alocados: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>n<span class="op">))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;el heap creció: &quot;</span> <span class="op">+</span> <span class="op">(</span>en_pico <span class="op">&gt;</span> antes<span class="op">).</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">gc_release</span><span class="op">()</span>
+    <span class="fn">gc_release</span><span class="op">()</span>
+    <span class="kw">let</span> despues<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">gc_heap_bytes</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;tras gc_release el heap bajó: &quot;</span> <span class="op">+</span> <span class="op">(</span>despues <span class="op">&lt;</span> en_pico<span class="op">).</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;libre &gt;= 0: &quot;</span> <span class="op">+</span> <span class="op">(</span><span class="fn">gc_free_bytes</span><span class="op">()</span> <span class="op">&gt;=</span> <span class="num">0</span><span class="op">).</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">trozos alocados: 32
+el heap creció: true
+tras gc_release el heap bajó: true
+libre >= 0: true</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>The program calls <code>gc_release()</code> to start from a clean heap and takes <code>gc_heap_bytes()</code> as a baseline. Then it allocates 32 strings of 1 MiB and measures again: the heap grew. After that it calls <code>gc_release()</code> twice and checks that the heap went down from the peak. <code>gc_free_bytes()</code> is an approximate figure that depends on the last collection, so the recipe only checks that it is not negative.</p>
+<p>The second call is deliberate. The collector is conservative: if an old pointer is still in a register or on the caller's stack, the first call may not release the peak, and the second one does.</p>
+<p>Limits: <code>gc_release()</code> stops ALL threads while it runs, so call it after the peak and not on every request; whatever a live variable or another thread's stack holds is not released; and <code>std/gc</code> does not exist on <code>wasm32-wasi</code>.</p>
+<p>In a <code>std/serve</code> server you do not have to call it by hand. With the environment variable <code>NYX_SERVE_IDLE_RELEASE_SECS=30</code> (off by default; a <code>0</code> or invalid value leaves it off) a server thread calls <code>gc_release()</code> after 30 s without requests. It has a cost: each release stops all threads while it runs, and the first large request afterwards takes longer. Also, with no traffic a floor of one body per worker stays until each worker serves another request. What avoids the peak at its root is not building the whole body: see the chunked response recipe.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/158-puntero-crudo-buffer.html"><span class="label">← Previous</span><span class="doc-nav-name">A byte buffer with a raw pointer</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/160-respuesta-por-trozos.html"><span class="label">Next →</span><span class="doc-nav-name">Answering a large body in chunks</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
