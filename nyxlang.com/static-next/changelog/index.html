@@ -40,6 +40,7 @@
 <div class="doc-toc-inner">
 <p class="label doc-toc-label">Versions</p>
 <ol class="doc-toc-list">
+<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-44-0"><span class="doc-toc-name">0.44.0</span><span class="doc-toc-num">2026-11-10</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-43-0"><span class="doc-toc-name">0.43.0</span><span class="doc-toc-num">2026-11-09</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-1"><span class="doc-toc-name">0.42.1</span><span class="doc-toc-num">2026-11-09</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-42-0"><span class="doc-toc-name">0.42.0</span><span class="doc-toc-num">2026-11-08</span></a></li>
@@ -47,11 +48,48 @@
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-40-0"><span class="doc-toc-name">0.40.0</span><span class="doc-toc-num">2026-10-30</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-39-0"><span class="doc-toc-name">0.39.0</span><span class="doc-toc-num">2026-10-27</span></a></li>
 <li class="doc-toc-item"><a class="doc-toc-link" href="#v0-38-0"><span class="doc-toc-name">0.38.0</span><span class="doc-toc-num">2026-10-26</span></a></li>
-<li class="doc-toc-item"><a class="doc-toc-link" href="#v0-37-1"><span class="doc-toc-name">0.37.1</span><span class="doc-toc-num">2026-10-24</span></a></li>
 </ol>
 </div>
 </nav>
 <article class="doc-body cl-body" lang="en">
+<section class="cl-release" id="v0-44-0">
+<h2>0.44.0 <span class="cl-date">2026-11-10</span></h2>
+<h3>Added</h3>
+<ul><li>
+<strong><code>std/serve</code> responds in chunks: <code>response_chunks</code>, <code>response_chunks_len</code>, <code>response_from_stream</code> and <code>response_file</code></strong>: a body of tens of MiB no longer has to exist whole in memory (the collector does not give it back and the server stayed at its peak). <code>response_chunks(status, type, next)</code> calls <code>next()</code> until it returns <code>""</code> (chunked; <code>_len</code> with <code>Content-Length</code>), <code>response_from_stream(s)</code> forwards an <code>HttpStream</code> without gathering it (it copies the status, the <code>Content-Type</code> and the content and cache headers) and <code>response_file(path, type, name)</code> serves a file in 16 KiB blocks. Static files over 1 MiB (<code>try_serve_static</code>, <code>app_static</code>, <code>app_static_cached</code>, <code>try_serve_static_prefix</code>) go out in blocks with a weak ETag of size and mtime. Measured with 4 workers: the proxy with 60 bodies of 24 MiB ends at ~22 MB of RSS (455 MB when gathering them); 20 downloads of 32 MiB with <code>response_file</code>, 23 MiB; 70 responses of 24 MiB with <code>response_chunks</code>, +13 MiB. The source's resources are closed on finish, on failure, when the client disconnects and when the response is discarded (<code>HEAD</code>, 304, an after-hook that changes the status). Limits: a worker stays busy for as long as the response lasts, and an HTTP/1.0 client receives chunked if there is no length. 88 checks in <code>test_serve_std_chunks.py</code>, recipe 160 and gotcha <code>serve-large-body-memory</code>.
+</li><li>
+<strong><code>std/gc</code>: <code>gc_collect</code>, <code>gc_release</code>, <code>gc_heap_bytes</code> and <code>gc_free_bytes</code></strong>: after a memory peak, <code>gc_release()</code> collects and returns to the system the free pages the GC retains (<code>GC_gcollect_and_unmap</code> is called twice: the first one collects but does not unmap what it has just freed). It stops all threads while it runs, and being conservative it may need a second call; <code>std/gc</code> does not exist in wasm. Case <code>ai-first/54-gc-release</code> and recipe 159 .
+</li><li>
+<strong><code>std/serve</code>: memory release when idle, opt-in</strong>: with <code>NYX_SERVE_IDLE_RELEASE_SECS=N</code> (N &gt; 0; off by default) a thread wakes up every N seconds and calls <code>gc_release()</code> if there are no requests in flight, none arrived in the last N seconds, <code>gc_free_bytes()</code> exceeds <code>NYX_SERVE_IDLE_RELEASE_MB</code> (32), there has been traffic since the last release and the server is not draining; at most two releases per idle stretch, separated by N seconds. SSE/WebSocket connections do not count as requests. Each release prints <code>nyx-serve idle release: heap &lt;A&gt; MB -&gt; &lt;B&gt; MB in &lt;T&gt; ms</code>. Measured cost: each one stops all threads (58-94 ms for the two together with little live heap, 330-440 ms each with ~270 MB live) and the first large request afterwards takes 2-3 times longer (63-108 ms against 33-41 ms); with no traffic a floor remains per worker (80-170 MB with 4 workers). No new API. Test <code>tests/integration/test_serve_std_idle_release.py</code> (27 checks).
+</li></ul>
+<h3>Fixed</h3>
+<ul><li>
+<strong>A large response is no longer truncated when the GC runs in the middle of the send</strong>: with two clients at once against <code>std/serve</code>, 24 MiB bodies arrived cut off at 4-20 MiB, with no error. <code>send()</code> on a socket with <code>SO_SNDTIMEO</code> returns with <code>EINTR</code> on any signal with a handler (even with <code>SA_RESTART</code>) and Boehm stops the threads with a signal on every collection; <code>os_sock_send</code> took that <code>EINTR</code> for an error and left the response half written. It now retries (each retry starts counting the deadline from zero again). Covered by the two simultaneous clients check of <code>test_serve_std_chunks.py</code>.
+</li><li>
+<strong><code>std/serve</code> writes a large body without copying it</strong>: to prepend the header, the server glued header and body into a new <code>String</code>, and that was two copies of the body per response. Now a body of 64 KiB or more is written after its header, as is. With 4 workers and 24 MiB bodies the process stays at 236 MB instead of 455 MB. What remained (memory does not go back to the system and there was no chunked response) is covered by the three entries above. Five new checks in <code>test_serve_std_keepalive.py</code>: the 32 MiB body arrives whole six times over the same connection, the connection is left clean, the process does not grow and a <code>HEAD</code> brings the <code>Content-Length</code> without a body.
+</li><li>
+<strong>Without the prelude, the error about <code>Result</code>/<code>Option</code> names the cause</strong>: a compiler module (it imports <code>"compiler/..."</code> or carries <code>// nyx:sin-prelude</code>) that imported <code>std/process</code> gave "'Result' not declared" (NYX1002) or, without semantic, "method 'Err' is not available on the global 'Result'" (NYX2002), without saying that the prelude is missing. Now both say so and ask to declare the enum by hand, as <code>compiler/build.nx</code> does. Two cases in <code>test-errors</code>.
+</li><li>
+<strong><code>make test</code> compiles the runtime only once</strong>: <code>run_bootstrap_tests.sh</code> recompiled the 25 <code>.c</code> files of the runtime on every test when linking; now it compiles them to <code>.o</code> at the start and links those objects (the same link, without <code>-O</code>). On the server <code>make test</code> went from over 10 minutes to 3 min 39 s.
+</li><li>
+<strong>The event loop reuses slots in O(1)</strong>: registering an fd or a timer swept the whole table looking for a free slot, so registering N timers was O(N²) — with the table growing up to 65536, filling it took ~2e9 comparisons. Now the free slots form a free-list and a single site (<code>ev_release_slot</code>) releases them. New test in <code>test_event_loop.c</code>: it fills the table up to the ceiling twice and checks that no slot is lost or shared.
+</li><li>
+<strong><code>make test</code> gives the compiler the same stack as the launchers</strong>: <code>run_bootstrap_tests.sh</code> was the only path that called <code>nyx_bootstrap</code> with the default 8 MB, and on x86_64 <code>test-515</code> (56 chained methods) overflowed there and in no real use. Now it raises the stack only for the compiler (the test binaries keep the normal limit); the deliberate 8 MB guard remains in <code>run_stack_frame_audit.sh</code>. Verified with a compiler built without SROA, which failed with 8 MB: 551/551.
+</li><li>
+<strong>Raw pointers to scalars: indexing, dereferencing and widening</strong>:
+<ul><li>
+<code>p[i]</code> on a <code>*int</code>/<code>*u8</code>/<code>*float</code> fell into the Array path and aborted with "Index 1 out of range [0..0)"; now it reads and writes element <code>i</code> (GEP on the pointee, with no bounds check, as in C).
+</li><li>
+<code>*p as int</code> was parsed as <code>*(p as int)</code> (invalid IR with a <code>*u8</code>); now it is <code>(*p) as int</code>, as in Rust and C. Nobody used the old form: sweep of compiler/, std/, products and nyxerp.
+</li><li>
+An <code>as</code> that widens an unsigned integer (<code>u8</code>, <code>u16</code>, <code>u32</code>, <code>char</code>, <code>bool</code>) sign-extended: <code>(*q) as int</code> with <code>q: *u8</code> read 250 as -6, silently. Now it uses <code>zext</code>.
+</li><li>
+<code>*q = -6</code> with <code>q: *i8</code> and <code>-x</code> with <code>x: i8</code> emitted invalid IR (an i64 where an i8 belonged).
+</li><li>
+<code>systems/test-543</code> and recipe 158 (byte buffer with a raw pointer).
+</li></ul>
+</li></ul>
+</section>
 <section class="cl-release" id="v0-43-0">
 <h2>0.43.0 <span class="cl-date">2026-11-09</span></h2>
 <blockquote>
@@ -379,22 +417,6 @@
 <strong><code>string_to_float</code> / <code>_or</code> / <code>_range</code> parse with the Clinger fast path</strong>: a number <code>[+-]digits[.digits]</code> of up to 15 digits is converted with one exact division, which gives the same double as <code>strtod</code> bit for bit; the rest (exponents, 16+ digits, <code>inf</code>, hex, whitespace) still goes to <code>strtod</code>. Verified against <code>strtod</code> on 5M random values and on the edge cases (<code>test_float_parse.c</code>). In the bench of 5M rows, <code>indexOf</code> + <code>_range</code> drops from 2.67 s to 2.13 s. +1 test (<code>508</code>), +1 C suite.
 </li></ul>
 </section>
-<section class="cl-release" id="v0-37-1">
-<h2>0.37.1 <span class="cl-date">2026-10-24</span></h2>
-<blockquote>
-<p><strong>PATCH</strong>: the three nyxerp friction reports of 2026-10-22.</p>
-</blockquote>
-<h3>Fixed</h3>
-<ul><li>
-<strong>NYX1046</strong>: an enum pattern (<code>Result.Ok(v)</code>, <code>Option.None</code>) in a <code>match</code> whose value is primitive (<code>int</code>, <code>float</code>, <code>bool</code>, <code>String</code>) is an error. Before, it passed <code>nyx check</code> and clang failed with invalid IR or, with a String, it compiled and never entered any arm (nyxerp friction with <code>match string_to_int(s)</code>, which returns <code>int</code>). +2 error tests.
-</li></ul>
-<h3>Added</h3>
-<ul><li>
-<strong><code>sse_close_room(room) -&gt; int</code></strong> in <code>std/serve</code>: closes only the channels of one room; the rest keep going and the room can be reopened. <code>sse_drain_close</code> did not work for this: it leaves the registry draining and no later open gets registered (nyxerp friction). +5 checks in the serve smoke test.
-</li><li>
-<strong><code>std/postgres</code> takes the password like libpq</strong> when the string has no <code>password=</code>: <code>PGPASSWORD</code>, then <code>passfile=</code>, <code>PGPASSFILE</code> or <code>~/.pgpass</code> (wildcards <code>*</code>, escapes <code>\:</code> and <code>\\</code>; a file readable by others is ignored). <code>pg_pgpass_buscar</code> is exposed (nyxerp friction). +1 test (<code>506</code>).
-</li></ul>
-</section>
 </article>
 </div>
 <a class="callout" href="https://github.com/nyxlang-dev/nyx/blob/main/CHANGELOG.md"><span><span class="callout-name">The complete CHANGELOG.md</span><span class="step-note note">Every version since the start, in the repository (in Spanish; the English translation starts at 0.33.0).</span></span><span class="callout-go">GitHub →</span></a>
@@ -403,7 +425,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.43.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>

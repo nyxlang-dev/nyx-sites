@@ -1,4 +1,5 @@
 <!-- not-a-version: 8.0.4 — es la versión de libgc/bdwgc del aviso del instalador, no la del toolchain -->
+<!-- not-a-version: 0.43.0 — es la versión desde la que existe nyx build --shared, no la del toolchain -->
 <p class="prose">The installer builds Nyx from source on your machine: it clones the repository, compiles the compiler and the tools, and links one command into your PATH. It runs on Linux and nowhere else — <code>install.sh</code> stops with an error on any other operating system.</p>
 
 <h2>What you need</h2>
@@ -29,7 +30,7 @@
 
 <h2>Verify</h2>
 <pre data-lang="sh">$ nyx --version
-nyx 0.43.0</pre>
+nyx 0.44.0</pre>
 <p>If the shell answers <code>command not found</code>, the link exists but this shell has not picked up the new PATH yet. See <em>Common problems</em> below.</p>
 
 <h2>Update</h2>

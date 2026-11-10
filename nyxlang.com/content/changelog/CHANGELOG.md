@@ -9,8 +9,55 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.44.0] — 2026-11-10
+
+### Added
+
+- **`std/serve` responde por trozos: `response_chunks`, `response_chunks_len`, `response_from_stream` y
+  `response_file`**: un cuerpo de decenas de MiB ya no tiene que existir entero en memoria (el recolector no la
+  devuelve y el servidor se quedaba en su pico). `response_chunks(status, tipo, siguiente)` llama a `siguiente()`
+  hasta que devuelve `""` (chunked; `_len` con `Content-Length`), `response_from_stream(s)` reenvía un `HttpStream`
+  sin juntarlo (copia el status, el `Content-Type` y las cabeceras de contenido y caché) y `response_file(ruta, tipo,
+  nombre)` sirve un archivo en bloques de 16 KiB. Los estáticos de más de 1 MiB (`try_serve_static`, `app_static`,
+  `app_static_cached`, `try_serve_static_prefix`) salen por bloques con un ETag débil de tamaño y mtime. Medido con 4
+  workers: el proxy con 60 cuerpos de 24 MiB termina en ~22 MB de RSS (455 MB al juntarlos); 20 descargas de 32 MiB
+  con `response_file`, 23 MiB; 70 respuestas de 24 MiB con `response_chunks`, +13 MiB. Los recursos de la fuente se
+  cierran al terminar, al fallar, al cortarse el cliente y al descartar la respuesta (`HEAD`, 304, un after-hook que
+  cambia el status). Límites: un worker queda ocupado mientras dura la respuesta, y un cliente HTTP/1.0 recibe chunked
+  si no hay largo. 88 checks en `test_serve_std_chunks.py`, receta 160 y gotcha `serve-large-body-memory`
+  [arco: serve-respuesta-por-trozos].
+- **`std/gc`: `gc_collect`, `gc_release`, `gc_heap_bytes` y `gc_free_bytes`**: tras un pico de memoria, `gc_release()`
+  colecta y devuelve al sistema las páginas libres que el GC retiene (se llama `GC_gcollect_and_unmap` dos veces: la
+  primera colecta pero no desmapea lo que acaba de liberar). Detiene todos los hilos mientras corre, y por ser
+  conservador puede necesitar una segunda llamada; `std/gc` no existe en wasm. Caso `ai-first/54-gc-release` y receta
+  159 [arco: serve-respuesta-por-trozos].
+- **`std/serve`: liberación de memoria en ocio, opt-in** [dogfooding:nyxerp]: con `NYX_SERVE_IDLE_RELEASE_SECS=N`
+  (N > 0; apagado por omisión) un hilo despierta cada N segundos y llama a `gc_release()` si no hay pedidos en
+  vuelo, no llegó ninguno en los últimos N segundos, `gc_free_bytes()` supera `NYX_SERVE_IDLE_RELEASE_MB` (32), hubo
+  tráfico desde la última liberación y el servidor no drena; a lo sumo dos liberaciones por tramo de ocio, separadas
+  por N segundos. Las conexiones SSE/WebSocket no cuentan como pedidos. Cada liberación imprime
+  `nyx-serve idle release: heap <A> MB -> <B> MB in <T> ms`. Costo medido: cada una detiene todos los hilos (58-94 ms
+  entre las dos con poco heap vivo, 330-440 ms cada una con ~270 MB vivos) y el primer pedido grande posterior tarda
+  2-3 veces más (63-108 ms contra 33-41 ms); sin tráfico queda un piso por worker (80-170 MB con 4 workers). Sin API
+  nueva. Test `tests/integration/test_serve_std_idle_release.py` (27 checks).
+
 ### Fixed
 
+- **Una respuesta grande ya no sale truncada cuando el GC corre a mitad del envío** [dogfooding:nyxerp]: con dos
+  clientes a la vez contra `std/serve`, los cuerpos de 24 MiB llegaban cortados a los 4-20 MiB, sin error. `send()`
+  sobre un socket con `SO_SNDTIMEO` vuelve con `EINTR` ante cualquier señal con handler (aunque tenga `SA_RESTART`) y
+  Boehm detiene los hilos con una señal en cada colección; `os_sock_send` tomaba ese `EINTR` por un error y dejaba la
+  respuesta a medias. Ahora lo reintenta (cada reintento vuelve a contar el plazo desde cero). Cubierto por el check
+  de dos clientes simultáneos de `test_serve_std_chunks.py` [arco: serve-respuesta-por-trozos].
+- **`std/serve` escribe un cuerpo grande sin copiarlo** [dogfooding:nyxerp]: para anteponer la cabecera, el
+  servidor pegaba cabecera y cuerpo en un `String` nuevo, y eso eran dos copias del cuerpo por respuesta. Ahora un
+  cuerpo de 64 KiB o más se escribe después de su cabecera, tal cual. Con 4 workers y cuerpos de 24 MiB el proceso
+  queda en 236 MB en vez de 455 MB. Lo que restaba (la memoria no vuelve al sistema y no había respuesta por trozos) lo
+  cubren las tres entradas de arriba. Cinco
+  checks nuevos en `test_serve_std_keepalive.py`: el cuerpo de 32 MiB llega entero seis veces por la misma conexión,
+  la conexión queda limpia, el proceso no crece y un `HEAD` trae el `Content-Length` sin cuerpo.
 - **Sin prelude, el error sobre `Result`/`Option` nombra la causa**: un módulo del compilador (importa
   `"compiler/..."` o lleva `// nyx:sin-prelude`) que importaba `std/process` daba «'Result' no declarado» (NYX1002)
   o, sin semantic, «el método 'Err' no está disponible sobre el global 'Result'» (NYX2002), sin decir que falta el
