@@ -94,30 +94,27 @@
 <div>
 <div class="panel">
 <div class="panel-head"><span class="panel-name">sample.nx</span><span>nyx</span></div>
-<div class="panel-body"><pre><span class="kw">enum</span> <span class="ty">Shape</span> <span class="op">{</span>
-    <span class="ty">Circle</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
-    <span class="ty">Square</span><span class="op">(</span><span class="ty">int</span><span class="op">),</span>
-    <span class="ty">Rect</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">)</span>
-<span class="op">}</span>
-
-<span class="kw">fn</span> <span class="fn">area</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">Shape</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
-    <span class="kw">return</span> <span class="kw">match</span> s <span class="op">{</span>            <span class="cm">// exhaustive: every variant must be covered</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Circle</span><span class="op">(</span>r<span class="op">)</span>  <span class="op">=&gt;</span> <span class="num">3</span> <span class="op">*</span> r <span class="op">*</span> r<span class="op">,</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Square</span><span class="op">(</span>l<span class="op">)</span>  <span class="op">=&gt;</span> l <span class="op">*</span> l<span class="op">,</span>
-        <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span>w<span class="op">,</span> h<span class="op">)</span> <span class="op">=&gt;</span> w <span class="op">*</span> h
-    <span class="op">}</span>
+<div class="panel-body"><pre><span class="kw">fn</span> <span class="fn">fib</span><span class="op">(</span>n<span class="op">:</span> <span class="ty">int</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">if</span> n <span class="op">&lt;</span> <span class="num">2</span> <span class="op">{</span> <span class="kw">return</span> n <span class="op">}</span>
+    <span class="kw">return</span> <span class="fn">fib</span><span class="op">(</span>n <span class="op">-</span> <span class="num">1</span><span class="op">)</span> <span class="op">+</span> <span class="fn">fib</span><span class="op">(</span>n <span class="op">-</span> <span class="num">2</span><span class="op">)</span>
 <span class="op">}</span>
 
 <span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
-    <span class="kw">let</span> rect<span class="op">:</span> <span class="ty">Shape</span> <span class="op">=</span> <span class="ty">Shape</span><span class="op">.</span><span class="ty">Rect</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">7</span><span class="op">)</span>
-    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;area = ${area(rect)}&quot;</span><span class="op">)</span>
+    <span class="kw">let</span> inputs <span class="op">=</span> <span class="op">[</span><span class="num">38</span><span class="op">,</span> <span class="num">36</span><span class="op">,</span> <span class="num">34</span><span class="op">,</span> <span class="num">32</span><span class="op">]</span>
+    <span class="kw">let</span> done <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span>inputs<span class="op">.</span><span class="fn">length</span><span class="op">())</span>
+    <span class="kw">for</span> n <span class="kw">in</span> inputs <span class="op">{</span>
+        <span class="kw">spawn</span> <span class="op">{</span> <span class="fn">channel_send</span><span class="op">(</span>done<span class="op">,</span> <span class="str">&quot;fib(${n}) = ${fib(n)}&quot;</span><span class="op">)</span> <span class="op">}</span>      <span class="cm">// one thread each</span>
+    <span class="op">}</span>
+    <span class="kw">var</span> lines<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">[]</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="num">0</span><span class="op">..</span>inputs<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">{</span> lines<span class="op">.</span><span class="fn">push</span><span class="op">(</span><span class="fn">channel_recv</span><span class="op">(</span>done<span class="op">))</span> <span class="op">}</span> <span class="cm">// first to finish, first in</span>
+    <span class="kw">for</span> line <span class="kw">in</span> lines <span class="op">{</span> <span class="fn">print</span><span class="op">(</span>line<span class="op">)</span> <span class="op">}</span>
 <span class="op">}</span>
 </pre></div>
 </div>
 </div>
 <div>
 <table class="kv kv-wide">
-<tr><th>Shows</th><td>An enum with an exhaustive match over every variant, string interpolation and explicit types on every binding.</td></tr>
+<tr><th>Shows</th><td>A list of inputs, one thread per item started with spawn, a channel that hands back each result as it finishes, and a typed array that collects them.</td></tr>
 <tr><th>Checked with</th><td><code>nyx check</code> — parses and type-checks, without linking and without running.</td></tr>
 <tr><th>Run it</th><td><code>nyx sample.nx</code></td></tr>
 </table>
