@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A shared library (.so) for an app — Nyx by example</title>
+<meta name="description" content="nyx build --shared builds the program as lib&lt;name&gt;.so that an Android app (JNI), C (dlopen) or Python (ctypes) can load.">
+<link rel="canonical" href="https://nyxlang.com/by-example/157-biblioteca-compartida-para-una-app.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/157-biblioteca-compartida-para-una-app.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/157-biblioteca-compartida-para-una-app.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/157-biblioteca-compartida-para-una-app.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/157-biblioteca-compartida-para-una-app.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">157</span> / Systems</span></p>
+<h1 class="doc-title">A shared library (.so) for an app</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A Nyx program can be built as <code>lib&lt;name&gt;.so</code> instead of an executable, so something else loads it: an Android app through JNI, a C program with <code>dlopen</code>, Python with <code>ctypes</code>. Run <code>nyx build --shared</code> (output <code>target/lib&lt;name&gt;.so</code>), add <code>--target aarch64-linux-android</code> for Android, or set <code>[build] kind = "shared"</code> in <code>nyx.toml</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">157-biblioteca-compartida-para-una-app.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/157-biblioteca-compartida-para-una-app.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: una biblioteca compartida (.so) para una app.</span>
+<span class="cm">//</span>
+<span class="cm">// Un programa Nyx puede armarse como `lib&lt;nombre&gt;.so` en vez de un ejecutable, para que</span>
+<span class="cm">// otra cosa lo cargue: una app Android por JNI, un programa en C con dlopen, Python con ctypes.</span>
+<span class="cm">//</span>
+<span class="cm">//   nyx build --shared                                  -&gt; target/lib&lt;nombre&gt;.so</span>
+<span class="cm">//   nyx build --target aarch64-linux-android --shared   -&gt; target/aarch64-linux-android/lib&lt;nombre&gt;.so</span>
+<span class="cm">//   # o fijarlo en nyx.toml:  [build]  kind = &quot;shared&quot;</span>
+<span class="cm">//</span>
+<span class="cm">// Reglas del modo --shared:</span>
+<span class="cm">//   1. Solo las funciones con #[export_name(&quot;x&quot;)] salen de la .so, con ese nombre C. Todo lo</span>
+<span class="cm">//      demás queda oculto (también los `pub`).</span>
+<span class="cm">//   2. Su firma usa solo int (int64_t), float (double), bool, punteros crudos y String.</span>
+<span class="cm">//      Un String ENTRA como (const uint8_t *ptr, int64_t len) —bytes UTF-8, puede traer NUL— y</span>
+<span class="cm">//      SALE como `nyx_buf *` (malloc fuera del GC); quien llama lo libera con nyx_buf_free.</span>
+<span class="cm">//      Cualquier otro tipo es NYX1048.</span>
+<span class="cm">//   3. `fn init()` es opcional y corre UNA vez, al cargar la biblioteca (nyx_lib_init).</span>
+<span class="cm">//   4. Una .so no tiene `fn main` (NYX1049): nadie la llamaría. El `main` de abajo existe solo</span>
+<span class="cm">//      para que esta receta se pueda ejecutar como programa normal; en --shared se BORRA.</span>
+<span class="cm">//   5. Un assert o un panic dentro de la .so mata la app entera (ver</span>
+<span class="cm">//      docs/gotchas/shared-lib-fatal-mata-app.md). Los errores esperables salen como códigos.</span>
+<span class="cm">//</span>
+<span class="cm">// El estado de larga vida (una conexión, un servidor) se guarda del lado de Nyx y se entrega</span>
+<span class="cm">// al llamador como un `int` opaco que él devuelve en cada llamada.</span>
+
+<span class="kw">var</span> g_llamadas<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">0</span>
+
+<span class="cm">// Corre una vez al cargar la .so (en este programa normal, la llama main).</span>
+<span class="kw">fn</span> <span class="fn">init</span><span class="op">()</span> <span class="op">{</span>
+    g_llamadas <span class="op">=</span> <span class="num">0</span>
+<span class="op">}</span>
+
+#<span class="op">[</span><span class="fn">export_name</span><span class="op">(</span><span class="str">&quot;app_echo&quot;</span><span class="op">)]</span>
+<span class="kw">fn</span> <span class="fn">echo</span><span class="op">(</span>s<span class="op">:</span> <span class="ty">String</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    g_llamadas <span class="op">=</span> g_llamadas <span class="op">+</span> <span class="num">1</span>
+    <span class="kw">return</span> s
+<span class="op">}</span>
+
+#<span class="op">[</span><span class="fn">export_name</span><span class="op">(</span><span class="str">&quot;app_llamadas&quot;</span><span class="op">)]</span>
+<span class="kw">fn</span> <span class="fn">llamadas</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">return</span> g_llamadas
+<span class="op">}</span>
+
+<span class="cm">// Solo para el runner de las recetas: en `nyx build --shared` este main no va.</span>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">{</span>
+    <span class="fn">init</span><span class="op">()</span>
+    <span class="kw">let</span> r<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">echo</span><span class="op">(</span><span class="str">&quot;hola, app&quot;</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>r <span class="op">==</span> <span class="str">&quot;hola, app&quot;</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span><span class="fn">llamadas</span><span class="op">()</span> <span class="op">==</span> <span class="num">1</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>r<span class="op">)</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">hola, app</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>Here <code>echo</code> is exported with <code>#[export_name("app_echo")]</code> and <code>llamadas</code> as <code>app_llamadas</code>; <code>init</code> resets a global counter. Run as a normal program, <code>main</code> calls <code>init</code>, calls <code>echo("hola, app")</code>, asserts the result and the counter, and prints <code>hola, app</code>. That <code>main</code> exists only so the recipe can run: in <code>--shared</code> mode it is removed, because a <code>.so</code> with <code>fn main</code> is error NYX1049.</p>
+<p>The rules of the mode: only functions with <code>#[export_name]</code> leave the <code>.so</code>, under that C name; everything else stays hidden, <code>pub</code> included. Their signature may use only <code>int</code> (<code>int64_t</code>), <code>float</code> (<code>double</code>), <code>bool</code>, raw pointers and <code>String</code>; any other type is NYX1048. A <code>String</code> comes in as <code>(const uint8_t *ptr, int64_t len)</code>, UTF-8 bytes that may contain NUL, and goes out as a <code>nyx_buf *</code> allocated with malloc outside the GC, which the caller frees with <code>nyx_buf_free</code>. An optional <code>fn init()</code> runs once, when the library loads. Keep long-lived state (a connection, a server) on the Nyx side and hand the caller an opaque <code>int</code> to pass back on every call.</p>
+<p>Important limits: a failed <code>assert</code>, a <code>panic</code>, running out of memory or an NYX2022 inside the <code>.so</code> kills the whole host app, with no recovery; return expected errors as codes or buffers. Load only one Nyx <code>.so</code> per process, since each brings its own GC and runtime, and never call an exported function from the UI thread, because it runs on the caller's thread and blocks it; use a thread of your own. The <code>templates/android</code> directory of the language repo has the JNI shim and a Kotlin bridge to copy into a Gradle project.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/156-target-android.html"><span class="label">← Previous</span><span class="doc-nav-name">A binary for Android (Termux) built from Linux</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/158-puntero-crudo-buffer.html"><span class="label">Next →</span><span class="doc-nav-name">A byte buffer with a raw pointer</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

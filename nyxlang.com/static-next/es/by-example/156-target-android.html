@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un binario para Android (Termux) armado desde Linux — Nyx por ejemplo</title>
+<meta name="description" content="nyx build --target aarch64-linux-android arma el mismo programa para un teléfono o tablet aarch64, para correr dentro de Termux.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/156-target-android.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/156-target-android.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/156-target-android.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/156-target-android.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/156-target-android.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">156</span> / Sistemas</span></p>
+<h1 class="doc-title">Un binario para Android (Termux) armado desde Linux</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>El mismo programa se puede armar para un aparato Android aarch64 sin tocar el código. El resultado es un PIE de bionic (API 24, linker64) con libgc y OpenSSL enlazados estáticamente, que se copia al aparato y se corre dentro de Termux, sin proot.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">156-target-android.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/156-target-android.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un binario para Android (Termux) armado desde Linux.</span>
+<span class="cm">//</span>
+<span class="cm">// El mismo programa se arma para un teléfono o tablet aarch64 sin tocar el código:</span>
+<span class="cm">//</span>
+<span class="cm">//     # 1. Una sola vez: sysroot NDK r27c, Boehm GC 8.2.12 y OpenSSL 3.6.5 para bionic</span>
+<span class="cm">//     #    (~5 min, ~58 MB + 664 MB de caché del zip). Van a ~/.cache/nyx-android-deps,</span>
+<span class="cm">//     #    o a donde diga NYX_ANDROID_DEPS.</span>
+<span class="cm">//     bash scripts/build_android_deps.sh ~/.cache/nyx-android-deps</span>
+<span class="cm">//</span>
+<span class="cm">//     # 2. Armar (desde un proyecto con nyx.toml). Necesita clang &gt;= 19 y lld; NO usa</span>
+<span class="cm">//     #    las herramientas del NDK. Salida: target/aarch64-linux-android/&lt;name&gt;</span>
+<span class="cm">//     nyx build --target aarch64-linux-android</span>
+<span class="cm">//</span>
+<span class="cm">//     # 3. Copiar al aparato y correr dentro de Termux (sin proot):</span>
+<span class="cm">//     scp target/aarch64-linux-android/&lt;name&gt; tablet:~/ &amp;&amp; ssh tablet ./&lt;name&gt;</span>
+<span class="cm">//     # (o `adb push` a /data/local/tmp, o el almacenamiento compartido de Termux)</span>
+<span class="cm">//</span>
+<span class="cm">// Es un PIE de bionic (linker64), API 24, con libgc y OpenSSL estáticos.</span>
+<span class="cm">//</span>
+<span class="cm">// Límites:</span>
+<span class="cm">//   - `nyx run --target aarch64-linux-android` NO ejecuta: da un error claro. Cópialo al aparato.</span>
+<span class="cm">//   - TLS busca las CAs en SSL_CERT_FILE / SSL_CERT_DIR; si no, en $PREFIX/etc/tls/cert.pem</span>
+<span class="cm">//     (Termux); si no, en /system/etc/security/cacerts/ (archivo por archivo). Las CAs de</span>
+<span class="cm">//     usuario de Android todavía no se leen.</span>
+<span class="cm">//   - SQLite se carga por dlopen desde $PREFIX/lib/libsqlite3.so: en Termux, `pkg install libsqlite`.</span>
+<span class="cm">//   - Directorio temporal: $TMPDIR, con respaldo /data/local/tmp.</span>
+<span class="cm">//   - NYX_ANDROID_STATIC=1 arma un binario ESTÁTICO solo para probar en Linux arm64; sin dlopen,</span>
+<span class="cm">//     así que no anda std/sqlite ni el inflate de zlib. No es un artefacto de distribución.</span>
+<span class="cm">//   - Pendiente: biblioteca .so para JNI; verificación en un aparato real.</span>
+<span class="cm">//</span>
+<span class="cm">// Este programa corre igual en nativo: imprime la arquitectura y la suma de un cálculo.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/process&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">arquitectura</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">var</span> o <span class="op">=</span> <span class="fn">spawn_opts</span><span class="op">()</span>
+    o<span class="op">.</span>stdout <span class="op">=</span> <span class="ty">Stdio</span><span class="op">.</span><span class="ty">Pipe</span>
+    <span class="kw">match</span> <span class="fn">try_spawn</span><span class="op">([</span><span class="str">&quot;uname&quot;</span><span class="op">,</span> <span class="str">&quot;-m&quot;</span><span class="op">],</span> o<span class="op">)</span> <span class="op">{</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>c<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span>
+            <span class="kw">match</span> <span class="fn">try_child_collect</span><span class="op">(</span>c<span class="op">)</span> <span class="op">{</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Ok</span><span class="op">(</span>r<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> r<span class="op">.</span>stdout<span class="op">.</span><span class="fn">trim</span><span class="op">()</span> <span class="op">}</span>
+                <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span> <span class="op">}</span>
+            <span class="op">}</span>
+        <span class="op">}</span>
+        <span class="ty">Result</span><span class="op">.</span><span class="ty">Err</span><span class="op">(</span>_<span class="op">)</span> <span class="op">=&gt;</span> <span class="op">{</span> <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span> <span class="op">}</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="str">&quot;desconocida&quot;</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;arquitectura: &quot;</span> <span class="op">+</span> <span class="fn">arquitectura</span><span class="op">())</span>
+    <span class="kw">var</span> suma <span class="op">=</span> <span class="num">0</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="num">1</span><span class="op">..</span><span class="num">101</span> <span class="op">{</span>
+        suma <span class="op">=</span> suma <span class="op">+</span> i
+    <span class="op">}</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma 1..100 = ${suma}&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">arquitectura: aarch64
+suma 1..100 = 5050</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Son tres pasos. Primero, una sola vez: <code>bash scripts/build_android_deps.sh ~/.cache/nyx-android-deps</code> prepara el sysroot NDK r27c, Boehm GC 8.2.12 y OpenSSL 3.6.5 para bionic (unos 5 minutos y 58 MB, más 664 MB de caché del zip; <code>NYX_ANDROID_DEPS</code> cambia el directorio). Segundo, desde un proyecto con <code>nyx.toml</code>, <code>nyx build --target aarch64-linux-android</code> escribe <code>target/aarch64-linux-android/&lt;name&gt;</code>; necesita clang 19 o posterior y lld, y no usa las herramientas del NDK. Tercero, copiarlo con <code>scp</code>, <code>adb push</code> a <code>/data/local/tmp</code> o al almacenamiento compartido de Termux, y correrlo. El programa imprime la arquitectura (con <code>uname -m</code>) y la suma 1..100, y corre igual en nativo.</p>
+<p>Límites: <code>nyx run --target aarch64-linux-android</code> no ejecuta nada y da un error claro; hay que copiar el binario al aparato. TLS busca las CAs en <code>SSL_CERT_FILE</code> / <code>SSL_CERT_DIR</code>, luego en <code>$PREFIX/etc/tls/cert.pem</code> (Termux) y luego en <code>/system/etc/security/cacerts/</code>; las CAs de usuario de Android todavía no se leen. SQLite se carga con <code>dlopen</code> desde <code>$PREFIX/lib/libsqlite3.so</code> (en Termux, <code>pkg install libsqlite</code>). El directorio temporal es <code>$TMPDIR</code>, con respaldo en <code>/data/local/tmp</code>. <code>NYX_ANDROID_STATIC=1</code> arma un binario estático solo para probar en Linux arm64; no tiene <code>dlopen</code>, así que no andan <code>std/sqlite</code> ni el inflate de zlib, y no es un artefacto de distribución. Para cargar Nyx desde una app en vez de Termux, ver la receta de la biblioteca compartida (157).</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/155-servicio-windows.html"><span class="label">← Anterior</span><span class="doc-nav-name">Un programa que corre como servicio de Windows</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/157-biblioteca-compartida-para-una-app.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Una biblioteca compartida (.so) para una app</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

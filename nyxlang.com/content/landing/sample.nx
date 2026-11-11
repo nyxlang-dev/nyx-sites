@@ -1,18 +1,15 @@
-enum Shape {
-    Circle(int),
-    Square(int),
-    Rect(int, int)
-}
-
-fn area(s: Shape) -> int {
-    return match s {            // exhaustive: every variant must be covered
-        Shape.Circle(r)  => 3 * r * r,
-        Shape.Square(l)  => l * l,
-        Shape.Rect(w, h) => w * h
-    }
+fn fib(n: int) -> int {
+    if n < 2 { return n }
+    return fib(n - 1) + fib(n - 2)
 }
 
 fn main() {
-    let rect: Shape = Shape.Rect(3, 7)
-    print("area = ${area(rect)}")
+    let inputs = [38, 36, 34, 32]
+    let done = channel_new(inputs.length())
+    for n in inputs {
+        spawn { channel_send(done, "fib(${n}) = ${fib(n)}") }      // one thread each
+    }
+    var lines: Array<String> = []
+    for i in 0..inputs.length() { lines.push(channel_recv(done)) } // first to finish, first in
+    for line in lines { print(line) }
 }

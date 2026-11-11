@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Un buffer de bytes con un puntero crudo — Nyx por ejemplo</title>
+<meta name="description" content="Indexa un puntero crudo a escalar (p[i] sobre *u8 o *int) para recorrer un buffer en memoria, dentro de unsafe y sin chequeo de límites.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/158-puntero-crudo-buffer.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/158-puntero-crudo-buffer.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/158-puntero-crudo-buffer.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/158-puntero-crudo-buffer.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/158-puntero-crudo-buffer.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">158</span> / Sistemas</span></p>
+<h1 class="doc-title">Un buffer de bytes con un puntero crudo</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Para recorrer muchos píxeles o bytes en un bucle caliente, un <code>Array</code> paga una llamada al runtime por acceso. Un puntero crudo a escalar (<code>*u8</code>, <code>*int</code>) indexa directo en memoria: <code>p[i]</code> lee o escribe el elemento <code>i</code>, a <code>i * sizeof(T)</code> bytes del inicio, como en C. No hay chequeo de límites, por eso vive dentro de <code>unsafe</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">158-puntero-crudo-buffer.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/158-puntero-crudo-buffer.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: un buffer de bytes con un puntero crudo.</span>
+<span class="cm">//</span>
+<span class="cm">// Para recorrer muchos píxeles o bytes en un bucle caliente, un `Array`</span>
+<span class="cm">// paga una llamada al runtime por acceso. Un puntero crudo (`*u8`, `*int`)</span>
+<span class="cm">// indexa directo en memoria: `p[i]` lee o escribe el elemento i, a</span>
+<span class="cm">// i * sizeof(T) bytes del inicio, sin chequeo de límites (como en C). Por</span>
+<span class="cm">// eso vive dentro de `unsafe`.</span>
+<span class="cm">//</span>
+<span class="cm">// Un `u8` leído se ensancha SIN signo: 250 sigue siendo 250 al pasarlo a</span>
+<span class="cm">// int. Y `*p as int` es `(*p) as int`: el `as` se aplica al valor leído.</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">unsafe</span> <span class="op">{</span>
+        <span class="cm">// Una fila de 6 píxeles en escala de grises.</span>
+        <span class="kw">let</span> fila<span class="op">:</span> <span class="op">*</span>u8 <span class="op">=</span> alloc<span class="op">&lt;</span>u8<span class="op">&gt;(</span><span class="num">6</span><span class="op">)</span>
+        <span class="kw">var</span> i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">6</span> <span class="op">{</span>
+            fila<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> <span class="num">200</span> <span class="op">+</span> i <span class="op">*</span> <span class="num">10</span>    <span class="cm">// 200, 210, ..., 250</span>
+            i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+
+        <span class="cm">// Invertir cada píxel y sumar el brillo total.</span>
+        <span class="kw">var</span> total <span class="op">=</span> <span class="num">0</span>
+        i <span class="op">=</span> <span class="num">0</span>
+        <span class="kw">while</span> i <span class="op">&lt;</span> <span class="num">6</span> <span class="op">{</span>
+            <span class="kw">let</span> v<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> fila<span class="op">[</span>i<span class="op">]</span> <span class="kw">as</span> <span class="ty">int</span>
+            fila<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> <span class="num">255</span> <span class="op">-</span> v
+            total <span class="op">=</span> total <span class="op">+</span> v
+            i <span class="op">=</span> i <span class="op">+</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;brillo original: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>total<span class="op">))</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;primer píxel invertido: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(*</span>fila <span class="kw">as</span> <span class="ty">int</span><span class="op">))</span>
+
+        <span class="cm">// Lo mismo con enteros de 64 bits.</span>
+        <span class="kw">var</span> acum<span class="op">:</span> <span class="op">*</span><span class="ty">int</span> <span class="op">=</span> alloc<span class="op">&lt;</span><span class="ty">int</span><span class="op">&gt;(</span><span class="num">3</span><span class="op">)</span>
+        acum<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">=</span> <span class="num">1</span>
+        acum<span class="op">[</span><span class="num">1</span><span class="op">]</span> <span class="op">=</span> <span class="num">2</span>
+        acum<span class="op">[</span><span class="num">2</span><span class="op">]</span> <span class="op">=</span> acum<span class="op">[</span><span class="num">0</span><span class="op">]</span> <span class="op">+</span> acum<span class="op">[</span><span class="num">1</span><span class="op">]</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;acum[2] = &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>acum<span class="op">[</span><span class="num">2</span><span class="op">]))</span>
+
+        <span class="fn">free</span><span class="op">(</span>fila<span class="op">)</span>
+        <span class="fn">free</span><span class="op">(</span>acum<span class="op">)</span>
+    <span class="op">}</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">brillo original: 1350
+primer píxel invertido: 55
+acum[2] = 3</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>El programa reserva una fila de 6 píxeles en escala de grises con <code>alloc&lt;u8&gt;(6)</code> y la llena con <code>fila[i] = 200 + i * 10</code> (200, 210, hasta 250). Un segundo bucle lee cada píxel como <code>int</code>, escribe <code>255 - v</code> para invertirlo y suma el brillo original, que da 1350. Luego hace lo mismo con enteros de 64 bits: un <code>*int</code> de <code>alloc&lt;int&gt;(3)</code>, donde <code>acum[2]</code> es la suma de las dos primeras celdas. Los dos buffers se liberan con <code>free</code>.</p>
+<p>Dos detalles que conviene conocer. Un <code>u8</code> leído se ensancha sin signo: 250 sigue siendo 250 al convertirlo con <code>as int</code>, nunca un número negativo. Y <code>*fila as int</code> significa <code>(*fila) as int</code>: el <code>as</code> se aplica al valor leído, por eso el primer píxel invertido imprime 55 (255 - 200).</p>
+<p>Límites: el puntero no lleva longitud, así que leer o escribir más allá del tamaño reservado es comportamiento indefinido, no un error, y el buffer que da <code>alloc</code> se libera a mano con <code>free</code>. Se usa un <code>Array</code> cuando se quiere acceso verificado y memoria automática, y un puntero crudo cuando lo que importa es el bucle.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/157-biblioteca-compartida-para-una-app.html"><span class="label">← Anterior</span><span class="doc-nav-name">Una biblioteca compartida (.so) para una app</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/159-gc-release.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Devolver memoria al sistema con std/gc</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
