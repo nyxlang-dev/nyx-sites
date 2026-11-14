@@ -54,6 +54,12 @@ echo "[4/4] Restart secuencial verificado..."
 declare -A PORTS=([nyx-serve-web]=3003 [nyx-proxy-web]=3005 [nyx-edit-web]=3009 [nyx-landing-main]=3001)
 for unit in nyx-serve-web nyx-proxy-web nyx-edit-web nyx-landing-main; do
     port="${PORTS[$unit]}"
+    # Servicio ya mudado a /srv/nyx (fuera del árbol de desarrollo): lo publica el
+    # guion común del servidor, que copia la versión, reinicia, verifica y vuelve atrás si falla.
+    if [ -e "/srv/nyx/${unit#nyx-}/current" ]; then
+        "$HOME/servidor/scripts/desplegar.sh" "${unit#nyx-}" || { echo "  ✗ $unit — ABORTO antes de tocar el siguiente"; exit 1; }
+        continue
+    fi
     sudo systemctl restart "$unit"
     ok=0
     for _ in $(seq 1 50); do
