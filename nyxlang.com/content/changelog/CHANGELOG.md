@@ -9,7 +9,126 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **El playground corre sin el repo** (encargo de la sesión del servidor): `playground/server.nx` compilaba con
+  `./nyx_bootstrap` y las fuentes del runtime del árbol, escribía `script.nx`/`script.ll` en la raíz del repo en
+  cada petición —los archivos de trabajo de `make`: una petición en producción podía pisar una compilación de
+  desarrollo— y usaba nombres fijos en `/tmp`, así que dos peticiones a la vez se pisaban. Ahora compila con un
+  toolchain instalado (`NYX_PLAYGROUND_TOOLCHAIN`, `./toolchain` o `~/.nyx/active`, resuelto en cada petición),
+  trabaja en un directorio temporal por petición y lee `PORT` y `NYX_PLAYGROUND_DIR` del entorno. La lista de
+  fuentes wasm sale de `runtime/wasm.srcs` (la copia del servidor había divergido). `make playground-dist
+  DEST=<dir>` arma el directorio de versión. Guarda `make test-playground` (15 checks, también en `make test-wasm`).
+
+### Security
+
+- **El playground servía archivos fuera de `examples/` y `static/`**: `/api/example/<nombre>` y `/static/<ruta>`
+  pegaban el nombre del pedido a la ruta sin validarlo, así que `..` alcanzaba cualquier `.nx` (y cualquier
+  estático) legible por el proceso. Los nombres se validan ahora (sin `..`, solo letras, dígitos, `-`, `_`, `.`).
+
+### Fixed
+
+- **Los nombres de cabecera HTTP ya no distinguen mayúsculas** `[dogfooding:nyxerp]`: `http_find_header` comparaba
+  el nombre tal cual y `std/web` armaba `req.cookies` solo si la cabecera se llamaba `Cookie`. Un pedido con
+  `cookie:` o `content-type:` en minúsculas —lo que reenvía un gateway desde HTTP/2, y varios clientes HTTP/1.1—
+  llegaba a `std/serve` sin sesión, sin formulario y sin `If-None-Match`; y un cliente leía como ausente el
+  `content-length:` de un servidor que responde en minúsculas. Todo en silencio. **Cambia conducta**:
+  `http_find_header(h, "Cookie")` encuentra ahora `cookie` y `COOKIE`. También las cabeceras que un handler
+  escribe (`content-type`, `location`) dejan de duplicarse con las que agrega `std/serve`. Nueva
+  `http_header_name_eq(a, b)`. Cinco casos en `tests/integration/test_serve_std.py`.
+- **Enteros angostos mezclados con `int`, con otro ancho o en comparaciones**: `b + 1` con `b: u8`, `a * 2`,
+  `x == y` y `x < 5` con `i32`, `i16 + i32` y las operaciones de bits emitían IR inválido que rechazaba clang
+  (`'%N' defined with type 'i8' but expected 'i64'`). Esas combinaciones ensanchan ahora los dos lados a `int` con
+  el signo de su tipo Nyx. Lo que ya compilaba no cambia (`i32 + i32` y `u8 + u8` siguen en su ancho). Un campo
+  angosto acepta un literal (`S { b: 67 }` daba `inttoptr i64 67 to i8`). Test `language/test-547`; gotcha
+  `narrow-int-arithmetic`.
+- **Aritmética de ancho fijo pareja para los seis enteros angostos**: dos operandos del mismo tipo operan en su
+  ancho en `+ - * / %`. Antes `u32 / u32` y `u16 % u16` usaban división con signo (`4000000000 / 3` daba un
+  negativo), dos `u8` solo envolvían con `+` (`*`, `-`, `/` y `%` daban `int`), e `i8 - i8` ensanchaba sin signo
+  (`-5 - 3` daba `248`). Guardar un angosto en un `int` (`let n: int = i - j`, `total = u`) lo ensancha con el
+  signo de su tipo. **Cambia conducta**: `u8 * u8` y `u8 - u8` ya no dan `int`. Test `language/test-551`.
+- **Métodos de `Result`/`Option` sobre el resultado de una llamada**: `f().unwrap()`, `obj.m().is_ok()` y los
+  demás (`unwrap_or`, `map`, `and_then`…) daban `NYX2002` y obligaban a bindear el receptor. Un `Err` con un
+  struct o enum propio como error nombra ahora su tipo: `called unwrap() on Err (MiError)`. Test
+  `language/test-552`.
+- **`print` por líneas también en Windows**: el CRT no tiene modo por líneas, así que cuando stdout no es una
+  consola cada `print` vacía el buffer.
+- **El texto de un campo `u8` y de un `let` angosto sin anotar**: `"${s.b}"` y `s.b.to_string()` con `b: u8 = 67`
+  daban `C`, y `let x = 200u8` se registraba como `char`. Usan ahora el tipo del campo, del sufijo del literal o
+  del retorno de la función [arco: texto-por-tipo].
+- **Un índice de tupla que no existe es error `NYX2024`**: `let t = (1, 2)` y `t.5` compilaba y valía `0` (codegen
+  imprimía una línea y seguía). El ratchet de prints mudos de codegen baja de 6 a 5.
+- **`unwrap()` sobre un `Err` muestra el error**: `panic: called unwrap() on Err: io: mala (code 3)` para el
+  `Error` de `std/error` (o un struct con `kind`, `msg` y `code`) y `…on Err: <texto>` para un `String` o un `int`.
+  Antes el mensaje era fijo y el error real se perdía; dentro de un `try`, el `catch` recibe el mismo texto.
+- **`print` llega por líneas aunque stdout sea un pipe o un archivo**: el runtime pone stdout en modo por líneas al
+  arrancar. Un servidor bajo un supervisor no mostraba nada hasta terminar.
+- **Coma final en un literal de struct**: `P { a: 1, b: 2, }` (de una o varias líneas, con o sin genéricos) daba
+  `NYX0101`. Test `language/test-550`.
+
+- **`push` etiqueta el entero de una variable sin anotar**: `var a: Array = []`, `var x = 3`, `a.push(x)` dejaba la
+  casilla sin etiqueta de tipo y `a.join(",")` moría con SIGSEGV (el arreglo de `join` de este mismo día solo cubría
+  literales y Arrays con tipo). Un `let`/`var` sin anotar cuenta ahora como entero si arranca en un literal entero y
+  la función no lo reasigna con algo que no sea aritmética; también el acumulador `total = total + i`. Casos nuevos
+  en `language/test-545` [arco: texto-por-tipo].
+- **`nyx edit` y `nyx shell` sobreviven a una instalación**: los binarios compañeros viven en el `bin` de la
+  versión activa de `~/.nyx`, y cada versión nueva (`make install-local`, `nyx update`, `install.sh`) nacía con su
+  `bin` sin ellos, así que dejaban de andar tras cada actualización. Ahora la versión nueva hereda todo ejecutable del
+  `bin` activo que ella no trae (`nyx_tc_heredar_companeros`). Caso nuevo en `make test-toolchain`.
+- **`arr.join(sep)` convierte cada casilla por su tag**: `[1, 2, 3].join(", ")` compilaba y moría con SIGSEGV porque
+  `join` trataba toda casilla como puntero a String. Ahora int, float y bool salen como con `to_string()`, String
+  igual que antes, y una casilla que guarda un Array o un Map aborta con «join() — el slot N del Array contiene un
+  Array, que no tiene conversión a String». Límite: un Array sin tipo de elemento con enteros sin tag se sigue leyendo
+  como String. Tests: `language/test-545`, `errors/join-slot-array-abort`. [arco: texto-por-tipo]
+- **La interpolación y `String + x` usan el tipo Nyx del operando**: antes solo veían el tipo LLVM, donde `u8` y `char`
+  son el mismo `i8`. **Cambio de comportamiento**: `"${b}"` con `b: u8 = 65` pasa de `A` a `65`; quien quiera el
+  carácter usa una variable `char`. Además `u16`/`u32` salen sin signo y un literal `"${'z'}"` da `z` (antes `122`).
+  Un `char` sigue dando el carácter. Test: `language/test-546`. [arco: texto-por-tipo]
+- **Interpolar o concatenar un valor sin conversión a texto ya no llega a clang**: `"xs = ${xs}"` con un `Array`
+  (o un `Map`, un struct, una tupla) pasaba `nyx check` y fallaba al enlazar con «'%N' defined with type 'ptr' but
+  expected 'i64'». Ahora es `NYX1010` en `nyx check`, con la pista de recorrerlo o interpolar sus partes, y `NYX2023`
+  en codegen para lo que semantic no tipa (tuplas, código sin anotar). De paso, `i16`, `i32` y `f32` —que caían en
+  la misma rama y tampoco compilaban— se interpolan y concatenan con su valor. Nunca produjo un binario, así que es
+  error directo. Tests: `test-nyx1010-interpolar-array`/`-map`, `test-nyx1010-concat-struct`,
+  `codegen-interpolar-tupla` y `language/test-544` [dogfooding:landing].
+
 ---
+
+### Added
+
+- **`std/http`: `HttpStreamOpts.cuerpo_crudo` para reenviar una respuesta comprimida sin descomprimirla**
+  `[dogfooding:nyxerp]`: `try_http_stream_opts` cortaba con `Err(unsupported)` ante cualquier `Content-Encoding`,
+  así que un proxy escrito en Nyx tenía que pedir sin comprimir y comprimir él. Con `opts.cuerpo_crudo = true` la
+  respuesta se acepta, `read()` entrega los bytes como llegaron y `read_event()` es el que da `Err(unsupported)`.
+  `response_from_stream` (`std/serve`) copia ahora `Content-Encoding` y `Vary`, y conserva el `Content-Length` del
+  origen también en ese caso. Sin la opción nada cambia (el mensaje del error la nombra). Test 504, cuatro casos en
+  `test_serve_std_chunks.py`, `tests/ai-first/55` y receta 163.
+
+- **HTTP/2: el código Huffman de `{` estaba mal y mataba la conexión** [arco: gateway-http2] — la tabla de
+  HPACK tenía `{` con 19 bits en vez de 15, así que cualquier cabecera comprimida que lo llevara terminaba en
+  `GOAWAY COMPRESSION_ERROR`. Cloudflare manda `cf-visitor: {"scheme":"https"}` a todo origen: un sitio
+  detrás de Cloudflare con «HTTP/2 to Origin» daba 520 en cada petición. El test nuevo recorre los 255
+  símbolos contra un código reconstruido solo desde las longitudes (el código de HPACK es canónico).
+  Además, `NYX_H2_TRACE=1` escribe a stderr los frames y el motivo de cada rechazo (`docs/HTTP2.md`).
+- **Servidor HTTP/2 real: TLS con ALPN `h2`, control de flujo y respuestas por partes** [arco: gateway-http2]
+  (fricción de nyxerp): con HTTP/1.1 un navegador abre 6 conexiones por dominio y cada canal SSE ocupa una, así
+  que la séptima petición esperaba. `std/http2` se rehízo sobre un motor de conexión sin E/S en el runtime
+  (`nyx_h2c_*`): HPACK con tabla dinámica y Huffman —el decodificador anterior no tenía tabla dinámica y un
+  navegador real fallaba en la segunda petición—, control de flujo en los dos sentidos, `CONTINUATION`,
+  validación de cabeceras y topes contra rapid reset, inundación de `PING`/`SETTINGS`, cabeceras gigantes y
+  cuerpos sin límite. API nueva: `h2_serve_tls`, `h2_serve_tls_conn` y la sesión (`h2_session_new`, `h2_feed`,
+  `h2_next_event`, `h2_respond_start`, `h2_send_data`, `h2_end`, `h2_take_output`…). `h2_serve` conserva su
+  firma. Lo usa `nyx-proxy` 0.4.14 (`http2 = true`), encendido en el gateway de producción el 2026-11-13. Detalle y topes: `docs/HTTP2.md`.
+- **ALPN en el servidor TLS** (`std/tls`): `tls_server_alpn("h2,http/1.1")` y `tls_alpn(h)`. Apagado si no se
+  llama. `tls_wait_any(h, fds, ms)` espera a la vez una conexión TLS y varios descriptores.
+- **`thread_detach(tid)`** (`std/sync`): suelta un hilo que nadie va a esperar con `thread_join`; sin eso, cada
+  hilo terminado dejaba su pila reservada.
+- **Notación científica en literales float**: `1.5e3`, `2.0E-2`, `1e3`, `6.02e+23`. Antes daba `NYX1002`
+  («'e3' not declared»). Test `language/test-549`.
+- **Struct tupla completo**: `struct Point(int, int)` acepta varios campos, se construye con `Point(3, 4)` y se lee
+  con `p.0` además de `p._0`. La declaración aceptaba un solo tipo y el constructor no existía, aunque `docs/SPEC.md`
+  los describía. Aridad equivocada: `NYX1006`; llamar a un struct de campos con nombre: `NYX1007`. Test
+  `language/test-548`, receta 162.
 
 ## [0.44.0] — 2026-11-10
 
