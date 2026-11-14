@@ -62,7 +62,7 @@ fi
 # fallback: sin el monorepo al lado se genera con lo último sincronizado, y se
 # avisa. El check L de check-content.sh (`sync-recipes.sh --check`) es la
 # guardia de que las dos copias no divergen en silencio.
-MONO="${NYX_MONOREPO:-/home/admin/nyx/lang}"
+MONO="${NYX_MONOREPO:-/home/admin/nyxlang}"
 if [ -d "$MONO/examples/by-example" ]; then
     echo "[0s/4] sync con el monorepo ($MONO): recetas, versión, CHANGELOG"
     if ! bash "$REPO_ROOT/scripts/sync-recipes.sh"; then

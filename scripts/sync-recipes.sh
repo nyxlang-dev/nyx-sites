@@ -31,7 +31,7 @@
 #   bash scripts/sync-recipes.sh --check-mirror
 #                                           compara content/by-example/src/
 #                                           contra el MIRROR PÚBLICO
-#                                           ($HOME/nyx/public/nyx/examples/by-example),
+#                                           ($HOME/servidor/espejos/nyx/examples/by-example),
 #                                           que es a donde apuntan los enlaces
 #                                           «Source →» de cada receta. Imprime ⚠
 #                                           por diferencia y SALE 0 SIEMPRE: el
@@ -53,14 +53,14 @@
 #                                           modo cuando se limpie la fase 2.
 #
 # Variables:
-#   NYX_MONOREPO   raíz del monorepo del lenguaje (default /home/admin/nyx/lang)
+#   NYX_MONOREPO   raíz del monorepo del lenguaje (default /home/admin/nyxlang)
 #   NYX_SITE_DIR   directorio del sitio con content/ (default <repo>/nyxlang.com).
 #                  Existe para que el check L de check-content.sh pueda apuntar
 #                  este script al sitio-fixture de su autotest en vez de al
 #                  content/ real: sin esto, L evaluaba siempre el repo aunque le
 #                  pasaran otro $root, y no podía medirse a sí mismo.
 #   NYX_MIRROR     mirror público para --check-mirror
-#                  (default $HOME/nyx/public/nyx/examples/by-example)
+#                  (default $HOME/servidor/espejos/nyx/examples/by-example)
 #   OLD_ROOT       raíz del sitio viejo para --drift (default nyxlang.com/static-next)
 #
 # El alcance sale de `content/by-example/recipes.toml`: se sincroniza lo que
@@ -73,9 +73,9 @@ SITE="${NYX_SITE_DIR:-$ROOT/nyxlang.com}"
 CONTENT="$SITE/content/by-example"
 SRC_DIR="$CONTENT/src"
 CATALOG="$CONTENT/recipes.toml"
-MONO="${NYX_MONOREPO:-/home/admin/nyx/lang}"
+MONO="${NYX_MONOREPO:-/home/admin/nyxlang}"
 EXAMPLES="$MONO/examples/by-example"
-MIRROR="${NYX_MIRROR:-$HOME/nyx/public/nyx/examples/by-example}"
+MIRROR="${NYX_MIRROR:-$HOME/servidor/espejos/nyx/examples/by-example}"
 OLD_ROOT="${OLD_ROOT:-$SITE/static-next}"
 
 MODE="sync"
@@ -255,7 +255,7 @@ fi
 
 # ── modo check-mirror ──────────────────────────────────────────────────────
 # Los enlaces «Source →» de las 69 páginas no apuntan al monorepo privado sino
-# al MIRROR PÚBLICO (github.com/nyxlang-dev/nyx → $HOME/nyx/public/nyx), que
+# al MIRROR PÚBLICO (github.com/nyxlang-dev/nyx → $HOME/servidor/espejos/nyx), que
 # `scripts/sync_to_public.sh core` del monorepo copia. En el instante del swap
 # ese mirror puede estar viejo: entonces la página muestra un código y su
 # enlace ofrece otro. Por eso el paso 8 del runbook sincroniza el mirror

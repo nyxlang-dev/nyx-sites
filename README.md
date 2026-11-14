@@ -15,7 +15,7 @@ make smoke      # verificación efímera sin tocar producción
 make deploy     # deploy completo con restart verificado (sudo)
 ```
 
-Requiere el toolchain Nyx (`NYX_HOME`, default `/home/admin/nyx/lang` — el
+Requiere el toolchain Nyx (`NYX_HOME`, default `/home/admin/nyxlang` — el
 mismo que usa el `Makefile`).
 Ver `CLAUDE.md` para reglas operativas.
 
@@ -55,7 +55,7 @@ hasta entonces el rollback vuelve a un sitio que todavía nombra productos en
 5. bash scripts/cutover-static.sh swap nyxlang.com
 6. curls contra https://nyxlang.com             # el gateway drena keep-alives stale (~15 requests)
 7. commit — y RECIÉN ACÁ el release del monorepo / el sync del mirror público
-8. bash /home/admin/nyx/lang/scripts/sync_to_public.sh core     # + push del mirror público
+8. bash /home/admin/nyxlang/scripts/sync_to_public.sh core     # + push del mirror público
    bash scripts/sync-recipes.sh --check-mirror                  # 0 diferencias tras el push
 ```
 

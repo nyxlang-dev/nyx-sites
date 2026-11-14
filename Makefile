@@ -3,7 +3,7 @@
 # El framework web es `std/serve` del core (absorción 2026-08-31): ya no hay
 # lib vendorizada — el build resuelve `import "std/serve"` en $NYX_HOME/std.
 
-NYX_HOME ?= /home/admin/nyx/lang
+NYX_HOME ?= /home/admin/nyxlang
 export NYX_HOME
 
 SITES = nyxlang.com serve.nyxlang.com proxy.nyxlang.com edit.nyxlang.com

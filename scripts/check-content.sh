@@ -191,7 +191,7 @@ fi
 
 # ── Denylist de español neutro (H) ───────────────────────────────────────
 # Copiada TAL CUAL de la variable DENY_RE de
-# /home/admin/nyx/lang/scripts/testing/run_templates_parity.sh (monorepo del
+# /home/admin/nyxlang/scripts/testing/run_templates_parity.sh (monorepo del
 # lenguaje, no este repo) — no se importa por ruta porque nyx-sites es un
 # repo independiente sin dependencia de ese monorepo. Si esa lista crece,
 # esta copia se queda atrás hasta que alguien la sincronice a mano.
@@ -202,7 +202,7 @@ VOSEO_RE='\b(sos|tenés|podés|querés|sabés|hacé|seguí|ofrecé|leé|probá|d
 # CHANGELOG del monorepo) y el recetario ya lo nombra en salida REAL — la
 # receta 110-serve-sse imprime el banner del servidor, «nyx-serve starting
 # on…». nyx-kv, nyx-proxy, nyx-edit, nyx-db, nyx-queue y nyx-shell siguen
-# siendo productos separados (~/nyx/products/*) y se quedan en la lista.
+# siendo productos separados (~/products/*) y se quedan en la lista.
 DENY_PRODUCTS_RE='nyx-kv|nyxkv|nyx-proxy|nyx-edit|nyx-db|nyx-queue|nyx-shell|\bgateway\b|playground|serve\.nyxlang|proxy\.nyxlang|edit\.nyxlang|nyxkv\.com'
 AI_TOOLS_RE='\bclaude\b|cursor|copilot'
 # El porcentaje comparativo entró en la fase 2 (review final): «~30% smaller
@@ -1040,7 +1040,7 @@ check_l() {
         CHECK_LAST_FAILS=0
         return
     fi
-    local mono="${NYX_MONOREPO:-/home/admin/nyx/lang}"
+    local mono="${NYX_MONOREPO:-/home/admin/nyxlang}"
     if [ ! -d "$mono/examples/by-example" ]; then
         print_warn "[L] no está $mono/examples/by-example — no se puede verificar el drift del recetario (¿NYX_MONOREPO?)"
         CHECK_LAST_FAILS=0

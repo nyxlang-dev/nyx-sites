@@ -44,8 +44,10 @@ echo "[2/4] Smoke efímero..."
 bash scripts/smoke.sh
 
 echo "[3/4] Units systemd..."
-sudo cp deploy/nyx-landing-main.service deploy/nyx-serve-web.service \
-        deploy/nyx-proxy-web.service deploy/nyx-edit-web.service /etc/systemd/system/
+# Las unidades viven en el repo privado del servidor (este repo es público).
+UNITS_DIR="${NYX_UNITS_DIR:-$HOME/servidor/etc/systemd/system}"
+sudo cp "$UNITS_DIR/nyx-landing-main.service" "$UNITS_DIR/nyx-serve-web.service" \
+        "$UNITS_DIR/nyx-proxy-web.service" "$UNITS_DIR/nyx-edit-web.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 
 echo "[4/4] Restart secuencial verificado..."

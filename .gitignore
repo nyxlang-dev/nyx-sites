@@ -31,3 +31,6 @@ nyxlang.com/.preview.pid
 # existe y gen-site.sh abortaría sin motivo.
 nyxlang.com/static/.cutover-rollback
 nyxlang.com/static-next/.cutover-rollback
+
+# Las unidades systemd viven en el repo privado del servidor.
+/deploy/
