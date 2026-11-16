@@ -1,0 +1,13 @@
+<!-- title: Text by the real type: join and interpolation | blurb: <code>join</code> converts each slot by its type tag and interpolation uses the Nyx type of the operand: a <code>u8</code> gives the number, a <code>char</code> gives the character. -->
+<section data-part="intro">
+<p><code>arr.join(sep)</code> converts each slot by its tag: integers, floats and booleans come out the same as with <code>to_string()</code>. Interpolation, <code>"${x}"</code>, and <code>String + x</code> use the Nyx type of the operand, not the machine type underneath.</p>
+</section>
+<section data-part="output">
+1, 2, 3
+u8=65 char=A
+literal=z
+</section>
+<section data-part="explanation">
+<p>A <code>u8</code> and a <code>char</code> are the same byte to the machine, but not to the language: <code>"${b}"</code> with <code>b: u8 = 65</code> gives <code>65</code>, and the <code>char</code> gives <code>A</code>. To see the character of a byte, store it in a <code>char</code> variable. A <code>char</code> literal interpolates as its character.</p>
+<p>An <code>Array</code> or a <code>Map</code> has no conversion to text. Inside a list, <code>join</code> aborts with a message that names the slot; interpolating one is a compile error, <code>NYX1010</code>, with the hint to walk it or interpolate its parts.</p>
+</section>

@@ -1,0 +1,15 @@
+<!-- title: Tuple structs, scientific notation and narrow integers | blurb: A tuple struct has positional fields, built like a call and read with <code>.0</code>, <code>.1</code>; floats accept an exponent, and a narrow integer mixed with an <code>int</code> gives an <code>int</code>. -->
+<section data-part="intro">
+<p>A tuple struct has positional fields: <code>struct Punto(int, int)</code> is built as <code>Punto(3, 4)</code> and read with <code>p.0</code> and <code>p.1</code> (or <code>p._0</code>, <code>p._1</code>). It fits a newtype such as <code>Metros(float)</code>, or a pair that deserves its own name.</p>
+</section>
+<section data-part="output">
+25
+299800.0
+260
+4
+</section>
+<section data-part="explanation">
+<p>Float literals accept an exponent: <code>2.998e8</code>, <code>1.0e3</code>. The third line of the output is the speed of light in kilometers per second.</p>
+<p>A narrow integer (<code>u8</code>, <code>i32</code> and the rest) mixed with an <code>int</code> widens to <code>int</code>: <code>b + 10</code> with <code>b: u8 = 250</code> is <code>260</code>. Storing it back in a <code>u8</code> truncates it to <code>4</code>. Two operands of the same narrow type stay in their width and wrap there.</p>
+<p>Building a tuple struct with the wrong number of arguments is <code>NYX1006</code>; calling a struct with named fields as if it were one is <code>NYX1007</code>.</p>
+</section>

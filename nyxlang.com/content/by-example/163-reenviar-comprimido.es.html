@@ -1,0 +1,14 @@
+<!-- title: Reenviar una respuesta comprimida sin descomprimirla | blurb: Con <code>opts.cuerpo_crudo = true</code>, <code>try_http_stream_opts</code> acepta una respuesta con <code>Content-Encoding</code> y <code>read()</code> entrega los bytes como llegaron: un proxy deja pasar el gzip. -->
+<section data-part="intro">
+<p>Un proxy escrito en Nyx repite el pedido del navegador contra un servidor de atrás y devuelve la respuesta. Si ese servidor ya comprime, lo barato es dejar pasar esos bytes: descomprimir para volver a comprimir cuesta CPU y memoria. La receta corre sola: un hilo hace de servidor de atrás y comprime con <code>zip_gzip</code>.</p>
+</section>
+<section data-part="output">
+estado: 200
+Content-Encoding: gzip
+bytes recibidos: 159
+bytes al descomprimir: 10400
+</section>
+<section data-part="explanation">
+<p>Por defecto <code>try_http_stream_opts</code> responde <code>Err(unsupported)</code> ante cualquier <code>Content-Encoding</code>, porque <code>read_event()</code> no puede partir en líneas un cuerpo comprimido. Con <code>opts.cuerpo_crudo = true</code> la respuesta se acepta: <code>read()</code> entrega los bytes comprimidos, <code>headers()</code> muestra <code>Content-Encoding</code>, y <code>read_event()</code> es el que da <code>Err(unsupported)</code>. Los clientes que devuelven la respuesta entera, <code>try_http_request</code> y <code>try_http_request_opts</code>, nunca descomprimen.</p>
+<p>En un servidor con <code>std/serve</code> el reenvío completo son tres pasos: pasar el <code>Accept-Encoding</code> del cliente al pedido de atrás, abrir con <code>cuerpo_crudo</code>, y devolver <code>response_from_stream(s)</code>, que copia <code>Content-Encoding</code> y <code>Vary</code> junto con el resto de las cabeceras del contenido. La salida muestra los bytes recibidos y a cuánto descomprimen: son el gzip del origen, intactos.</p>
+</section>

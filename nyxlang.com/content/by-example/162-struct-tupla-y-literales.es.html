@@ -1,0 +1,15 @@
+<!-- title: Struct tupla, notación científica y enteros angostos | blurb: Un struct tupla tiene campos posicionales, se construye como una llamada y se lee con <code>.0</code>, <code>.1</code>; los floats aceptan exponente, y un entero angosto mezclado con un <code>int</code> da un <code>int</code>. -->
+<section data-part="intro">
+<p>Un struct tupla tiene campos posicionales: <code>struct Punto(int, int)</code> se construye como <code>Punto(3, 4)</code> y se lee con <code>p.0</code> y <code>p.1</code> (o <code>p._0</code>, <code>p._1</code>). Sirve para un newtype como <code>Metros(float)</code>, o para un par que merece nombre propio.</p>
+</section>
+<section data-part="output">
+25
+299800.0
+260
+4
+</section>
+<section data-part="explanation">
+<p>Los literales float aceptan exponente: <code>2.998e8</code>, <code>1.0e3</code>. La tercera línea de la salida es la velocidad de la luz en kilómetros por segundo.</p>
+<p>Un entero angosto (<code>u8</code>, <code>i32</code> y los demás) mezclado con un <code>int</code> se ensancha a <code>int</code>: <code>b + 10</code> con <code>b: u8 = 250</code> es <code>260</code>. Al guardarlo de vuelta en un <code>u8</code> se trunca a <code>4</code>. Dos operandos del mismo tipo angosto se quedan en su ancho y envuelven ahí.</p>
+<p>Construir un struct tupla con la cantidad equivocada de argumentos es <code>NYX1006</code>; llamar como si lo fuera a un struct de campos con nombre es <code>NYX1007</code>.</p>
+</section>

@@ -1,0 +1,14 @@
+<!-- title: Forward a compressed response without decompressing it | blurb: With <code>opts.cuerpo_crudo = true</code>, <code>try_http_stream_opts</code> accepts a response with <code>Content-Encoding</code> and <code>read()</code> hands over the bytes as they arrived: a proxy passes the gzip through. -->
+<section data-part="intro">
+<p>A proxy written in Nyx repeats the browser's request against a server behind it and returns the response. If that server already compresses, the cheap thing is to pass those bytes through: decompressing only to compress again costs CPU and memory. The recipe runs on its own: a thread plays the server behind and compresses with <code>zip_gzip</code>.</p>
+</section>
+<section data-part="output">
+estado: 200
+Content-Encoding: gzip
+bytes recibidos: 159
+bytes al descomprimir: 10400
+</section>
+<section data-part="explanation">
+<p>By default <code>try_http_stream_opts</code> answers <code>Err(unsupported)</code> to any <code>Content-Encoding</code>, because <code>read_event()</code> cannot split a compressed body into lines. With <code>opts.cuerpo_crudo = true</code> the response is accepted: <code>read()</code> delivers the compressed bytes, <code>headers()</code> shows <code>Content-Encoding</code>, and <code>read_event()</code> is the one that gives <code>Err(unsupported)</code>. The clients that return the whole response, <code>try_http_request</code> and <code>try_http_request_opts</code>, never decompress.</p>
+<p>In a server built on <code>std/serve</code> the full forward is three steps: pass the client's <code>Accept-Encoding</code> to the request behind, open with <code>cuerpo_crudo</code>, and return <code>response_from_stream(s)</code>, which copies <code>Content-Encoding</code> and <code>Vary</code> along with the rest of the content headers. The output shows the bytes received and what they decompress to: they are the origin's gzip, untouched.</p>
+</section>

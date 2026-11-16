@@ -1,0 +1,13 @@
+<!-- title: Texto por el tipo real: join e interpolación | blurb: <code>join</code> convierte cada casilla por su etiqueta de tipo y la interpolación usa el tipo Nyx del operando: un <code>u8</code> da el número, un <code>char</code> da el carácter. -->
+<section data-part="intro">
+<p><code>arr.join(sep)</code> convierte cada casilla por su etiqueta: enteros, floats y booleanos salen igual que con <code>to_string()</code>. La interpolación, <code>"${x}"</code>, y <code>String + x</code> usan el tipo Nyx del operando, no el tipo de máquina que hay debajo.</p>
+</section>
+<section data-part="output">
+1, 2, 3
+u8=65 char=A
+literal=z
+</section>
+<section data-part="explanation">
+<p>Un <code>u8</code> y un <code>char</code> son el mismo byte para la máquina, pero no para el lenguaje: <code>"${b}"</code> con <code>b: u8 = 65</code> da <code>65</code>, y el <code>char</code> da <code>A</code>. Para ver el carácter de un byte, se guarda en una variable <code>char</code>. Un literal <code>char</code> se interpola como su carácter.</p>
+<p>Un <code>Array</code> o un <code>Map</code> no tienen conversión a texto. Dentro de una lista, <code>join</code> aborta con un mensaje que nombra la casilla; interpolar uno es un error de compilación, <code>NYX1010</code>, con la pista de recorrerlo o interpolar sus partes.</p>
+</section>
