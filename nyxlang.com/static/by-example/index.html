@@ -80,6 +80,7 @@
 <li class="step"><a class="step-link" href="/by-example/145-csv-sin-split.html"><span class="step-num">145</span><span><span class="step-name">A large CSV without split() per row</span><span class="step-note note"><code>indexOf</code> finds the commas and <code>string_to_float_range</code> parses the number straight from the bytes, without creating a substring per field.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/146-csv-columnar.html"><span class="step-num">146</span><span><span class="step-name">A large CSV by columns</span><span class="step-note note"><code>try_csv_read</code> parses a CSV in one pass straight into typed columns; a <code>cat</code> column arrives as integer codes plus a dictionary, so grouping is indexing an array.</span></span></a></li>
 <li class="step"><a class="step-link" href="/by-example/147-cifrar-secreto-aes-gcm.html"><span class="step-num">147</span><span><span class="step-name">Store an encrypted secret you need to use again</span><span class="step-note note"><code>try_aes256gcm_seal</code> and <code>try_aes256gcm_open</code> from <code>std/crypto</code> encrypt with AES-256-GCM: if someone tampers with the stored value or copies it into another customer's record, opening it gives an <code>Err</code> instead of garbage.</span></span></a></li>
+<li class="step"><a class="step-link" href="/by-example/164-ndarray.html"><span class="step-num">164</span><span><span class="step-name">Numeric arrays with std/ndarray</span><span class="step-note note"><code>std/ndarray</code> brings numpy-style <code>float</code> arrays to the standard library, with no dependencies: array operators, reductions, <code>matmul</code> and a bridge to and from <code>Array&lt;float&gt;</code>.</span></span></a></li>
 </ol>
 </section>
 <section class="ex-cat">
@@ -205,7 +206,7 @@
 </main>
 <footer class="footer">
 <div class="footer-inner wrap">
-<p class="mono"><span class="footer-version">v0.44.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
 <p class="mono">nyxlang.com</p>
 </div>
 </footer>
