@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arreglos numéricos con std/ndarray — Nyx por ejemplo</title>
+<meta name="description" content="std/ndarray trae arreglos de float al estilo numpy en la biblioteca estándar, sin dependencias: operadores entre arreglos, reducciones, matmul y un puente de ida y vuelta con Array&lt;float&gt;.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/164-ndarray.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/164-ndarray.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/164-ndarray.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/164-ndarray.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/164-ndarray.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">164</span> / Entrada, salida y datos</span></p>
+<h1 class="doc-title">Arreglos numéricos con std/ndarray</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>import "std/ndarray"</code> da <code>NDArray</code>: un arreglo de <code>float</code> de una o más dimensiones sobre un buffer contiguo que administra el recolector de memoria, con los kernels escritos en Nyx. La receta recorre lo esencial: constructores, forma, acceso, operadores, escalares, reducciones, <code>matmul</code> y la ida y vuelta por un <code>Array&lt;float&gt;</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">164-ndarray.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/164-ndarray.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: arreglos numéricos con std/ndarray.</span>
+<span class="cm">//</span>
+<span class="cm">// NDArray es un arreglo de `float` de una o más dimensiones, en un buffer contiguo (orden por</span>
+<span class="cm">// filas) que administra el recolector. Esta receta recorre lo esencial: constructores, forma,</span>
+<span class="cm">// acceso, operadores, escalares, reducciones, matmul y el puente con un Array&lt;float&gt;.</span>
+<span class="cm">//</span>
+<span class="cm">// Tres límites que conviene conocer de entrada:</span>
+<span class="cm">//   - Los operadores + - * / son SOLO entre dos arreglos de la misma forma (sin broadcasting).</span>
+<span class="cm">//     El escalar va por método: a.add_scalar(2.0), a.mul_scalar(2.0).</span>
+<span class="cm">//   - No hay a[i, j] ni a[i] = x: se usa get / get2 / set / set2.</span>
+<span class="cm">//   - Copiar el struct (pasarlo a una función) COMPARTE el buffer; para una copia real, copy().</span>
+<span class="cm">//</span>
+<span class="cm">// Para medir velocidad se compila con `nyx build --release`; sin eso no hay optimización.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/ndarray&quot;</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="cm">// Constructores</span>
+    <span class="kw">let</span> ceros<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_zeros</span><span class="op">([</span><span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">])</span>
+    <span class="kw">let</span> rampa<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_arange</span><span class="op">(</span><span class="num">0.0</span><span class="op">,</span> <span class="num">6.0</span><span class="op">,</span> <span class="num">1.0</span><span class="op">)</span>        <span class="cm">// 0,1,2,3,4,5 (fin excluido)</span>
+    <span class="kw">let</span> tramos<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_linspace</span><span class="op">(</span><span class="num">0.0</span><span class="op">,</span> <span class="num">1.0</span><span class="op">,</span> <span class="num">5</span><span class="op">)</span>       <span class="cm">// 5 valores, extremos incluidos</span>
+    <span class="kw">let</span> m<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_from_rows</span><span class="op">([[</span><span class="num">1.0</span><span class="op">,</span> <span class="num">2.0</span><span class="op">],</span> <span class="op">[</span><span class="num">3.0</span><span class="op">,</span> <span class="num">4.0</span><span class="op">]])</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;ceros: &quot;</span> <span class="op">+</span> ceros<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;linspace: &quot;</span> <span class="op">+</span> tramos<span class="op">.</span><span class="fn">to_string_fixed</span><span class="op">(</span><span class="num">2</span><span class="op">))</span>
+
+    <span class="cm">// Forma y reordenamiento (cada uno devuelve un arreglo nuevo)</span>
+    <span class="kw">let</span> grid<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> rampa<span class="op">.</span><span class="fn">reshape</span><span class="op">([</span><span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">])</span>
+    <span class="kw">let</span> t<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> grid<span class="op">.</span><span class="fn">transpose</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;grid &quot;</span> <span class="op">+</span> grid<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot; ndim=&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>grid<span class="op">.</span><span class="fn">ndim</span><span class="op">()))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;transpuesta &quot;</span> <span class="op">+</span> t<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+
+    <span class="cm">// Acceso: get/get2 leen, set/set2 escriben</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;grid[1][2] = &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>grid<span class="op">.</span><span class="fn">get2</span><span class="op">(</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">)))</span>
+    grid<span class="op">.</span><span class="fn">set2</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">,</span> <span class="num">10.0</span><span class="op">)</span>
+    <span class="kw">let</span> fila0<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> grid<span class="op">.</span><span class="fn">row</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> col2<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> grid<span class="op">.</span><span class="fn">col</span><span class="op">(</span><span class="num">2</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;fila 0: &quot;</span> <span class="op">+</span> fila0<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot;  columna 2: &quot;</span> <span class="op">+</span> col2<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+
+    <span class="cm">// Operadores entre arreglos de la misma forma; el escalar va por método</span>
+    <span class="kw">let</span> a<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_from_array</span><span class="op">([</span><span class="num">1.0</span><span class="op">,</span> <span class="num">2.0</span><span class="op">,</span> <span class="num">3.0</span><span class="op">])</span>
+    <span class="kw">let</span> b<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_from_array</span><span class="op">([</span><span class="num">10.0</span><span class="op">,</span> <span class="num">20.0</span><span class="op">,</span> <span class="num">30.0</span><span class="op">])</span>
+    <span class="cm">// (el resultado de una llamada no admite métodos encadenados: se liga a una variable)</span>
+    <span class="kw">let</span> suma<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> a <span class="op">+</span> b
+    <span class="kw">let</span> prod<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> a <span class="op">*</span> b
+    <span class="kw">let</span> mas2<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> a<span class="op">.</span><span class="fn">add_scalar</span><span class="op">(</span><span class="num">2.0</span><span class="op">)</span>
+    <span class="kw">let</span> por2<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> a<span class="op">.</span><span class="fn">mul_scalar</span><span class="op">(</span><span class="num">2.0</span><span class="op">)</span>
+    <span class="kw">let</span> raiz<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> b<span class="op">.</span><span class="fn">sqrt</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a + b = &quot;</span> <span class="op">+</span> suma<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a * b = &quot;</span> <span class="op">+</span> prod<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a + 2 = &quot;</span> <span class="op">+</span> mas2<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a * 2 = &quot;</span> <span class="op">+</span> por2<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;sqrt  = &quot;</span> <span class="op">+</span> raiz<span class="op">.</span><span class="fn">to_string_fixed</span><span class="op">(</span><span class="num">3</span><span class="op">))</span>
+
+    <span class="cm">// Copias: pasar el struct comparte el buffer; copy() lo separa</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> a<span class="op">.</span><span class="fn">copy</span><span class="op">()</span>
+    c<span class="op">.</span><span class="fn">set</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">99.0</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a sigue en &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>a<span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="num">0</span><span class="op">))</span> <span class="op">+</span> <span class="str">&quot;, la copia en &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>c<span class="op">.</span><span class="fn">get</span><span class="op">(</span><span class="num">0</span><span class="op">)))</span>
+
+    <span class="cm">// Reducciones</span>
+    <span class="kw">let</span> datos<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_from_array</span><span class="op">([</span><span class="num">2.0</span><span class="op">,</span> <span class="num">4.0</span><span class="op">,</span> <span class="num">4.0</span><span class="op">,</span> <span class="num">4.0</span><span class="op">,</span> <span class="num">5.0</span><span class="op">,</span> <span class="num">5.0</span><span class="op">,</span> <span class="num">7.0</span><span class="op">,</span> <span class="num">9.0</span><span class="op">])</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma=&quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">sum</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; media=&quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">mean</span><span class="op">()))</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;std=&quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">std</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; (poblacional)&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;min=&quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">min</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; en &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">argmin</span><span class="op">())</span>
+        <span class="op">+</span> <span class="str">&quot;, max=&quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">max</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot; en &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>datos<span class="op">.</span><span class="fn">argmax</span><span class="op">()))</span>
+    <span class="kw">let</span> por_col<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> m<span class="op">.</span><span class="fn">sum_axis</span><span class="op">(</span><span class="num">0</span><span class="op">)</span>
+    <span class="kw">let</span> por_fila<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> m<span class="op">.</span><span class="fn">sum_axis</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;suma por columnas: &quot;</span> <span class="op">+</span> por_col<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span> <span class="op">+</span> <span class="str">&quot;, por filas: &quot;</span> <span class="op">+</span> por_fila<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;a . b = &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>a<span class="op">.</span><span class="fn">dot</span><span class="op">(</span>b<span class="op">))</span> <span class="op">+</span> <span class="str">&quot;, |a| = &quot;</span> <span class="op">+</span> <span class="fn">float_to_fixed</span><span class="op">(</span>a<span class="op">.</span><span class="fn">norm</span><span class="op">(),</span> <span class="num">4</span><span class="op">))</span>
+
+    <span class="cm">// Producto de matrices</span>
+    <span class="kw">let</span> p<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> m<span class="op">.</span><span class="fn">matmul</span><span class="op">(</span><span class="fn">nd_eye</span><span class="op">(</span><span class="num">2</span><span class="op">))</span>
+    <span class="kw">let</span> m2<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> m<span class="op">.</span><span class="fn">matmul</span><span class="op">(</span>m<span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;m @ I = &quot;</span> <span class="op">+</span> p<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;m @ m = &quot;</span> <span class="op">+</span> m2<span class="op">.</span><span class="fn">to_string</span><span class="op">())</span>
+
+    <span class="cm">// Puente con Array&lt;float&gt;: entra con nd_from_array, sale con to_array</span>
+    <span class="kw">let</span> lista<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">float</span><span class="op">&gt;</span> <span class="op">=</span> <span class="op">[</span><span class="num">3.5</span><span class="op">,</span> <span class="num">1.5</span><span class="op">,</span> <span class="num">2.0</span><span class="op">]</span>
+    <span class="kw">let</span> nd<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> <span class="fn">nd_from_array</span><span class="op">(</span>lista<span class="op">)</span>
+    <span class="kw">let</span> doble<span class="op">:</span> <span class="ty">NDArray</span> <span class="op">=</span> nd<span class="op">.</span><span class="fn">mul_scalar</span><span class="op">(</span><span class="num">2.0</span><span class="op">)</span>
+    <span class="kw">let</span> de_vuelta<span class="op">:</span> <span class="ty">Array</span><span class="op">&lt;</span><span class="ty">float</span><span class="op">&gt;</span> <span class="op">=</span> doble<span class="op">.</span><span class="fn">to_array</span><span class="op">()</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;de vuelta: &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>de_vuelta<span class="op">[</span><span class="num">0</span><span class="op">])</span> <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>de_vuelta<span class="op">[</span><span class="num">1</span><span class="op">])</span> <span class="op">+</span> <span class="str">&quot; &quot;</span> <span class="op">+</span> <span class="fn">float_to_string</span><span class="op">(</span>de_vuelta<span class="op">[</span><span class="num">2</span><span class="op">]))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">ceros: NDArray [2, 3] [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+linspace: NDArray [5] [0.00, 0.25, 0.50, 0.75, 1.00]
+grid NDArray [2, 3] [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]] ndim=2
+transpuesta NDArray [3, 2] [[0.0, 3.0], [1.0, 4.0], [2.0, 5.0]]
+grid[1][2] = 5.0
+fila 0: NDArray [3] [10.0, 1.0, 2.0]  columna 2: NDArray [2] [2.0, 5.0]
+a + b = NDArray [3] [11.0, 22.0, 33.0]
+a * b = NDArray [3] [10.0, 40.0, 90.0]
+a + 2 = NDArray [3] [3.0, 4.0, 5.0]
+a * 2 = NDArray [3] [2.0, 4.0, 6.0]
+sqrt  = NDArray [3] [3.162, 4.472, 5.477]
+a sigue en 1.0, la copia en 99.0
+suma=40.0 media=5.0
+std=2.0 (poblacional)
+min=2.0 en 0, max=9.0 en 7
+suma por columnas: NDArray [2] [4.0, 6.0], por filas: NDArray [2] [3.0, 7.0]
+a . b = 140.0, |a| = 3.7417
+m @ I = NDArray [2, 2] [[1.0, 2.0], [3.0, 4.0]]
+m @ m = NDArray [2, 2] [[7.0, 10.0], [15.0, 22.0]]
+de vuelta: 7.0 3.0 4.0</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Conviene conocer tres límites de entrada. Los operadores <code>+ - * /</code> funcionan solo entre dos arreglos de la misma forma, sin broadcasting; el escalar va por método (<code>a.add_scalar(2.0)</code>, <code>a.mul_scalar(2.0)</code>), y <code>a * 2.0</code> es un error de compilación. No hay <code>a[i, j]</code>: se lee y se escribe con <code>get</code>, <code>get2</code>, <code>set</code> y <code>set2</code>. Y pasar un <code>NDArray</code> a una función comparte su buffer; <code>copy()</code> hace uno aparte.</p>
+<p>La velocidad pide <code>nyx build --release</code>; sin eso los kernels corren varias veces más lentos. Compilado así, empata o supera a numpy en operaciones elemento a elemento y reducciones, y gana con arreglos pequeños, donde numpy paga un costo fijo por llamada. En multiplicación de matrices numpy, que llama a BLAS, sigue siendo varias veces más veloz. La tabla medida, con la máquina y el método, está en la sección <code>std/ndarray</code> de <code>docs/SPEC.md</code> del repositorio.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/160-respuesta-por-trozos.html"><span class="label">← Anterior</span><span class="doc-nav-name">Responder un cuerpo grande por trozos</span></a>
+
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

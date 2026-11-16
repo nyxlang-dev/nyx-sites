@@ -137,6 +137,7 @@ std_csv_note = "Un lector columnar: millones de filas a columnas tipadas en una 
 std_http_note = "Cliente HTTP: pedidos, cabeceras, plazos y TLS."
 std_image_note = "Decodificar, achicar y codificar imágenes: miniaturas de productos."
 std_json_note = "Parsear JSON a mapas y arreglos, y volver a serializarlo."
+std_ndarray_note = "Arreglos de float al estilo numpy: operadores, reducciones y matmul, sin dependencias."
 std_label = "Biblioteca estándar"
 std_lede = "Todo lo de abajo viene con el toolchain: no hay paquete que agregar. Cada entrada abre una receta que compila y corre con la versión del pie de página."
 std_pdf_note = "Generar una factura en PDF: texto, líneas, una imagen y un código QR."

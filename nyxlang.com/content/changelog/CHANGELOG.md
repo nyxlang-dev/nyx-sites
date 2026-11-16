@@ -9,7 +9,86 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## [0.45.0] — 2026-11-16
+
+### Added
+
+- **`std/ndarray`: arreglos numéricos de `float`** [arco: numerico]: `import "std/ndarray"` trae `NDArray`, un
+  arreglo de una o más dimensiones sobre un buffer contiguo que administra el recolector, con los kernels escritos
+  en Nyx. Constructores `nd_zeros`, `nd_ones`, `nd_full`, `nd_arange`, `nd_linspace`, `nd_from_array`,
+  `nd_from_rows`, `nd_eye`; forma y acceso (`shape`, `reshape`, `transpose`, `get`/`get2`, `set`/`set2`, `row`,
+  `col`, `slice`); `a + b`, `a - b`, `a * b`, `a / b` entre arreglos de la misma forma; `add_scalar`,
+  `mul_scalar`, `add_scaled` (en el lugar), `map`, `sqrt`, `abs`, `exp`, `log`; reducciones (`sum`, `mean`,
+  `min`, `max`, `argmin`, `argmax`, `std`, `sum_axis`, `mean_axis`); `dot`, `matmul`, `norm`. La API pública
+  valida límites y formas; un error de programa es `panic` con las formas en el mensaje, y `try_reshape` /
+  `try_nd_from_rows` devuelven `Result`. Lo que el lenguaje no deja escribir: `a[i, j]`, `2.0 * a` y `a * 2.0`
+  (el escalar va por método). Tests: `stdlib-suite/test-556` a `558`. `make test` 565 → 568.
+
+- **`alloc_gc<T>(n)` y `#[fast_math]`** [arco: numerico]: dos piezas para cómputo numérico sobre punteros crudos.
+  `alloc_gc<T>(n)` devuelve un `*T` como `alloc<T>(n)`, pero sobre memoria del recolector: no se libera a mano y
+  el recolector no la recorre (es para buffers de escalares; no viene en cero). `#[fast_math]` sobre una función
+  deja reordenar y fundir su aritmética de `float` (`reassoc contract` de LLVM; `NaN` e infinitos conservan su
+  significado), que es lo que hace falta para que una suma vectorice: sobre 2048 floats, 33 ms sin el atributo y
+  8 ms con él, lo mismo que C con `-ffast-math`. El resultado puede diferir en los últimos dígitos. Tests:
+  `systems/test-553`, `systems/test-554`, y un check más en `run_alloca_entry_audit.sh`. `make test` 562 → 564.
+
+- **`std/http`: `HttpStreamOpts.cuerpo_crudo` para reenviar una respuesta comprimida sin descomprimirla**
+  `[dogfooding:nyxerp]`: `try_http_stream_opts` cortaba con `Err(unsupported)` ante cualquier `Content-Encoding`,
+  así que un proxy escrito en Nyx tenía que pedir sin comprimir y comprimir él. Con `opts.cuerpo_crudo = true` la
+  respuesta se acepta, `read()` entrega los bytes como llegaron y `read_event()` es el que da `Err(unsupported)`.
+  `response_from_stream` (`std/serve`) copia ahora `Content-Encoding` y `Vary`, y conserva el `Content-Length` del
+  origen también en ese caso. Sin la opción nada cambia (el mensaje del error la nombra). Test 504, cuatro casos en
+  `test_serve_std_chunks.py`, `tests/ai-first/55` y receta 163.
+
+- **HTTP/2: el código Huffman de `{` estaba mal y mataba la conexión** [arco: gateway-http2] — la tabla de
+  HPACK tenía `{` con 19 bits en vez de 15, así que cualquier cabecera comprimida que lo llevara terminaba en
+  `GOAWAY COMPRESSION_ERROR`. Cloudflare manda `cf-visitor: {"scheme":"https"}` a todo origen: un sitio
+  detrás de Cloudflare con «HTTP/2 to Origin» daba 520 en cada petición. El test nuevo recorre los 255
+  símbolos contra un código reconstruido solo desde las longitudes (el código de HPACK es canónico).
+  Además, `NYX_H2_TRACE=1` escribe a stderr los frames y el motivo de cada rechazo (`docs/HTTP2.md`).
+- **Servidor HTTP/2 real: TLS con ALPN `h2`, control de flujo y respuestas por partes** [arco: gateway-http2]
+  (fricción de nyxerp): con HTTP/1.1 un navegador abre 6 conexiones por dominio y cada canal SSE ocupa una, así
+  que la séptima petición esperaba. `std/http2` se rehízo sobre un motor de conexión sin E/S en el runtime
+  (`nyx_h2c_*`): HPACK con tabla dinámica y Huffman —el decodificador anterior no tenía tabla dinámica y un
+  navegador real fallaba en la segunda petición—, control de flujo en los dos sentidos, `CONTINUATION`,
+  validación de cabeceras y topes contra rapid reset, inundación de `PING`/`SETTINGS`, cabeceras gigantes y
+  cuerpos sin límite. API nueva: `h2_serve_tls`, `h2_serve_tls_conn` y la sesión (`h2_session_new`, `h2_feed`,
+  `h2_next_event`, `h2_respond_start`, `h2_send_data`, `h2_end`, `h2_take_output`…). `h2_serve` conserva su
+  firma. Lo usa `nyx-proxy` 0.4.14 (`http2 = true`), encendido en el gateway de producción el 2026-11-13. Detalle y topes: `docs/HTTP2.md`.
+- **ALPN en el servidor TLS** (`std/tls`): `tls_server_alpn("h2,http/1.1")` y `tls_alpn(h)`. Apagado si no se
+  llama. `tls_wait_any(h, fds, ms)` espera a la vez una conexión TLS y varios descriptores.
+- **`thread_detach(tid)`** (`std/sync`): suelta un hilo que nadie va a esperar con `thread_join`; sin eso, cada
+  hilo terminado dejaba su pila reservada.
+- **Notación científica en literales float**: `1.5e3`, `2.0E-2`, `1e3`, `6.02e+23`. Antes daba `NYX1002`
+  («'e3' not declared»). Test `language/test-549`.
+- **Struct tupla completo**: `struct Point(int, int)` acepta varios campos, se construye con `Point(3, 4)` y se lee
+  con `p.0` además de `p._0`. La declaración aceptaba un solo tipo y el constructor no existía, aunque `docs/SPEC.md`
+  los describía. Aridad equivocada: `NYX1006`; llamar a un struct de campos con nombre: `NYX1007`. Test
+  `language/test-548`, receta 162.
+
 ### Changed
+
+- **Los bucles de Nyx vectorizan y un `let` dentro de un bucle va a registro** [arco: allocas-al-entry]: el
+  compilador emitía cada variable local donde aparecía y, para que eso no desbordara el stack en un bucle,
+  agregaba una llamada (`llvm.stackrestore`) al inicio de cada iteración. Esa llamada sobrevivía a `-O2`, así
+  que ningún bucle vectorizaba, y la variable quedaba en memoria. Ahora todas las variables locales de tamaño
+  fijo se emiten en el bloque de entrada de la función y la llamada desaparece. Medido con `--release` sobre
+  `*float` (Neoverse-N1): multiplicación de matrices 512×512 de 129 a 50 ms (C: 47), `y = k*x + y` sobre 2048
+  elementos ×20 000 de 41 a 14 ms (C: 12). El comportamiento de los programas no cambia. Lo que sí cambia es el
+  texto del IR: los temporales pasan de `%12` a `%t12`. Spike y programas de medición:
+  `docs/design/spikes/2026-11-16-numerico-vectorizacion.md`, `scripts/bench_numerico/`. Guarda nueva
+  `run_alloca_entry_audit.sh` en `make test-ai-first`. Los techos de `run_stack_frame_audit.sh` suben por
+  contabilidad (la reserva que era dinámica ahora es estática); el límite real de una expresión larga con 8 MB
+  quedó igual sin SROA (310 operandos) y subió con SROA (2362 → 2478).
+
+- **Un diagnóstico dentro de un módulo importado nombra el módulo** (fricción de nyxerp 20261114-090003): los
+  errores y avisos del semántico pasan de «in 'f' (line 925)» a «in 'f' (std/serve, line 925)», y los de parse de
+  «--> line 3:10» a «--> src/util, line 3:10». Bajo `NYX_DIAG=json` llevan un campo `module`. En el archivo
+  principal el texto no cambia y el campo se omite: una línea sin módulo es siempre del archivo que se compila.
+  Quien lea el texto con una expresión regular sobre «(line N)» tiene que admitir el módulo delante. Los errores
+  de codegen (`NYX2xxx`) y el borrow checker opcional todavía no lo llevan. `make test-errors` 424 → 429.
 
 - **El playground corre sin el repo** (encargo de la sesión del servidor): `playground/server.nx` compilaba con
   `./nyx_bootstrap` y las fuentes del runtime del árbol, escribía `script.nx`/`script.ll` en la raíz del repo en
@@ -20,13 +99,39 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
   fuentes wasm sale de `runtime/wasm.srcs` (la copia del servidor había divergido). `make playground-dist
   DEST=<dir>` arma el directorio de versión. Guarda `make test-playground` (15 checks, también en `make test-wasm`).
 
-### Security
-
-- **El playground servía archivos fuera de `examples/` y `static/`**: `/api/example/<nombre>` y `/static/<ruta>`
-  pegaban el nombre del pedido a la ruta sin validarlo, así que `..` alcanzaba cualquier `.nx` (y cualquier
-  estático) legible por el proceso. Los nombres se validan ahora (sin `..`, solo letras, dígitos, `-`, `_`, `.`).
-
 ### Fixed
+
+- **El operando derecho de un operador sobrecargado se chequea contra la firma del `impl`** [arco: numerico]:
+  `a * 3.0` contra `impl Mul for W { fn mul(self, other: W) }` compilaba y el codegen le pasaba un `float` a una
+  función que espera un `W`: basura con código de salida 0, o un fallo de segmento si el struct lleva un puntero
+  (así apareció, con `NDArray + 2.0`). Ahora es NYX1005: «operando derecho de '*': 'W' implementa 'Mul' con un W,
+  se obtuvo float». Un `impl` que declara un escalar a la derecha (`fn mul(self, k: float)`) sigue funcionando.
+  Código que hoy compile con el tipo equivocado a la derecha de un operador deja de compilar; ya estaba roto en
+  ejecución. Tests: `errors/test-operador-rhs-tipo`, `errors/positive-operador-rhs-escalar`.
+
+- **`!=` entre floats con un `NaN` daba `false`** [arco: numerico]: se emitía como «ordenados y distintos»
+  (`fcmp one`) en vez de como la negación de `==` (`fcmp une`). `x != x` no detectaba un `NaN` y `nan != 1.0`
+  decía que eran iguales, sin ningún aviso. Lo encontró el agente que escribía el núcleo de `std/ndarray`, al ver
+  que un `NaN` se imprimía como `0.000`. `==`, `<` y `>` ya eran correctos. Quien haya escrito `not (x == x)`
+  para detectar un `NaN` puede dejarlo así. Test: `language/test-555`. `make test` 564 → 565.
+
+- **Una función `#[export_name]` se puede llamar desde Nyx en todos los targets** (reporte de venezuelainfo,
+  2026-11-15): el compilador daba `check OK` y el fallo salía recién en clang, sin nombrar la función ni el
+  atributo. En wasm el `define` salía con el nombre de export y las llamadas con el de Nyx, así que fallaba
+  siempre que diferían — en un módulo importado, siempre, porque ahí la función se llama `<módulo>__<fn>`
+  (`use of undefined value '@mod__saluda'`). Fuera de wasm, si los dos nombres coincidían, el alias externo
+  redefinía el símbolo (`redefinition of function '@saluda'`). Ahora la función conserva su nombre de Nyx en
+  todos los targets: en wasm el nombre de export lo pone solo el atributo `wasm-export-name`, y en nativo, con
+  nombres iguales, la función sale externa sin alias. El mapa de cobertura deja de traducir el nombre.
+  Guarda: `run_export_name_matrix.sh` (principal/módulo × nativo/wasm, 4 celdas) en `make test-ai-first`.
+
+- **`let cerrar = fn() {...}` + `cerrar()` daba NYX1036 si otro módulo tenía una `fn cerrar` privada** (regresión de
+  0.44.0, fricción de nyxerp 20261114-090003): el chequeo de visibilidad miraba el nombre de la llamada sin preguntar
+  a qué resolvía, así que una closure local, una variable o un parámetro homónimos de una privada ajena cortaban la
+  compilación. Llegó por `std/serve` (`response_file` tiene una closure local `cerrar`): importar el módulo rompía a
+  un proyecto con su propia `fn cerrar` privada. Ahora aplica solo cuando el nombre resuelve a una función de módulo;
+  el código generado ya llamaba a la closure local. Caso ai-first 56 (55 → 56 programas) y gotcha
+  `local-closure-shadows-private`.
 
 - **Los nombres de cabecera HTTP ya no distinguen mayúsculas** `[dogfooding:nyxerp]`: `http_find_header` comparaba
   el nombre tal cual y `std/web` armaba `req.cookies` solo si la cabecera se llamaba `Cookie`. Un pedido con
@@ -92,43 +197,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
   error directo. Tests: `test-nyx1010-interpolar-array`/`-map`, `test-nyx1010-concat-struct`,
   `codegen-interpolar-tupla` y `language/test-544` [dogfooding:landing].
 
----
+### Security
 
-### Added
-
-- **`std/http`: `HttpStreamOpts.cuerpo_crudo` para reenviar una respuesta comprimida sin descomprimirla**
-  `[dogfooding:nyxerp]`: `try_http_stream_opts` cortaba con `Err(unsupported)` ante cualquier `Content-Encoding`,
-  así que un proxy escrito en Nyx tenía que pedir sin comprimir y comprimir él. Con `opts.cuerpo_crudo = true` la
-  respuesta se acepta, `read()` entrega los bytes como llegaron y `read_event()` es el que da `Err(unsupported)`.
-  `response_from_stream` (`std/serve`) copia ahora `Content-Encoding` y `Vary`, y conserva el `Content-Length` del
-  origen también en ese caso. Sin la opción nada cambia (el mensaje del error la nombra). Test 504, cuatro casos en
-  `test_serve_std_chunks.py`, `tests/ai-first/55` y receta 163.
-
-- **HTTP/2: el código Huffman de `{` estaba mal y mataba la conexión** [arco: gateway-http2] — la tabla de
-  HPACK tenía `{` con 19 bits en vez de 15, así que cualquier cabecera comprimida que lo llevara terminaba en
-  `GOAWAY COMPRESSION_ERROR`. Cloudflare manda `cf-visitor: {"scheme":"https"}` a todo origen: un sitio
-  detrás de Cloudflare con «HTTP/2 to Origin» daba 520 en cada petición. El test nuevo recorre los 255
-  símbolos contra un código reconstruido solo desde las longitudes (el código de HPACK es canónico).
-  Además, `NYX_H2_TRACE=1` escribe a stderr los frames y el motivo de cada rechazo (`docs/HTTP2.md`).
-- **Servidor HTTP/2 real: TLS con ALPN `h2`, control de flujo y respuestas por partes** [arco: gateway-http2]
-  (fricción de nyxerp): con HTTP/1.1 un navegador abre 6 conexiones por dominio y cada canal SSE ocupa una, así
-  que la séptima petición esperaba. `std/http2` se rehízo sobre un motor de conexión sin E/S en el runtime
-  (`nyx_h2c_*`): HPACK con tabla dinámica y Huffman —el decodificador anterior no tenía tabla dinámica y un
-  navegador real fallaba en la segunda petición—, control de flujo en los dos sentidos, `CONTINUATION`,
-  validación de cabeceras y topes contra rapid reset, inundación de `PING`/`SETTINGS`, cabeceras gigantes y
-  cuerpos sin límite. API nueva: `h2_serve_tls`, `h2_serve_tls_conn` y la sesión (`h2_session_new`, `h2_feed`,
-  `h2_next_event`, `h2_respond_start`, `h2_send_data`, `h2_end`, `h2_take_output`…). `h2_serve` conserva su
-  firma. Lo usa `nyx-proxy` 0.4.14 (`http2 = true`), encendido en el gateway de producción el 2026-11-13. Detalle y topes: `docs/HTTP2.md`.
-- **ALPN en el servidor TLS** (`std/tls`): `tls_server_alpn("h2,http/1.1")` y `tls_alpn(h)`. Apagado si no se
-  llama. `tls_wait_any(h, fds, ms)` espera a la vez una conexión TLS y varios descriptores.
-- **`thread_detach(tid)`** (`std/sync`): suelta un hilo que nadie va a esperar con `thread_join`; sin eso, cada
-  hilo terminado dejaba su pila reservada.
-- **Notación científica en literales float**: `1.5e3`, `2.0E-2`, `1e3`, `6.02e+23`. Antes daba `NYX1002`
-  («'e3' not declared»). Test `language/test-549`.
-- **Struct tupla completo**: `struct Point(int, int)` acepta varios campos, se construye con `Point(3, 4)` y se lee
-  con `p.0` además de `p._0`. La declaración aceptaba un solo tipo y el constructor no existía, aunque `docs/SPEC.md`
-  los describía. Aridad equivocada: `NYX1006`; llamar a un struct de campos con nombre: `NYX1007`. Test
-  `language/test-548`, receta 162.
+- **El playground servía archivos fuera de `examples/` y `static/`**: `/api/example/<nombre>` y `/static/<ruta>`
+  pegaban el nombre del pedido a la ruta sin validarlo, así que `..` alcanzaba cualquier `.nx` (y cualquier
+  estático) legible por el proceso. Los nombres se validan ahora (sin `..`, solo letras, dígitos, `-`, `_`, `.`).
 
 ## [0.44.0] — 2026-11-10
 

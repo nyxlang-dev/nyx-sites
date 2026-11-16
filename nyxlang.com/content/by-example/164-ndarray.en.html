@@ -1,0 +1,30 @@
+<!-- title: Numeric arrays with std/ndarray | blurb: <code>std/ndarray</code> brings numpy-style <code>float</code> arrays to the standard library, with no dependencies: array operators, reductions, <code>matmul</code> and a bridge to and from <code>Array&lt;float&gt;</code>. -->
+<section data-part="intro">
+<p><code>import "std/ndarray"</code> gives <code>NDArray</code>: an array of <code>float</code> with one or more dimensions over a contiguous buffer that the garbage collector manages, with the kernels written in Nyx. The recipe walks through the essentials: constructors, shape, access, operators, scalars, reductions, <code>matmul</code> and the round trip through an <code>Array&lt;float&gt;</code>.</p>
+</section>
+<section data-part="output">
+ceros: NDArray [2, 3] [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+linspace: NDArray [5] [0.00, 0.25, 0.50, 0.75, 1.00]
+grid NDArray [2, 3] [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]] ndim=2
+transpuesta NDArray [3, 2] [[0.0, 3.0], [1.0, 4.0], [2.0, 5.0]]
+grid[1][2] = 5.0
+fila 0: NDArray [3] [10.0, 1.0, 2.0]  columna 2: NDArray [2] [2.0, 5.0]
+a + b = NDArray [3] [11.0, 22.0, 33.0]
+a * b = NDArray [3] [10.0, 40.0, 90.0]
+a + 2 = NDArray [3] [3.0, 4.0, 5.0]
+a * 2 = NDArray [3] [2.0, 4.0, 6.0]
+sqrt  = NDArray [3] [3.162, 4.472, 5.477]
+a sigue en 1.0, la copia en 99.0
+suma=40.0 media=5.0
+std=2.0 (poblacional)
+min=2.0 en 0, max=9.0 en 7
+suma por columnas: NDArray [2] [4.0, 6.0], por filas: NDArray [2] [3.0, 7.0]
+a . b = 140.0, |a| = 3.7417
+m @ I = NDArray [2, 2] [[1.0, 2.0], [3.0, 4.0]]
+m @ m = NDArray [2, 2] [[7.0, 10.0], [15.0, 22.0]]
+de vuelta: 7.0 3.0 4.0
+</section>
+<section data-part="explanation">
+<p>Three limits are worth knowing up front. The operators <code>+ - * /</code> work only between two arrays of the same shape, with no broadcasting; a scalar goes through a method (<code>a.add_scalar(2.0)</code>, <code>a.mul_scalar(2.0)</code>), and <code>a * 2.0</code> is a compile error. There is no <code>a[i, j]</code>: reads and writes go through <code>get</code>, <code>get2</code>, <code>set</code> and <code>set2</code>. And passing an <code>NDArray</code> to a function shares its buffer; <code>copy()</code> makes a separate one.</p>
+<p>Speed needs <code>nyx build --release</code>; without it the kernels run several times slower. Compiled that way it ties or beats numpy on elementwise operations and reductions, and wins on small arrays, where numpy pays a fixed cost per call. On matrix multiplication numpy, which calls BLAS, is still several times faster. The measured table, with the machine and the method, is in the <code>std/ndarray</code> section of <code>docs/SPEC.md</code> in the repository.</p>
+</section>
