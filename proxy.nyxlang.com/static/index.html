@@ -68,6 +68,7 @@ name        = <span class="str">"web"</span>
 host        = <span class="str">"127.0.0.1"</span>
 port        = <span class="num">3000</span>
 hostname    = <span class="str">"example.com"</span>
+cache       = <span class="num">true</span>          <span class="cm"># opt-in per upstream; needs [cache] enabled = 1</span>
 
 <span class="op">[</span><span class="kw">upstream.1</span><span class="op">]</span>
 name        = <span class="str">"api"</span>
@@ -111,12 +112,19 @@ hostname    = <span class="str">"*.example.com"</span></pre>
 <span class="out"># certs land in /etc/letsencrypt/live/example.com/</span></pre>
 
     <h3 style="margin-top:2rem">4 &middot; Write proxy.toml</h3>
-    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Point <code>tls_cert</code> / <code>tls_key</code> at the issued cert, list your upstreams by hostname (see the config above), and turn on caching, metrics and rate limiting as needed.</p>
+    <p style="color:var(--ink-2);font-size:0.94rem;margin-top:0.4rem">Point <code>tls_cert</code> / <code>tls_key</code> at the issued cert, list your upstreams by hostname (see the config above), and turn on caching, metrics and rate limiting as needed. Caching is opt-in per upstream: <code>[cache] enabled = 1</code> alone stores nothing &mdash; add <code>cache = true</code> to each upstream you want cached.</p>
 <pre><span class="op">[</span><span class="kw">server</span><span class="op">]</span>
 listen   = <span class="num">443</span>
 workers  = <span class="num">64</span>
 tls_cert = <span class="str">"/etc/letsencrypt/live/example.com/fullchain.pem"</span>
 tls_key  = <span class="str">"/etc/letsencrypt/live/example.com/privkey.pem"</span>
+
+<span class="op">[</span><span class="kw">upstream.0</span><span class="op">]</span>
+name     = <span class="str">"web"</span>
+host     = <span class="str">"127.0.0.1"</span>
+port     = <span class="num">3000</span>
+hostname = <span class="str">"example.com"</span>
+cache    = <span class="num">true</span>                <span class="cm"># cache this upstream</span>
 
 <span class="op">[</span><span class="kw">cache</span><span class="op">]</span>
 enabled  = <span class="num">1</span>
@@ -189,7 +197,7 @@ WantedBy=multi-user.target</pre>
         </div>
         <div class="card">
             <div class="card-title">Response cache (LRU + TTL)</div>
-            <div class="card-desc">Caches GET 200 responses under HOST:PATH and honours upstream Cache-Control (no-store / no-cache / private bypass; max-age overrides). Hits are marked <code>X-Nyx-Cache: HIT</code>.</div>
+            <div class="card-desc">Opt-in per upstream (<code>cache = true</code>). Caches GET 200 responses and honours upstream Cache-Control (no-store / no-cache / private bypass; s-maxage / max-age set the TTL). Requests carrying <code>Cookie</code> or <code>Authorization</code> never touch the cache, and responses with <code>Set-Cookie</code> are never stored. <code>Vary: Accept-Encoding</code> is kept per variant; conditional requests get a <code>304</code> straight from the cache. Hits are marked <code>X-Nyx-Cache: HIT</code>.</div>
         </div>
         <div class="card">
             <div class="card-title">Prometheus /metrics</div>
