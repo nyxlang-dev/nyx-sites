@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forward a compressed response without decompressing it — Nyx by example</title>
+<meta name="description" content="With opts.cuerpo_crudo = true, try_http_stream_opts accepts a response with Content-Encoding and read() hands over the bytes as they arrived: a proxy passes the gzip through.">
+<link rel="canonical" href="https://nyxlang.com/by-example/163-reenviar-comprimido.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/163-reenviar-comprimido.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/163-reenviar-comprimido.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/163-reenviar-comprimido.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/163-reenviar-comprimido.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">163</span> / Networking</span></p>
+<h1 class="doc-title">Forward a compressed response without decompressing it</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>A proxy written in Nyx repeats the browser's request against a server behind it and returns the response. If that server already compresses, the cheap thing is to pass those bytes through: decompressing only to compress again costs CPU and memory. The recipe runs on its own: a thread plays the server behind and compresses with <code>zip_gzip</code>.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">163-reenviar-comprimido.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/163-reenviar-comprimido.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: reenviar una respuesta comprimida sin descomprimirla.</span>
+<span class="cm">//</span>
+<span class="cm">// El caso real: un proxy escrito en Nyx recibe el pedido del navegador, lo repite contra un</span>
+<span class="cm">// servidor de atrás y devuelve la respuesta. Si el servidor de atrás ya comprime (gzip), lo</span>
+<span class="cm">// barato es pasar esos bytes tal cual: descomprimir para volver a comprimir cuesta CPU y memoria.</span>
+<span class="cm">//</span>
+<span class="cm">// Qué hace cada cliente de std/http con `Content-Encoding`:</span>
+<span class="cm">//   - try_http_request / try_http_request_opts (respuesta entera): entregan el cuerpo como llegó,</span>
+<span class="cm">//     comprimido, con la cabecera a la vista. Nunca descomprimen.</span>
+<span class="cm">//   - try_http_stream_opts (por partes): por defecto da Err(unsupported), porque read_event()</span>
+<span class="cm">//     no puede partir en líneas un cuerpo comprimido. Con `opts.cuerpo_crudo = true` la respuesta</span>
+<span class="cm">//     se acepta: read() entrega los bytes comprimidos, headers() muestra `Content-Encoding`, y</span>
+<span class="cm">//     read_event() es el que da Err(unsupported).</span>
+<span class="cm">//</span>
+<span class="cm">// En un servidor con std/serve el reenvío completo son tres pasos: pasar el `Accept-Encoding` del</span>
+<span class="cm">// cliente al pedido de atrás, abrir con `cuerpo_crudo`, y devolver `response_from_stream(s)`, que</span>
+<span class="cm">// copia `Content-Encoding` y `Vary` junto con el resto de las cabeceras del contenido.</span>
+<span class="cm">//</span>
+<span class="cm">// La receta corre sola: un hilo hace de servidor de atrás y comprime con zip_gzip.</span>
+
+<span class="kw">import</span> <span class="str">&quot;std/http&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/net&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/zip&quot;</span>
+<span class="kw">import</span> <span class="str">&quot;std/error&quot;</span>
+
+<span class="kw">var</span> g_port<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="num">18472</span>
+<span class="kw">var</span> g_listo<span class="op">:</span> <span class="ty">Map</span> <span class="op">=</span> <span class="fn">channel_new</span><span class="op">(</span><span class="num">1</span><span class="op">)</span>
+
+<span class="kw">fn</span> <span class="fn">texto</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">String</span> <span class="op">{</span>
+    <span class="kw">return</span> <span class="str">&quot;una linea que se repite y por eso comprime muy bien\n&quot;</span><span class="op">.</span><span class="fn">repeat</span><span class="op">(</span><span class="num">200</span><span class="op">)</span>
+<span class="op">}</span>
+
+<span class="cm">// El servidor de atrás: contesta siempre comprimido (un servidor real mira Accept-Encoding).</span>
+<span class="kw">fn</span> <span class="fn">atras</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> l<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_listen</span><span class="op">(</span><span class="str">&quot;127.0.0.1&quot;</span><span class="op">,</span> g_port<span class="op">)</span>
+    <span class="fn">channel_send</span><span class="op">(</span>g_listo<span class="op">,</span> <span class="num">1</span><span class="op">)</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_accept</span><span class="op">(</span>l<span class="op">)</span>
+    <span class="kw">let</span> _pedido<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">tcp_read_partial</span><span class="op">(</span>c<span class="op">,</span> <span class="num">4096</span><span class="op">)</span>
+    <span class="kw">let</span> gz<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="fn">zip_gzip</span><span class="op">(</span><span class="fn">texto</span><span class="op">())</span>
+    <span class="kw">let</span> cab<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> <span class="str">&quot;HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: gzip\r\nVary: Accept-Encoding\r\nContent-Length: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>gz<span class="op">.</span><span class="fn">length</span><span class="op">())</span> <span class="op">+</span> <span class="str">&quot;\r\n\r\n&quot;</span>
+    <span class="kw">let</span> _a<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>c<span class="op">,</span> cab<span class="op">)</span>
+    <span class="kw">let</span> _b<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">tcp_write</span><span class="op">(</span>c<span class="op">,</span> gz<span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>c<span class="op">)</span>
+    <span class="fn">tcp_close</span><span class="op">(</span>l<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="fn">thread_spawn</span><span class="op">(</span>atras<span class="op">)</span>
+    <span class="kw">let</span> _r<span class="op">:</span> <span class="ty">int</span> <span class="op">=</span> <span class="fn">channel_recv</span><span class="op">(</span>g_listo<span class="op">)</span>
+
+    <span class="kw">var</span> opts<span class="op">:</span> <span class="ty">HttpStreamOpts</span> <span class="op">=</span> <span class="fn">http_stream_opts</span><span class="op">()</span>
+    opts<span class="op">.</span>cuerpo_crudo <span class="op">=</span> <span class="kw">true</span>
+    <span class="kw">let</span> cab<span class="op">:</span> <span class="ty">Array</span> <span class="op">=</span> <span class="op">[</span><span class="str">&quot;Accept-Encoding&quot;</span><span class="op">,</span> <span class="str">&quot;gzip&quot;</span><span class="op">]</span>
+    <span class="kw">let</span> rs<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">HttpStream</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">try_http_stream_opts</span><span class="op">(</span><span class="str">&quot;GET&quot;</span><span class="op">,</span> <span class="str">&quot;http://127.0.0.1:&quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>g_port<span class="op">)</span> <span class="op">+</span> <span class="str">&quot;/a.txt&quot;</span><span class="op">,</span> cab<span class="op">,</span> <span class="str">&quot;&quot;</span><span class="op">,</span> opts<span class="op">)</span>
+    <span class="kw">if</span> rs<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span>
+        <span class="fn">println</span><span class="op">(</span><span class="str">&quot;no abrió: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>rs<span class="op">.</span><span class="fn">unwrap_err</span><span class="op">()))</span>
+        <span class="kw">return</span> <span class="num">1</span>
+    <span class="op">}</span>
+    <span class="kw">let</span> s<span class="op">:</span> <span class="ty">HttpStream</span> <span class="op">=</span> rs<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;estado: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>s<span class="op">.</span><span class="fn">status</span><span class="op">()))</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;Content-Encoding: &quot;</span> <span class="op">+</span> <span class="fn">http_find_header</span><span class="op">(</span>s<span class="op">.</span><span class="fn">headers</span><span class="op">(),</span> <span class="str">&quot;Content-Encoding&quot;</span><span class="op">))</span>
+
+    <span class="cm">// Un proxy escribiría cada trozo al cliente; acá se juntan para mostrar los tamaños.</span>
+    <span class="kw">var</span> sb<span class="op">:</span> <span class="ty">StringBuilder</span> <span class="op">=</span> <span class="ty">StringBuilder</span><span class="op">.</span><span class="fn">new</span><span class="op">()</span>
+    <span class="kw">while</span> <span class="kw">true</span> <span class="op">{</span>
+        <span class="kw">let</span> r<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> s<span class="op">.</span><span class="fn">read</span><span class="op">()</span>
+        <span class="kw">if</span> r<span class="op">.</span><span class="fn">is_err</span><span class="op">()</span> <span class="op">{</span>
+            <span class="fn">println</span><span class="op">(</span><span class="str">&quot;corte: &quot;</span> <span class="op">+</span> <span class="fn">error_to_string</span><span class="op">(</span>r<span class="op">.</span><span class="fn">unwrap_err</span><span class="op">()))</span>
+            <span class="kw">return</span> <span class="num">1</span>
+        <span class="op">}</span>
+        <span class="kw">let</span> trozo<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> r<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+        <span class="kw">if</span> trozo<span class="op">.</span><span class="fn">length</span><span class="op">()</span> <span class="op">==</span> <span class="num">0</span> <span class="op">{</span> <span class="kw">break</span> <span class="op">}</span>
+        sb<span class="op">.</span><span class="fn">append</span><span class="op">(</span>trozo<span class="op">)</span>
+    <span class="op">}</span>
+    s<span class="op">.</span><span class="fn">close</span><span class="op">()</span>
+    <span class="kw">let</span> comprimido<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> sb<span class="op">.</span><span class="fn">to_string</span><span class="op">()</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;bytes recibidos: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>comprimido<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+
+    <span class="cm">// Los bytes son el gzip del origen, intactos: descomprimen al texto original.</span>
+    <span class="kw">let</span> plano<span class="op">:</span> <span class="ty">Result</span><span class="op">&lt;</span><span class="ty">String</span><span class="op">,</span> <span class="ty">Error</span><span class="op">&gt;</span> <span class="op">=</span> <span class="fn">zip_gunzip</span><span class="op">(</span>comprimido<span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="kw">assert</span><span class="op">(</span>plano<span class="op">.</span><span class="fn">is_ok</span><span class="op">())</span>
+    <span class="kw">let</span> original<span class="op">:</span> <span class="ty">String</span> <span class="op">=</span> plano<span class="op">.</span><span class="fn">unwrap</span><span class="op">()</span>
+    <span class="kw">assert</span><span class="op">(</span>original <span class="op">==</span> <span class="fn">texto</span><span class="op">())</span>
+    <span class="fn">println</span><span class="op">(</span><span class="str">&quot;bytes al descomprimir: &quot;</span> <span class="op">+</span> <span class="fn">int_to_string</span><span class="op">(</span>original<span class="op">.</span><span class="fn">length</span><span class="op">()))</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">estado: 200
+Content-Encoding: gzip
+bytes recibidos: 159
+bytes al descomprimir: 10400</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>By default <code>try_http_stream_opts</code> answers <code>Err(unsupported)</code> to any <code>Content-Encoding</code>, because <code>read_event()</code> cannot split a compressed body into lines. With <code>opts.cuerpo_crudo = true</code> the response is accepted: <code>read()</code> delivers the compressed bytes, <code>headers()</code> shows <code>Content-Encoding</code>, and <code>read_event()</code> is the one that gives <code>Err(unsupported)</code>. The clients that return the whole response, <code>try_http_request</code> and <code>try_http_request_opts</code>, never decompress.</p>
+<p>In a server built on <code>std/serve</code> the full forward is three steps: pass the client's <code>Accept-Encoding</code> to the request behind, open with <code>cuerpo_crudo</code>, and return <code>response_from_stream(s)</code>, which copies <code>Content-Encoding</code> and <code>Vary</code> along with the rest of the content headers. The output shows the bytes received and what they decompress to: they are the origin's gzip, untouched.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/162-struct-tupla-y-literales.html"><span class="label">← Previous</span><span class="doc-nav-name">Tuple structs, scientific notation and narrow integers</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/164-ndarray.html"><span class="label">Next →</span><span class="doc-nav-name">Numeric arrays with std/ndarray</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

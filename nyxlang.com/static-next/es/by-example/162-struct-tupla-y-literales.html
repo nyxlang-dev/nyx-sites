@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Struct tupla, notación científica y enteros angostos — Nyx por ejemplo</title>
+<meta name="description" content="Un struct tupla tiene campos posicionales, se construye como una llamada y se lee con .0, .1; los floats aceptan exponente, y un entero angosto mezclado con un int da un int.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/162-struct-tupla-y-literales.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/162-struct-tupla-y-literales.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/162-struct-tupla-y-literales.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/162-struct-tupla-y-literales.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/162-struct-tupla-y-literales.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">162</span> / Tipos y patrones</span></p>
+<h1 class="doc-title">Struct tupla, notación científica y enteros angostos</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p>Un struct tupla tiene campos posicionales: <code>struct Punto(int, int)</code> se construye como <code>Punto(3, 4)</code> y se lee con <code>p.0</code> y <code>p.1</code> (o <code>p._0</code>, <code>p._1</code>). Sirve para un newtype como <code>Metros(float)</code>, o para un par que merece nombre propio.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">162-struct-tupla-y-literales.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/162-struct-tupla-y-literales.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: struct tupla, notación científica y enteros angostos.</span>
+<span class="cm">//</span>
+<span class="cm">// Un struct tupla tiene campos posicionales: se construye como una llamada y</span>
+<span class="cm">// se lee con `.0`, `.1` (o `._0`, `._1`). Sirve para un newtype (`Metros(float)`)</span>
+<span class="cm">// o para un par con nombre propio.</span>
+<span class="cm">//</span>
+<span class="cm">// Los float aceptan exponente (`1.5e3`). Un entero angosto (`u8`, `i32`…)</span>
+<span class="cm">// mezclado con un `int` da un `int`; al guardarlo de vuelta se trunca.</span>
+<span class="kw">struct</span> <span class="ty">Metros</span><span class="op">(</span><span class="ty">float</span><span class="op">)</span>
+<span class="kw">struct</span> <span class="ty">Punto</span><span class="op">(</span><span class="ty">int</span><span class="op">,</span> <span class="ty">int</span><span class="op">)</span>
+
+<span class="kw">fn</span> <span class="fn">distancia2</span><span class="op">(</span>a<span class="op">:</span> <span class="ty">Punto</span><span class="op">,</span> b<span class="op">:</span> <span class="ty">Punto</span><span class="op">)</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> dx <span class="op">=</span> a<span class="op">.</span><span class="num">0</span> <span class="op">-</span> b<span class="op">.</span><span class="num">0</span>
+    <span class="kw">let</span> dy <span class="op">=</span> a<span class="op">.</span><span class="num">1</span> <span class="op">-</span> b<span class="op">.</span><span class="num">1</span>
+    <span class="kw">return</span> dx <span class="op">*</span> dx <span class="op">+</span> dy <span class="op">*</span> dy
+<span class="op">}</span>
+
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> p <span class="op">=</span> <span class="ty">Punto</span><span class="op">(</span><span class="num">3</span><span class="op">,</span> <span class="num">4</span><span class="op">)</span>
+    <span class="kw">let</span> origen <span class="op">=</span> <span class="ty">Punto</span><span class="op">(</span><span class="num">0</span><span class="op">,</span> <span class="num">0</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="fn">distancia2</span><span class="op">(</span>p<span class="op">,</span> origen<span class="op">))</span>
+
+    <span class="kw">let</span> luz <span class="op">=</span> <span class="ty">Metros</span><span class="op">(</span><span class="num">2.998e8</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span>luz<span class="op">.</span><span class="num">0</span> <span class="op">/</span> <span class="num">1.0e3</span><span class="op">)</span>
+
+    <span class="kw">let</span> b<span class="op">:</span> u8 <span class="op">=</span> <span class="num">250</span>
+    <span class="kw">let</span> n <span class="op">=</span> b <span class="op">+</span> <span class="num">10</span>
+    <span class="fn">print</span><span class="op">(</span>n<span class="op">)</span>
+    <span class="kw">let</span> de_vuelta<span class="op">:</span> u8 <span class="op">=</span> b <span class="op">+</span> <span class="num">10</span>
+    <span class="fn">print</span><span class="op">(</span>de_vuelta<span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">25
+299800.0
+260
+4</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Los literales float aceptan exponente: <code>2.998e8</code>, <code>1.0e3</code>. La tercera línea de la salida es la velocidad de la luz en kilómetros por segundo.</p>
+<p>Un entero angosto (<code>u8</code>, <code>i32</code> y los demás) mezclado con un <code>int</code> se ensancha a <code>int</code>: <code>b + 10</code> con <code>b: u8 = 250</code> es <code>260</code>. Al guardarlo de vuelta en un <code>u8</code> se trunca a <code>4</code>. Dos operandos del mismo tipo angosto se quedan en su ancho y envuelven ahí.</p>
+<p>Construir un struct tupla con la cantidad equivocada de argumentos es <code>NYX1006</code>; llamar como si lo fuera a un struct de campos con nombre es <code>NYX1007</code>.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/161-texto-por-tipo.html"><span class="label">← Anterior</span><span class="doc-nav-name">Texto por el tipo real: join e interpolación</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/163-reenviar-comprimido.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Reenviar una respuesta comprimida sin descomprimirla</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text by the real type: join and interpolation — Nyx by example</title>
+<meta name="description" content="join converts each slot by its type tag and interpolation uses the Nyx type of the operand: a u8 gives the number, a char gives the character.">
+<link rel="canonical" href="https://nyxlang.com/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/161-texto-por-tipo.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/">NYX</a>
+<ul class="nav-links">
+<li><a href="/#install">Install</a></li>
+<li><a href="/docs/">Docs</a></li>
+<li><a href="/by-example/">By example</a></li>
+<li><a href="/changelog/">Changelog</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/es/by-example/161-texto-por-tipo.html" hreflang="es" lang="es" title="Ver esta página en español">Español</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">161</span> / Types and patterns</span></p>
+<h1 class="doc-title">Text by the real type: join and interpolation</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>arr.join(sep)</code> converts each slot by its tag: integers, floats and booleans come out the same as with <code>to_string()</code>. Interpolation, <code>"${x}"</code>, and <code>String + x</code> use the Nyx type of the operand, not the machine type underneath.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">161-texto-por-tipo.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/161-texto-por-tipo.nx">Source →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: convertir a texto por el tipo real (join e interpolación).</span>
+<span class="cm">//</span>
+<span class="cm">// `join` convierte cada casilla por su tag: enteros, floats y bool salen igual</span>
+<span class="cm">// que con `to_string()`. Un Array o un Map dentro de la lista aborta con un</span>
+<span class="cm">// mensaje claro (no tienen conversión a String).</span>
+<span class="cm">//</span>
+<span class="cm">// La interpolación usa el tipo Nyx del operando: un `u8` da el NÚMERO y un</span>
+<span class="cm">// `char` da el carácter. Para ver el carácter de un byte, conviértelo a `char`.</span>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> nums <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span>nums<span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="str">&quot;, &quot;</span><span class="op">))</span>
+
+    <span class="kw">let</span> b<span class="op">:</span> u8 <span class="op">=</span> <span class="num">65</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">char</span> <span class="op">=</span> <span class="str">&#x27;A&#x27;</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;u8=${b} char=${c}&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;literal=${&#x27;z&#x27;}&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Output</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">1, 2, 3
+u8=65 char=A
+literal=z</pre></div>
+</div>
+<h2 class="recipe-head">How it works</h2>
+<div class="recipe-prose"><p>A <code>u8</code> and a <code>char</code> are the same byte to the machine, but not to the language: <code>"${b}"</code> with <code>b: u8 = 65</code> gives <code>65</code>, and the <code>char</code> gives <code>A</code>. To see the character of a byte, store it in a <code>char</code> variable. A <code>char</code> literal interpolates as its character.</p>
+<p>An <code>Array</code> or a <code>Map</code> has no conversion to text. Inside a list, <code>join</code> aborts with a message that names the slot; interpolating one is a compile error, <code>NYX1010</code>, with the hint to walk it or interpolate its parts.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Previous and next recipe">
+<a class="doc-nav-link doc-nav-prev" href="/by-example/160-respuesta-por-trozos.html"><span class="label">← Previous</span><span class="doc-nav-name">Answering a large body in chunks</span></a>
+<a class="doc-nav-link doc-nav-next" href="/by-example/162-struct-tupla-y-literales.html"><span class="label">Next →</span><span class="doc-nav-name">Tuple structs, scientific notation and narrow integers</span></a>
+</nav>
+<p class="recipe-links"><a href="/by-example/">All recipes</a><a href="/docs/">The step-by-step guide</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/changelog/">Changelog</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texto por el tipo real: join e interpolación — Nyx por ejemplo</title>
+<meta name="description" content="join convierte cada casilla por su etiqueta de tipo y la interpolación usa el tipo Nyx del operando: un u8 da el número, un char da el carácter.">
+<link rel="canonical" href="https://nyxlang.com/es/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="en" href="https://nyxlang.com/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="es" href="https://nyxlang.com/es/by-example/161-texto-por-tipo.html">
+<link rel="alternate" hreflang="x-default" href="https://nyxlang.com/by-example/161-texto-por-tipo.html">
+<link rel="stylesheet" href="/shared/spec.css">
+</head>
+<body>
+<nav class="nav" aria-label="Principal">
+<div class="nav-inner wrap">
+<a class="nav-wordmark" href="/es/">NYX</a>
+<ul class="nav-links">
+<li><a href="/es/#install">Instalar</a></li>
+<li><a href="/es/docs/">Documentación</a></li>
+<li><a href="/es/by-example/">Por ejemplo</a></li>
+<li><a href="/es/changelog/">Novedades</a></li>
+<li><a href="https://github.com/nyxlang-dev/nyx">GitHub</a></li>
+</ul>
+<a class="nav-lang" href="/by-example/161-texto-por-tipo.html" hreflang="en" lang="en" title="View this page in English">English</a>
+</div>
+</nav>
+
+<main>
+<section class="band">
+<div class="wrap band-inner">
+<header class="doc-head">
+<p><span class="stamp stamp-accent"><span class="stamp-num">161</span> / Tipos y patrones</span></p>
+<h1 class="doc-title">Texto por el tipo real: join e interpolación</h1>
+</header>
+<article class="recipe">
+<div class="recipe-lede prose"><p><code>arr.join(sep)</code> convierte cada casilla por su etiqueta: enteros, floats y booleanos salen igual que con <code>to_string()</code>. La interpolación, <code>"${x}"</code>, y <code>String + x</code> usan el tipo Nyx del operando, no el tipo de máquina que hay debajo.</p></div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">161-texto-por-tipo.nx</span><a href="https://github.com/nyxlang-dev/nyx/blob/main/examples/by-example/161-texto-por-tipo.nx">Fuente →</a></div>
+<div class="panel-body"><pre><span class="cm">// Nyx by Example: convertir a texto por el tipo real (join e interpolación).</span>
+<span class="cm">//</span>
+<span class="cm">// `join` convierte cada casilla por su tag: enteros, floats y bool salen igual</span>
+<span class="cm">// que con `to_string()`. Un Array o un Map dentro de la lista aborta con un</span>
+<span class="cm">// mensaje claro (no tienen conversión a String).</span>
+<span class="cm">//</span>
+<span class="cm">// La interpolación usa el tipo Nyx del operando: un `u8` da el NÚMERO y un</span>
+<span class="cm">// `char` da el carácter. Para ver el carácter de un byte, conviértelo a `char`.</span>
+<span class="kw">fn</span> <span class="fn">main</span><span class="op">()</span> <span class="op">-&gt;</span> <span class="ty">int</span> <span class="op">{</span>
+    <span class="kw">let</span> nums <span class="op">=</span> <span class="op">[</span><span class="num">1</span><span class="op">,</span> <span class="num">2</span><span class="op">,</span> <span class="num">3</span><span class="op">]</span>
+    <span class="fn">print</span><span class="op">(</span>nums<span class="op">.</span><span class="fn">join</span><span class="op">(</span><span class="str">&quot;, &quot;</span><span class="op">))</span>
+
+    <span class="kw">let</span> b<span class="op">:</span> u8 <span class="op">=</span> <span class="num">65</span>
+    <span class="kw">let</span> c<span class="op">:</span> <span class="ty">char</span> <span class="op">=</span> <span class="str">&#x27;A&#x27;</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;u8=${b} char=${c}&quot;</span><span class="op">)</span>
+    <span class="fn">print</span><span class="op">(</span><span class="str">&quot;literal=${&#x27;z&#x27;}&quot;</span><span class="op">)</span>
+    <span class="kw">return</span> <span class="num">0</span>
+<span class="op">}</span>
+</pre></div>
+</div>
+<div class="panel recipe-panel">
+<div class="panel-head"><span class="panel-name">Salida</span><span>stdout</span></div>
+<div class="panel-body"><pre class="recipe-output">1, 2, 3
+u8=65 char=A
+literal=z</pre></div>
+</div>
+<h2 class="recipe-head">Cómo funciona</h2>
+<div class="recipe-prose"><p>Un <code>u8</code> y un <code>char</code> son el mismo byte para la máquina, pero no para el lenguaje: <code>"${b}"</code> con <code>b: u8 = 65</code> da <code>65</code>, y el <code>char</code> da <code>A</code>. Para ver el carácter de un byte, se guarda en una variable <code>char</code>. Un literal <code>char</code> se interpola como su carácter.</p>
+<p>Un <code>Array</code> o un <code>Map</code> no tienen conversión a texto. Dentro de una lista, <code>join</code> aborta con un mensaje que nombra la casilla; interpolar uno es un error de compilación, <code>NYX1010</code>, con la pista de recorrerlo o interpolar sus partes.</p></div>
+</article>
+<nav class="doc-nav" aria-label="Receta anterior y siguiente">
+<a class="doc-nav-link doc-nav-prev" href="/es/by-example/160-respuesta-por-trozos.html"><span class="label">← Anterior</span><span class="doc-nav-name">Responder un cuerpo grande por trozos</span></a>
+<a class="doc-nav-link doc-nav-next" href="/es/by-example/162-struct-tupla-y-literales.html"><span class="label">Siguiente →</span><span class="doc-nav-name">Struct tupla, notación científica y enteros angostos</span></a>
+</nav>
+<p class="recipe-links"><a href="/es/by-example/">Todas las recetas</a><a href="/es/docs/">La guía paso a paso</a></p>
+</div>
+</section>
+</main>
+<footer class="footer">
+<div class="footer-inner wrap">
+<p class="mono"><span class="footer-version">v0.45.0</span> · Apache 2.0 · <a href="https://github.com/nyxlang-dev/nyx">GitHub</a> · <a href="/es/changelog/">Novedades</a></p>
+<p class="mono">nyxlang.com</p>
+</div>
+</footer>
+
+<script src="/shared/copy.js" defer></script>
+</body>
+</html>
